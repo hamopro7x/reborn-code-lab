@@ -7,7 +7,8 @@ const steps = [
   "نزّل ملف الوكيل على جهاز الموظف وفك الضغط (Extract All).",
   "افتح مجلد MagProAgent-win32-x64 واعمل دبل كليك على MagProAgent.exe.",
   "لو ظهرت شاشة حماية ويندوز اختر «More info» ثم «Run anyway».",
-  "هيظهر كود من 6 حروف وأرقام — اكتبه في «مشاهدة شاشة موظف» تحت وهتشوف شاشته مباشرة.",
+  "الموظف يكتب اسمه ويضغط «أوافق وسجّل الجهاز» — موافقة واحدة فقط لأول مرة.",
+  "بعد كده الجهاز يظهر فوق في «أجهزة الموظفين المسجّلة»، واضغط «مشاهدة» أي وقت وهو متصل.",
 ];
 
 export function AgentDownloadCard() {
@@ -31,14 +32,15 @@ export function AgentDownloadCard() {
     <div className="card-surface rounded-2xl p-4 space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h3 className="font-bold">برنامج الوكيل الخاص بنا (Windows)</h3>
+          <h3 className="font-bold">برنامج المراقبة الخاص بنا (Windows)</h3>
           <p className="text-sm text-muted-foreground">
-            استضافة خاصة بالكامل — يثبَّت على جهاز الموظف ويبث شاشته لهذه اللوحة بدون أي خدمة خارجية.
+            موافقة واحدة من الموظف عند أول تشغيل — بعدها يعمل تلقائيًا في الخلفية وتشاهد شاشته
+            من اللوحة وقت ما تحب زي سيستم كاميرات المراقبة.
           </p>
         </div>
         <div className="flex gap-2">
           <Button onClick={download}>
-            <Download className="size-4 ml-1" /> تنزيل الوكيل
+            <Download className="size-4 ml-1" /> تنزيل البرنامج
           </Button>
           <Button
             variant="outline"

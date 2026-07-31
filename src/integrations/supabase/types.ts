@@ -44,6 +44,45 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_devices: {
+        Row: {
+          approved: boolean
+          created_at: string
+          device_id: string
+          device_label: string | null
+          employee_name: string | null
+          id: string
+          last_seen_at: string | null
+          os: string | null
+          secret_hash: string
+          updated_at: string
+        }
+        Insert: {
+          approved?: boolean
+          created_at?: string
+          device_id: string
+          device_label?: string | null
+          employee_name?: string | null
+          id?: string
+          last_seen_at?: string | null
+          os?: string | null
+          secret_hash: string
+          updated_at?: string
+        }
+        Update: {
+          approved?: boolean
+          created_at?: string
+          device_id?: string
+          device_label?: string | null
+          employee_name?: string | null
+          id?: string
+          last_seen_at?: string | null
+          os?: string | null
+          secret_hash?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           active: boolean
@@ -838,6 +877,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      agent_heartbeat: {
+        Args: { p_device_id: string; p_secret: string }
+        Returns: boolean
+      }
+      agent_register: {
+        Args: {
+          p_device_id: string
+          p_device_label: string
+          p_employee_name: string
+          p_os: string
+          p_secret: string
+        }
+        Returns: boolean
+      }
       gen_order_code: { Args: never; Returns: string }
     }
     Enums: {

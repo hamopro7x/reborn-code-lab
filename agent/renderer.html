@@ -10,40 +10,58 @@
         font-family: "Segoe UI", system-ui, sans-serif;
         background: #0f172a;
         color: #e8edf7;
-        display: flex;
+        height: 100vh;
+      }
+      .screen {
+        display: none;
         flex-direction: column;
         align-items: center;
         justify-content: center;
         height: 100vh;
-        gap: 18px;
+        gap: 16px;
+        padding: 24px;
+        box-sizing: border-box;
+        text-align: center;
       }
       h1 { font-size: 18px; margin: 0; font-weight: 600; }
-      .code {
-        font-size: 40px;
-        letter-spacing: 8px;
-        font-weight: 700;
-        padding: 14px 24px;
-        border-radius: 14px;
-        background: #16213e;
-        border: 1px solid #24365f;
+      p { margin: 0; font-size: 13px; opacity: .75; line-height: 1.8; max-width: 340px; }
+      input {
+        background: #16213e; border: 1px solid #24365f; color: #e8edf7;
+        border-radius: 10px; padding: 10px 14px; font-size: 14px; width: 240px; text-align: center;
       }
-      .status { font-size: 13px; opacity: .8; }
-      .dot { display:inline-block; width:9px; height:9px; border-radius:50%; background:#f59e0b; margin-inline-end:6px; }
-      .dot.on { background:#22c55e; }
       button {
         background: #2563eb; color: #fff; border: 0; border-radius: 10px;
-        padding: 10px 20px; font-size: 14px; cursor: pointer;
+        padding: 11px 22px; font-size: 14px; cursor: pointer;
       }
       button:disabled { opacity: .5; cursor: default; }
-      .hint { font-size: 11px; opacity: .6; max-width: 320px; text-align: center; line-height: 1.7; }
+      .status { font-size: 13px; opacity: .85; }
+      .dot { display:inline-block; width:9px; height:9px; border-radius:50%; background:#f59e0b; margin-inline-end:6px; }
+      .dot.on { background:#22c55e; }
+      .device { font-size: 12px; opacity: .6; font-family: ui-monospace, monospace; }
+      .badge {
+        font-size: 11px; padding: 6px 12px; border-radius: 999px;
+        background: #16213e; border: 1px solid #24365f; opacity: .9;
+      }
     </style>
   </head>
   <body>
-    <h1>وكيل الوصول عن بُعد — Mag Pro</h1>
-    <div class="code" id="code">------</div>
-    <div class="status"><span class="dot" id="dot"></span><span id="status">جاهز</span></div>
-    <button id="start">بدء المشاركة</button>
-    <div class="hint">أعطِ هذا الكود للمدير ليشاهد الشاشة من لوحة التحكم. يمكن إغلاق النافذة وسيبقى الوكيل يعمل في شريط المهام.</div>
+    <div class="screen" id="consent">
+      <h1>تسجيل الجهاز — Mag Pro</h1>
+      <p>
+        بالموافقة مرة واحدة سيتم تسجيل هذا الجهاز لدى الإدارة، وسيسمح للمدير بمشاهدة الشاشة
+        متى كان الجهاز متصلاً — بدون طلب موافقة في كل مرة.
+      </p>
+      <input id="employee-name" placeholder="اسم الموظف" />
+      <button id="approve">أوافق وسجّل الجهاز</button>
+    </div>
+
+    <div class="screen" id="running">
+      <h1>وكيل المراقبة — Mag Pro</h1>
+      <div class="status"><span class="dot" id="dot"></span><span id="status">جاهز</span></div>
+      <div class="device" id="device"></div>
+      <div class="badge">يعمل تلقائيًا في الخلفية — يمكن إغلاق النافذة</div>
+    </div>
+
     <script type="module" src="./renderer.js"></script>
   </body>
 </html>
