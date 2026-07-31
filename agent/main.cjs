@@ -206,6 +206,17 @@ ipcMain.handle("install-update", async () => {
     await shell.openPath(downloadedFile);
     return true;
   }
+  // النسخة الجديدة عبارة عن ملف تثبيت (Setup.exe): نشغّله بصمت ثم نخرج
+  if (/\.exe$/i.test(downloadedFile)) {
+    const { spawn } = require("child_process");
+    spawn(downloadedFile, ["/S"], { detached: true, stdio: "ignore" }).unref();
+    setTimeout(() => {
+      app.isQuiting = true;
+      app.quit();
+    }, 1200);
+    return true;
+  }
+
   await new Promise((resolve, reject) => {
     execFile(
       "powershell.exe",
