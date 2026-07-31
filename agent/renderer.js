@@ -23,7 +23,7 @@ const dotEl = document.getElementById("dot");
 const deviceEl = document.getElementById("device");
 
 const STORE = "mag-agent-device-v1";
-const AGENT_VERSION = "1.3.0";
+const AGENT_VERSION = "1.4.0";
 
 const updateEl = document.getElementById("update");
 const updVerEl = document.getElementById("upd-ver");
