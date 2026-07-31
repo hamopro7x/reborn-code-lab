@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Loader2, Monitor, PhoneOff, RefreshCw, Trash2, Video } from "lucide-react";
+import { KeyRound, Loader2, Monitor, PhoneOff, RefreshCw, Trash2, Video } from "lucide-react";
+
 import { RTC_CONFIG, openSignaling, type Signal } from "@/lib/screenshare";
 
 type Device = {
@@ -98,6 +100,48 @@ function WatchPanel({ device, onClose }: { device: Device; onClose: () => void }
   );
 }
 
+function PairDeviceBox() {
+  const qc = useQueryClient();
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const add = async () => {
+    const key = code.trim().toUpperCase();
+    if (!key) return toast.error("اكتب مفتاح الربط الظاهر في برنامج الموظف");
+    setBusy(true);
+    const { error } = await supabase.rpc("agent_claim_pairing", { p_code: key });
+    setBusy(false);
+    if (error) return toast.error("مفتاح غير صحيح أو منتهي");
+    setCode("");
+    toast.success("تم إضافة الجهاز — سيتصل تلقائيًا خلال ثوانٍ");
+    void qc.invalidateQueries({ queryKey: ["agent-devices"] });
+  };
+
+  return (
+    <div className="rounded-xl border border-border/60 p-3 space-y-2">
+      <div className="flex items-center gap-2">
+        <KeyRound className="size-4 text-primary" />
+        <span className="text-sm font-bold">إضافة جهاز بمفتاح الربط</span>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        الموظف يفتح البرنامج فيظهر له مفتاح ربط — اكتبه هنا ليعمل الجهاز دائمًا حتى تحذفه بنفسك.
+      </p>
+      <div className="flex gap-2">
+        <Input
+          value={code}
+          onChange={(e) => setCode(e.target.value.toUpperCase())}
+          placeholder="مفتاح الربط (8 خانات)"
+          className="font-mono tracking-widest"
+          dir="ltr"
+        />
+        <Button onClick={() => void add()} disabled={busy}>
+          {busy ? <Loader2 className="size-4 animate-spin" /> : "إضافة"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function DeviceMonitorGrid() {
   const qc = useQueryClient();
   const [watching, setWatching] = useState<Device | null>(null);
@@ -119,11 +163,12 @@ export function DeviceMonitorGrid() {
     const { error } = await supabase.from("agent_devices").delete().eq("id", d.id);
     if (error) return toast.error(error.message);
     if (watching?.id === d.id) setWatching(null);
-    toast.success("تم إلغاء تسجيل الجهاز");
+    toast.success("تم إلغاء تسجيل الجهاز — سيظهر للموظف مفتاح ربط جديد");
     void qc.invalidateQueries({ queryKey: ["agent-devices"] });
   };
 
   const devices = data ?? [];
+
 
   return (
     <div className="card-surface rounded-2xl p-4 space-y-4">
@@ -136,6 +181,9 @@ export function DeviceMonitorGrid() {
           <RefreshCw className={`size-4 ml-1 ${isFetching ? "animate-spin" : ""}`} /> تحديث
         </Button>
       </div>
+
+      {!watching && <PairDeviceBox />}
+
 
       {watching ? (
         <WatchPanel device={watching} onClose={() => setWatching(null)} />
