@@ -411,6 +411,11 @@ if (existing) {
   pairingEl.style.display = "none";
 }
 
+// فحص التحديث بشكل مستقل عن الجلسة — كل دقيقة والبرنامج مفتوح
+void checkUpdate();
+updTimer = setInterval(() => void checkUpdate(), 60 * 1000);
+window.addEventListener("focus", () => void checkUpdate());
+
 // إعادة الاتصال تلقائياً لما الشبكة ترجع (بعد قفل اللابتوب/فقد النت)
 window.addEventListener("online", () => {
   setTimeout(() => window.location.reload(), 1500);
