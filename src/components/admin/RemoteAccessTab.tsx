@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Trash2, Edit, ExternalLink, Copy, MonitorPlay, Loader2, Info } from "lucide-react";
+import { Plus, Trash2, Edit, ExternalLink, Copy, MonitorPlay, Loader2 } from "lucide-react";
 
 type RemoteRow = {
   id: string;
@@ -193,17 +193,6 @@ export function RemoteAccessTab() {
   return (
 
     <div className="space-y-6">
-      <div className="card-surface rounded-2xl p-4 flex gap-3 items-start">
-        <Info className="size-5 text-primary shrink-0 mt-0.5" />
-        <div className="text-sm text-muted-foreground space-y-1">
-          <p className="font-semibold text-foreground">إزاي الموظف يدّي صلاحية من عنده؟</p>
-          <p>1. ينزّل برنامج <span className="font-mono">RustDesk</span> من <span className="font-mono">rustdesk.com</span> ويفتحه على جهازه.</p>
-          <p>2. يبعتلك <b>ID</b> الجهاز، ويحدد <b>كلمة سر دائمة</b> من Settings ← Security (أو يبعت الباسورد المؤقت).</p>
-          <p>3. تسجّل الـ ID والباسورد هنا، وتضغط <b>اتصال</b> فتظهر شاشته جوه لوحة الأدمن على طول وتتحكم فيها.</p>
-
-        </div>
-      </div>
-
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold">الوصول عن بُعد للموظفين</h2>
         <Button onClick={startAdd}><Plus className="size-4 ml-1" /> إضافة جهاز</Button>
