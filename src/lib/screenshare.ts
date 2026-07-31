@@ -28,10 +28,16 @@ export type Signal =
   | { type: "ice"; from: "host" | "viewer"; candidate: RTCIceCandidateInit }
   | { type: "bye" };
 
-export function openSignaling(code: string, onSignal: (s: Signal) => void) {
-  const channel = supabase.channel(channelName(code), {
+export function openSignaling(
+  code: string,
+  onSignal: (s: Signal) => void,
+  opts?: { raw?: boolean },
+) {
+  const name = opts?.raw ? `screenshare-${code}` : channelName(code);
+  const channel = supabase.channel(name, {
     config: { broadcast: { self: false } },
   });
+
   channel.on("broadcast", { event: "signal" }, ({ payload }) => onSignal(payload as Signal));
   const ready = new Promise<void>((resolve) => {
     channel.subscribe((status) => {
