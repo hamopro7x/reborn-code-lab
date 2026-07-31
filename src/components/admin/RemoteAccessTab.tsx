@@ -10,7 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Plus, Trash2, Edit, ExternalLink, Copy, MonitorPlay, Loader2 } from "lucide-react";
-import { LiveScreenViewer } from "./LiveScreenViewer";
 import { AgentDownloadCard } from "./AgentDownloadCard";
 import { DeviceMonitorGrid } from "./DeviceMonitorGrid";
 
@@ -198,7 +197,6 @@ export function RemoteAccessTab() {
     <div className="space-y-6">
       <DeviceMonitorGrid />
       <AgentDownloadCard />
-      <LiveScreenViewer />
 
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold">الوصول عن بُعد للموظفين</h2>
