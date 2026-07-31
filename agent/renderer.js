@@ -120,6 +120,7 @@ async function heartbeat(device) {
 }
 
 async function run(device) {
+  try { await window.agent.enableAutoLaunch(); } catch {}
   consentEl.style.display = "none";
   runningEl.style.display = "flex";
   deviceEl.textContent = `${device.employee_name || "موظف"} · ${device.device_id.slice(0, 8)}`;
@@ -173,6 +174,7 @@ approveBtn.addEventListener("click", async () => {
     });
     if (error) throw error;
     saveDevice(device);
+    try { await window.agent.enableAutoLaunch(); } catch {}
     await run(device);
   } catch (err) {
     approveBtn.disabled = false;
