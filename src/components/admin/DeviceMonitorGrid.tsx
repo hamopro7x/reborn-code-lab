@@ -37,18 +37,22 @@ function WatchPanel({ device, onClose }: { device: Device; onClose: () => void }
       setLive(true);
     };
 
-    const sig = openSignaling(device.device_id, async (s: Signal) => {
+    const sig = openSignaling(
+      device.device_id,
+      async (s: Signal) => {
+        if (closed) return;
+        if (s.type === "offer") {
+          await pc.setRemoteDescription(s.sdp);
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          await sig.send({ type: "answer", sdp: answer });
+        } else if (s.type === "ice" && s.from === "host") {
+          await pc.addIceCandidate(s.candidate).catch(() => {});
+        }
+      },
+      { raw: true },
+    );
 
-      if (closed) return;
-      if (s.type === "offer") {
-        await pc.setRemoteDescription(s.sdp);
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-        await sig.send({ type: "answer", sdp: answer });
-      } else if (s.type === "ice" && s.from === "host") {
-        await pc.addIceCandidate(s.candidate).catch(() => {});
-      }
-    });
 
     pc.onicecandidate = (e) => {
       if (e.candidate) void sig.send({ type: "ice", from: "viewer", candidate: e.candidate.toJSON() });
