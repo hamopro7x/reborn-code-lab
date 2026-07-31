@@ -1,0 +1,90 @@
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { Header } from "@/components/site/Header";
+import { Footer } from "@/components/site/Footer";
+import { WhatsAppFab } from "@/components/site/WhatsAppFab";
+import { useCart } from "@/lib/cart";
+import { useCurrency } from "@/lib/currency-context";
+import { convertFromEgp, formatPrice, computeDiscountedPrice } from "@/lib/format";
+import { Button } from "@/components/ui/button";
+import { Trash2, Plus, Minus, ShoppingBag } from "lucide-react";
+
+export const Route = createFileRoute("/cart")({
+  component: CartPage,
+  head: () => ({
+    meta: [
+      { title: "سلة التسوق | متجر الاشتراكات الرقمية" },
+      { name: "description", content: "راجع المنتجات الرقمية في سلتك، عدّل الكميات، وتابع لإتمام الشراء بأمان وبعملتك المحلية." },
+      { property: "og:title", content: "سلة التسوق | متجر الاشتراكات الرقمية" },
+      { property: "og:description", content: "راجع المنتجات الرقمية في سلتك، عدّل الكميات، وتابع لإتمام الشراء بأمان وبعملتك المحلية." },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://mag-pro1.com/cart" },
+      { name: "twitter:title", content: "سلة التسوق | متجر الاشتراكات الرقمية" },
+      { name: "twitter:description", content: "راجع المنتجات الرقمية في سلتك، عدّل الكميات، وتابع لإتمام الشراء بأمان وبعملتك المحلية." },
+      { name: "robots", content: "noindex, nofollow" },
+    ],
+  }),
+});
+
+function CartPage() {
+  const { items, remove, updateQty, totalEgp, count } = useCart();
+  const { currency, rates } = useCurrency();
+  const navigate = useNavigate();
+  const rate = rates[currency.code] ?? 1;
+
+  return (
+    <div className="min-h-screen flex flex-col">
+      <Header />
+      <main className="flex-1 container mx-auto px-4 py-8 max-w-5xl">
+        <h1 className="text-4xl font-black text-gradient mb-8">سلة التسوق</h1>
+        {items.length === 0 ? (
+          <div className="card-surface rounded-3xl p-16 text-center">
+            <ShoppingBag className="size-16 mx-auto text-muted-foreground mb-4" />
+            <p className="text-lg mb-6">السلة فارغة</p>
+            <Link to="/shop"><Button className="gradient-primary text-white">تصفح المتجر</Button></Link>
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-3 gap-6">
+            <div className="md:col-span-2 space-y-3">
+              {items.map((i) => {
+                const priceEgp = computeDiscountedPrice(i.basePriceEgp, i.discountPercent);
+                const localized = convertFromEgp(priceEgp * i.quantity, rate, currency.code);
+                return (
+                  <div key={i.productId} className="card-surface rounded-2xl p-4 flex items-center gap-4">
+                    <div className="size-16 rounded-xl bg-primary/10 flex items-center justify-center overflow-hidden shrink-0">
+                      {i.image ? <img src={i.image} alt={i.name} className="w-full h-full object-cover" /> : <span className="text-2xl">🎁</span>}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-sm truncate">{i.name}</div>
+                      <div className="text-xs text-muted-foreground">ضمان {i.warrantyDays} يوم</div>
+                      <div className="flex items-center gap-2 mt-2">
+                        <button onClick={() => updateQty(i.productId, i.quantity - 1)} aria-label="تقليل الكمية" className="size-7 rounded-lg card-surface hover:bg-primary/10 flex items-center justify-center"><Minus className="size-3" /></button>
+                        <span className="w-6 text-center text-sm font-bold">{i.quantity}</span>
+                        <button onClick={() => updateQty(i.productId, i.quantity + 1)} aria-label="زيادة الكمية" className="size-7 rounded-lg card-surface hover:bg-primary/10 flex items-center justify-center"><Plus className="size-3" /></button>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-bold text-gradient">{formatPrice(localized, currency)}</div>
+                      <button onClick={() => remove(i.productId)} className="text-destructive text-xs mt-2 hover:underline flex items-center gap-1"><Trash2 className="size-3" />حذف</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div>
+              <div className="card-surface rounded-2xl p-6 sticky top-24 glow-purple">
+                <h2 className="font-bold text-lg mb-4">ملخص الطلب</h2>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between"><span className="text-muted-foreground">عدد المنتجات</span><span>{count}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">الإجمالي</span><span className="font-black text-lg text-gradient">{formatPrice(convertFromEgp(totalEgp, rate, currency.code), currency)}</span></div>
+                </div>
+                <Button onClick={() => navigate({ to: "/checkout" })} className="gradient-primary text-white w-full mt-6 h-11">إتمام الشراء</Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+      <Footer />
+      <WhatsAppFab />
+    </div>
+  );
+}

@@ -1,0 +1,161 @@
+{
+  "version": 1,
+  "sdk_version": "0.26.1",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://shrrrgvcrevujivuyvzv.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "mag-pro1-com",
+      "version": "0.1.0",
+      "title": "mag-pro1.com"
+    },
+    "tools": [
+      {
+        "name": "list_products",
+        "title": "List products",
+        "description": "List store products with prices, discounts, warranty and category. Supports a text search and an active-only filter.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "search": {
+              "type": "string",
+              "description": "Optional text to match against product name or description."
+            },
+            "active_only": {
+              "type": "boolean",
+              "description": "Only return products that are currently active. Defaults to true."
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Maximum number of products to return. Defaults to 25."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_product",
+        "title": "Get product",
+        "description": "Get the full details of one product by its slug, including description, gallery, pricing and approved reviews count.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "slug": {
+              "type": "string",
+              "description": "The product slug, e.g. 'canva-pro'."
+            }
+          },
+          "required": [
+            "slug"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_orders",
+        "title": "List orders",
+        "description": "List store orders visible to the signed-in user, newest first. Can be filtered by status and creation date range.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "description": "Filter by order status, e.g. 'pending', 'confirmed', 'cancelled'."
+            },
+            "from": {
+              "type": "string",
+              "description": "Only orders created on or after this ISO date, e.g. '2026-07-01'."
+            },
+            "to": {
+              "type": "string",
+              "description": "Only orders created on or before this ISO date."
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Maximum number of orders to return. Defaults to 25."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_order",
+        "title": "Get order",
+        "description": "Get one order and its line items by order code, for orders the signed-in user is allowed to see.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "order_code": {
+              "type": "string",
+              "description": "The order code, e.g. 'ORD-A1B2C3D4'."
+            }
+          },
+          "required": [
+            "order_code"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "sales_summary",
+        "title": "Sales summary",
+        "description": "Summarize orders over a date range: order counts by status plus total sales and discounts per currency.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "from": {
+              "type": "string",
+              "description": "Start ISO date of the range, e.g. '2026-07-01'. Defaults to the last 30 days."
+            },
+            "to": {
+              "type": "string",
+              "description": "End ISO date of the range."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
