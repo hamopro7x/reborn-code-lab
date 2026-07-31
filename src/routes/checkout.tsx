@@ -244,16 +244,20 @@ function CheckoutPage() {
                 <div className="card-surface rounded-2xl p-5 mt-4 border-2 border-primary/40">
                   <div className="text-sm text-muted-foreground mb-2">حوّل المبلغ إلى:</div>
                   <div className="font-mono text-2xl font-black text-gradient mb-2 flex items-center gap-2">
-                    {selectedPayment.account_number}
-                    <button onClick={() => { navigator.clipboard.writeText(selectedPayment.account_number); toast.success("تم النسخ"); }} aria-label="نسخ رقم الحساب" className="text-primary hover:scale-110 transition-transform">
-                      <Copy className="size-5" />
-                    </button>
+                    {paymentDetailsQ.data?.account_number ?? "..."}
+                    {paymentDetailsQ.data?.account_number && (
+                      <button onClick={() => { navigator.clipboard.writeText(paymentDetailsQ.data!.account_number); toast.success("تم النسخ"); }} aria-label="نسخ رقم الحساب" className="text-primary hover:scale-110 transition-transform">
+                        <Copy className="size-5" />
+                      </button>
+                    )}
                   </div>
+                  {paymentDetailsQ.data?.account_name && <div className="text-xs text-muted-foreground">{paymentDetailsQ.data.account_name}</div>}
                   <div className="font-bold text-sm text-white mt-2">بعد التحويل اكد الطلب ورفع صورة الاثبات</div>
-                  {selectedPayment.instructions && <div className="text-xs text-muted-foreground mt-2">{selectedPayment.instructions}</div>}
+                  {paymentDetailsQ.data?.instructions && <div className="text-xs text-muted-foreground mt-2">{paymentDetailsQ.data.instructions}</div>}
                   <div className="mt-3 font-black text-lg">المبلغ: <span className="text-gradient">{formatPrice(total, currency)}</span></div>
                 </div>
               )}
+
               <div className="flex gap-2 mt-4">
                 <Button variant="outline" onClick={() => setStep("info")}><ArrowLeft className="size-4 ml-1" />رجوع</Button>
                 <Button onClick={createOrder} disabled={!selectedPayment} className="bg-black hover:bg-black/90 text-white flex-1 h-10 text-sm">تأكيد الطلب ورفع صورة التحويل</Button>
