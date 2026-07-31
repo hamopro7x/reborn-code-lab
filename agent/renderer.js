@@ -26,7 +26,7 @@ const dotEl = document.getElementById("dot");
 const deviceEl = document.getElementById("device");
 
 const STORE = "mag-agent-device-v1";
-const AGENT_VERSION = "1.6.0";
+const AGENT_VERSION = "1.6.1";
 
 
 const updateEl = document.getElementById("update");
@@ -36,6 +36,7 @@ const updBtn = document.getElementById("upd-btn");
 const updBar = document.getElementById("upd-bar");
 const updFill = document.getElementById("upd-fill");
 const updProg = document.getElementById("upd-progress");
+const updLater = document.getElementById("upd-later");
 
 const mb = (n) => (n / 1048576).toFixed(1) + " MB";
 
@@ -53,6 +54,7 @@ window.agent.onUpdateProgress?.(({ received, total, percent }) => {
 async function startDownload(info) {
   if (!info?.url) return;
   updateBusy = true;
+  updLater.style.display = "none";
   updBtn.disabled = true;
   updBtn.textContent = "جارٍ التحميل…";
   updBar.style.display = "block";
@@ -94,9 +96,10 @@ function cmpVersion(a, b) {
 }
 
 let updateBusy = false;
+let dismissedVersion = null;
 
 async function checkUpdate() {
-  if (updateBusy) return;
+  if (updateBusy) return; // تحميل/تثبيت جارٍ — لا نلمس الواجهة
   try {
     const { data } = await supabase
       .from("site_settings")
@@ -108,16 +111,23 @@ async function checkUpdate() {
       updateEl.style.display = "none";
       return;
     }
+    if (info.version === dismissedVersion) return;
     updVerEl.textContent = "v" + info.version;
     updNotesEl.textContent = info.notes || "نسخة أحدث متاحة للتحميل";
     updBtn.textContent = "تحميل التحديث";
     updBtn.disabled = false;
     updBtn.onclick = () => startDownload(info);
+    updLater.style.display = "inline-block";
+    updLater.onclick = () => {
+      dismissedVersion = info.version;
+      updateEl.style.display = "none";
+    };
     updateEl.style.display = "flex";
   } catch {
     /* تجاهل — نحاول لاحقاً */
   }
 }
+
 
 function rand(len) {
   const b = new Uint8Array(len);
@@ -337,7 +347,7 @@ async function run(device) {
   }, 20000);
 
   void checkUpdate();
-  if (!updTimer) updTimer = setInterval(() => void checkUpdate(), 30 * 60 * 1000);
+
 
   channel = supabase.channel(`screenshare-${device.device_id}`, {
     config: { broadcast: { self: false } },
@@ -401,9 +411,12 @@ if (existing) {
   pairingEl.style.display = "none";
 }
 
+// فحص التحديث بشكل مستقل عن الجلسة — كل دقيقة والبرنامج مفتوح
+void checkUpdate();
+updTimer = setInterval(() => void checkUpdate(), 60 * 1000);
+window.addEventListener("focus", () => void checkUpdate());
+
 // إعادة الاتصال تلقائياً لما الشبكة ترجع (بعد قفل اللابتوب/فقد النت)
 window.addEventListener("online", () => {
   setTimeout(() => window.location.reload(), 1500);
-});
-
 });
