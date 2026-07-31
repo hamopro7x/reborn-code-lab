@@ -105,13 +105,15 @@ export function RemoteAccessTab() {
   };
 
   const connect = async (row: RemoteRow) => {
-    window.open(row.remote_url, "_blank", "noopener,noreferrer");
+    setSession(row);
+    setFrameBlocked(false);
     await supabase
       .from("remote_access")
       .update({ last_connected_at: new Date().toISOString() })
       .eq("id", row.id);
     qc.invalidateQueries({ queryKey: ["remote-access"] });
   };
+
 
   const copyCode = (code: string) => {
     navigator.clipboard.writeText(code);
