@@ -4,9 +4,10 @@ import { toast } from "sonner";
 import agentAsset from "../../../public/mag-pro-agent-windows.zip.asset.json";
 
 const steps = [
-  "نزّل ملف الوكيل على جهاز الموظف وفك الضغط.",
-  "شغّل MagProAgent.exe — هيظهر كود من 6 حروف وأرقام.",
-  "اكتب الكود في «مشاهدة شاشة موظف» تحت وهتشوف شاشته مباشرة.",
+  "نزّل ملف الوكيل على جهاز الموظف وفك الضغط (Extract All).",
+  "افتح مجلد MagProAgent-win32-x64 واعمل دبل كليك على MagProAgent.exe.",
+  "لو ظهرت شاشة حماية ويندوز اختر «More info» ثم «Run anyway».",
+  "هيظهر كود من 6 حروف وأرقام — اكتبه في «مشاهدة شاشة موظف» تحت وهتشوف شاشته مباشرة.",
 ];
 
 export function AgentDownloadCard() {
