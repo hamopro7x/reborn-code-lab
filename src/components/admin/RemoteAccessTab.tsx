@@ -119,14 +119,14 @@ export function RemoteAccessTab() {
 
   const connect = async (row: RemoteRow) => {
     setSession(row);
-    setFrameBlocked(true);
-    window.open(row.remote_url, "_blank", "noopener,noreferrer,width=1400,height=900");
+    setFrameBlocked(false);
     await supabase
       .from("remote_access")
       .update({ last_connected_at: new Date().toISOString() })
       .eq("id", row.id);
     qc.invalidateQueries({ queryKey: ["remote-access"] });
   };
+
 
 
   const copyCode = (code: string) => {
