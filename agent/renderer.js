@@ -67,9 +67,9 @@ async function captureScreen() {
       mandatory: {
         chromeMediaSource: "desktop",
         chromeMediaSourceId: sourceId,
-        maxWidth: 1920,
-        maxHeight: 1080,
-        maxFrameRate: 15,
+        maxWidth: 1600,
+        maxHeight: 900,
+        maxFrameRate: 30,
       },
     },
   });
@@ -93,7 +93,32 @@ async function startPeer() {
   pc?.close();
   const s = await getStream();
   pc = new RTCPeerConnection(RTC_CONFIG);
+  pc.getConfiguration?.();
+  s.getVideoTracks().forEach((t) => {
+    t.contentHint = "motion";
+  });
   s.getTracks().forEach((t) => pc.addTrack(t, s));
+
+  // إعدادات ترميز منخفضة الكمون: نحافظ على معدل الإطارات ونقلل الدقة عند الضغط
+  for (const sender of pc.getSenders()) {
+    if (!sender.track || sender.track.kind !== "video") continue;
+    try {
+      const params = sender.getParameters();
+      params.degradationPreference = "maintain-framerate";
+      params.encodings = [
+        {
+          ...(params.encodings?.[0] ?? {}),
+          maxBitrate: 3_000_000,
+          maxFramerate: 30,
+          networkPriority: "high",
+          priority: "high",
+        },
+      ];
+      await sender.setParameters(params);
+    } catch {
+      // بعض النسخ لا تدعم كل الخصائص
+    }
+  }
   pc.onicecandidate = (e) => {
     if (e.candidate) void send({ type: "ice", from: "host", candidate: e.candidate.toJSON() });
   };
