@@ -109,7 +109,8 @@ export function RemoteAccessTab() {
 
   const connect = async (row: RemoteRow) => {
     setSession(row);
-    setFrameBlocked(false);
+    setFrameBlocked(true);
+    window.open(row.remote_url, "_blank", "noopener,noreferrer,width=1400,height=900");
     await supabase
       .from("remote_access")
       .update({ last_connected_at: new Date().toISOString() })
@@ -132,7 +133,7 @@ export function RemoteAccessTab() {
           <p>1. يفتح <span className="font-mono">remotedesktop.google.com/support</span> على اللابتوب ويثبت إضافة Chrome Remote Desktop.</p>
           <p>2. يضغط <b>Generate Code</b> ويبعتلك الكود (صالح 5 دقايق) — أو يعمل <b>Set up remote access</b> بـ PIN دائم.</p>
           <p>3. تسجّل بياناته هنا، وتضغط <b>اتصال</b> وتدخل الكود/الـ PIN فتشوف شاشته وتتحكم فيها.</p>
-          <p className="text-xs">ملاحظة: الجلسة تتفتح داخل الموقع في شاشة كاملة. لو جوجل منعت العرض داخل الإطار، هيظهرلك زر لفتحها في تبويب جديد. ولازم الموظف يوافق على الجلسة من جهازه.</p>
+          <p className="text-xs">ملاحظة: جوجل تمنع عرض الجلسة داخل أي موقع (خطأ 403)، فالجلسة تتفتح في نافذة منفصلة بينما يظل الكود ولوحة التحكم هنا. ولازم الموظف يوافق على الجلسة من جهازه.</p>
         </div>
       </div>
 
