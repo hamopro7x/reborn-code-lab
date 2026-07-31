@@ -109,7 +109,8 @@ export function RemoteAccessTab() {
 
   const connect = async (row: RemoteRow) => {
     setSession(row);
-    setFrameBlocked(false);
+    setFrameBlocked(true);
+    window.open(row.remote_url, "_blank", "noopener,noreferrer,width=1400,height=900");
     await supabase
       .from("remote_access")
       .update({ last_connected_at: new Date().toISOString() })
@@ -132,7 +133,7 @@ export function RemoteAccessTab() {
           <p>1. يفتح <span className="font-mono">remotedesktop.google.com/support</span> على اللابتوب ويثبت إضافة Chrome Remote Desktop.</p>
           <p>2. يضغط <b>Generate Code</b> ويبعتلك الكود (صالح 5 دقايق) — أو يعمل <b>Set up remote access</b> بـ PIN دائم.</p>
           <p>3. تسجّل بياناته هنا، وتضغط <b>اتصال</b> وتدخل الكود/الـ PIN فتشوف شاشته وتتحكم فيها.</p>
-          <p className="text-xs">ملاحظة: الجلسة تتفتح داخل الموقع في شاشة كاملة. لو جوجل منعت العرض داخل الإطار، هيظهرلك زر لفتحها في تبويب جديد. ولازم الموظف يوافق على الجلسة من جهازه.</p>
+          <p className="text-xs">ملاحظة: جوجل تمنع عرض الجلسة داخل أي موقع (خطأ 403)، فالجلسة تتفتح في نافذة منفصلة بينما يظل الكود ولوحة التحكم هنا. ولازم الموظف يوافق على الجلسة من جهازه.</p>
         </div>
       </div>
 
@@ -213,37 +214,26 @@ export function RemoteAccessTab() {
             </DialogTitle>
           </DialogHeader>
 
-          <div className="flex-1 min-h-0 rounded-xl overflow-hidden border border-border bg-black relative">
-            {session && !frameBlocked && (
-              <iframe
-                key={session.id}
-                src={session.remote_url}
-                title={`جلسة ${session.employee_name}`}
-                className="w-full h-full"
-                allow="clipboard-read; clipboard-write; fullscreen"
-                onLoad={(e) => {
-                  // Google blocks framing; a blocked frame stays about:blank-like with no reachable document.
-                  try {
-                    const f = e.currentTarget;
-                    if (!f.contentWindow) setFrameBlocked(true);
-                  } catch {
-                    /* cross-origin load = frame actually rendered */
-                  }
-                }}
-                onError={() => setFrameBlocked(true)}
-              />
-            )}
-            {frameBlocked && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center p-6">
-                <p className="text-sm text-muted-foreground">
-                  جوجل بتمنع عرض جلسة Chrome Remote Desktop داخل الموقع. افتح الجلسة في تبويب جديد.
-                </p>
-                <Button onClick={() => window.open(session!.remote_url, "_blank", "noopener,noreferrer")}>
-                  <ExternalLink className="size-4 ml-1" /> فتح الجلسة في تبويب جديد
+          <div className="flex-1 min-h-0 rounded-xl border border-border bg-card/50 flex flex-col items-center justify-center gap-4 text-center p-6">
+            <MonitorPlay className="size-12 text-primary" />
+            <p className="text-sm font-semibold">الجلسة اتفتحت في نافذة منفصلة</p>
+            <p className="text-sm text-muted-foreground max-w-lg">
+              جوجل تمنع عرض Chrome Remote Desktop داخل أي موقع (خطأ 403)، فالتحكم بيتم من نافذة الجلسة.
+              لو النافذة اتقفلت أو المتصفح منعها، اضغط الزر تحت.
+            </p>
+            {session?.access_code && (
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-lg">{session.access_code}</span>
+                <Button variant="outline" size="sm" onClick={() => copyCode(session.access_code!)}>
+                  <Copy className="size-4 ml-1" /> نسخ الكود
                 </Button>
               </div>
             )}
+            <Button onClick={() => window.open(session!.remote_url, "_blank", "noopener,noreferrer,width=1400,height=900")}>
+              <ExternalLink className="size-4 ml-1" /> فتح نافذة الجلسة
+            </Button>
           </div>
+
 
           <div className="flex justify-between items-center gap-2">
             <p className="text-xs text-muted-foreground">
