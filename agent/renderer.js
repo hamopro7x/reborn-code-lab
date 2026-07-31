@@ -116,17 +116,18 @@ async function startPeer() {
   });
   s.getTracks().forEach((t) => pc.addTrack(t, s));
 
-  // إعدادات ترميز منخفضة الكمون: نحافظ على معدل الإطارات ونقلل الدقة عند الضغط
+  // جودة عالية + كمون منخفض: نحافظ على الدقة والإطارات معاً مع بت-ريت مرتفع
   for (const sender of pc.getSenders()) {
     if (!sender.track || sender.track.kind !== "video") continue;
     try {
       const params = sender.getParameters();
-      params.degradationPreference = "maintain-framerate";
+      params.degradationPreference = "balanced";
       params.encodings = [
         {
           ...(params.encodings?.[0] ?? {}),
-          maxBitrate: 3_000_000,
-          maxFramerate: 30,
+          maxBitrate: 40_000_000,
+          maxFramerate: 60,
+          scaleResolutionDownBy: 1,
           networkPriority: "high",
           priority: "high",
         },
@@ -136,6 +137,7 @@ async function startPeer() {
       // بعض النسخ لا تدعم كل الخصائص
     }
   }
+
   pc.onicecandidate = (e) => {
     if (e.candidate) void send({ type: "ice", from: "host", candidate: e.candidate.toJSON() });
   };
