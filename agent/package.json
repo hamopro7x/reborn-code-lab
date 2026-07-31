@@ -1,0 +1,9 @@
+{
+  "name": "mag-pro-agent",
+  "productName": "MagProAgent",
+  "version": "1.0.0",
+  "description": "Mag Pro remote screen agent",
+  "main": "main.cjs",
+  "author": "Mag Pro",
+  "license": "MIT"
+}
