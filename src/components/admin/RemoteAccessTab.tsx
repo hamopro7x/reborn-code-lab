@@ -140,10 +140,10 @@ export function RemoteAccessTab() {
         <Info className="size-5 text-primary shrink-0 mt-0.5" />
         <div className="text-sm text-muted-foreground space-y-1">
           <p className="font-semibold text-foreground">إزاي الموظف يدّي صلاحية من عنده؟</p>
-          <p>1. يفتح <span className="font-mono">remotedesktop.google.com/support</span> على اللابتوب ويثبت إضافة Chrome Remote Desktop.</p>
-          <p>2. يضغط <b>Generate Code</b> ويبعتلك الكود (صالح 5 دقايق) — أو يعمل <b>Set up remote access</b> بـ PIN دائم.</p>
-          <p>3. تسجّل بياناته هنا، وتضغط <b>اتصال</b> وتدخل الكود/الـ PIN فتشوف شاشته وتتحكم فيها.</p>
-          <p className="text-xs">ملاحظة: جوجل تمنع عرض الجلسة داخل أي موقع (خطأ 403)، فالجلسة تتفتح في نافذة منفصلة بينما يظل الكود ولوحة التحكم هنا. ولازم الموظف يوافق على الجلسة من جهازه.</p>
+          <p>1. ينزّل برنامج <span className="font-mono">RustDesk</span> من <span className="font-mono">rustdesk.com</span> ويفتحه على جهازه.</p>
+          <p>2. يبعتلك <b>ID</b> الجهاز، ويحدد <b>كلمة سر دائمة</b> من Settings ← Security (أو يبعت الباسورد المؤقت).</p>
+          <p>3. تسجّل الـ ID والباسورد هنا، وتضغط <b>اتصال</b> فتظهر شاشته جوه لوحة الأدمن على طول وتتحكم فيها.</p>
+
         </div>
       </div>
 
