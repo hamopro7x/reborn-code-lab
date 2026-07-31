@@ -35,6 +35,8 @@ export const Route = createFileRoute("/auth")({
 function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { next } = Route.useSearch();
@@ -55,6 +57,22 @@ function AuthPage() {
     const normalized = email.trim().toLowerCase();
     setLoading(true);
     try {
+      if (mode === "signup") {
+        const { error: upErr } = await supabase.auth.signUp({
+          email: normalized,
+          password,
+          options: {
+            emailRedirectTo: window.location.origin,
+            data: { full_name: fullName.trim() || normalized.split("@")[0] },
+          },
+        });
+        if (upErr) throw upErr;
+        const { error: inErr } = await supabase.auth.signInWithPassword({ email: normalized, password });
+        if (inErr) throw inErr;
+        toast.success("تم إنشاء حساب الأدمن وتسجيل الدخول");
+        goAfterAuth();
+        return;
+      }
       const { error } = await supabase.auth.signInWithPassword({ email: normalized, password });
       if (error) throw error;
       toast.success("تم تسجيل الدخول");
@@ -65,6 +83,7 @@ function AuthPage() {
       setLoading(false);
     }
   }
+
 
   return (
     <div dir="rtl" className="min-h-screen flex items-center justify-center px-4 py-12 bg-background">
@@ -84,18 +103,34 @@ function AuthPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-3">
+            {mode === "signup" && (
+              <div>
+                <Label>الاسم الكامل</Label>
+                <Input value={fullName} onChange={(e) => setFullName(e.target.value)} autoComplete="name" />
+              </div>
+            )}
             <div>
               <Label>البريد الإلكتروني</Label>
               <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
             </div>
             <div>
               <Label>كلمة المرور</Label>
-              <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} minLength={6} required autoComplete="current-password" />
+              <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} minLength={6} required autoComplete={mode === "signup" ? "new-password" : "current-password"} />
             </div>
             <Button type="submit" disabled={loading} className="gradient-primary text-white w-full h-11">
-              {loading ? "..." : "دخول"}
+              {loading ? "..." : mode === "signup" ? "إنشاء حساب الأدمن" : "دخول"}
             </Button>
           </form>
+
+          <button
+            type="button"
+            onClick={() => setMode(mode === "signup" ? "signin" : "signup")}
+            className="mt-4 w-full text-xs text-muted-foreground hover:text-foreground"
+          >
+            {mode === "signup" ? "لدي حساب بالفعل — تسجيل الدخول" : "لا يوجد أدمن بعد؟ إنشاء أول حساب"}
+          </button>
+
+
 
         </div>
 
