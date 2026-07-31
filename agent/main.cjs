@@ -23,13 +23,57 @@ if (!gotLock) {
 const RUN_KEY = "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run";
 const RUN_NAME = "MagProAgent";
 
-// خطة احتياطية على ويندوز: نكتب مفتاح التشغيل التلقائي في الريجستري مباشرة
+function startupCommand() {
+  return `"${process.execPath}" --hidden`;
+}
+
+// خطط احتياطية على ويندوز: Registry + Startup folder + Scheduled Task.
+// استخدام أكثر من آلية يعالج الأجهزة التي يعطّل فيها ويندوز إحدى طرق بدء التشغيل.
 function registryAutoLaunch() {
   if (process.platform !== "win32") return;
-  const value = `"${process.execPath}" --hidden`;
   execFile(
     "reg.exe",
-    ["add", RUN_KEY, "/v", RUN_NAME, "/t", "REG_SZ", "/d", value, "/f"],
+    ["add", RUN_KEY, "/v", RUN_NAME, "/t", "REG_SZ", "/d", startupCommand(), "/f"],
+    () => {},
+  );
+}
+
+function startupFolderAutoLaunch() {
+  if (process.platform !== "win32") return;
+  const fs = require("fs");
+  try {
+    const startupDir = path.join(
+      process.env.APPDATA || path.join(require("os").homedir(), "AppData", "Roaming"),
+      "Microsoft",
+      "Windows",
+      "Start Menu",
+      "Programs",
+      "Startup",
+    );
+    fs.mkdirSync(startupDir, { recursive: true });
+    const commandFile = path.join(startupDir, `${RUN_NAME}.cmd`);
+    fs.writeFileSync(commandFile, `@echo off\r\nstart "" ${startupCommand()}\r\n`, "utf8");
+  } catch {
+    // ignore
+  }
+}
+
+function scheduledTaskAutoLaunch() {
+  if (process.platform !== "win32") return;
+  execFile(
+    "schtasks.exe",
+    [
+      "/Create",
+      "/TN",
+      RUN_NAME,
+      "/SC",
+      "ONLOGON",
+      "/TR",
+      startupCommand(),
+      "/RL",
+      "LIMITED",
+      "/F",
+    ],
     () => {},
   );
 }
@@ -46,8 +90,10 @@ function enableAutoLaunch() {
   } catch {
     // ignore
   }
-  // نتأكد دايماً: لو الإعداد فشل أو المسار اتغير بعد إعادة التشغيل
+  // نتأكد دايماً: لو إعداد اتعطّل أو المسار اتغير بعد إعادة التشغيل.
   registryAutoLaunch();
+  startupFolderAutoLaunch();
+  scheduledTaskAutoLaunch();
 }
 
 
