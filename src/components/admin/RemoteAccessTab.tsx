@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { toast } from "sonner";
 import { Plus, Trash2, Edit, ExternalLink, Copy, MonitorPlay, Loader2 } from "lucide-react";
 import { LiveScreenViewer } from "./LiveScreenViewer";
+import { AgentDownloadCard } from "./AgentDownloadCard";
 
 type RemoteRow = {
   id: string;
@@ -194,6 +195,7 @@ export function RemoteAccessTab() {
   return (
 
     <div className="space-y-6">
+      <AgentDownloadCard />
       <LiveScreenViewer />
 
       <div className="flex items-center justify-between">
