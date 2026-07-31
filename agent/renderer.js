@@ -54,6 +54,7 @@ window.agent.onUpdateProgress?.(({ received, total, percent }) => {
 async function startDownload(info) {
   if (!info?.url) return;
   updateBusy = true;
+  updLater.style.display = "none";
   updBtn.disabled = true;
   updBtn.textContent = "جارٍ التحميل…";
   updBar.style.display = "block";
@@ -346,7 +347,7 @@ async function run(device) {
   }, 20000);
 
   void checkUpdate();
-  if (!updTimer) updTimer = setInterval(() => void checkUpdate(), 30 * 60 * 1000);
+
 
   channel = supabase.channel(`screenshare-${device.device_id}`, {
     config: { broadcast: { self: false } },
