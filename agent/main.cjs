@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, desktopCapturer, Tray, Menu, nativeImage } = require("electron");
+const { app, BrowserWindow, ipcMain, desktopCapturer, Tray, Menu, nativeImage, shell } = require("electron");
 const path = require("path");
 
 let win = null;
@@ -64,6 +64,11 @@ function createWindow() {
 ipcMain.handle("get-screen-source", async () => {
   const sources = await desktopCapturer.getSources({ types: ["screen"] });
   return sources.length ? sources[0].id : null;
+});
+
+ipcMain.handle("open-external", (_e, url) => {
+  if (typeof url === "string" && /^https:\/\//.test(url)) void shell.openExternal(url);
+  return true;
 });
 
 ipcMain.handle("enable-auto-launch", () => {

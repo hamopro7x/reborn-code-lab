@@ -23,6 +23,44 @@ const dotEl = document.getElementById("dot");
 const deviceEl = document.getElementById("device");
 
 const STORE = "mag-agent-device-v1";
+const AGENT_VERSION = "1.1.0";
+
+const updateEl = document.getElementById("update");
+const updVerEl = document.getElementById("upd-ver");
+const updNotesEl = document.getElementById("upd-notes");
+const updBtn = document.getElementById("upd-btn");
+
+function cmpVersion(a, b) {
+  const pa = String(a).split(".").map(Number);
+  const pb = String(b).split(".").map(Number);
+  for (let i = 0; i < 3; i++) {
+    if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) - (pb[i] || 0);
+  }
+  return 0;
+}
+
+async function checkUpdate() {
+  try {
+    const { data } = await supabase
+      .from("site_settings")
+      .select("value")
+      .eq("key", "agent_update")
+      .maybeSingle();
+    const info = data?.value;
+    if (!info?.version || cmpVersion(info.version, AGENT_VERSION) <= 0) {
+      updateEl.style.display = "none";
+      return;
+    }
+    updVerEl.textContent = "v" + info.version;
+    updNotesEl.textContent = info.notes || "نسخة أحدث متاحة للتحميل";
+    updBtn.onclick = () => {
+      if (info.url) void window.agent.openExternal(info.url);
+    };
+    updateEl.style.display = "flex";
+  } catch {
+    /* تجاهل — نحاول لاحقاً */
+  }
+}
 
 function rand(len) {
   const b = new Uint8Array(len);
@@ -172,6 +210,9 @@ async function run(device) {
 
   await heartbeat(device);
   setInterval(() => heartbeat(device), 20000);
+
+  void checkUpdate();
+  setInterval(() => void checkUpdate(), 30 * 60 * 1000);
 
   channel = supabase.channel(`screenshare-${device.device_id}`, {
     config: { broadcast: { self: false } },
