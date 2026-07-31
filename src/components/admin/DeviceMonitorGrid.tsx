@@ -38,6 +38,7 @@ function WatchPanel({ device, onClose }: { device: Device; onClose: () => void }
     };
 
     const sig = openSignaling(device.device_id, async (s: Signal) => {
+
       if (closed) return;
       if (s.type === "offer") {
         await pc.setRemoteDescription(s.sdp);
