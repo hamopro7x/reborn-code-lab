@@ -160,7 +160,12 @@ ipcMain.handle("download-update", (_e, url) => {
   }
   const fs = require("fs");
   const os = require("os");
-  const target = path.join(os.tmpdir(), "mag-pro-agent-update.zip");
+  const isSetup = /\.exe(\?|$)/i.test(url);
+  const target = path.join(
+    os.tmpdir(),
+    isSetup ? "mag-pro-agent-setup.exe" : "mag-pro-agent-update.zip",
+  );
+
   return new Promise((resolve, reject) => {
     httpGet(
       url,
@@ -201,6 +206,17 @@ ipcMain.handle("install-update", async () => {
     await shell.openPath(downloadedFile);
     return true;
   }
+  // النسخة الجديدة عبارة عن ملف تثبيت (Setup.exe): نشغّله بصمت ثم نخرج
+  if (/\.exe$/i.test(downloadedFile)) {
+    const { spawn } = require("child_process");
+    spawn(downloadedFile, ["/S"], { detached: true, stdio: "ignore" }).unref();
+    setTimeout(() => {
+      app.isQuiting = true;
+      app.quit();
+    }, 1200);
+    return true;
+  }
+
   await new Promise((resolve, reject) => {
     execFile(
       "powershell.exe",
