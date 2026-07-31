@@ -278,8 +278,9 @@ export function RemoteAccessTab() {
               <Input placeholder="لابتوب المكتب" value={form.device_label} onChange={(e) => setForm({ ...form, device_label: e.target.value })} />
             </div>
             <div>
-              <Label>رابط جلسة Chrome Remote Desktop *</Label>
-              <Input dir="ltr" value={form.remote_url} onChange={(e) => setForm({ ...form, remote_url: e.target.value })} />
+              <Label>RustDesk ID أو رابط جلسة *</Label>
+              <Input dir="ltr" placeholder="123456789" value={form.remote_url} onChange={(e) => setForm({ ...form, remote_url: e.target.value })} />
+
             </div>
             <div>
               <Label>كود الوصول / PIN</Label>
