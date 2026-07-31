@@ -26,11 +26,21 @@ type RemoteRow = {
 const emptyForm = {
   employee_name: "",
   device_label: "",
-  remote_url: "https://remotedesktop.google.com/access",
+  remote_url: "",
   access_code: "",
   notes: "",
   is_active: true,
 };
+
+// RustDesk web client يدعم العرض داخل الموقع، وبيقبل ID الجهاز أو رابط جلسة كامل
+const RUSTDESK_WEB = "https://rustdesk.com/web/";
+const viewerUrl = (row: RemoteRow) => {
+  const v = (row.remote_url ?? "").trim();
+  if (/^https?:\/\//i.test(v)) return v;
+  const id = v.replace(/\s+/g, "");
+  return id ? `${RUSTDESK_WEB}#/connect/${encodeURIComponent(id)}` : RUSTDESK_WEB;
+};
+
 
 export function RemoteAccessTab() {
   const qc = useQueryClient();
