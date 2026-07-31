@@ -74,12 +74,21 @@ ipcMain.handle("enable-auto-launch", () => {
 
 app.whenReady().then(() => {
   createWindow();
+  enableAutoLaunch();
   try {
     tray = new Tray(nativeImage.createEmpty());
     tray.setToolTip("Mag Pro Agent");
     tray.setContextMenu(
       Menu.buildFromTemplate([
-        { label: "إظهار النافذة", click: () => win && win.show() },
+        {
+          label: "إظهار النافذة",
+          click: () => {
+            if (win) {
+              win.setSkipTaskbar(false);
+              win.show();
+            }
+          },
+        },
         {
           label: "إنهاء",
           click: () => {
@@ -89,12 +98,17 @@ app.whenReady().then(() => {
         },
       ]),
     );
-    tray.on("click", () => win && win.show());
+    tray.on("click", () => {
+      if (win) {
+        win.setSkipTaskbar(false);
+        win.show();
+      }
+    });
   } catch {
     // tray optional
   }
 });
 
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") app.quit();
-});
+// لا نغلق التطبيق عند إخفاء النافذة — يستمر في الخلفية
+app.on("window-all-closed", () => {});
+
