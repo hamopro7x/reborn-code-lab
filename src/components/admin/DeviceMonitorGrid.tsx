@@ -40,7 +40,7 @@ function WatchPanel({ device, onClose }: { device: Device; onClose: () => void }
         const sorted = [...caps.codecs].sort(
           (a, b) => order.indexOf(a.mimeType) - order.indexOf(b.mimeType),
         );
-        pc.addTransceiver("video", { direction: "recvonly" }).setCodecPreferences?.(sorted);
+        pc.addTransceiver("video", { direction: "recvonly" }).setCodecPreferences?.(sorted as unknown as RTCRtpCodec[]);
       }
     } catch {
       /* غير مدعوم */
