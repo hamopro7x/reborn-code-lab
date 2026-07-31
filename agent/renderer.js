@@ -236,20 +236,21 @@ async function startPeer() {
   pc = new RTCPeerConnection(RTC_CONFIG);
   pc.getConfiguration?.();
   s.getVideoTracks().forEach((t) => {
-    t.contentHint = "motion";
+    t.contentHint = "text"; // يعطي الأولوية للحدة والوضوح على الحركة
   });
   s.getTracks().forEach((t) => pc.addTrack(t, s));
+  preferCodec(pc);
 
-  // جودة عالية + كمون منخفض: نحافظ على الدقة والإطارات معاً مع بت-ريت مرتفع
+  // جودة عالية جداً + حفاظ على الدقة الأصلية للشاشة
   for (const sender of pc.getSenders()) {
     if (!sender.track || sender.track.kind !== "video") continue;
     try {
       const params = sender.getParameters();
-      params.degradationPreference = "balanced";
+      params.degradationPreference = "maintain-resolution";
       params.encodings = [
         {
           ...(params.encodings?.[0] ?? {}),
-          maxBitrate: 40_000_000,
+          maxBitrate: 60_000_000,
           maxFramerate: 60,
           scaleResolutionDownBy: 1,
           networkPriority: "high",
