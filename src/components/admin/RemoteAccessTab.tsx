@@ -26,11 +26,21 @@ type RemoteRow = {
 const emptyForm = {
   employee_name: "",
   device_label: "",
-  remote_url: "https://remotedesktop.google.com/access",
+  remote_url: "",
   access_code: "",
   notes: "",
   is_active: true,
 };
+
+// RustDesk web client يدعم العرض داخل الموقع، وبيقبل ID الجهاز أو رابط جلسة كامل
+const RUSTDESK_WEB = "https://rustdesk.com/web/";
+const viewerUrl = (row: RemoteRow) => {
+  const v = (row.remote_url ?? "").trim();
+  if (/^https?:\/\//i.test(v)) return v;
+  const id = v.replace(/\s+/g, "");
+  return id ? `${RUSTDESK_WEB}#/connect/${encodeURIComponent(id)}` : RUSTDESK_WEB;
+};
+
 
 export function RemoteAccessTab() {
   const qc = useQueryClient();
@@ -109,14 +119,14 @@ export function RemoteAccessTab() {
 
   const connect = async (row: RemoteRow) => {
     setSession(row);
-    setFrameBlocked(true);
-    window.open(row.remote_url, "_blank", "noopener,noreferrer,width=1400,height=900");
+    setFrameBlocked(false);
     await supabase
       .from("remote_access")
       .update({ last_connected_at: new Date().toISOString() })
       .eq("id", row.id);
     qc.invalidateQueries({ queryKey: ["remote-access"] });
   };
+
 
 
   const copyCode = (code: string) => {
@@ -130,10 +140,10 @@ export function RemoteAccessTab() {
         <Info className="size-5 text-primary shrink-0 mt-0.5" />
         <div className="text-sm text-muted-foreground space-y-1">
           <p className="font-semibold text-foreground">إزاي الموظف يدّي صلاحية من عنده؟</p>
-          <p>1. يفتح <span className="font-mono">remotedesktop.google.com/support</span> على اللابتوب ويثبت إضافة Chrome Remote Desktop.</p>
-          <p>2. يضغط <b>Generate Code</b> ويبعتلك الكود (صالح 5 دقايق) — أو يعمل <b>Set up remote access</b> بـ PIN دائم.</p>
-          <p>3. تسجّل بياناته هنا، وتضغط <b>اتصال</b> وتدخل الكود/الـ PIN فتشوف شاشته وتتحكم فيها.</p>
-          <p className="text-xs">ملاحظة: جوجل تمنع عرض الجلسة داخل أي موقع (خطأ 403)، فالجلسة تتفتح في نافذة منفصلة بينما يظل الكود ولوحة التحكم هنا. ولازم الموظف يوافق على الجلسة من جهازه.</p>
+          <p>1. ينزّل برنامج <span className="font-mono">RustDesk</span> من <span className="font-mono">rustdesk.com</span> ويفتحه على جهازه.</p>
+          <p>2. يبعتلك <b>ID</b> الجهاز، ويحدد <b>كلمة سر دائمة</b> من Settings ← Security (أو يبعت الباسورد المؤقت).</p>
+          <p>3. تسجّل الـ ID والباسورد هنا، وتضغط <b>اتصال</b> فتظهر شاشته جوه لوحة الأدمن على طول وتتحكم فيها.</p>
+
         </div>
       </div>
 
@@ -214,38 +224,41 @@ export function RemoteAccessTab() {
             </DialogTitle>
           </DialogHeader>
 
-          <div className="flex-1 min-h-0 rounded-xl border border-border bg-card/50 flex flex-col items-center justify-center gap-4 text-center p-6">
-            <MonitorPlay className="size-12 text-primary" />
-            <p className="text-sm font-semibold">الجلسة اتفتحت في نافذة منفصلة</p>
-            <p className="text-sm text-muted-foreground max-w-lg">
-              جوجل تمنع عرض Chrome Remote Desktop داخل أي موقع (خطأ 403)، فالتحكم بيتم من نافذة الجلسة.
-              لو النافذة اتقفلت أو المتصفح منعها، اضغط الزر تحت.
-            </p>
-            {session?.access_code && (
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-lg">{session.access_code}</span>
-                <Button variant="outline" size="sm" onClick={() => copyCode(session.access_code!)}>
-                  <Copy className="size-4 ml-1" /> نسخ الكود
+          <div className="flex-1 min-h-0 rounded-xl border border-border overflow-hidden bg-black/40">
+            {session && !frameBlocked ? (
+              <iframe
+                key={session.id}
+                src={viewerUrl(session)}
+                title={`جلسة ${session.employee_name}`}
+                className="w-full h-full"
+                allow="clipboard-read; clipboard-write; fullscreen; microphone"
+              />
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center gap-4 text-center p-6">
+                <MonitorPlay className="size-12 text-primary" />
+                <p className="text-sm font-semibold">مش قادر يعرض الجلسة جوه الموقع</p>
+                <Button onClick={() => window.open(viewerUrl(session!), "_blank", "noopener,noreferrer")}>
+                  <ExternalLink className="size-4 ml-1" /> فتح في تبويب جديد
                 </Button>
               </div>
             )}
-            <Button onClick={() => window.open(session!.remote_url, "_blank", "noopener,noreferrer,width=1400,height=900")}>
-              <ExternalLink className="size-4 ml-1" /> فتح نافذة الجلسة
-            </Button>
           </div>
-
 
           <div className="flex justify-between items-center gap-2">
             <p className="text-xs text-muted-foreground">
-              لازم الموظف يوافق على الجلسة من جهازه، وتدخل الكود/الـ PIN لبدء التحكم.
+              اكتب ID الجهاز في العارض ثم كلمة السر ({session?.access_code ? "المسجّلة فوق" : "اللي عند الموظف"}) لبدء التحكم.
             </p>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => window.open(session!.remote_url, "_blank", "noopener,noreferrer")}>
+              <Button variant="outline" size="sm" onClick={() => setFrameBlocked((v) => !v)}>
+                {frameBlocked ? "إعادة العرض داخل الموقع" : "العرض مش ظاهر؟"}
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => window.open(viewerUrl(session!), "_blank", "noopener,noreferrer")}>
                 <ExternalLink className="size-4 ml-1" /> تبويب جديد
               </Button>
               <Button variant="outline" size="sm" onClick={() => setSession(null)}>إغلاق</Button>
             </div>
           </div>
+
         </DialogContent>
       </Dialog>
 
@@ -265,8 +278,9 @@ export function RemoteAccessTab() {
               <Input placeholder="لابتوب المكتب" value={form.device_label} onChange={(e) => setForm({ ...form, device_label: e.target.value })} />
             </div>
             <div>
-              <Label>رابط جلسة Chrome Remote Desktop *</Label>
-              <Input dir="ltr" value={form.remote_url} onChange={(e) => setForm({ ...form, remote_url: e.target.value })} />
+              <Label>RustDesk ID أو رابط جلسة *</Label>
+              <Input dir="ltr" placeholder="123456789" value={form.remote_url} onChange={(e) => setForm({ ...form, remote_url: e.target.value })} />
+
             </div>
             <div>
               <Label>كود الوصول / PIN</Label>
