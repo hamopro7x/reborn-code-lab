@@ -83,6 +83,39 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_pairings: {
+        Row: {
+          code: string
+          created_at: string
+          device_id: string
+          device_label: string | null
+          employee_name: string | null
+          last_seen_at: string
+          os: string | null
+          secret_hash: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          device_id: string
+          device_label?: string | null
+          employee_name?: string | null
+          last_seen_at?: string
+          os?: string | null
+          secret_hash: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          device_id?: string
+          device_label?: string | null
+          employee_name?: string | null
+          last_seen_at?: string
+          os?: string | null
+          secret_hash?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           active: boolean
@@ -877,9 +910,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      agent_claim_pairing: { Args: { p_code: string }; Returns: Json }
       agent_heartbeat: {
         Args: { p_device_id: string; p_secret: string }
         Returns: boolean
+      }
+      agent_pair_request: {
+        Args: {
+          p_device_id: string
+          p_device_label: string
+          p_employee_name: string
+          p_os: string
+          p_secret: string
+        }
+        Returns: string
       }
       agent_register: {
         Args: {

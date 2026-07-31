@@ -16,6 +16,9 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
 
 const consentEl = document.getElementById("consent");
 const runningEl = document.getElementById("running");
+const pairingEl = document.getElementById("pairing");
+const pairCodeEl = document.getElementById("pair-code");
+const pairStatusEl = document.getElementById("pair-status");
 const nameEl = document.getElementById("employee-name");
 const approveBtn = document.getElementById("approve");
 const statusEl = document.getElementById("status");
@@ -23,7 +26,8 @@ const dotEl = document.getElementById("dot");
 const deviceEl = document.getElementById("device");
 
 const STORE = "mag-agent-device-v1";
-const AGENT_VERSION = "1.5.0";
+const AGENT_VERSION = "1.6.0";
+
 
 const updateEl = document.getElementById("update");
 const updVerEl = document.getElementById("upd-ver");
@@ -245,27 +249,95 @@ async function startPeer() {
 
 async function heartbeat(device) {
   try {
-    await supabase.rpc("agent_heartbeat", {
+    const { data } = await supabase.rpc("agent_heartbeat", {
       p_device_id: device.device_id,
       p_secret: device.secret,
     });
+    return data === true;
   } catch {
-    /* offline — retry next tick */
+    return null; // offline — retry next tick
   }
 }
 
+let hbTimer = null;
+let pairTimer = null;
+let updTimer = null;
+let running = false;
+
+function stopSession() {
+  running = false;
+  if (hbTimer) clearInterval(hbTimer);
+  hbTimer = null;
+  try { pc?.close(); } catch {}
+  pc = null;
+  try { if (channel) supabase.removeChannel(channel); } catch {}
+  channel = null;
+}
+
+// ============ شاشة مفتاح الربط ============
+async function requestPairing(device) {
+  const { data, error } = await supabase.rpc("agent_pair_request", {
+    p_device_id: device.device_id,
+    p_secret: device.secret,
+    p_employee_name: device.employee_name || null,
+    p_device_label: osLabel() + " · " + (navigator.platform || ""),
+    p_os: osLabel(),
+  });
+  if (error) throw error;
+  return data;
+}
+
+async function showPairing(device, note) {
+  stopSession();
+  consentEl.style.display = "none";
+  runningEl.style.display = "none";
+  pairingEl.style.display = "flex";
+  pairStatusEl.textContent = note || "في انتظار موافقة الإدارة…";
+
+  const tick = async () => {
+    try {
+      const code = await requestPairing(device);
+      if (code === "REGISTERED") {
+        if (pairTimer) clearInterval(pairTimer);
+        pairTimer = null;
+        pairingEl.style.display = "none";
+        await run(device);
+        return;
+      }
+      pairCodeEl.textContent = code;
+      pairStatusEl.textContent = "في انتظار موافقة الإدارة…";
+    } catch (err) {
+      pairStatusEl.textContent = "تعذّر الاتصال بالسيرفر — إعادة المحاولة…";
+    }
+  };
+
+  await tick();
+  if (!pairTimer) pairTimer = setInterval(() => void tick(), 5000);
+}
+
 async function run(device) {
+  if (running) return;
+  running = true;
   try { await window.agent.enableAutoLaunch(); } catch {}
   consentEl.style.display = "none";
+  pairingEl.style.display = "none";
   runningEl.style.display = "flex";
   deviceEl.textContent = `${device.employee_name || "موظف"} · ${device.device_id.slice(0, 8)}`;
   setStatus("جارٍ الاتصال بالسيرفر…", false);
 
-  await heartbeat(device);
-  setInterval(() => heartbeat(device), 20000);
+  const first = await heartbeat(device);
+  if (first === false) {
+    // الإدارة حذفت الجهاز — نطلب مفتاح ربط جديد
+    return showPairing(device, "تم حذف تسجيل هذا الجهاز — سلّم المفتاح للإدارة");
+  }
+
+  hbTimer = setInterval(async () => {
+    const ok = await heartbeat(device);
+    if (ok === false) void showPairing(device, "تم حذف تسجيل هذا الجهاز — سلّم المفتاح للإدارة");
+  }, 20000);
 
   void checkUpdate();
-  setInterval(() => void checkUpdate(), 30 * 60 * 1000);
+  if (!updTimer) updTimer = setInterval(() => void checkUpdate(), 30 * 60 * 1000);
 
   channel = supabase.channel(`screenshare-${device.device_id}`, {
     config: { broadcast: { self: false } },
@@ -326,9 +398,12 @@ if (existing) {
 } else {
   consentEl.style.display = "flex";
   runningEl.style.display = "none";
+  pairingEl.style.display = "none";
 }
 
 // إعادة الاتصال تلقائياً لما الشبكة ترجع (بعد قفل اللابتوب/فقد النت)
 window.addEventListener("online", () => {
   setTimeout(() => window.location.reload(), 1500);
+});
+
 });

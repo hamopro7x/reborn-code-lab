@@ -54,6 +54,12 @@
         font-size: 11px; padding: 6px 12px; border-radius: 999px;
         background: #16213e; border: 1px solid #24365f; opacity: .9;
       }
+      .code {
+        font-family: ui-monospace, monospace; font-size: 30px; letter-spacing: 6px;
+        font-weight: 700; color: #93c5fd; background: #14263f;
+        border: 1px solid #2f4d80; border-radius: 14px; padding: 12px 22px;
+      }
+
     </style>
   </head>
   <body>
@@ -66,6 +72,15 @@
       <input id="employee-name" placeholder="اسم الموظف" />
       <button id="approve">أوافق وسجّل الجهاز</button>
     </div>
+
+    <div class="screen" id="pairing">
+      <h1>مفتاح ربط الجهاز</h1>
+      <p>سلّم هذا المفتاح للإدارة ليتم إضافة الجهاز من لوحة التحكم. البرنامج سيتصل تلقائيًا بعد إضافته.</p>
+      <div class="code" id="pair-code">--------</div>
+      <div class="status" id="pair-status">في انتظار موافقة الإدارة…</div>
+      <div class="badge">اتركه مفتوحًا أو أغلق النافذة — يعمل في الخلفية</div>
+    </div>
+
 
     <div class="screen" id="running">
       <h1>وكيل المراقبة — Mag Pro</h1>
