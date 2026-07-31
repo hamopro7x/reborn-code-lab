@@ -36,6 +36,7 @@ const updBtn = document.getElementById("upd-btn");
 const updBar = document.getElementById("upd-bar");
 const updFill = document.getElementById("upd-fill");
 const updProg = document.getElementById("upd-progress");
+const updLater = document.getElementById("upd-later");
 
 const mb = (n) => (n / 1048576).toFixed(1) + " MB";
 
@@ -94,9 +95,10 @@ function cmpVersion(a, b) {
 }
 
 let updateBusy = false;
+let dismissedVersion = null;
 
 async function checkUpdate() {
-  if (updateBusy) return;
+  if (updateBusy) return; // تحميل/تثبيت جارٍ — لا نلمس الواجهة
   try {
     const { data } = await supabase
       .from("site_settings")
@@ -108,16 +110,23 @@ async function checkUpdate() {
       updateEl.style.display = "none";
       return;
     }
+    if (info.version === dismissedVersion) return;
     updVerEl.textContent = "v" + info.version;
     updNotesEl.textContent = info.notes || "نسخة أحدث متاحة للتحميل";
     updBtn.textContent = "تحميل التحديث";
     updBtn.disabled = false;
     updBtn.onclick = () => startDownload(info);
+    updLater.style.display = "inline-block";
+    updLater.onclick = () => {
+      dismissedVersion = info.version;
+      updateEl.style.display = "none";
+    };
     updateEl.style.display = "flex";
   } catch {
     /* تجاهل — نحاول لاحقاً */
   }
 }
+
 
 function rand(len) {
   const b = new Uint8Array(len);
