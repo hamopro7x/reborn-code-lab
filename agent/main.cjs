@@ -90,6 +90,115 @@ ipcMain.handle("open-external", (_e, url) => {
   return true;
 });
 
+// ===== تحديث داخلي: تنزيل بشريط تقدّم ثم تثبيت =====
+let downloadedFile = null;
+
+function httpGet(url, onResponse, onError, redirects = 0) {
+  const https = require("https");
+  https
+    .get(url, (res) => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        if (redirects > 5) return onError(new Error("عدد كبير من التحويلات"));
+        res.resume();
+        return httpGet(res.headers.location, onResponse, onError, redirects + 1);
+      }
+      if (res.statusCode !== 200) return onError(new Error("HTTP " + res.statusCode));
+      onResponse(res);
+    })
+    .on("error", onError);
+}
+
+ipcMain.handle("download-update", (_e, url) => {
+  if (typeof url !== "string" || !/^https:\/\//.test(url)) {
+    return Promise.reject(new Error("رابط غير صالح"));
+  }
+  const fs = require("fs");
+  const os = require("os");
+  const target = path.join(os.tmpdir(), "mag-pro-agent-update.zip");
+  return new Promise((resolve, reject) => {
+    httpGet(
+      url,
+      (res) => {
+        const total = Number(res.headers["content-length"] || 0);
+        let received = 0;
+        const file = fs.createWriteStream(target);
+        res.on("data", (chunk) => {
+          received += chunk.length;
+          if (win && !win.isDestroyed()) {
+            win.webContents.send("update-progress", {
+              received,
+              total,
+              percent: total ? Math.round((received / total) * 100) : null,
+            });
+          }
+        });
+        res.pipe(file);
+        file.on("finish", () => {
+          file.close(() => {
+            downloadedFile = target;
+            resolve({ path: target });
+          });
+        });
+        file.on("error", reject);
+      },
+      reject,
+    );
+  });
+});
+
+ipcMain.handle("install-update", async () => {
+  if (!downloadedFile) throw new Error("لم يتم تنزيل التحديث");
+  const fs = require("fs");
+  const os = require("os");
+  const dest = path.join(os.homedir(), "MagProAgent");
+  if (process.platform !== "win32") {
+    await shell.openPath(downloadedFile);
+    return true;
+  }
+  await new Promise((resolve, reject) => {
+    execFile(
+      "powershell.exe",
+      [
+        "-NoProfile",
+        "-Command",
+        `Expand-Archive -LiteralPath '${downloadedFile}' -DestinationPath '${dest}' -Force`,
+      ],
+      (err) => (err ? reject(err) : resolve()),
+    );
+  });
+  // نبحث عن الملف التنفيذي الجديد ونشغّله ثم نخرج
+  const findExe = (dir, depth = 0) => {
+    if (depth > 3) return null;
+    let entries = [];
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return null;
+    }
+    for (const en of entries) {
+      const p = path.join(dir, en.name);
+      if (en.isFile() && /\.exe$/i.test(en.name) && /mag/i.test(en.name)) return p;
+    }
+    for (const en of entries) {
+      if (en.isDirectory()) {
+        const found = findExe(path.join(dir, en.name), depth + 1);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+  const exe = findExe(dest);
+  if (!exe) throw new Error("لم يتم العثور على ملف التثبيت");
+  const { spawn } = require("child_process");
+  spawn(exe, [], { detached: true, stdio: "ignore" }).unref();
+  setTimeout(() => {
+    app.isQuiting = true;
+    app.quit();
+  }, 1200);
+  return true;
+});
+
+
 ipcMain.handle("enable-auto-launch", () => {
   enableAutoLaunch();
   return true;
