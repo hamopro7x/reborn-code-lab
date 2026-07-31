@@ -33,7 +33,7 @@ function WatchPanel({ device, onClose }: { device: Device; onClose: () => void }
 
     // نُفضّل H264 ثم VP9 للمشاهدة (وضوح أفضل للنصوص)
     try {
-      const caps = (RTCRtpReceiver as unknown as { getCapabilities?: (k: string) => { codecs: RTCRtpCodecCapability[] } | null })
+      const caps = (RTCRtpReceiver as unknown as { getCapabilities?: (k: string) => { codecs: Array<{ mimeType: string }> } | null })
         .getCapabilities?.("video");
       if (caps) {
         const order = ["video/H264", "video/VP9", "video/AV1", "video/VP8"];
