@@ -196,6 +196,70 @@ export function RemoteAccessTab() {
         </div>
       )}
 
+      <Dialog open={!!session} onOpenChange={(v) => !v && setSession(null)}>
+        <DialogContent className="max-w-[98vw] w-[98vw] h-[92vh] p-3 flex flex-col gap-3">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <MonitorPlay className="size-4" />
+              جلسة {session?.employee_name}
+              {session?.access_code && (
+                <span className="font-mono text-xs text-muted-foreground">كود: {session.access_code}</span>
+              )}
+              {session?.access_code && (
+                <Button variant="ghost" size="icon" aria-label="نسخ الكود" onClick={() => copyCode(session.access_code!)}>
+                  <Copy className="size-4" />
+                </Button>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex-1 min-h-0 rounded-xl overflow-hidden border border-border bg-black relative">
+            {session && !frameBlocked && (
+              <iframe
+                key={session.id}
+                src={session.remote_url}
+                title={`جلسة ${session.employee_name}`}
+                className="w-full h-full"
+                allow="clipboard-read; clipboard-write; fullscreen"
+                onLoad={(e) => {
+                  // Google blocks framing; a blocked frame stays about:blank-like with no reachable document.
+                  try {
+                    const f = e.currentTarget;
+                    if (!f.contentWindow) setFrameBlocked(true);
+                  } catch {
+                    /* cross-origin load = frame actually rendered */
+                  }
+                }}
+                onError={() => setFrameBlocked(true)}
+              />
+            )}
+            {frameBlocked && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center p-6">
+                <p className="text-sm text-muted-foreground">
+                  جوجل بتمنع عرض جلسة Chrome Remote Desktop داخل الموقع. افتح الجلسة في تبويب جديد.
+                </p>
+                <Button onClick={() => window.open(session!.remote_url, "_blank", "noopener,noreferrer")}>
+                  <ExternalLink className="size-4 ml-1" /> فتح الجلسة في تبويب جديد
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-between items-center gap-2">
+            <p className="text-xs text-muted-foreground">
+              لازم الموظف يوافق على الجلسة من جهازه، وتدخل الكود/الـ PIN لبدء التحكم.
+            </p>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => window.open(session!.remote_url, "_blank", "noopener,noreferrer")}>
+                <ExternalLink className="size-4 ml-1" /> تبويب جديد
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setSession(null)}>إغلاق</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
