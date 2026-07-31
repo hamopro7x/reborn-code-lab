@@ -103,18 +103,34 @@ function AuthPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-3">
+            {mode === "signup" && (
+              <div>
+                <Label>الاسم الكامل</Label>
+                <Input value={fullName} onChange={(e) => setFullName(e.target.value)} autoComplete="name" />
+              </div>
+            )}
             <div>
               <Label>البريد الإلكتروني</Label>
               <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
             </div>
             <div>
               <Label>كلمة المرور</Label>
-              <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} minLength={6} required autoComplete="current-password" />
+              <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} minLength={6} required autoComplete={mode === "signup" ? "new-password" : "current-password"} />
             </div>
             <Button type="submit" disabled={loading} className="gradient-primary text-white w-full h-11">
-              {loading ? "..." : "دخول"}
+              {loading ? "..." : mode === "signup" ? "إنشاء حساب الأدمن" : "دخول"}
             </Button>
           </form>
+
+          <button
+            type="button"
+            onClick={() => setMode(mode === "signup" ? "signin" : "signup")}
+            className="mt-4 w-full text-xs text-muted-foreground hover:text-foreground"
+          >
+            {mode === "signup" ? "لدي حساب بالفعل — تسجيل الدخول" : "لا يوجد أدمن بعد؟ إنشاء أول حساب"}
+          </button>
+
+
 
         </div>
 
