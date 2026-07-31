@@ -61,19 +61,36 @@ function osLabel() {
 async function captureScreen() {
   const sourceId = await window.agent.getScreenSource();
   if (!sourceId) throw new Error("لا توجد شاشة متاحة");
-  return navigator.mediaDevices.getUserMedia({
-    audio: false,
-    video: {
-      mandatory: {
-        chromeMediaSource: "desktop",
-        chromeMediaSourceId: sourceId,
-        maxWidth: 1600,
-        maxHeight: 900,
-        maxFrameRate: 30,
+  // جودة عالية جداً (حتى 4K/8K حسب دقة شاشة الجهاز) مع معدل إطارات عالي
+  try {
+    return await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: {
+        mandatory: {
+          chromeMediaSource: "desktop",
+          chromeMediaSourceId: sourceId,
+          maxWidth: 7680,
+          maxHeight: 4320,
+          maxFrameRate: 60,
+        },
       },
-    },
-  });
+    });
+  } catch {
+    return navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: {
+        mandatory: {
+          chromeMediaSource: "desktop",
+          chromeMediaSourceId: sourceId,
+          maxWidth: 3840,
+          maxHeight: 2160,
+          maxFrameRate: 60,
+        },
+      },
+    });
+  }
 }
+
 
 let stream = null;
 let channel = null;
@@ -99,17 +116,18 @@ async function startPeer() {
   });
   s.getTracks().forEach((t) => pc.addTrack(t, s));
 
-  // إعدادات ترميز منخفضة الكمون: نحافظ على معدل الإطارات ونقلل الدقة عند الضغط
+  // جودة عالية + كمون منخفض: نحافظ على الدقة والإطارات معاً مع بت-ريت مرتفع
   for (const sender of pc.getSenders()) {
     if (!sender.track || sender.track.kind !== "video") continue;
     try {
       const params = sender.getParameters();
-      params.degradationPreference = "maintain-framerate";
+      params.degradationPreference = "balanced";
       params.encodings = [
         {
           ...(params.encodings?.[0] ?? {}),
-          maxBitrate: 3_000_000,
-          maxFramerate: 30,
+          maxBitrate: 40_000_000,
+          maxFramerate: 60,
+          scaleResolutionDownBy: 1,
           networkPriority: "high",
           priority: "high",
         },
@@ -119,6 +137,7 @@ async function startPeer() {
       // بعض النسخ لا تدعم كل الخصائص
     }
   }
+
   pc.onicecandidate = (e) => {
     if (e.candidate) void send({ type: "ice", from: "host", candidate: e.candidate.toJSON() });
   };
