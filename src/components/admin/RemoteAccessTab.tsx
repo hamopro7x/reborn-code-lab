@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Plus, Trash2, Edit, ExternalLink, Copy, MonitorPlay, Loader2 } from "lucide-react";
+import { LiveScreenViewer } from "./LiveScreenViewer";
 
 type RemoteRow = {
   id: string;
@@ -193,6 +194,8 @@ export function RemoteAccessTab() {
   return (
 
     <div className="space-y-6">
+      <LiveScreenViewer />
+
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold">الوصول عن بُعد للموظفين</h2>
         <Button onClick={startAdd}><Plus className="size-4 ml-1" /> إضافة جهاز</Button>
