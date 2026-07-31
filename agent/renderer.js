@@ -48,6 +48,7 @@ window.agent.onUpdateProgress?.(({ received, total, percent }) => {
 
 async function startDownload(info) {
   if (!info?.url) return;
+  updateBusy = true;
   updBtn.disabled = true;
   updBtn.textContent = "جارٍ التحميل…";
   updBar.style.display = "block";
@@ -88,7 +89,10 @@ function cmpVersion(a, b) {
   return 0;
 }
 
+let updateBusy = false;
+
 async function checkUpdate() {
+  if (updateBusy) return;
   try {
     const { data } = await supabase
       .from("site_settings")
