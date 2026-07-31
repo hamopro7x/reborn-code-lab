@@ -4,9 +4,10 @@ import { toast } from "sonner";
 import agentAsset from "../../../public/mag-pro-agent-windows.zip.asset.json";
 
 const steps = [
-  "نزّل ملف الوكيل على جهاز الموظف وفك الضغط.",
-  "شغّل MagProAgent.exe — هيظهر كود من 6 حروف وأرقام.",
-  "اكتب الكود في «مشاهدة شاشة موظف» تحت وهتشوف شاشته مباشرة.",
+  "نزّل ملف الوكيل على جهاز الموظف وفك الضغط (Extract All).",
+  "افتح مجلد MagProAgent-win32-x64 واعمل دبل كليك على MagProAgent.exe.",
+  "لو ظهرت شاشة حماية ويندوز اختر «More info» ثم «Run anyway».",
+  "هيظهر كود من 6 حروف وأرقام — اكتبه في «مشاهدة شاشة موظف» تحت وهتشوف شاشته مباشرة.",
 ];
 
 export function AgentDownloadCard() {
@@ -49,6 +50,11 @@ export function AgentDownloadCard() {
             <Copy className="size-4 ml-1" /> نسخ الرابط
           </Button>
         </div>
+      </div>
+      <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm">
+        <strong>مهم:</strong> ده برنامج ويندوز — مش إضافة كروم. لا تحاول تحميله من صفحة
+        <span dir="ltr" className="mx-1 font-mono">chrome://extensions</span>
+        وإلا هتظهر رسالة «ملف البيان مفقود».
       </div>
       <ol className="text-sm text-muted-foreground space-y-1 list-decimal ps-5">
         {steps.map((s) => (
