@@ -166,33 +166,52 @@ function osLabel() {
 async function captureScreen() {
   const sourceId = await window.agent.getScreenSource();
   if (!sourceId) throw new Error("لا توجد شاشة متاحة");
-  // جودة عالية جداً (حتى 4K/8K حسب دقة شاشة الجهاز) مع معدل إطارات عالي
+  // نلتقط بدقة الشاشة الفعلية (بدون تصغير) لضمان أعلى وضوح.
+  const sw = Math.round((window.screen?.width || 1920) * (window.devicePixelRatio || 1));
+  const sh = Math.round((window.screen?.height || 1080) * (window.devicePixelRatio || 1));
+  const tryCapture = async (w, h, fps) =>
+    navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: {
+        mandatory: {
+          chromeMediaSource: "desktop",
+          chromeMediaSourceId: sourceId,
+          minWidth: w,
+          maxWidth: w,
+          minHeight: h,
+          maxHeight: h,
+          minFrameRate: 30,
+          maxFrameRate: fps,
+        },
+      },
+    });
   try {
-    return await navigator.mediaDevices.getUserMedia({
-      audio: false,
-      video: {
-        mandatory: {
-          chromeMediaSource: "desktop",
-          chromeMediaSourceId: sourceId,
-          maxWidth: 7680,
-          maxHeight: 4320,
-          maxFrameRate: 60,
-        },
-      },
-    });
+    return await tryCapture(sw, sh, 60);
   } catch {
-    return navigator.mediaDevices.getUserMedia({
-      audio: false,
-      video: {
-        mandatory: {
-          chromeMediaSource: "desktop",
-          chromeMediaSourceId: sourceId,
-          maxWidth: 3840,
-          maxHeight: 2160,
-          maxFrameRate: 60,
-        },
-      },
-    });
+    try {
+      return await tryCapture(Math.min(sw, 2560), Math.min(sh, 1440), 60);
+    } catch {
+      return await tryCapture(1920, 1080, 60);
+    }
+  }
+}
+
+// نُفضّل H264 (يعطي وضوح أفضل للنصوص عند نفس البت-ريت) ثم VP9 ثم VP8.
+function preferCodec(pc) {
+  try {
+    const caps = RTCRtpSender.getCapabilities?.("video");
+    if (!caps) return;
+    const order = ["video/H264", "video/VP9", "video/AV1", "video/VP8"];
+    const sorted = [...caps.codecs].sort(
+      (a, b) => order.indexOf(a.mimeType) - order.indexOf(b.mimeType),
+    );
+    for (const tr of pc.getTransceivers()) {
+      if (tr.sender?.track?.kind === "video" || tr.receiver?.track?.kind === "video") {
+        tr.setCodecPreferences?.(sorted);
+      }
+    }
+  } catch {
+    /* غير مدعوم */
   }
 }
 
@@ -217,20 +236,21 @@ async function startPeer() {
   pc = new RTCPeerConnection(RTC_CONFIG);
   pc.getConfiguration?.();
   s.getVideoTracks().forEach((t) => {
-    t.contentHint = "motion";
+    t.contentHint = "text"; // يعطي الأولوية للحدة والوضوح على الحركة
   });
   s.getTracks().forEach((t) => pc.addTrack(t, s));
+  preferCodec(pc);
 
-  // جودة عالية + كمون منخفض: نحافظ على الدقة والإطارات معاً مع بت-ريت مرتفع
+  // جودة عالية جداً + حفاظ على الدقة الأصلية للشاشة
   for (const sender of pc.getSenders()) {
     if (!sender.track || sender.track.kind !== "video") continue;
     try {
       const params = sender.getParameters();
-      params.degradationPreference = "balanced";
+      params.degradationPreference = "maintain-resolution";
       params.encodings = [
         {
           ...(params.encodings?.[0] ?? {}),
-          maxBitrate: 40_000_000,
+          maxBitrate: 60_000_000,
           maxFramerate: 60,
           scaleResolutionDownBy: 1,
           networkPriority: "high",

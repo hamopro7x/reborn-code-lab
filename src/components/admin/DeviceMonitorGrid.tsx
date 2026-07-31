@@ -31,10 +31,26 @@ function WatchPanel({ device, onClose }: { device: Device; onClose: () => void }
     let closed = false;
     const pc = new RTCPeerConnection(RTC_CONFIG);
 
+    // نُفضّل H264 ثم VP9 للمشاهدة (وضوح أفضل للنصوص)
+    try {
+      const caps = (RTCRtpReceiver as unknown as { getCapabilities?: (k: string) => { codecs: Array<{ mimeType: string }> } | null })
+        .getCapabilities?.("video");
+      if (caps) {
+        const order = ["video/H264", "video/VP9", "video/AV1", "video/VP8"];
+        const sorted = [...caps.codecs].sort(
+          (a, b) => order.indexOf(a.mimeType) - order.indexOf(b.mimeType),
+        );
+        pc.addTransceiver("video", { direction: "recvonly" }).setCodecPreferences?.(sorted as unknown as RTCRtpCodec[]);
+      }
+    } catch {
+      /* غير مدعوم */
+    }
+
     pc.ontrack = (e) => {
       // تقليل زمن التأخير: أصغر مخزن مؤقت ممكن
       try {
         (e.receiver as unknown as { jitterBufferTarget?: number }).jitterBufferTarget = 0;
+        (e.receiver as unknown as { playoutDelayHint?: number }).playoutDelayHint = 0;
       } catch {
         /* غير مدعوم في بعض المتصفحات */
       }
