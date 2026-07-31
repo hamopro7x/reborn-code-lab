@@ -5,6 +5,7 @@ import { useState, useMemo } from "react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { createPublicOrder, attachOrderScreenshot, signScreenshotUpload } from "@/lib/orders.functions";
+import { listPublicPaymentMethods, getPublicPaymentDetails } from "@/lib/payments.functions";
 import { getCachedFingerprint } from "@/lib/device-session";
 import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
@@ -45,6 +46,8 @@ function CheckoutPage() {
   const createOrderFn = useServerFn(createPublicOrder);
   const attachScreenshotFn = useServerFn(attachOrderScreenshot);
   const signUploadFn = useServerFn(signScreenshotUpload);
+  const listPaymentsFn = useServerFn(listPublicPaymentMethods);
+  const paymentDetailsFn = useServerFn(getPublicPaymentDetails);
   const [step, setStep] = useState<"info" | "payment" | "screenshot" | "done">("info");
   const [form, setForm] = useState({ full_name: "", email: "", phone: "", country_code: "EG" });
   const [selectedPayment, setSelectedPayment] = useState<any>(null);
@@ -62,12 +65,15 @@ function CheckoutPage() {
   });
   const paymentQ = useQuery({
     queryKey: ["payments", form.country_code],
-    queryFn: async () => {
-      const { data } = await supabase.from("payment_methods").select("*").eq("active", true).or(`country_code.eq.${form.country_code},country_code.is.null`).order("sort_order");
-      return data ?? [];
-    },
+    queryFn: async () => await listPaymentsFn({ data: { country_code: form.country_code } }),
     enabled: step === "payment",
   });
+  const paymentDetailsQ = useQuery({
+    queryKey: ["payment-details", selectedPayment?.id],
+    queryFn: async () => await paymentDetailsFn({ data: { id: selectedPayment.id } }),
+    enabled: !!selectedPayment?.id,
+  });
+
 
   const rate = rates[currency.code] ?? 1;
   const total = useMemo(() => convertFromEgp(totalEgp, rate, currency.code), [totalEgp, rate, currency.code]);
@@ -238,16 +244,20 @@ function CheckoutPage() {
                 <div className="card-surface rounded-2xl p-5 mt-4 border-2 border-primary/40">
                   <div className="text-sm text-muted-foreground mb-2">حوّل المبلغ إلى:</div>
                   <div className="font-mono text-2xl font-black text-gradient mb-2 flex items-center gap-2">
-                    {selectedPayment.account_number}
-                    <button onClick={() => { navigator.clipboard.writeText(selectedPayment.account_number); toast.success("تم النسخ"); }} aria-label="نسخ رقم الحساب" className="text-primary hover:scale-110 transition-transform">
-                      <Copy className="size-5" />
-                    </button>
+                    {paymentDetailsQ.data?.account_number ?? "..."}
+                    {paymentDetailsQ.data?.account_number && (
+                      <button onClick={() => { navigator.clipboard.writeText(paymentDetailsQ.data!.account_number); toast.success("تم النسخ"); }} aria-label="نسخ رقم الحساب" className="text-primary hover:scale-110 transition-transform">
+                        <Copy className="size-5" />
+                      </button>
+                    )}
                   </div>
+                  {paymentDetailsQ.data?.account_name && <div className="text-xs text-muted-foreground">{paymentDetailsQ.data.account_name}</div>}
                   <div className="font-bold text-sm text-white mt-2">بعد التحويل اكد الطلب ورفع صورة الاثبات</div>
-                  {selectedPayment.instructions && <div className="text-xs text-muted-foreground mt-2">{selectedPayment.instructions}</div>}
+                  {paymentDetailsQ.data?.instructions && <div className="text-xs text-muted-foreground mt-2">{paymentDetailsQ.data.instructions}</div>}
                   <div className="mt-3 font-black text-lg">المبلغ: <span className="text-gradient">{formatPrice(total, currency)}</span></div>
                 </div>
               )}
+
               <div className="flex gap-2 mt-4">
                 <Button variant="outline" onClick={() => setStep("info")}><ArrowLeft className="size-4 ml-1" />رجوع</Button>
                 <Button onClick={createOrder} disabled={!selectedPayment} className="bg-black hover:bg-black/90 text-white flex-1 h-10 text-sm">تأكيد الطلب ورفع صورة التحويل</Button>
