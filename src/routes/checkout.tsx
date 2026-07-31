@@ -46,6 +46,8 @@ function CheckoutPage() {
   const createOrderFn = useServerFn(createPublicOrder);
   const attachScreenshotFn = useServerFn(attachOrderScreenshot);
   const signUploadFn = useServerFn(signScreenshotUpload);
+  const listPaymentsFn = useServerFn(listPublicPaymentMethods);
+  const paymentDetailsFn = useServerFn(getPublicPaymentDetails);
   const [step, setStep] = useState<"info" | "payment" | "screenshot" | "done">("info");
   const [form, setForm] = useState({ full_name: "", email: "", phone: "", country_code: "EG" });
   const [selectedPayment, setSelectedPayment] = useState<any>(null);
