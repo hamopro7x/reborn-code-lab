@@ -23,7 +23,7 @@ const dotEl = document.getElementById("dot");
 const deviceEl = document.getElementById("device");
 
 const STORE = "mag-agent-device-v1";
-const AGENT_VERSION = "1.1.0";
+const AGENT_VERSION = "1.2.0";
 
 const updateEl = document.getElementById("update");
 const updVerEl = document.getElementById("upd-ver");
@@ -274,3 +274,8 @@ if (existing) {
   consentEl.style.display = "flex";
   runningEl.style.display = "none";
 }
+
+// إعادة الاتصال تلقائياً لما الشبكة ترجع (بعد قفل اللابتوب/فقد النت)
+window.addEventListener("online", () => {
+  setTimeout(() => window.location.reload(), 1500);
+});
