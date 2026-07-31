@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain, desktopCapturer, Tray, Menu, nativeImage, shell } = require("electron");
 const path = require("path");
+const { execFile } = require("child_process");
 
 let win = null;
 let tray = null;
@@ -19,6 +20,20 @@ if (!gotLock) {
   });
 }
 
+const RUN_KEY = "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run";
+const RUN_NAME = "MagProAgent";
+
+// خطة احتياطية على ويندوز: نكتب مفتاح التشغيل التلقائي في الريجستري مباشرة
+function registryAutoLaunch() {
+  if (process.platform !== "win32") return;
+  const value = `"${process.execPath}" --hidden`;
+  execFile(
+    "reg.exe",
+    ["add", RUN_KEY, "/v", RUN_NAME, "/t", "REG_SZ", "/d", value, "/f"],
+    () => {},
+  );
+}
+
 function enableAutoLaunch() {
   try {
     app.setLoginItemSettings({
@@ -26,11 +41,15 @@ function enableAutoLaunch() {
       openAsHidden: true,
       args: ["--hidden"],
       path: process.execPath,
+      name: RUN_NAME,
     });
   } catch {
     // ignore
   }
+  // نتأكد دايماً: لو الإعداد فشل أو المسار اتغير بعد إعادة التشغيل
+  registryAutoLaunch();
 }
+
 
 function createWindow() {
   win = new BrowserWindow({
