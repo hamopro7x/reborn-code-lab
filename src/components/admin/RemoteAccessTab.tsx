@@ -224,38 +224,41 @@ export function RemoteAccessTab() {
             </DialogTitle>
           </DialogHeader>
 
-          <div className="flex-1 min-h-0 rounded-xl border border-border bg-card/50 flex flex-col items-center justify-center gap-4 text-center p-6">
-            <MonitorPlay className="size-12 text-primary" />
-            <p className="text-sm font-semibold">الجلسة اتفتحت في نافذة منفصلة</p>
-            <p className="text-sm text-muted-foreground max-w-lg">
-              جوجل تمنع عرض Chrome Remote Desktop داخل أي موقع (خطأ 403)، فالتحكم بيتم من نافذة الجلسة.
-              لو النافذة اتقفلت أو المتصفح منعها، اضغط الزر تحت.
-            </p>
-            {session?.access_code && (
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-lg">{session.access_code}</span>
-                <Button variant="outline" size="sm" onClick={() => copyCode(session.access_code!)}>
-                  <Copy className="size-4 ml-1" /> نسخ الكود
+          <div className="flex-1 min-h-0 rounded-xl border border-border overflow-hidden bg-black/40">
+            {session && !frameBlocked ? (
+              <iframe
+                key={session.id}
+                src={viewerUrl(session)}
+                title={`جلسة ${session.employee_name}`}
+                className="w-full h-full"
+                allow="clipboard-read; clipboard-write; fullscreen; microphone"
+              />
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center gap-4 text-center p-6">
+                <MonitorPlay className="size-12 text-primary" />
+                <p className="text-sm font-semibold">مش قادر يعرض الجلسة جوه الموقع</p>
+                <Button onClick={() => window.open(viewerUrl(session!), "_blank", "noopener,noreferrer")}>
+                  <ExternalLink className="size-4 ml-1" /> فتح في تبويب جديد
                 </Button>
               </div>
             )}
-            <Button onClick={() => window.open(session!.remote_url, "_blank", "noopener,noreferrer,width=1400,height=900")}>
-              <ExternalLink className="size-4 ml-1" /> فتح نافذة الجلسة
-            </Button>
           </div>
-
 
           <div className="flex justify-between items-center gap-2">
             <p className="text-xs text-muted-foreground">
-              لازم الموظف يوافق على الجلسة من جهازه، وتدخل الكود/الـ PIN لبدء التحكم.
+              اكتب ID الجهاز في العارض ثم كلمة السر ({session?.access_code ? "المسجّلة فوق" : "اللي عند الموظف"}) لبدء التحكم.
             </p>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => window.open(session!.remote_url, "_blank", "noopener,noreferrer")}>
+              <Button variant="outline" size="sm" onClick={() => setFrameBlocked((v) => !v)}>
+                {frameBlocked ? "إعادة العرض داخل الموقع" : "العرض مش ظاهر؟"}
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => window.open(viewerUrl(session!), "_blank", "noopener,noreferrer")}>
                 <ExternalLink className="size-4 ml-1" /> تبويب جديد
               </Button>
               <Button variant="outline" size="sm" onClick={() => setSession(null)}>إغلاق</Button>
             </div>
           </div>
+
         </DialogContent>
       </Dialog>
 
