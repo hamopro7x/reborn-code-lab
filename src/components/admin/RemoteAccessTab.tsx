@@ -38,6 +38,9 @@ export function RemoteAccessTab() {
   const [editing, setEditing] = useState<RemoteRow | null>(null);
   const [form, setForm] = useState({ ...emptyForm });
   const [saving, setSaving] = useState(false);
+  const [session, setSession] = useState<RemoteRow | null>(null);
+  const [frameBlocked, setFrameBlocked] = useState(false);
+
 
   const { data, isLoading } = useQuery({
     queryKey: ["remote-access"],
