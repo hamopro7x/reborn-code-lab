@@ -134,7 +134,64 @@ export function RemoteAccessTab() {
     toast.success("تم نسخ كود الوصول");
   };
 
+  if (session) {
+    return (
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <MonitorPlay className="size-5 text-primary" />
+            <h2 className="text-lg font-bold">جلسة {session.employee_name}</h2>
+            {session.device_label && (
+              <span className="text-xs text-muted-foreground">{session.device_label}</span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {session.access_code && (
+              <>
+                <span className="font-mono text-xs text-muted-foreground">كود: {session.access_code}</span>
+                <Button variant="ghost" size="icon" aria-label="نسخ الكود" onClick={() => copyCode(session.access_code!)}>
+                  <Copy className="size-4" />
+                </Button>
+              </>
+            )}
+            <Button variant="outline" size="sm" onClick={() => setFrameBlocked((v) => !v)}>
+              {frameBlocked ? "إعادة العرض داخل الموقع" : "العرض مش ظاهر؟"}
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setSession(null)}>
+              رجوع للأجهزة
+            </Button>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-border overflow-hidden bg-black/60 h-[calc(100vh-14rem)] min-h-[420px]">
+          {!frameBlocked ? (
+            <iframe
+              key={session.id}
+              src={viewerUrl(session)}
+              title={`جلسة ${session.employee_name}`}
+              className="w-full h-full"
+              allow="clipboard-read; clipboard-write; fullscreen; microphone"
+            />
+          ) : (
+            <div className="w-full h-full flex flex-col items-center justify-center gap-4 text-center p-6">
+              <MonitorPlay className="size-12 text-primary" />
+              <p className="text-sm font-semibold">مش قادر يعرض الجلسة جوه الموقع</p>
+              <Button onClick={() => window.open(viewerUrl(session), "_blank", "noopener,noreferrer")}>
+                <ExternalLink className="size-4 ml-1" /> فتح في تبويب جديد
+              </Button>
+            </div>
+          )}
+        </div>
+
+        <p className="text-xs text-muted-foreground">
+          اكتب ID الجهاز في العارض ثم كلمة السر ({session.access_code ? "المسجّلة فوق" : "اللي عند الموظف"}) لبدء التحكم.
+        </p>
+      </div>
+    );
+  }
+
   return (
+
     <div className="space-y-6">
       <div className="card-surface rounded-2xl p-4 flex gap-3 items-start">
         <Info className="size-5 text-primary shrink-0 mt-0.5" />
