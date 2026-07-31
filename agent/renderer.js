@@ -61,19 +61,36 @@ function osLabel() {
 async function captureScreen() {
   const sourceId = await window.agent.getScreenSource();
   if (!sourceId) throw new Error("لا توجد شاشة متاحة");
-  return navigator.mediaDevices.getUserMedia({
-    audio: false,
-    video: {
-      mandatory: {
-        chromeMediaSource: "desktop",
-        chromeMediaSourceId: sourceId,
-        maxWidth: 1600,
-        maxHeight: 900,
-        maxFrameRate: 30,
+  // جودة عالية جداً (حتى 4K/8K حسب دقة شاشة الجهاز) مع معدل إطارات عالي
+  try {
+    return await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: {
+        mandatory: {
+          chromeMediaSource: "desktop",
+          chromeMediaSourceId: sourceId,
+          maxWidth: 7680,
+          maxHeight: 4320,
+          maxFrameRate: 60,
+        },
       },
-    },
-  });
+    });
+  } catch {
+    return navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: {
+        mandatory: {
+          chromeMediaSource: "desktop",
+          chromeMediaSourceId: sourceId,
+          maxWidth: 3840,
+          maxHeight: 2160,
+          maxFrameRate: 60,
+        },
+      },
+    });
+  }
 }
+
 
 let stream = null;
 let channel = null;
