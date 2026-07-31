@@ -5,6 +5,7 @@ import { useState, useMemo } from "react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { createPublicOrder, attachOrderScreenshot, signScreenshotUpload } from "@/lib/orders.functions";
+import { listPublicPaymentMethods, getPublicPaymentDetails } from "@/lib/payments.functions";
 import { getCachedFingerprint } from "@/lib/device-session";
 import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
