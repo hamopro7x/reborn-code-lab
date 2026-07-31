@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { Plus, Trash2, Edit, ExternalLink, Copy, MonitorPlay, Loader2 } from "lucide-react";
 import { LiveScreenViewer } from "./LiveScreenViewer";
 import { AgentDownloadCard } from "./AgentDownloadCard";
+import { ExtensionDownloadCard } from "./ExtensionDownloadCard";
 
 type RemoteRow = {
   id: string;
@@ -195,6 +196,7 @@ export function RemoteAccessTab() {
   return (
 
     <div className="space-y-6">
+      <ExtensionDownloadCard />
       <AgentDownloadCard />
       <LiveScreenViewer />
 
