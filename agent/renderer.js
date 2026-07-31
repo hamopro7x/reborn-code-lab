@@ -14,32 +14,48 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
 
-const codeEl = document.getElementById("code");
+const consentEl = document.getElementById("consent");
+const runningEl = document.getElementById("running");
+const nameEl = document.getElementById("employee-name");
+const approveBtn = document.getElementById("approve");
 const statusEl = document.getElementById("status");
 const dotEl = document.getElementById("dot");
-const startBtn = document.getElementById("start");
+const deviceEl = document.getElementById("device");
 
-function makeCode() {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let out = "";
-  for (let i = 0; i < 6; i++) out += chars[Math.floor(Math.random() * chars.length)];
-  return out;
+const STORE = "mag-agent-device-v1";
+
+function rand(len) {
+  const b = new Uint8Array(len);
+  crypto.getRandomValues(b);
+  return Array.from(b)
+    .map((x) => x.toString(16).padStart(2, "0"))
+    .join("");
 }
 
-let code = localStorage.getItem("agent-code");
-if (!code) {
-  code = makeCode();
-  localStorage.setItem("agent-code", code);
+function loadDevice() {
+  try {
+    const raw = localStorage.getItem(STORE);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
 }
-codeEl.textContent = code;
 
-let stream = null;
-let channel = null;
-const peers = new Map();
+function saveDevice(d) {
+  localStorage.setItem(STORE, JSON.stringify(d));
+}
 
 function setStatus(text, on) {
   statusEl.textContent = text;
   dotEl.classList.toggle("on", !!on);
+}
+
+function osLabel() {
+  const ua = navigator.userAgent;
+  if (/Windows/i.test(ua)) return "Windows";
+  if (/Mac OS/i.test(ua)) return "macOS";
+  if (/Linux/i.test(ua)) return "Linux";
+  return "Device";
 }
 
 async function captureScreen() {
@@ -59,66 +75,115 @@ async function captureScreen() {
   });
 }
 
+let stream = null;
+let channel = null;
+let pc = null;
+
 function send(signal) {
   return channel.send({ type: "broadcast", event: "signal", payload: signal });
 }
 
+async function getStream() {
+  if (stream && stream.getTracks().some((t) => t.readyState === "live")) return stream;
+  stream = await captureScreen();
+  return stream;
+}
+
 async function startPeer() {
-  const pc = new RTCPeerConnection(RTC_CONFIG);
-  peers.set("viewer", pc);
-  stream.getTracks().forEach((t) => pc.addTrack(t, stream));
+  pc?.close();
+  const s = await getStream();
+  pc = new RTCPeerConnection(RTC_CONFIG);
+  s.getTracks().forEach((t) => pc.addTrack(t, s));
   pc.onicecandidate = (e) => {
-    if (e.candidate) send({ type: "ice", from: "host", candidate: e.candidate.toJSON() });
+    if (e.candidate) void send({ type: "ice", from: "host", candidate: e.candidate.toJSON() });
   };
   pc.onconnectionstatechange = () => {
     if (pc.connectionState === "connected") setStatus("المدير يشاهد الشاشة الآن", true);
     if (["failed", "disconnected", "closed"].includes(pc.connectionState)) {
-      setStatus("في انتظار المدير…", true);
+      setStatus("متصل — في انتظار طلب المشاهدة", true);
     }
   };
   const offer = await pc.createOffer();
   await pc.setLocalDescription(offer);
   await send({ type: "offer", sdp: offer });
-  return pc;
 }
 
-async function start() {
-  startBtn.disabled = true;
+async function heartbeat(device) {
   try {
-    setStatus("جارٍ تجهيز المشاركة…", false);
-    stream = await captureScreen();
-    channel = supabase.channel(`screenshare-${code}`, {
-      config: { broadcast: { self: false } },
+    await supabase.rpc("agent_heartbeat", {
+      p_device_id: device.device_id,
+      p_secret: device.secret,
     });
-    channel.on("broadcast", { event: "signal" }, async ({ payload }) => {
-      const s = payload;
-      if (s.type === "join") {
-        peers.get("viewer")?.close();
-        peers.delete("viewer");
-        await startPeer();
-      } else if (s.type === "answer") {
-        const pc = peers.get("viewer");
-        if (pc) await pc.setRemoteDescription(s.sdp);
-      } else if (s.type === "ice" && s.from === "viewer") {
-        const pc = peers.get("viewer");
-        if (pc) await pc.addIceCandidate(s.candidate).catch(() => {});
-      } else if (s.type === "bye") {
-        peers.get("viewer")?.close();
-        peers.delete("viewer");
-        setStatus("في انتظار المدير…", true);
-      }
-    });
-    await new Promise((resolve) =>
-      channel.subscribe((st) => st === "SUBSCRIBED" && resolve()),
-    );
-    setStatus("في انتظار المدير…", true);
-    startBtn.textContent = "المشاركة نشطة";
-  } catch (err) {
-    setStatus("خطأ: " + (err?.message || err), false);
-    startBtn.disabled = false;
+  } catch {
+    /* offline — retry next tick */
   }
 }
 
-startBtn.addEventListener("click", start);
-// auto-start on launch
-start();
+async function run(device) {
+  consentEl.style.display = "none";
+  runningEl.style.display = "flex";
+  deviceEl.textContent = `${device.employee_name || "موظف"} · ${device.device_id.slice(0, 8)}`;
+  setStatus("جارٍ الاتصال بالسيرفر…", false);
+
+  await heartbeat(device);
+  setInterval(() => heartbeat(device), 20000);
+
+  channel = supabase.channel(`screenshare-${device.device_id}`, {
+    config: { broadcast: { self: false } },
+  });
+  channel.on("broadcast", { event: "signal" }, async ({ payload }) => {
+    const s = payload;
+    try {
+      if (s.type === "join") {
+        await startPeer();
+      } else if (s.type === "answer") {
+        if (pc) await pc.setRemoteDescription(s.sdp);
+      } else if (s.type === "ice" && s.from === "viewer") {
+        if (pc) await pc.addIceCandidate(s.candidate).catch(() => {});
+      } else if (s.type === "bye") {
+        pc?.close();
+        pc = null;
+        setStatus("متصل — في انتظار طلب المشاهدة", true);
+      }
+    } catch (err) {
+      setStatus("خطأ: " + (err?.message || err), false);
+    }
+  });
+  await new Promise((resolve) => channel.subscribe((st) => st === "SUBSCRIBED" && resolve()));
+  setStatus("متصل — في انتظار طلب المشاهدة", true);
+}
+
+approveBtn.addEventListener("click", async () => {
+  approveBtn.disabled = true;
+  const employee_name = nameEl.value.trim();
+  if (!employee_name) {
+    approveBtn.disabled = false;
+    return alert("اكتب اسمك أولاً");
+  }
+  const device = { device_id: rand(16), secret: rand(24), employee_name };
+  try {
+    // نطلب صلاحية الشاشة مرة واحدة هنا للتأكد أنها تعمل
+    await getStream();
+    const { error } = await supabase.rpc("agent_register", {
+      p_device_id: device.device_id,
+      p_secret: device.secret,
+      p_employee_name: employee_name,
+      p_device_label: osLabel() + " · " + (navigator.platform || ""),
+      p_os: osLabel(),
+    });
+    if (error) throw error;
+    saveDevice(device);
+    await run(device);
+  } catch (err) {
+    approveBtn.disabled = false;
+    alert("فشل التسجيل: " + (err?.message || err));
+  }
+});
+
+const existing = loadDevice();
+if (existing) {
+  void run(existing);
+} else {
+  consentEl.style.display = "flex";
+  runningEl.style.display = "none";
+}
