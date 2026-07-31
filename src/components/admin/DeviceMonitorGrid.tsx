@@ -30,12 +30,19 @@ function WatchPanel({ device, onClose }: { device: Device; onClose: () => void }
     const pc = new RTCPeerConnection(RTC_CONFIG);
 
     pc.ontrack = (e) => {
+      // تقليل زمن التأخير: أصغر مخزن مؤقت ممكن
+      try {
+        (e.receiver as unknown as { jitterBufferTarget?: number }).jitterBufferTarget = 0;
+      } catch {
+        /* غير مدعوم في بعض المتصفحات */
+      }
       if (videoRef.current) {
         videoRef.current.srcObject = e.streams[0]!;
         void videoRef.current.play().catch(() => {});
       }
       setLive(true);
     };
+
 
     const sig = openSignaling(
       device.device_id,
