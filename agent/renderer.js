@@ -405,5 +405,3 @@ if (existing) {
 window.addEventListener("online", () => {
   setTimeout(() => window.location.reload(), 1500);
 });
-
-});
