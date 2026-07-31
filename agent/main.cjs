@@ -160,7 +160,12 @@ ipcMain.handle("download-update", (_e, url) => {
   }
   const fs = require("fs");
   const os = require("os");
-  const target = path.join(os.tmpdir(), "mag-pro-agent-update.zip");
+  const isSetup = /\.exe(\?|$)/i.test(url);
+  const target = path.join(
+    os.tmpdir(),
+    isSetup ? "mag-pro-agent-setup.exe" : "mag-pro-agent-update.zip",
+  );
+
   return new Promise((resolve, reject) => {
     httpGet(
       url,
