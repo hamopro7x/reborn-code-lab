@@ -1,6 +1,4 @@
-import { Button } from "@/components/ui/button";
-import { Download, Copy } from "lucide-react";
-import { toast } from "sonner";
+import { Download } from "lucide-react";
 import agentAsset from "../../../public/mag-pro-agent-windows.zip.asset.json";
 
 const steps = [
@@ -14,22 +12,6 @@ const steps = [
 
 
 export function AgentDownloadCard() {
-  const download = () => {
-    fetch(agentAsset.url)
-      .then((res) => {
-        if (!res.ok) throw new Error(`فشل التنزيل: ${res.status}`);
-        return res.blob();
-      })
-      .then((blob) => {
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = "mag-pro-agent-windows.zip";
-        a.click();
-        URL.revokeObjectURL(a.href);
-      })
-      .catch((err) => toast.error(err.message));
-  };
-
   return (
     <div className="card-surface rounded-2xl p-4 space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -40,20 +22,13 @@ export function AgentDownloadCard() {
             من اللوحة وقت ما تحب زي سيستم كاميرات المراقبة.
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={download}>
-            <Download className="size-4 ml-1" /> تنزيل البرنامج
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => {
-              void navigator.clipboard.writeText(`${window.location.origin}${agentAsset.url}`);
-              toast.success("تم نسخ رابط التنزيل");
-            }}
-          >
-            <Copy className="size-4 ml-1" /> نسخ الرابط
-          </Button>
-        </div>
+        <a
+          href={agentAsset.url}
+          download="mag-pro-agent-windows.zip"
+          className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+        >
+          <Download className="size-4 ml-1" /> تنزيل البرنامج
+        </a>
       </div>
       <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm">
         <strong>مهم:</strong> ده برنامج ويندوز — مش إضافة كروم. لا تحاول تحميله من صفحة
