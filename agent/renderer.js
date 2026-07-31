@@ -29,6 +29,55 @@ const updateEl = document.getElementById("update");
 const updVerEl = document.getElementById("upd-ver");
 const updNotesEl = document.getElementById("upd-notes");
 const updBtn = document.getElementById("upd-btn");
+const updBar = document.getElementById("upd-bar");
+const updFill = document.getElementById("upd-fill");
+const updProg = document.getElementById("upd-progress");
+
+const mb = (n) => (n / 1048576).toFixed(1) + " MB";
+
+window.agent.onUpdateProgress?.(({ received, total, percent }) => {
+  updBar.style.display = "block";
+  if (percent != null) {
+    updFill.style.width = percent + "%";
+    updProg.textContent = `جارٍ التحميل… ${percent}% (${mb(received)} / ${mb(total)})`;
+  } else {
+    updFill.style.width = "100%";
+    updProg.textContent = `جارٍ التحميل… ${mb(received)}`;
+  }
+});
+
+async function startDownload(info) {
+  if (!info?.url) return;
+  updBtn.disabled = true;
+  updBtn.textContent = "جارٍ التحميل…";
+  updBar.style.display = "block";
+  updFill.style.width = "0%";
+  updProg.textContent = "جارٍ بدء التحميل…";
+  try {
+    await window.agent.downloadUpdate(info.url);
+    updFill.style.width = "100%";
+    updProg.textContent = "تم التحميل — جاهز للتثبيت";
+    updBtn.textContent = "تثبيت";
+    updBtn.disabled = false;
+    updBtn.onclick = async () => {
+      updBtn.disabled = true;
+      updBtn.textContent = "جارٍ التثبيت…";
+      updProg.textContent = "سيتم إعادة تشغيل البرنامج بعد التثبيت…";
+      try {
+        await window.agent.installUpdate();
+      } catch (err) {
+        updProg.textContent = "فشل التثبيت: " + (err?.message || err);
+        updBtn.textContent = "إعادة المحاولة";
+        updBtn.disabled = false;
+      }
+    };
+  } catch (err) {
+    updProg.textContent = "فشل التحميل: " + (err?.message || err);
+    updBtn.textContent = "إعادة المحاولة";
+    updBtn.disabled = false;
+    updBtn.onclick = () => startDownload(info);
+  }
+}
 
 function cmpVersion(a, b) {
   const pa = String(a).split(".").map(Number);
@@ -53,9 +102,9 @@ async function checkUpdate() {
     }
     updVerEl.textContent = "v" + info.version;
     updNotesEl.textContent = info.notes || "نسخة أحدث متاحة للتحميل";
-    updBtn.onclick = () => {
-      if (info.url) void window.agent.openExternal(info.url);
-    };
+    updBtn.textContent = "تحميل التحديث";
+    updBtn.disabled = false;
+    updBtn.onclick = () => startDownload(info);
     updateEl.style.display = "flex";
   } catch {
     /* تجاهل — نحاول لاحقاً */
