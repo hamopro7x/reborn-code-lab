@@ -51,6 +51,11 @@ export function AgentDownloadCard() {
           </Button>
         </div>
       </div>
+      <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm">
+        <strong>مهم:</strong> ده برنامج ويندوز — مش إضافة كروم. لا تحاول تحميله من صفحة
+        <span dir="ltr" className="mx-1 font-mono">chrome://extensions</span>
+        وإلا هتظهر رسالة «ملف البيان مفقود».
+      </div>
       <ol className="text-sm text-muted-foreground space-y-1 list-decimal ps-5">
         {steps.map((s) => (
           <li key={s}>{s}</li>
