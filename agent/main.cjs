@@ -131,7 +131,21 @@ app.whenReady().then(() => {
   } catch {
     // tray optional
   }
+
+  // بعد قفل/فتح اللابتوب أو النوم: نعيد تحميل الواجهة لإعادة الاتصال فوراً
+  try {
+    const { powerMonitor } = require("electron");
+    const reconnect = () => {
+      enableAutoLaunch();
+      if (win && !win.isDestroyed()) win.webContents.reload();
+    };
+    powerMonitor.on("resume", reconnect);
+    powerMonitor.on("unlock-screen", reconnect);
+  } catch {
+    // powerMonitor optional
+  }
 });
+
 
 // لا نغلق التطبيق عند إخفاء النافذة — يستمر في الخلفية
 app.on("window-all-closed", () => {});
