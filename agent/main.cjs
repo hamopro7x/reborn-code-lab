@@ -139,24 +139,26 @@ ipcMain.handle("open-external", (_e, url) => {
 // ===== تحديث داخلي: تنزيل بشريط تقدّم ثم تثبيت =====
 let downloadedFile = null;
 
-function httpGet(url, onResponse, onError, redirects = 0) {
+function httpGet(url, onResponse, onError, redirects = 0, headers = {}) {
   const https = require("https");
   https
-    .get(url, (res) => {
+    .get(url, { headers }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         if (redirects > 5) return onError(new Error("عدد كبير من التحويلات"));
         res.resume();
-        return httpGet(res.headers.location, onResponse, onError, redirects + 1);
+        return httpGet(res.headers.location, onResponse, onError, redirects + 1, headers);
       }
-      if (res.statusCode !== 200) return onError(new Error("HTTP " + res.statusCode));
+      if (res.statusCode !== 200 && res.statusCode !== 206) {
+        return onError(new Error("HTTP " + res.statusCode));
+      }
       onResponse(res);
     })
     .on("error", onError);
 }
 
-ipcMain.handle("download-update", (_e, url) => {
+ipcMain.handle("download-update", async (_e, url) => {
   if (typeof url !== "string" || !/^https:\/\//.test(url)) {
-    return Promise.reject(new Error("رابط غير صالح"));
+    throw new Error("رابط غير صالح");
   }
   const fs = require("fs");
   const os = require("os");
@@ -166,35 +168,84 @@ ipcMain.handle("download-update", (_e, url) => {
     isSetup ? "mag-pro-agent-setup.exe" : "mag-pro-agent-update.zip",
   );
 
-  return new Promise((resolve, reject) => {
-    httpGet(
-      url,
-      (res) => {
-        const total = Number(res.headers["content-length"] || 0);
-        let received = 0;
-        const file = fs.createWriteStream(target);
-        res.on("data", (chunk) => {
-          received += chunk.length;
-          if (win && !win.isDestroyed()) {
-            win.webContents.send("update-progress", {
-              received,
-              total,
-              percent: total ? Math.round((received / total) * 100) : null,
-            });
+  let received = 0;
+  let total = 0;
+  try {
+    if (fs.existsSync(target)) received = fs.statSync(target).size;
+  } catch {
+    received = 0;
+  }
+
+  const sendProgress = () => {
+    if (win && !win.isDestroyed()) {
+      win.webContents.send("update-progress", {
+        received,
+        total,
+        percent: total ? Math.round((received / total) * 100) : null,
+      });
+    }
+  };
+
+  // محاولة واحدة: تكمل من مكان التوقف عبر Range
+  const attempt = () =>
+    new Promise((resolve, reject) => {
+      const headers = received > 0 ? { Range: `bytes=${received}-` } : {};
+      httpGet(
+        url,
+        (res) => {
+          if (res.statusCode === 200 && received > 0) {
+            // السيرفر مش بيدعم الإكمال — نبدأ من الأول
+            received = 0;
+            try {
+              fs.unlinkSync(target);
+            } catch {}
           }
-        });
-        res.pipe(file);
-        file.on("finish", () => {
-          file.close(() => {
-            downloadedFile = target;
-            resolve({ path: target });
+          const len = Number(res.headers["content-length"] || 0);
+          total = received + len;
+          const file = fs.createWriteStream(target, { flags: received > 0 ? "a" : "w" });
+          let done = false;
+          const fail = (err) => {
+            if (done) return;
+            done = true;
+            try {
+              file.destroy();
+            } catch {}
+            reject(err);
+          };
+          res.on("data", (chunk) => {
+            received += chunk.length;
+            sendProgress();
           });
-        });
-        file.on("error", reject);
-      },
-      reject,
-    );
-  });
+          res.on("error", fail);
+          file.on("error", fail);
+          res.pipe(file);
+          file.on("finish", () => {
+            if (done) return;
+            done = true;
+            file.close(() => {
+              if (total && received < total) return reject(new Error("تحميل غير مكتمل"));
+              resolve({ path: target });
+            });
+          });
+        },
+        reject,
+        0,
+        headers,
+      );
+    });
+
+  let lastErr = null;
+  for (let i = 0; i < 8; i++) {
+    try {
+      const out = await attempt();
+      downloadedFile = target;
+      return out;
+    } catch (err) {
+      lastErr = err;
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+  }
+  throw new Error("فشل التحميل بعد عدة محاولات: " + (lastErr?.message || lastErr));
 });
 
 ipcMain.handle("install-update", async () => {
