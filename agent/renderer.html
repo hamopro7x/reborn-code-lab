@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <title>Mag Pro Agent</title>
+    <style>
+      :root { color-scheme: dark; }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", system-ui, sans-serif;
+        background: #0f172a;
+        color: #e8edf7;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        gap: 18px;
+      }
+      h1 { font-size: 18px; margin: 0; font-weight: 600; }
+      .code {
+        font-size: 40px;
+        letter-spacing: 8px;
+        font-weight: 700;
+        padding: 14px 24px;
+        border-radius: 14px;
+        background: #16213e;
+        border: 1px solid #24365f;
+      }
+      .status { font-size: 13px; opacity: .8; }
+      .dot { display:inline-block; width:9px; height:9px; border-radius:50%; background:#f59e0b; margin-inline-end:6px; }
+      .dot.on { background:#22c55e; }
+      button {
+        background: #2563eb; color: #fff; border: 0; border-radius: 10px;
+        padding: 10px 20px; font-size: 14px; cursor: pointer;
+      }
+      button:disabled { opacity: .5; cursor: default; }
+      .hint { font-size: 11px; opacity: .6; max-width: 320px; text-align: center; line-height: 1.7; }
+    </style>
+  </head>
+  <body>
+    <h1>وكيل الوصول عن بُعد — Mag Pro</h1>
+    <div class="code" id="code">------</div>
+    <div class="status"><span class="dot" id="dot"></span><span id="status">جاهز</span></div>
+    <button id="start">بدء المشاركة</button>
+    <div class="hint">أعطِ هذا الكود للمدير ليشاهد الشاشة من لوحة التحكم. يمكن إغلاق النافذة وسيبقى الوكيل يعمل في شريط المهام.</div>
+    <script type="module" src="./renderer.js"></script>
+  </body>
+</html>
