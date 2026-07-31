@@ -35,6 +35,8 @@ export const Route = createFileRoute("/auth")({
 function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { next } = Route.useSearch();
@@ -55,6 +57,22 @@ function AuthPage() {
     const normalized = email.trim().toLowerCase();
     setLoading(true);
     try {
+      if (mode === "signup") {
+        const { error: upErr } = await supabase.auth.signUp({
+          email: normalized,
+          password,
+          options: {
+            emailRedirectTo: window.location.origin,
+            data: { full_name: fullName.trim() || normalized.split("@")[0] },
+          },
+        });
+        if (upErr) throw upErr;
+        const { error: inErr } = await supabase.auth.signInWithPassword({ email: normalized, password });
+        if (inErr) throw inErr;
+        toast.success("تم إنشاء حساب الأدمن وتسجيل الدخول");
+        goAfterAuth();
+        return;
+      }
       const { error } = await supabase.auth.signInWithPassword({ email: normalized, password });
       if (error) throw error;
       toast.success("تم تسجيل الدخول");
@@ -65,6 +83,7 @@ function AuthPage() {
       setLoading(false);
     }
   }
+
 
   return (
     <div dir="rtl" className="min-h-screen flex items-center justify-center px-4 py-12 bg-background">
