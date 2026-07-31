@@ -65,12 +65,15 @@ function CheckoutPage() {
   });
   const paymentQ = useQuery({
     queryKey: ["payments", form.country_code],
-    queryFn: async () => {
-      const { data } = await supabase.from("payment_methods").select("*").eq("active", true).or(`country_code.eq.${form.country_code},country_code.is.null`).order("sort_order");
-      return data ?? [];
-    },
+    queryFn: async () => await listPaymentsFn({ data: { country_code: form.country_code } }),
     enabled: step === "payment",
   });
+  const paymentDetailsQ = useQuery({
+    queryKey: ["payment-details", selectedPayment?.id],
+    queryFn: async () => await paymentDetailsFn({ data: { id: selectedPayment.id } }),
+    enabled: !!selectedPayment?.id,
+  });
+
 
   const rate = rates[currency.code] ?? 1;
   const total = useMemo(() => convertFromEgp(totalEgp, rate, currency.code), [totalEgp, rate, currency.code]);
