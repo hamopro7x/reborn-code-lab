@@ -22,7 +22,7 @@ import {
   Lock, Camera,
 } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
-import { createEmployee, deleteEmployee, listEmployees, listCustomers, updateEmployeeAvatar, deleteAllOrders } from "@/lib/admin.functions";
+import { createEmployee, deleteEmployee, listEmployees, listCustomers, updateEmployeeAvatar, deleteAllOrders, updateEmployee } from "@/lib/admin.functions";
 import { adminListDevices, adminDeleteDevice, adminResetUserDevices, adminAddDevice, adminListEmployees,
   adminListCourseAccess, adminGrantCourseAccess, adminRevokeCourseAccess, checkDevice, getViewerIdentity } from "@/lib/courses.functions";
 import { getDeviceFingerprint } from "@/lib/device";
