@@ -483,12 +483,12 @@ async function run(device) {
   const first = await heartbeat(device);
   if (first === false) {
     // الإدارة حذفت الجهاز — نطلب مفتاح ربط جديد
-    return showPairing(device, "تم حذف تسجيل هذا الجهاز — سلّم المفتاح للإدارة");
+    return showPairing(device, "تم حذف تسجيل هذا الجهاز — اطلب كود تسجيل جديد من الإدارة");
   }
 
   hbTimer = setInterval(async () => {
     const ok = await heartbeat(device);
-    if (ok === false) void showPairing(device, "تم حذف تسجيل هذا الجهاز — سلّم المفتاح للإدارة");
+    if (ok === false) void showPairing(device, "تم حذف تسجيل هذا الجهاز — اطلب كود تسجيل جديد من الإدارة");
   }, 20000);
 
   void checkUpdate();
