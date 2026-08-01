@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { KeyRound, Loader2, Maximize2, Minimize2, Monitor, RefreshCw, Trash2 } from "lucide-react";
+import { KeyRound, Loader2, Maximize2, Minimize2, Monitor, MonitorOff, RefreshCw, Trash2 } from "lucide-react";
 
 import { RTC_CONFIG, openSignaling, type Signal } from "@/lib/screenshare";
 
@@ -173,17 +173,24 @@ function LiveScreen({
       </div>
 
       <div className="relative rounded-lg overflow-hidden bg-black aspect-video">
-        <video
-          ref={videoRef}
-          className="w-full h-full object-contain"
-          autoPlay
-          playsInline
-          muted
-        />
+        {online ? (
+          <video
+            ref={videoRef}
+            className="w-full h-full object-contain"
+            autoPlay
+            playsInline
+            muted
+          />
+        ) : null}
         {!live && (
-          <div className="absolute inset-0 flex items-center justify-center">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black">
             {!online ? (
-              <span className="text-xs text-muted-foreground">الجهاز غير متصل</span>
+              <>
+                <MonitorOff className="size-7 text-muted-foreground" />
+                <span className="text-xs font-bold text-muted-foreground">
+                  تم إيقاف الشاشة — الجهاز مغلق
+                </span>
+              </>
             ) : failed ? (
               <span className="text-xs text-muted-foreground">
                 تعذّر الاتصال — تأكد أن البرنامج مفتوح
@@ -194,6 +201,7 @@ function LiveScreen({
           </div>
         )}
       </div>
+
 
       <div className="flex gap-2">
         <Button size="sm" variant="outline" className="flex-1" onClick={onToggleExpand}>
