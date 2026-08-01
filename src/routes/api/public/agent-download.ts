@@ -118,6 +118,7 @@ async function upstreamSize(): Promise<number> {
 }
 
 export async function handleAgentDownload(request: Request) {
+  UPSTREAM = await resolveUpstream();
   const total = await upstreamSize();
 
 
