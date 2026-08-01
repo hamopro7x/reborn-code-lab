@@ -1,5 +1,4 @@
 import { Download } from "lucide-react";
-import agentAsset from "../../../public/MagProAgent-Setup.exe.asset.json";
 
 const steps = [
   "نزّل ملف التثبيت MagProAgent-Setup.exe على جهاز الموظف.",
@@ -26,7 +25,7 @@ export function AgentDownloadCard() {
           </p>
         </div>
         <a
-          href={agentAsset.url}
+          href="/api/public/agent-download.exe"
           download="MagProAgent-Setup.exe"
           className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
         >
