@@ -246,7 +246,7 @@ export function PairDeviceBox({
   const generate = async () => {
     setBusy(true);
     const { data, error } = await supabase.rpc("agent_create_enroll_code", {
-      p_employee_name: (employeeName ?? "").trim() || null,
+      p_employee_name: (employeeName ?? "").trim() || undefined,
     });
     setBusy(false);
     if (error || typeof data !== "string") return toast.error("تعذّر إنشاء كود التسجيل");
