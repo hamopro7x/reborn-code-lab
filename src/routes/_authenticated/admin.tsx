@@ -31,6 +31,8 @@ import { Progress } from "@/components/ui/progress";
 import { ReportsTab } from "@/components/admin/ReportsTab";
 import { FileBarChart, MonitorPlay } from "lucide-react";
 import { RemoteAccessTab } from "@/components/admin/RemoteAccessTab";
+import { EmployeeDevices } from "@/components/admin/DeviceMonitorGrid";
+
 
 type PanelKey =
   | "overview" | "orders" | "products" | "categories" | "customers" | "employees"
