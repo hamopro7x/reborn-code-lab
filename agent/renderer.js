@@ -395,8 +395,8 @@ async function startPeer(viewerId) {
     peers.set(viewerId, entry);
 
     s.getVideoTracks().forEach((t) => {
-      // "motion" = الأولوية للسلاسة وعدم التجمّد على النت الضعيف
-      t.contentHint = "motion";
+      // "detail" = وضوح أعلى للنصوص وتفاصيل الشاشة
+      t.contentHint = "detail";
     });
     s.getTracks().forEach((t) => pc.addTrack(t, s));
     preferCodec(pc);
@@ -407,15 +407,15 @@ async function startPeer(viewerId) {
       videoSender = sender;
       try {
         const params = sender.getParameters();
-        // نحافظ على الإطارات ونصغّر الدقة عند ضعف الشبكة (بدل تجمّد الصورة)
-        params.degradationPreference = "maintain-framerate";
+        // توازن بين الدقة والسلاسة، والمتحكّم التلقائي يصحّح حسب الشبكة
+        params.degradationPreference = "balanced";
         params.encodings = [
           {
             ...(params.encodings?.[0] ?? {}),
-            // بداية متحفظة ثم يرفعها المتحكّم التلقائي حسب سرعة النت الحقيقية
-            maxBitrate: 1_200_000,
-            maxFramerate: 30,
-            scaleResolutionDownBy: 1.5,
+            // بداية بجودة عالية (الدقة الكاملة) ثم تصحيح لأسفل فقط عند الحاجة
+            maxBitrate: 6_000_000,
+            maxFramerate: 60,
+            scaleResolutionDownBy: 1,
             networkPriority: "high",
             priority: "high",
           },
