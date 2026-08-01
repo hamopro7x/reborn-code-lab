@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 const UPSTREAM =
-  "https://mag-pro1.com/__l5e/assets-v1/55ce2cf7-1152-492c-b364-e7e42165cfcf/MagProAgent-Setup.exe";
+  "https://mag-pro1.com/__l5e/assets-v1/5b174241-e2bd-439a-af7a-b914f1a6515e/MagProAgent-Setup-1.7.3.exe";
 
 const MAX_RETRIES = 40;
 
@@ -63,12 +63,10 @@ async function handle(request: Request) {
     const m = /bytes=(\d+)-/.exec(rangeHeader);
     if (m) start = Number(m[1]);
   }
-  if (total && start >= total) {
-    return new Response(null, {
-      status: 416,
-      headers: { "content-range": `bytes */${total}` },
-    });
-  }
+  // توافق مع نسخ البرنامج القديمة: كانت تعيد طلب ملف مؤقت مكتمل أو تالف
+  // فتدخل في حلقة HTTP 416. تجاهل الـ Range هنا يجبرها على حذف الملف
+  // المؤقت وإعادة تنزيل نسخة نظيفة ثم تثبيتها داخل التطبيق.
+  if (total && start >= total) start = 0;
 
   if (request.method === "HEAD") {
     return new Response(null, {
