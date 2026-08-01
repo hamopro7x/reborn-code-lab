@@ -368,8 +368,25 @@ ipcMain.handle("install-update", async () => {
     await shell.openPath(downloadedFile);
     return true;
   }
-  // النسخة الجديدة عبارة عن ملف تثبيت (Setup.exe): نشغّله بصمت ثم نخرج
-  if (/\.exe$/i.test(downloadedFile)) {
+  // بعض الروابط لا تنتهي بـ .exe (مسار وسيط) — نتعرف على ملف التثبيت من التوقيع MZ
+  let isExeFile = /\.exe$/i.test(downloadedFile);
+  if (!isExeFile) {
+    try {
+      const fd = fs.openSync(downloadedFile, "r");
+      const head = Buffer.alloc(2);
+      fs.readSync(fd, head, 0, 2, 0);
+      fs.closeSync(fd);
+      if (head.toString("latin1") === "MZ") {
+        const renamed = downloadedFile.replace(/\.zip$/i, "") + ".exe";
+        fs.renameSync(downloadedFile, renamed);
+        downloadedFile = renamed;
+        isExeFile = true;
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  if (isExeFile) {
     const { spawn } = require("child_process");
     spawn(downloadedFile, ["/S"], { detached: true, stdio: "ignore" }).unref();
     setTimeout(() => {
