@@ -160,7 +160,8 @@ function httpGet(url, onResponse, onError, redirects = 0, headers = {}) {
         res.resume();
         return httpGet(res.headers.location, onResponse, onError, redirects + 1, headers);
       }
-      if (res.statusCode !== 200 && res.statusCode !== 206) {
+      if (res.statusCode !== 200 && res.statusCode !== 206 && res.statusCode !== 416) {
+        res.resume();
         return onError(new Error("HTTP " + res.statusCode));
       }
       onResponse(res);
@@ -168,7 +169,7 @@ function httpGet(url, onResponse, onError, redirects = 0, headers = {}) {
     .on("error", onError);
 }
 
-ipcMain.handle("download-update", async (_e, url) => {
+ipcMain.handle("download-update", async (_e, url, version) => {
   if (typeof url !== "string" || !/^https:\/\//.test(url)) {
     throw new Error("رابط غير صالح");
   }
@@ -176,7 +177,14 @@ ipcMain.handle("download-update", async (_e, url) => {
   const os = require("os");
   const crypto = require("crypto");
   const isSetup = /\.exe(\?|$)/i.test(url);
-  const downloadId = crypto.createHash("sha256").update(url).digest("hex").slice(0, 12);
+  const safeVersion = typeof version === "string" && /^\d+\.\d+\.\d+$/.test(version)
+    ? version
+    : "unknown";
+  const downloadId = crypto
+    .createHash("sha256")
+    .update(`${url}|${safeVersion}`)
+    .digest("hex")
+    .slice(0, 12);
   const target = path.join(
     os.tmpdir(),
     isSetup ? `mag-pro-agent-setup-${downloadId}.exe` : `mag-pro-agent-update-${downloadId}.zip`,
@@ -213,6 +221,23 @@ ipcMain.handle("download-update", async (_e, url) => {
         url,
         (res) => {
           const requestedOffset = received;
+          if (res.statusCode === 416) {
+            const unsatisfiedRange = String(res.headers["content-range"] || "");
+            const totalMatch = /^bytes\s+\*\/(\d+)$/i.exec(unsatisfiedRange);
+            const expectedSize = totalMatch ? Number(totalMatch[1]) : 0;
+            res.resume();
+            if (expectedSize > 0 && received === expectedSize) {
+              total = expectedSize;
+              sendProgress(true);
+              return resolve({ path: target });
+            }
+            try {
+              fs.unlinkSync(target);
+            } catch {}
+            received = 0;
+            total = expectedSize;
+            return reject(new Error("تم تنظيف ملف تحميل قديم"));
+          }
           if (res.statusCode === 200 && received > 0) {
             // السيرفر مش بيدعم الإكمال — نبدأ من الأول
             received = 0;
@@ -228,6 +253,7 @@ ipcMain.handle("download-update", async (_e, url) => {
             return reject(new Error("استجابة استكمال غير صالحة"));
           }
           total = rangeMatch ? Number(rangeMatch[3]) : received + len;
+          if (!Number.isFinite(total) || total < 0) total = 0;
           const file = fs.createWriteStream(target, { flags: received > 0 ? "a" : "w" });
           let done = false;
           let stallTimer = null;

@@ -26,7 +26,7 @@ const dotEl = document.getElementById("dot");
 const deviceEl = document.getElementById("device");
 
 const STORE = "mag-agent-device-v1";
-const AGENT_VERSION = "1.7.2";
+const AGENT_VERSION = "1.7.3";
 
 
 const updateEl = document.getElementById("update");
@@ -61,7 +61,7 @@ async function startDownload(info, autoInstall = false) {
   updFill.style.width = "0%";
   updProg.textContent = "جارٍ بدء التحميل…";
   try {
-    await window.agent.downloadUpdate(info.url);
+    await window.agent.downloadUpdate(info.url, info.version);
     updFill.style.width = "100%";
     updProg.textContent = "تم التحميل — جاهز للتثبيت";
     updBtn.textContent = "تثبيت";

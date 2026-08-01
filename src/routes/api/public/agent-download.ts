@@ -63,12 +63,10 @@ async function handle(request: Request) {
     const m = /bytes=(\d+)-/.exec(rangeHeader);
     if (m) start = Number(m[1]);
   }
-  if (total && start >= total) {
-    return new Response(null, {
-      status: 416,
-      headers: { "content-range": `bytes */${total}` },
-    });
-  }
+  // توافق مع نسخ البرنامج القديمة: كانت تعيد طلب ملف مؤقت مكتمل أو تالف
+  // فتدخل في حلقة HTTP 416. تجاهل الـ Range هنا يجبرها على حذف الملف
+  // المؤقت وإعادة تنزيل نسخة نظيفة ثم تثبيتها داخل التطبيق.
+  if (total && start >= total) start = 0;
 
   if (request.method === "HEAD") {
     return new Response(null, {
