@@ -521,9 +521,10 @@ function EmployeesTab() {
         </div>
         <Button onClick={() => setOpen(true)} className="gradient-primary text-white gap-1"><Plus className="size-4" />موظف جديد</Button>
       </div>
-      <div className="grid md:grid-cols-2 gap-3">
+      <div className="grid gap-3">
         {(q.data ?? []).map((u: any) => (
-          <div key={u.user_id + u.role} className="card-surface rounded-2xl p-4 flex items-center justify-between gap-3">
+          <div key={u.user_id + u.role} className="card-surface rounded-2xl p-4 space-y-4">
+            <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0 flex-1">
               <button
                 type="button"
@@ -565,15 +566,44 @@ function EmployeesTab() {
                 <div className="text-[10px] text-muted-foreground">مُضاف: {new Date(u.created_at).toLocaleDateString("ar-EG")}</div>
               </div>
             </div>
-            {u.role !== "admin" && (
-              <Button size="icon" variant="ghost" onClick={() => remove(u.user_id)}>
-                <Trash2 className="size-4 text-destructive" />
+            <div className="flex items-center gap-1 shrink-0">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setEditing({ user_id: u.user_id, full_name: u.full_name ?? "", email: u.email ?? "", password: "" })}
+              >
+                <Edit className="size-4 ml-1" /> تعديل
               </Button>
-            )}
+              {u.role !== "admin" && (
+                <Button size="icon" variant="ghost" onClick={() => remove(u.user_id)}>
+                  <Trash2 className="size-4 text-destructive" />
+                </Button>
+              )}
+            </div>
+            </div>
+            <EmployeeDevices userId={u.user_id} employeeName={u.full_name} />
           </div>
         ))}
         {(q.data ?? []).length === 0 && <div className="card-surface rounded-2xl p-12 text-center text-muted-foreground col-span-full">لا يوجد موظفون</div>}
       </div>
+      <Dialog open={!!editing} onOpenChange={(o) => { if (!o) setEditing(null); }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>تعديل بيانات الموظف</DialogTitle></DialogHeader>
+          {editing && (
+            <div className="space-y-3">
+              <div><Label>الاسم الكامل</Label><Input value={editing.full_name} onChange={(e) => setEditing({ ...editing, full_name: e.target.value })} /></div>
+              <div><Label>البريد الإلكتروني</Label><Input type="email" value={editing.email} onChange={(e) => setEditing({ ...editing, email: e.target.value })} /></div>
+              <div><Label>كلمة سر جديدة (اختياري)</Label><Input type="password" value={editing.password} onChange={(e) => setEditing({ ...editing, password: e.target.value })} placeholder="اتركها فاضية لو مش عايز تغييرها" /></div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={saveEdit} disabled={savingEdit} className="gradient-primary text-white">
+              {savingEdit ? <Loader2 className="size-4 animate-spin" /> : "حفظ"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>إضافة موظف جديد</DialogTitle></DialogHeader>
