@@ -26,7 +26,7 @@ const dotEl = document.getElementById("dot");
 const deviceEl = document.getElementById("device");
 
 const STORE = "mag-agent-device-v1";
-const AGENT_VERSION = "1.6.2";
+const AGENT_VERSION = "1.7.0";
 
 
 const updateEl = document.getElementById("update");
@@ -51,7 +51,7 @@ window.agent.onUpdateProgress?.(({ received, total, percent }) => {
   }
 });
 
-async function startDownload(info) {
+async function startDownload(info, autoInstall = false) {
   if (!info?.url) return;
   updateBusy = true;
   updLater.style.display = "none";
@@ -66,7 +66,7 @@ async function startDownload(info) {
     updProg.textContent = "تم التحميل — جاهز للتثبيت";
     updBtn.textContent = "تثبيت";
     updBtn.disabled = false;
-    updBtn.onclick = async () => {
+    const install = async () => {
       updBtn.disabled = true;
       updBtn.textContent = "جارٍ التثبيت…";
       updProg.textContent = "سيتم إعادة تشغيل البرنامج بعد التثبيت…";
@@ -78,6 +78,8 @@ async function startDownload(info) {
         updBtn.disabled = false;
       }
     };
+    updBtn.onclick = install;
+    if (autoInstall) void install();
   } catch (err) {
     updProg.textContent = "فشل التحميل: " + (err?.message || err);
     updBtn.textContent = "إعادة المحاولة";
@@ -112,6 +114,8 @@ async function checkUpdate() {
       return;
     }
     if (info.version === dismissedVersion) return;
+    // تحديث تلقائي في الخلفية: ينزل ويثبت بدون الحاجة لفتح البرنامج أو إغلاقه يدوياً
+    if (!updateBusy) void startDownload(info, true);
     updVerEl.textContent = "v" + info.version;
     updNotesEl.textContent = info.notes || "نسخة أحدث متاحة للتحميل";
     updBtn.textContent = "تحميل التحديث";
@@ -216,6 +220,32 @@ function preferCodec(pc) {
 }
 
 
+// نجبر الكوديك يبدأ ويستمر على بت-ريت عالي بدل التدرّج من جودة ضعيفة
+function boostSdp(sdp) {
+  const lines = sdp.split(/\r?\n/);
+  const out = [];
+  let inVideo = false;
+  for (const line of lines) {
+    if (line.startsWith("m=")) inVideo = line.startsWith("m=video");
+    out.push(line);
+    if (inVideo && line.startsWith("m=video")) continue;
+    if (inVideo && /^a=fmtp:\d+ /.test(line)) {
+      out[out.length - 1] =
+        line +
+        ";x-google-start-bitrate=30000;x-google-min-bitrate=12000;x-google-max-bitrate=60000";
+    }
+  }
+  // b=AS بعد سطر c= الخاص بالفيديو
+  const res = [];
+  let seenVideo = false;
+  for (const line of out) {
+    if (line.startsWith("m=")) seenVideo = line.startsWith("m=video");
+    res.push(line);
+    if (seenVideo && line.startsWith("c=")) res.push("b=AS:60000", "b=TIAS:60000000");
+  }
+  return res.join("\r\n");
+}
+
 let stream = null;
 let channel = null;
 let pc = null;
@@ -267,14 +297,16 @@ async function startPeer() {
     if (e.candidate) void send({ type: "ice", from: "host", candidate: e.candidate.toJSON() });
   };
   pc.onconnectionstatechange = () => {
-    if (pc.connectionState === "connected") setStatus("المدير يشاهد الشاشة الآن", true);
+    if (pc.connectionState === "connected") setStatus("متصل", true);
     if (["failed", "disconnected", "closed"].includes(pc.connectionState)) {
       setStatus("متصل — في انتظار طلب المشاهدة", true);
     }
   };
   const offer = await pc.createOffer();
+  // نفرض جودة عالية جداً من أول لحظة (لا نبدأ بجودة منخفضة ثم نرتفع)
+  offer.sdp = boostSdp(offer.sdp);
   await pc.setLocalDescription(offer);
-  await send({ type: "offer", sdp: offer });
+  await send({ type: "offer", sdp: { type: offer.type, sdp: offer.sdp } });
 }
 
 async function heartbeat(device) {
@@ -435,6 +467,12 @@ if (existing) {
 void checkUpdate();
 updTimer = setInterval(() => void checkUpdate(), 60 * 1000);
 window.addEventListener("focus", () => void checkUpdate());
+
+// زر التحديث أعلى اليمين: يعيد تحميل الصفحة ويفحص التحديثات فوراً
+document.getElementById("refresh")?.addEventListener("click", (e) => {
+  e.currentTarget.classList.add("spin");
+  window.location.reload();
+});
 
 // إعادة الاتصال تلقائياً لما الشبكة ترجع (بعد قفل اللابتوب/فقد النت)
 window.addEventListener("online", () => {

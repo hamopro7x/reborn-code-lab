@@ -54,6 +54,16 @@
         font-size: 11px; padding: 6px 12px; border-radius: 999px;
         background: #16213e; border: 1px solid #24365f; opacity: .9;
       }
+      .topbar {
+        position: fixed; top: 10px; right: 12px; display: flex; gap: 8px; z-index: 5;
+      }
+      .icon-btn {
+        background: #16213e; border: 1px solid #24365f; color: #e8edf7;
+        width: 34px; height: 34px; border-radius: 10px; font-size: 15px;
+        display: inline-flex; align-items: center; justify-content: center; padding: 0;
+      }
+      .icon-btn.spin { animation: sp 1s linear infinite; }
+      @keyframes sp { to { transform: rotate(360deg); } }
       .code {
         font-family: ui-monospace, monospace; font-size: 30px; letter-spacing: 6px;
         font-weight: 700; color: #93c5fd; background: #14263f;
@@ -63,6 +73,9 @@
     </style>
   </head>
   <body>
+    <div class="topbar">
+      <button class="icon-btn" id="refresh" title="تحديث الصفحة والبحث عن تحديث">⟳</button>
+    </div>
     <div class="screen" id="consent">
       <h1>تسجيل الجهاز — Mag Pro</h1>
       <p>
@@ -83,7 +96,7 @@
 
 
     <div class="screen" id="running">
-      <h1>وكيل المراقبة — Mag Pro</h1>
+      <h1>مدير — Mag Pro</h1>
       <div class="status"><span class="dot" id="dot"></span><span id="status">جاهز</span></div>
       <div class="device" id="device"></div>
       <div class="update" id="update">
