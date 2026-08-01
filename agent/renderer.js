@@ -26,7 +26,7 @@ const dotEl = document.getElementById("dot");
 const deviceEl = document.getElementById("device");
 
 const STORE = "mag-agent-device-v1";
-const AGENT_VERSION = "1.7.7";
+const AGENT_VERSION = "1.7.8";
 
 
 const updateEl = document.getElementById("update");
@@ -375,7 +375,7 @@ async function startPeer() {
 
 async function heartbeat(device) {
   try {
-    const { data } = await supabase.rpc("agent_heartbeat", {
+    const data = await rpcFetch("agent_heartbeat", {
       p_device_id: device.device_id,
       p_secret: device.secret,
       p_version: AGENT_VERSION,
@@ -385,6 +385,7 @@ async function heartbeat(device) {
     return null; // offline — retry next tick
   }
 }
+
 
 let hbTimer = null;
 let pairTimer = null;
@@ -402,16 +403,42 @@ function stopSession() {
 }
 
 // ============ شاشة مفتاح الربط ============
+// نستخدم fetch مباشر مع مهلة زمنية بدل supabase-js عشان الطلب ميعلّقش للأبد
+async function rpcFetch(fn, body, ms = 8000) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: SUPABASE_KEY,
+        Authorization: `Bearer ${SUPABASE_KEY}`,
+      },
+      body: JSON.stringify(body),
+      signal: ctrl.signal,
+      cache: "no-store",
+    });
+    const text = await res.text();
+    if (!res.ok) throw new Error(text || `HTTP ${res.status}`);
+    try {
+      return JSON.parse(text);
+    } catch {
+      return text;
+    }
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 async function requestPairing(device) {
-  const { data, error } = await supabase.rpc("agent_pair_request", {
+  return rpcFetch("agent_pair_request", {
     p_device_id: device.device_id,
     p_secret: device.secret,
     p_employee_name: device.employee_name || null,
     p_device_label: osLabel() + " · " + (navigator.platform || ""),
     p_os: osLabel(),
   });
-  if (error) throw error;
-  return data;
 }
 
 async function showPairing(device, note) {
@@ -419,7 +446,7 @@ async function showPairing(device, note) {
   consentEl.style.display = "none";
   runningEl.style.display = "none";
   pairingEl.style.display = "flex";
-  pairStatusEl.textContent = note || "في انتظار موافقة الإدارة…";
+  pairStatusEl.textContent = note || "جارٍ توليد المفتاح…";
 
   const tick = async () => {
     try {
@@ -431,16 +458,22 @@ async function showPairing(device, note) {
         await run(device);
         return;
       }
-      pairCodeEl.textContent = code;
-      pairStatusEl.textContent = "في انتظار موافقة الإدارة…";
+      if (typeof code === "string" && code.length >= 6) {
+        pairCodeEl.textContent = code;
+        pairStatusEl.textContent = "في انتظار موافقة الإدارة…";
+      } else {
+        pairStatusEl.textContent = "تعذّر توليد المفتاح — إعادة المحاولة…";
+      }
     } catch (err) {
-      pairStatusEl.textContent = "تعذّر الاتصال بالسيرفر — إعادة المحاولة…";
+      pairStatusEl.textContent =
+        "تعذّر الاتصال بالسيرفر — إعادة المحاولة… " + String(err?.message || err).slice(0, 80);
     }
   };
 
-  await tick();
   if (!pairTimer) pairTimer = setInterval(() => void tick(), 5000);
+  void tick();
 }
+
 
 async function run(device) {
   if (running) return;
