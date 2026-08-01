@@ -21,7 +21,7 @@
       "package.json"
     ],
     "directories": {
-      "output": "release"
+      "output": "/tmp/agent-release"
     },
     "win": {
       "target": [
@@ -32,7 +32,8 @@
           ]
         }
       ],
-      "artifactName": "MagProAgent-Setup.exe"
+      "artifactName": "MagProAgent-Setup.exe",
+      "signAndEditExecutable": false
     },
     "nsis": {
       "oneClick": true,
