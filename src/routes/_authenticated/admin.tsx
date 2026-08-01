@@ -1837,7 +1837,7 @@ function DevicesTab() {
   const addFn = useServerFn(adminAddDevice);
   const empFn = useServerFn(adminListEmployees);
   const devices = useQuery({ queryKey: ["admin-devices"], queryFn: () => listFn() });
-  const employees = useQuery({ queryKey: ["admin-employees"], queryFn: () => empFn() });
+  const employees = useQuery({ queryKey: ["admin-devices-employees"], queryFn: () => empFn() });
   const [newUserId, setNewUserId] = useState<string>("");
   const [newFp, setNewFp] = useState<string>("");
   const [newLabel, setNewLabel] = useState<string>("");
