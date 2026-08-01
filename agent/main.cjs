@@ -208,12 +208,17 @@ ipcMain.handle("download-update", async (_e, url, version) => {
     }
   };
 
+  // لو رابط الإصدار المخزن تعطل، ننتقل آلياً لمسار التنزيل الدائم بدلاً من
+  // تكرار نفس HTTP 400/500 عشرات المرات.
+  const permanentDownloadUrl = "https://mag-pro1.com/api/public/agent-download.exe";
+  let activeUrl = url;
+
   // محاولة واحدة: تكمل من مكان التوقف عبر Range + كشف التوقف (stall)
   const attempt = () =>
     new Promise((resolve, reject) => {
       const headers = received > 0 ? { Range: `bytes=${received}-` } : {};
       httpGet(
-        url,
+        activeUrl,
         (res) => {
           const requestedOffset = received;
           if (res.statusCode === 416) {
@@ -322,6 +327,18 @@ ipcMain.handle("download-update", async (_e, url, version) => {
       return out;
     } catch (err) {
       lastErr = err;
+      const message = String(err?.message || err);
+      if (
+        activeUrl !== permanentDownloadUrl &&
+        (/HTTP\s+(400|403|404|410|500|502|503|504)/.test(message) || i >= 2)
+      ) {
+        activeUrl = permanentDownloadUrl;
+        try {
+          if (fs.existsSync(target)) fs.unlinkSync(target);
+        } catch {}
+        received = 0;
+        total = 0;
+      }
       // نُحدّث الحجم الفعلي على القرص قبل الاستئناف
       try {
         received = fs.existsSync(target) ? fs.statSync(target).size : 0;
