@@ -16,6 +16,7 @@ type Device = {
   device_label: string | null;
   os: string | null;
   approved: boolean;
+  app_version?: string | null;
   last_seen_at: string | null;
   created_at: string;
   user_id?: string | null;
@@ -163,9 +164,14 @@ function LiveScreen({
             {device.device_label ?? device.os ?? "جهاز"}
           </div>
         </div>
-        <Badge variant={online ? "default" : "secondary"}>
-          {!online ? "غير متصل" : live ? "بث مباشر" : failed ? "لا يستجيب" : "جاري الاتصال…"}
-        </Badge>
+        <div className="flex items-center gap-1.5">
+          <Badge variant="outline" className="text-[10px]" dir="ltr">
+            {device.app_version ? "v" + device.app_version : "—"}
+          </Badge>
+          <Badge variant={online ? "default" : "secondary"}>
+            {!online ? "غير متصل" : live ? "بث مباشر" : failed ? "لا يستجيب" : "جاري الاتصال…"}
+          </Badge>
+        </div>
       </div>
 
       <div className="relative rounded-lg overflow-hidden bg-black aspect-video">
@@ -261,7 +267,7 @@ export function PairDeviceBox({ userId, title }: { userId?: string; title?: stri
 }
 
 const DEVICE_COLUMNS =
-  "id, device_id, employee_name, device_label, os, approved, last_seen_at, created_at, user_id";
+  "id, device_id, employee_name, device_label, os, approved, last_seen_at, created_at, user_id, app_version";
 
 function useAgentDevices() {
   return useQuery({
@@ -346,6 +352,9 @@ export function EmployeeDevices({
               <p className="text-xs text-muted-foreground flex items-center gap-1">
                 <KeyRound className="size-3" />
                 <span dir="ltr" className="truncate">{d.device_id}</span>
+              </p>
+              <p className="text-xs text-muted-foreground">
+                إصدار البرنامج: <span dir="ltr">{d.app_version ? "v" + d.app_version : "—"}</span>
               </p>
               <p className="text-xs text-muted-foreground">
                 الحالة: {d.approved ? "مصرّح له" : "غير مصرّح"}
