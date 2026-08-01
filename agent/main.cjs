@@ -488,7 +488,6 @@ let installing = false;
 async function installUpdate() {
   if (installing) return true;
   if (!downloadedFile) throw new Error("لم يتم تنزيل التحديث");
-  installing = true;
   cleanupOldDownloads();
   const fs = require("fs");
   const os = require("os");
@@ -533,6 +532,7 @@ async function installUpdate() {
       ].join("\r\n"),
       "utf8",
     );
+    installing = true;
     const { spawn } = require("child_process");
     spawn("cmd.exe", ["/c", script], { detached: true, stdio: "ignore", windowsHide: true }).unref();
     setTimeout(() => {
