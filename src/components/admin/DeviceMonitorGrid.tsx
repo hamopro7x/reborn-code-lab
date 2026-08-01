@@ -18,7 +18,10 @@ type Device = {
   approved: boolean;
   last_seen_at: string | null;
   created_at: string;
+  user_id?: string | null;
+
 };
+
 
 const isOnline = (d: Device) =>
   !!d.last_seen_at && Date.now() - new Date(d.last_seen_at).getTime() < 60_000;
@@ -207,7 +210,7 @@ function LiveScreen({
   );
 }
 
-function PairDeviceBox() {
+export function PairDeviceBox({ userId, title }: { userId?: string; title?: string } = {}) {
   const qc = useQueryClient();
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
@@ -216,7 +219,13 @@ function PairDeviceBox() {
     const key = code.trim().toUpperCase();
     if (!key) return toast.error("اكتب مفتاح الربط الظاهر في برنامج الموظف");
     setBusy(true);
-    const { error } = await supabase.rpc("agent_claim_pairing", { p_code: key });
+    const { data, error } = await supabase.rpc("agent_claim_pairing", { p_code: key });
+    if (!error && userId) {
+      const deviceId = (data as { device_id?: string } | null)?.device_id;
+      if (deviceId) {
+        await supabase.from("agent_devices").update({ user_id: userId }).eq("device_id", deviceId);
+      }
+    }
     setBusy(false);
     if (error) return toast.error("مفتاح غير صحيح أو منتهي");
     setCode("");
@@ -224,11 +233,12 @@ function PairDeviceBox() {
     void qc.invalidateQueries({ queryKey: ["agent-devices"] });
   };
 
+
   return (
     <div className="rounded-xl border border-border/60 p-3 space-y-2">
       <div className="flex items-center gap-2">
         <KeyRound className="size-4 text-primary" />
-        <span className="text-sm font-bold">إضافة جهاز بمفتاح الربط</span>
+        <span className="text-sm font-bold">{title ?? "إضافة جهاز بمفتاح الربط"}</span>
       </div>
       <p className="text-xs text-muted-foreground">
         الموظف يفتح البرنامج فيظهر له مفتاح ربط — اكتبه هنا ليعمل الجهاز دائمًا حتى تحذفه بنفسك.
@@ -249,30 +259,123 @@ function PairDeviceBox() {
   );
 }
 
-export function DeviceMonitorGrid() {
-  const qc = useQueryClient();
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+const DEVICE_COLUMNS =
+  "id, device_id, employee_name, device_label, os, approved, last_seen_at, created_at, user_id";
 
-  const { data, isLoading, refetch, isFetching } = useQuery({
+function useAgentDevices() {
+  return useQuery({
     queryKey: ["agent-devices"],
     refetchInterval: 15_000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("agent_devices")
-        .select("id, device_id, employee_name, device_label, os, approved, last_seen_at, created_at")
+        .select(DEVICE_COLUMNS)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as Device[];
     },
   });
+}
 
-  const remove = async (d: Device) => {
+function useRemoveDevice(onRemoved?: (id: string) => void) {
+  const qc = useQueryClient();
+  return async (d: Device) => {
     const { error } = await supabase.from("agent_devices").delete().eq("id", d.id);
     if (error) return toast.error(error.message);
-    if (expandedId === d.id) setExpandedId(null);
+    onRemoved?.(d.id);
     toast.success("تم إلغاء تسجيل الجهاز — سيظهر للموظف مفتاح ربط جديد");
     void qc.invalidateQueries({ queryKey: ["agent-devices"] });
   };
+}
+
+/** أجهزة موظف واحد — تُعرض شاشاتها مباشرة داخل بيانات الموظف */
+export function EmployeeDevices({
+  userId,
+  employeeName,
+}: {
+  userId: string;
+  employeeName?: string | null;
+}) {
+  const qc = useQueryClient();
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const { data, isLoading } = useAgentDevices();
+  const remove = useRemoveDevice((id) => {
+    if (expandedId === id) setExpandedId(null);
+  });
+
+  const all = data ?? [];
+  const name = (employeeName ?? "").trim().toLowerCase();
+  const mine = all.filter(
+    (d) =>
+      d.user_id === userId ||
+      (!d.user_id && !!name && (d.employee_name ?? "").trim().toLowerCase() === name),
+  );
+  const unassigned = all.filter((d) => !d.user_id && !mine.includes(d));
+
+  const assign = async (d: Device) => {
+    const { error } = await supabase.from("agent_devices").update({ user_id: userId }).eq("id", d.id);
+    if (error) return toast.error(error.message);
+    toast.success("تم ربط الجهاز بهذا الموظف");
+    void qc.invalidateQueries({ queryKey: ["agent-devices"] });
+  };
+
+  const shown = expandedId ? mine.filter((d) => d.id === expandedId) : mine;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Monitor className="size-4 text-primary" />
+        <span className="text-sm font-bold">أجهزة هذا الموظف</span>
+      </div>
+
+      {isLoading ? (
+        <div className="flex justify-center py-4">
+          <Loader2 className="size-5 animate-spin text-primary" />
+        </div>
+      ) : mine.length === 0 ? (
+        <p className="text-xs text-muted-foreground">لا توجد أجهزة مربوطة بهذا الموظف بعد.</p>
+      ) : (
+        <div className={expandedId ? "" : "grid gap-3 sm:grid-cols-2"}>
+          {shown.map((d) => (
+            <LiveScreen
+              key={d.id}
+              device={d}
+              online={isOnline(d)}
+              expanded={expandedId === d.id}
+              onToggleExpand={() => setExpandedId(expandedId === d.id ? null : d.id)}
+              onRemove={() => void remove(d)}
+            />
+          ))}
+        </div>
+      )}
+
+      <PairDeviceBox userId={userId} title="ربط جهاز جديد لهذا الموظف" />
+
+      {unassigned.length > 0 && (
+        <div className="rounded-xl border border-border/60 p-3 space-y-2">
+          <span className="text-xs font-bold">أجهزة غير مربوطة بموظف</span>
+          {unassigned.map((d) => (
+            <div key={d.id} className="flex items-center justify-between gap-2 text-xs">
+              <span className="truncate">
+                {d.employee_name ?? "جهاز"} — <span dir="ltr">{d.device_id.slice(0, 12)}</span>
+              </span>
+              <Button size="sm" variant="outline" onClick={() => void assign(d)}>
+                ربط بهذا الموظف
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function DeviceMonitorGrid() {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const { data, isLoading, refetch, isFetching } = useAgentDevices();
+  const remove = useRemoveDevice((id) => {
+    if (expandedId === id) setExpandedId(null);
+  });
 
   const devices = data ?? [];
   const shown = expandedId ? devices.filter((d) => d.id === expandedId) : devices;
@@ -317,3 +420,4 @@ export function DeviceMonitorGrid() {
     </div>
   );
 }
+

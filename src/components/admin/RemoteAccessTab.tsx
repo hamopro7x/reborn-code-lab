@@ -11,7 +11,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { toast } from "sonner";
 import { Plus, Trash2, Edit, ExternalLink, Copy, MonitorPlay, Loader2 } from "lucide-react";
 import { AgentDownloadCard } from "./AgentDownloadCard";
-import { DeviceMonitorGrid } from "./DeviceMonitorGrid";
 
 type RemoteRow = {
   id: string;
@@ -195,7 +194,6 @@ export function RemoteAccessTab() {
   return (
 
     <div className="space-y-6">
-      <DeviceMonitorGrid />
       <AgentDownloadCard />
 
       <div className="flex items-center justify-between">

@@ -191,3 +191,35 @@ export const deleteAllOrders = createServerFn({ method: "POST" })
     if (ordersErr) throw new Error(ordersErr.message);
     return { deleted: orderIds.length };
   });
+const updateEmpSchema = z.object({
+  user_id: z.string().uuid(),
+  full_name: z.string().trim().min(2).max(120).optional(),
+  email: z.string().trim().email().max(200).optional(),
+  password: z.string().min(6).max(100).optional(),
+});
+
+export const updateEmployee = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) => updateEmpSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const authUpdate: { email?: string; password?: string; user_metadata?: Record<string, unknown> } = {};
+    if (data.email) authUpdate.email = data.email;
+    if (data.password) authUpdate.password = data.password;
+    if (data.full_name) authUpdate.user_metadata = { full_name: data.full_name };
+    if (Object.keys(authUpdate).length) {
+      const { error } = await supabaseAdmin.auth.admin.updateUserById(data.user_id, authUpdate);
+      if (error) throw new Error(error.message);
+    }
+
+    const profileUpdate: { email?: string; full_name?: string } = {};
+    if (data.email) profileUpdate.email = data.email;
+    if (data.full_name) profileUpdate.full_name = data.full_name;
+    if (Object.keys(profileUpdate).length) {
+      const { error } = await supabaseAdmin.from("profiles").update(profileUpdate).eq("id", data.user_id);
+      if (error) throw new Error(error.message);
+    }
+    return { ok: true };
+  });

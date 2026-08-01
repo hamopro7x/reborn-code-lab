@@ -22,7 +22,7 @@ import {
   Lock, Camera,
 } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
-import { createEmployee, deleteEmployee, listEmployees, listCustomers, updateEmployeeAvatar, deleteAllOrders } from "@/lib/admin.functions";
+import { createEmployee, deleteEmployee, listEmployees, listCustomers, updateEmployeeAvatar, deleteAllOrders, updateEmployee } from "@/lib/admin.functions";
 import { adminListDevices, adminDeleteDevice, adminResetUserDevices, adminAddDevice, adminListEmployees,
   adminListCourseAccess, adminGrantCourseAccess, adminRevokeCourseAccess, checkDevice, getViewerIdentity } from "@/lib/courses.functions";
 import { getDeviceFingerprint } from "@/lib/device";
@@ -31,6 +31,8 @@ import { Progress } from "@/components/ui/progress";
 import { ReportsTab } from "@/components/admin/ReportsTab";
 import { FileBarChart, MonitorPlay } from "lucide-react";
 import { RemoteAccessTab } from "@/components/admin/RemoteAccessTab";
+import { EmployeeDevices } from "@/components/admin/DeviceMonitorGrid";
+
 
 type PanelKey =
   | "overview" | "orders" | "products" | "categories" | "customers" | "employees"
@@ -468,6 +470,30 @@ function EmployeesTab() {
   const [form, setForm] = useState({ email: "", password: "", full_name: "" });
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const upd = useServerFn(updateEmployee);
+  const [editing, setEditing] = useState<{ user_id: string; full_name: string; email: string; password: string } | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  async function saveEdit() {
+    if (!editing) return;
+    if (editing.full_name.trim().length < 2) return toast.error("اكتب اسم صحيح");
+    if (editing.password && editing.password.length < 6) return toast.error("كلمة السر 6 أحرف على الأقل");
+    setSavingEdit(true);
+    try {
+      await upd({ data: {
+        user_id: editing.user_id,
+        full_name: editing.full_name.trim(),
+        email: editing.email.trim(),
+        ...(editing.password ? { password: editing.password } : {}),
+      } });
+      toast.success("تم تحديث بيانات الموظف");
+      setEditing(null);
+      qc.invalidateQueries({ queryKey: ["admin-employees"] });
+    } catch (e: any) { toast.error(e?.message ?? "خطأ"); }
+    finally { setSavingEdit(false); }
+  }
+
+
 
   async function onPickAvatar(userId: string, file: File | null) {
     if (!file) return;
@@ -519,9 +545,10 @@ function EmployeesTab() {
         </div>
         <Button onClick={() => setOpen(true)} className="gradient-primary text-white gap-1"><Plus className="size-4" />موظف جديد</Button>
       </div>
-      <div className="grid md:grid-cols-2 gap-3">
+      <div className="grid gap-3">
         {(q.data ?? []).map((u: any) => (
-          <div key={u.user_id + u.role} className="card-surface rounded-2xl p-4 flex items-center justify-between gap-3">
+          <div key={u.user_id + u.role} className="card-surface rounded-2xl p-4 space-y-4">
+            <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0 flex-1">
               <button
                 type="button"
@@ -563,15 +590,44 @@ function EmployeesTab() {
                 <div className="text-[10px] text-muted-foreground">مُضاف: {new Date(u.created_at).toLocaleDateString("ar-EG")}</div>
               </div>
             </div>
-            {u.role !== "admin" && (
-              <Button size="icon" variant="ghost" onClick={() => remove(u.user_id)}>
-                <Trash2 className="size-4 text-destructive" />
+            <div className="flex items-center gap-1 shrink-0">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setEditing({ user_id: u.user_id, full_name: u.full_name ?? "", email: u.email ?? "", password: "" })}
+              >
+                <Edit className="size-4 ml-1" /> تعديل
               </Button>
-            )}
+              {u.role !== "admin" && (
+                <Button size="icon" variant="ghost" onClick={() => remove(u.user_id)}>
+                  <Trash2 className="size-4 text-destructive" />
+                </Button>
+              )}
+            </div>
+            </div>
+            <EmployeeDevices userId={u.user_id} employeeName={u.full_name} />
           </div>
         ))}
         {(q.data ?? []).length === 0 && <div className="card-surface rounded-2xl p-12 text-center text-muted-foreground col-span-full">لا يوجد موظفون</div>}
       </div>
+      <Dialog open={!!editing} onOpenChange={(o) => { if (!o) setEditing(null); }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>تعديل بيانات الموظف</DialogTitle></DialogHeader>
+          {editing && (
+            <div className="space-y-3">
+              <div><Label>الاسم الكامل</Label><Input value={editing.full_name} onChange={(e) => setEditing({ ...editing, full_name: e.target.value })} /></div>
+              <div><Label>البريد الإلكتروني</Label><Input type="email" value={editing.email} onChange={(e) => setEditing({ ...editing, email: e.target.value })} /></div>
+              <div><Label>كلمة سر جديدة (اختياري)</Label><Input type="password" value={editing.password} onChange={(e) => setEditing({ ...editing, password: e.target.value })} placeholder="اتركها فاضية لو مش عايز تغييرها" /></div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={saveEdit} disabled={savingEdit} className="gradient-primary text-white">
+              {savingEdit ? <Loader2 className="size-4 animate-spin" /> : "حفظ"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>إضافة موظف جديد</DialogTitle></DialogHeader>
