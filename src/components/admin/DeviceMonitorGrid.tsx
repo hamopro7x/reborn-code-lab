@@ -45,6 +45,7 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
     // معرّف فريد لكل مشاهد: يسمح بعدة أجهزة إدارة تشاهد نفس الجهاز في نفس الوقت
     const viewerId = makeViewerId();
     const pc = new RTCPeerConnection(RTC_CONFIG);
+    const pendingIce: RTCIceCandidateInit[] = [];
 
     // نُفضّل H264 ثم VP9 للمشاهدة (وضوح أفضل للنصوص)
     try {
@@ -55,9 +56,11 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
       ).getCapabilities?.("video");
       if (caps) {
         const order = ["video/H264", "video/VP9", "video/AV1", "video/VP8"];
-        const sorted = [...caps.codecs].sort(
-          (a, b) => order.indexOf(a.mimeType) - order.indexOf(b.mimeType),
-        );
+        const rank = (mimeType: string) => {
+          const index = order.indexOf(mimeType);
+          return index === -1 ? order.length : index;
+        };
+        const sorted = [...caps.codecs].sort((a, b) => rank(a.mimeType) - rank(b.mimeType));
         pc.addTransceiver("video", { direction: "recvonly" }).setCodecPreferences?.(
           sorted as unknown as RTCRtpCodec[],
         );
@@ -67,10 +70,10 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
     }
 
     pc.ontrack = (e) => {
-      // تأخير منخفض جداً مع مخزن صغير (60ms) يمنع التقطيع على النت الضعيف
+      // مخزن تشغيل صغير جداً؛ الهدف عرض أحدث frame بدل تراكم فيديو قديم.
       try {
-        (e.receiver as unknown as { jitterBufferTarget?: number }).jitterBufferTarget = 60;
-        (e.receiver as unknown as { playoutDelayHint?: number }).playoutDelayHint = 0.06;
+        (e.receiver as unknown as { jitterBufferTarget?: number }).jitterBufferTarget = 30;
+        (e.receiver as unknown as { playoutDelayHint?: number }).playoutDelayHint = 0.03;
       } catch {
         /* غير مدعوم في بعض المتصفحات */
       }
@@ -93,11 +96,15 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
         if (s.type === "offer") {
           if (pc.signalingState !== "stable" && pc.signalingState !== "have-remote-offer") return;
           await pc.setRemoteDescription(s.sdp);
+          for (const candidate of pendingIce.splice(0)) {
+            await pc.addIceCandidate(candidate).catch(() => {});
+          }
           const answer = await pc.createAnswer();
           await pc.setLocalDescription(answer);
           await sig.send({ type: "answer", sdp: answer, viewer: viewerId });
         } else if (s.type === "ice" && s.from === "host") {
-          await pc.addIceCandidate(s.candidate).catch(() => {});
+          if (pc.remoteDescription) await pc.addIceCandidate(s.candidate).catch(() => {});
+          else pendingIce.push(s.candidate);
         }
       },
       { raw: true },

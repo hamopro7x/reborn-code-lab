@@ -43,7 +43,7 @@ const dotEl = document.getElementById("dot");
 const deviceEl = document.getElementById("device");
 
 const STORE = "mag-agent-device-v1";
-const AGENT_VERSION = "1.8.4";
+const AGENT_VERSION = "1.8.5";
 
 const verBadgeEl = document.getElementById("ver-badge");
 if (verBadgeEl) verBadgeEl.textContent = "v" + AGENT_VERSION;
@@ -197,12 +197,12 @@ function osLabel() {
 async function captureScreen() {
   const sourceId = await window.agent.getScreenSource();
   if (!sourceId) throw new Error("لا توجد شاشة متاحة");
-  // أقصى وضوح ممكن *بدون* تأخير: نحدّ الدقة عند 1440p كحد أعلى.
-  // الدقة الأعلى (4K/8K) تُشبع الشبكة فيتكوّن طابور بيانات = بث متأخر.
+  // 1080p هو أفضل نقطة لحدة النصوص مع ترميز فوري بزمن وصول منخفض.
+  // 1440p/4K مع 60fps يضغطان المشفّر والشبكة ويكوّنان طابور إرسال متأخر.
   const dpr = window.devicePixelRatio || 1;
   const rawW = Math.round((window.screen?.width || 1920) * dpr);
   const rawH = Math.round((window.screen?.height || 1080) * dpr);
-  const scale = Math.min(1, 2560 / rawW, 1440 / rawH);
+  const scale = Math.min(1, 1920 / rawW, 1080 / rawH);
   const capW = Math.round(rawW * scale);
   const capH = Math.round(rawH * scale);
   const tryCapture = async (w, h, fps) =>
@@ -219,10 +219,10 @@ async function captureScreen() {
       },
     });
   try {
-    return await tryCapture(capW, capH, 60);
+    return await tryCapture(capW, capH, 30);
   } catch {
     try {
-      return await tryCapture(1920, 1080, 60);
+      return await tryCapture(1920, 1080, 30);
     } catch {
       return await tryCapture(1280, 720, 30);
     }
@@ -236,9 +236,11 @@ function preferCodec(pc) {
     const caps = RTCRtpSender.getCapabilities?.("video");
     if (!caps) return;
     const order = ["video/H264", "video/VP9", "video/AV1", "video/VP8"];
-    const sorted = [...caps.codecs].sort(
-      (a, b) => order.indexOf(a.mimeType) - order.indexOf(b.mimeType),
-    );
+    const rank = (mimeType) => {
+      const index = order.indexOf(mimeType);
+      return index === -1 ? order.length : index;
+    };
+    const sorted = [...caps.codecs].sort((a, b) => rank(a.mimeType) - rank(b.mimeType));
     for (const tr of pc.getTransceivers()) {
       if (tr.sender?.track?.kind === "video" || tr.receiver?.track?.kind === "video") {
         tr.setCodecPreferences?.(sorted);
@@ -262,8 +264,8 @@ function boostSdp(sdp) {
     if (inVideo && /^a=fmtp:\d+ /.test(line)) {
       out[out.length - 1] =
         line +
-        // بداية عالية (5Mbps) للحصول على صورة واضحة فوراً، وحد أدنى 800kbps.
-        ";x-google-start-bitrate=5000;x-google-min-bitrate=800;x-google-max-bitrate=12000";
+        // بداية واضحة بدون ملء طابور الشبكة، مع سقف مناسب لـ1080p/30.
+        ";x-google-start-bitrate=3500;x-google-min-bitrate=500;x-google-max-bitrate=8000";
     }
   }
   // b=AS بعد سطر c= الخاص بالفيديو
@@ -272,7 +274,7 @@ function boostSdp(sdp) {
   for (const line of out) {
     if (line.startsWith("m=")) seenVideo = line.startsWith("m=video");
     res.push(line);
-    if (seenVideo && line.startsWith("c=")) res.push("b=AS:12000", "b=TIAS:12000000");
+    if (seenVideo && line.startsWith("c=")) res.push("b=AS:8000", "b=TIAS:8000000");
 
   }
   return res.join("\r\n");
@@ -293,18 +295,18 @@ async function getStream() {
   return stream;
 }
 
-// تحكّم سريع في الشبكة لكل مشاهد: نستخدم البت-ريت المتاح فعلياً (availableOutgoingBitrate)
-// + التأخير (RTT) + فقد الحزم + طابور الإرسال، ونصحّح كل 700ms.
-// على النت الضعيف نُنزّل الدقة (scaleResolutionDownBy) ونحافظ على معدل الإطارات
-// عشان الشاشة تفضل ماشية بسلاسة ومتتجمدش.
+// متحكّم latency-first: لا نستهلك كل الباندويث المتاح حتى لا يتراكم طابور إرسال.
+// نهبط فوراً عند الازدحام ونصعد ببطء بعد استقرار الشبكة.
 function startAdaptive(entry, sender) {
   if (entry.statsTimer) clearInterval(entry.statsTimer);
-  const MIN = 800_000; // حد أدنى أعلى = وضوح مقبول دائماً
-  const MAX = 12_000_000;
-  let target = 6_000_000; // نبدأ بجودة عالية ثم نصحّح لأسفل فقط لو الشبكة فعلاً ضعيفة
+  const MIN = 450_000;
+  const MAX = 8_000_000;
+  let target = 3_500_000;
   let scale = 1;
   let lastLost = 0;
   let lastPackets = 0;
+  let lastBytes = 0;
+  let lastTimestamp = 0;
   entry.statsTimer = setInterval(async () => {
     if (!entry.pc || entry.pc.connectionState !== "connected") return;
     try {
@@ -312,6 +314,7 @@ function startAdaptive(entry, sender) {
       let rtt = 0;
       let lost = 0;
       let packets = 0;
+      let bytes = 0;
       let avail = 0;
       let qualityLimited = "";
       stats.forEach((r) => {
@@ -325,6 +328,7 @@ function startAdaptive(entry, sender) {
         }
         if (r.type === "outbound-rtp") {
           if (typeof r.packetsSent === "number") packets = r.packetsSent;
+          if (typeof r.bytesSent === "number") bytes = r.bytesSent;
           if (typeof r.qualityLimitationReason === "string")
             qualityLimited = r.qualityLimitationReason;
         }
@@ -334,31 +338,41 @@ function startAdaptive(entry, sender) {
       lastLost = lost;
       lastPackets = packets;
       const lossRate = dLost / dPackets;
+      const now = performance.now();
+      const sendRate = lastTimestamp && bytes >= lastBytes
+        ? ((bytes - lastBytes) * 8000) / Math.max(1, now - lastTimestamp)
+        : 0;
+      lastBytes = bytes;
+      lastTimestamp = now;
 
-      // 1) البت-ريت: نتبع المتاح فعلياً بهامش 92% ونرفع بسرعة عند توفر الشبكة
-      const congested = rtt > 0.3 || lossRate > 0.04 || qualityLimited === "bandwidth";
+      // هامش 30% يمنع امتلاء bufferbloat. RTT أو الفقد يسببان خفضاً فورياً.
+      const cpuLimited = qualityLimited === "cpu";
+      const severe = rtt > 0.35 || lossRate > 0.06;
+      const congested = severe || rtt > 0.18 || lossRate > 0.025 || qualityLimited === "bandwidth";
       if (avail > 0) {
-        const safe = Math.round(avail * 0.92);
-        target = congested ? Math.min(target, safe) : Math.round(target * 0.3 + safe * 0.7);
-        if (!congested) target = Math.max(target, Math.round(safe * 0.9));
+        const safe = Math.round(avail * 0.7);
+        if (severe) target = Math.min(Math.round(target * 0.62), safe);
+        else if (congested) target = Math.min(Math.round(target * 0.82), safe);
+        else target = Math.min(safe, Math.round(target * 1.08 + 80_000));
       } else if (congested) {
-        target = Math.round(target * 0.75);
+        target = Math.round(target * (severe ? 0.62 : 0.82));
       } else {
-        target = Math.round(target * 1.35);
+        target = Math.round(target * 1.06 + 60_000);
       }
+      // لو المشفّر لا يستطيع تصريف الهدف، لا نرفع أكثر لمجرد أن التقدير النظري مرتفع.
+      if (sendRate > 0 && congested) target = Math.min(target, Math.round(sendRate * 0.9));
       target = Math.max(MIN, Math.min(MAX, target));
 
-      // 2) الدقة: نحافظ على الدقة الكاملة ولا نصغّرها إلا على نت ضعيف جداً
+      // نخفض الدقة قبل أن تتراكم ثوانٍ من الفيديو، ونبقي 30fps للاستجابة السريعة.
       let nextScale = scale;
-      if (target < 900_000) nextScale = 2;
-      else if (target < 1_800_000) nextScale = 1.5;
+      if (cpuLimited || target < 750_000) nextScale = 2;
+      else if (target < 1_500_000) nextScale = 1.5;
       else nextScale = 1;
 
       const params = sender.getParameters();
       if (params.encodings?.[0]) {
         params.encodings[0].maxBitrate = target;
-        // إطارات عالية للوضوح والسلاسة (أقل حد 30fps)
-        params.encodings[0].maxFramerate = target < 1_500_000 ? 30 : target < 3_500_000 ? 45 : 60;
+        params.encodings[0].maxFramerate = 30;
         if (nextScale !== scale) {
           params.encodings[0].scaleResolutionDownBy = nextScale;
           scale = nextScale;
@@ -368,7 +382,7 @@ function startAdaptive(entry, sender) {
     } catch {
       /* تجاهل */
     }
-  }, 700);
+  }, 500);
 }
 
 
@@ -385,12 +399,14 @@ const startingViewers = new Set();
 
 async function startPeer(viewerId) {
   if (startingViewers.has(viewerId)) return; // منع بدء اتصالين لنفس المشاهد
+  const current = peers.get(viewerId);
+  if (current?.pc && ["new", "connecting", "connected"].includes(current.pc.connectionState)) return;
   startingViewers.add(viewerId);
   try {
     closePeer(viewerId); // أي اتصال قديم لنفس المشاهد يُستبدل
     const s = await getStream();
     const pc = new RTCPeerConnection(RTC_CONFIG);
-    const entry = { pc, statsTimer: null };
+    const entry = { pc, statsTimer: null, pendingIce: [] };
     peers.set(viewerId, entry);
 
     s.getVideoTracks().forEach((t) => {
@@ -406,14 +422,14 @@ async function startPeer(viewerId) {
       videoSender = sender;
       try {
         const params = sender.getParameters();
-        // توازن بين الدقة والسلاسة، والمتحكّم التلقائي يصحّح حسب الشبكة
-        params.degradationPreference = "balanced";
+        // الحفاظ على الدقة مع إسقاط الإطارات عند اللزوم يمنع طابور frames قديم.
+        params.degradationPreference = "maintain-resolution";
         params.encodings = [
           {
             ...(params.encodings?.[0] ?? {}),
             // بداية بجودة عالية (الدقة الكاملة) ثم تصحيح لأسفل فقط عند الحاجة
-            maxBitrate: 6_000_000,
-            maxFramerate: 60,
+            maxBitrate: 3_500_000,
+            maxFramerate: 30,
             scaleResolutionDownBy: 1,
             networkPriority: "high",
             priority: "high",
@@ -579,10 +595,14 @@ async function run(device) {
         const entry = peers.get(viewerId);
         if (entry?.pc && entry.pc.signalingState === "have-local-offer") {
           await entry.pc.setRemoteDescription(s.sdp);
+          for (const candidate of entry.pendingIce.splice(0)) {
+            await entry.pc.addIceCandidate(candidate).catch(() => {});
+          }
         }
       } else if (s.type === "ice" && s.from === "viewer") {
         const entry = peers.get(viewerId);
-        if (entry?.pc) await entry.pc.addIceCandidate(s.candidate).catch(() => {});
+        if (entry?.pc?.remoteDescription) await entry.pc.addIceCandidate(s.candidate).catch(() => {});
+        else if (entry) entry.pendingIce.push(s.candidate);
       } else if (s.type === "bye") {
         closePeer(viewerId);
       }
