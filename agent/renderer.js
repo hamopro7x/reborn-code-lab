@@ -464,6 +464,19 @@ async function run(device) {
   }, 20000);
 
   void checkUpdate();
+  // فحص دوري كل دقيقة كخطة احتياطية لو الريلتايم اتقطع
+  setInterval(() => void checkUpdate(), 60000);
+  // اشتراك فوري: أي تحديث جديد يتحفظ في site_settings يظهر مباشرة
+  try {
+    supabase
+      .channel("agent-update-watch")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "site_settings", filter: "key=eq.agent_update" },
+        () => void checkUpdate(),
+      )
+      .subscribe();
+  } catch {}
 
 
   channel = supabase.channel(`screenshare-${device.device_id}`, {
