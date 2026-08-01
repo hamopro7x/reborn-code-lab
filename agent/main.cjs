@@ -580,7 +580,9 @@ async function installUpdate() {
     app.quit();
   }, 1200);
   return true;
-});
+}
+
+ipcMain.handle("install-update", () => installUpdate());
 
 
 ipcMain.handle("enable-auto-launch", () => {
@@ -588,11 +590,41 @@ ipcMain.handle("enable-auto-launch", () => {
   return true;
 });
 
+// ===== تحديث تلقائي عند بدء التشغيل =====
+// لو الجهاز كان مقفولاً وصدر تحديث، أول ما يفتح ينزل التحديث ويثبته بصمت.
+// لا يعتمد على الواجهة: يشتغل حتى لو البرنامج بدأ مخفياً، وينتظر الشبكة.
+let bootUpdateDone = false;
+
+async function runBootUpdate(attempt = 0) {
+  if (bootUpdateDone) return;
+  const retry = () => {
+    const delay = attempt < 6 ? 30000 : 15 * 60 * 1000;
+    setTimeout(() => void runBootUpdate(attempt + 1), delay);
+  };
+  try {
+    const info = await httpJson(VERSION_ENDPOINT);
+    const latest = info?.version;
+    if (!latest || cmpVersion(latest, app.getVersion()) <= 0) {
+      // لا يوجد تحديث الآن — نفحص كل ربع ساعة تحسباً لصدور نسخة أثناء العمل.
+      setTimeout(() => void runBootUpdate(attempt + 1), 15 * 60 * 1000);
+      return;
+    }
+    if (activeDownload) return retry();
+    await downloadUpdate(PERMANENT_DOWNLOAD_URL, latest, true);
+    bootUpdateDone = true;
+    await installUpdate();
+  } catch {
+    retry();
+  }
+}
 
 app.whenReady().then(() => {
   createWindow();
   enableAutoLaunch();
+  // مهلة قصيرة حتى تجهز الشبكة بعد تشغيل ويندوز
+  setTimeout(() => void runBootUpdate(), 8000);
   try {
+
     tray = new Tray(nativeImage.createEmpty());
     tray.setToolTip("Mag Pro Agent");
     tray.setContextMenu(
