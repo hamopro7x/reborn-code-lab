@@ -410,11 +410,11 @@ function stopSession() {
   running = false;
   if (hbTimer) clearInterval(hbTimer);
   hbTimer = null;
-  try { pc?.close(); } catch {}
-  pc = null;
+  for (const id of Array.from(peers.keys())) closePeer(id);
   try { if (channel) supabase.removeChannel(channel); } catch {}
   channel = null;
 }
+
 
 // ============ شاشة مفتاح الربط ============
 // نستخدم fetch مباشر مع مهلة زمنية بدل supabase-js عشان الطلب ميعلّقش للأبد
