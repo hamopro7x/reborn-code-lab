@@ -368,6 +368,9 @@ async function startPeer() {
   await pc.setLocalDescription(offer);
   await send({ type: "offer", sdp: { type: offer.type, sdp: offer.sdp } });
   if (videoSender) startAdaptive(videoSender);
+  } finally {
+    starting = false;
+  }
 }
 
 async function heartbeat(device) {
