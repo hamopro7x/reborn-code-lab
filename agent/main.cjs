@@ -663,7 +663,10 @@ app.whenReady().then(() => {
     const reconnect = () => {
       enableAutoLaunch();
       if (win && !win.isDestroyed()) win.webContents.reload();
+      // بعد الاستئناف نفحص التحديث فوراً بدل انتظار الدورة القادمة
+      setTimeout(() => void runBootUpdate(), 5000);
     };
+
     powerMonitor.on("resume", reconnect);
     powerMonitor.on("unlock-screen", reconnect);
   } catch {
