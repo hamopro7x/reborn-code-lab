@@ -348,9 +348,11 @@ export function EmployeeDevices({
 
   return (
     <div className="space-y-3">
+      <PairDeviceBox userId={userId} employeeName={employeeName} title="إنشاء كود تسجيل للموظف" />
+
       <div className="flex items-center gap-2">
         <Monitor className="size-4 text-primary" />
-        <span className="text-sm font-bold">أجهزة هذا الموظف</span>
+        <span className="text-sm font-bold">أجهزة الموظف</span>
       </div>
 
       {isLoading ? (
@@ -397,7 +399,6 @@ export function EmployeeDevices({
       )}
 
 
-      <PairDeviceBox userId={userId} employeeName={employeeName} title="كود تسجيل جهاز لهذا الموظف" />
 
       {unassigned.length > 0 && (
         <div className="rounded-xl border border-border/60 p-3 space-y-2">
