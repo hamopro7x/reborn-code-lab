@@ -1,0 +1,1 @@
+update public.site_settings set value = jsonb_build_object('version','1.7.9','url','https://mag-pro1.com/__l5e/assets-v1/04e7039d-821b-4e1e-9f2d-ec213dc8c8f9/MagProAgent-Setup-1.7.9.exe','notes','إظهار رقم الإصدار جنب علامة التحديث') where key = 'agent_update';
