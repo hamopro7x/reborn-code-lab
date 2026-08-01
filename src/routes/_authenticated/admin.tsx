@@ -473,6 +473,7 @@ function EmployeesTab() {
   const upd = useServerFn(updateEmployee);
   const [editing, setEditing] = useState<{ user_id: string; full_name: string; email: string; password: string } | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
+  const [expanded, setExpanded] = useState<string | null>(null);
 
   async function saveEdit() {
     if (!editing) return;
