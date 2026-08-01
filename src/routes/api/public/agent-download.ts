@@ -81,7 +81,7 @@ async function upstreamSize(): Promise<number> {
   return len ? Number(len) : 0;
 }
 
-async function handle(request: Request) {
+export async function handleAgentDownload(request: Request) {
   const total = await upstreamSize();
 
 
@@ -179,8 +179,8 @@ async function handle(request: Request) {
 export const Route = createFileRoute("/api/public/agent-download")({
   server: {
     handlers: {
-      GET: ({ request }) => handle(request),
-      HEAD: ({ request }) => handle(request),
+      GET: ({ request }) => handleAgentDownload(request),
+      HEAD: ({ request }) => handleAgentDownload(request),
     },
   },
 });
