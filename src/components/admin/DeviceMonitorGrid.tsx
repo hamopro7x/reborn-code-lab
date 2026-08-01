@@ -370,7 +370,7 @@ export function EmployeeDevices({
   );
 }
 
-export function DeviceMonitorGrid() {
+export function DeviceMonitorGrid({ screensOnly = false }: { screensOnly?: boolean } = {}) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const { data, isLoading, refetch, isFetching } = useAgentDevices();
   const remove = useRemoveDevice((id) => {
@@ -392,7 +392,8 @@ export function DeviceMonitorGrid() {
         </Button>
       </div>
 
-      {!expandedId && <PairDeviceBox />}
+      {!expandedId && !screensOnly && <PairDeviceBox />}
+
 
       {isLoading ? (
         <div className="flex justify-center py-8">

@@ -30,7 +30,7 @@ import { ShieldAlert } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { ReportsTab } from "@/components/admin/ReportsTab";
 import { FileBarChart, MonitorPlay } from "lucide-react";
-import { RemoteAccessTab } from "@/components/admin/RemoteAccessTab";
+import { DeviceMonitorGrid } from "@/components/admin/DeviceMonitorGrid";
 import { EmployeeDevices } from "@/components/admin/DeviceMonitorGrid";
 
 
@@ -206,7 +206,7 @@ function Admin() {
             {panel === "employees" && adminOnly && <EmployeesTab />}
             {panel === "courses" && <CoursesTab isAdmin={adminOnly} />}
             {panel === "devices" && adminOnly && <DevicesTab />}
-            {panel === "remote" && adminOnly && <RemoteAccessTab />}
+            {panel === "remote" && adminOnly && <DeviceMonitorGrid screensOnly />}
             {panel === "payments" && adminOnly && <PaymentsTab />}
             {panel === "currencies" && adminOnly && <CurrenciesTab />}
             {panel === "settings" && adminOnly && <SettingsTab />}
