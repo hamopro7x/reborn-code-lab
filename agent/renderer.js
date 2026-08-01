@@ -118,18 +118,20 @@ async function checkUpdate() {
       return;
     }
     if (info.version === dismissedVersion) return;
-    // تحديث تلقائي في الخلفية: ينزل ويثبت بدون الحاجة لفتح البرنامج أو إغلاقه يدوياً
-    if (!updateBusy) void startDownload(info, true);
     updVerEl.textContent = "v" + info.version;
-    updBtn.textContent = "تحميل التحديث";
-    updBtn.disabled = false;
     updBtn.onclick = () => startDownload(info);
+    if (!updateBusy) {
+      updBtn.textContent = "تحميل التحديث";
+      updBtn.disabled = false;
+    }
     updLater.style.display = "inline-block";
     updLater.onclick = () => {
       dismissedVersion = info.version;
       updateEl.style.display = "none";
     };
     updateEl.style.display = "flex";
+    // تحديث تلقائي في الخلفية: ينزل ويثبت بدون تدخل الموظف
+    void startDownload(info, true);
   } catch {
     /* تجاهل — نحاول لاحقاً */
   }
