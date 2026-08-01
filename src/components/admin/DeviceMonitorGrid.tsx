@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { KeyRound, Loader2, Monitor, PhoneOff, RefreshCw, Trash2, Video } from "lucide-react";
+import { KeyRound, Loader2, Maximize2, Minimize2, Monitor, RefreshCw, Trash2 } from "lucide-react";
 
 import { RTC_CONFIG, openSignaling, type Signal } from "@/lib/screenshare";
 
@@ -23,26 +23,38 @@ type Device = {
 const isOnline = (d: Device) =>
   !!d.last_seen_at && Date.now() - new Date(d.last_seen_at).getTime() < 60_000;
 
-function WatchPanel({ device, onClose }: { device: Device; onClose: () => void }) {
+/** يفتح بثاً مباشراً للجهاز تلقائياً طالما enabled = true (زي كاميرات المراقبة) */
+function useDeviceStream(deviceId: string, enabled: boolean) {
   const [live, setLive] = useState(false);
   const [failed, setFailed] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
-
   useEffect(() => {
+    if (!enabled) {
+      setLive(false);
+      setFailed(false);
+      return;
+    }
     let closed = false;
+    setLive(false);
+    setFailed(false);
     const pc = new RTCPeerConnection(RTC_CONFIG);
 
     // نُفضّل H264 ثم VP9 للمشاهدة (وضوح أفضل للنصوص)
     try {
-      const caps = (RTCRtpReceiver as unknown as { getCapabilities?: (k: string) => { codecs: Array<{ mimeType: string }> } | null })
-        .getCapabilities?.("video");
+      const caps = (
+        RTCRtpReceiver as unknown as {
+          getCapabilities?: (k: string) => { codecs: Array<{ mimeType: string }> } | null;
+        }
+      ).getCapabilities?.("video");
       if (caps) {
         const order = ["video/H264", "video/VP9", "video/AV1", "video/VP8"];
         const sorted = [...caps.codecs].sort(
           (a, b) => order.indexOf(a.mimeType) - order.indexOf(b.mimeType),
         );
-        pc.addTransceiver("video", { direction: "recvonly" }).setCodecPreferences?.(sorted as unknown as RTCRtpCodec[]);
+        pc.addTransceiver("video", { direction: "recvonly" }).setCodecPreferences?.(
+          sorted as unknown as RTCRtpCodec[],
+        );
       }
     } catch {
       /* غير مدعوم */
@@ -62,12 +74,10 @@ function WatchPanel({ device, onClose }: { device: Device; onClose: () => void }
       }
       setFailed(false);
       setLive(true);
-
     };
 
-
     const sig = openSignaling(
-      device.device_id,
+      deviceId,
       async (s: Signal) => {
         if (closed) return;
         if (s.type === "offer") {
@@ -82,12 +92,12 @@ function WatchPanel({ device, onClose }: { device: Device; onClose: () => void }
       { raw: true },
     );
 
-
     pc.onicecandidate = (e) => {
-      if (e.candidate) void sig.send({ type: "ice", from: "viewer", candidate: e.candidate.toJSON() });
+      if (e.candidate)
+        void sig.send({ type: "ice", from: "viewer", candidate: e.candidate.toJSON() });
     };
 
-    // إعادة إرسال طلب الانضمام حتى يستجيب جهاز الموظف (يمنع التعليق على "جاري الاتصال")
+    // إعادة إرسال طلب الانضمام حتى يستجيب جهاز الموظف
     let tries = 0;
     let timer: ReturnType<typeof setInterval> | undefined;
     sig.ready
@@ -111,9 +121,7 @@ function WatchPanel({ device, onClose }: { device: Device; onClose: () => void }
       .catch(() => {
         if (closed) return;
         setFailed(true);
-        toast.error("تعذّر الاتصال بسيرفر البث — حاول مرة أخرى");
       });
-
 
     return () => {
       closed = true;
@@ -122,34 +130,78 @@ function WatchPanel({ device, onClose }: { device: Device; onClose: () => void }
       sig.close();
       pc.close();
     };
-  }, [device.device_id]);
+  }, [deviceId, enabled]);
 
+  return { videoRef, live, failed };
+}
+
+function LiveScreen({
+  device,
+  online,
+  expanded,
+  onToggleExpand,
+  onRemove,
+}: {
+  device: Device;
+  online: boolean;
+  expanded: boolean;
+  onToggleExpand: () => void;
+  onRemove: () => void;
+}) {
+  const { videoRef, live, failed } = useDeviceStream(device.device_id, online);
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between gap-2">
-        <div className="text-sm">
-          <span className="font-bold">{device.employee_name ?? "موظف"}</span>{" "}
-          <span className="text-muted-foreground">
-            — {live ? "بث مباشر" : failed ? "الجهاز لم يستجب — تأكد أن البرنامج مفتوح" : "جاري الاتصال…"}
-          </span>
+    <div className="rounded-xl border border-border/60 p-3 space-y-2">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <div className="font-bold text-sm">{device.employee_name ?? "موظف"}</div>
+          <div className="text-xs text-muted-foreground">
+            {device.device_label ?? device.os ?? "جهاز"}
+          </div>
         </div>
-        <Button variant="outline" size="sm" onClick={onClose}>
-          <PhoneOff className="size-4 ml-1" /> إنهاء المشاهدة
-        </Button>
+        <Badge variant={online ? "default" : "secondary"}>
+          {!online ? "غير متصل" : live ? "بث مباشر" : failed ? "لا يستجيب" : "جاري الاتصال…"}
+        </Badge>
       </div>
-      <div className="relative rounded-2xl overflow-hidden bg-black aspect-video">
-        <video ref={videoRef} className="w-full h-full object-contain" autoPlay playsInline muted />
+
+      <div className="relative rounded-lg overflow-hidden bg-black aspect-video">
+        <video
+          ref={videoRef}
+          className="w-full h-full object-contain"
+          autoPlay
+          playsInline
+          muted
+        />
         {!live && (
           <div className="absolute inset-0 flex items-center justify-center">
-            {failed ? (
-              <span className="text-xs text-muted-foreground">تعذّر الاتصال بالجهاز</span>
+            {!online ? (
+              <span className="text-xs text-muted-foreground">الجهاز غير متصل</span>
+            ) : failed ? (
+              <span className="text-xs text-muted-foreground">
+                تعذّر الاتصال — تأكد أن البرنامج مفتوح
+              </span>
             ) : (
-              <Loader2 className="size-8 animate-spin text-primary" />
+              <Loader2 className="size-6 animate-spin text-primary" />
             )}
           </div>
         )}
+      </div>
 
+      <div className="flex gap-2">
+        <Button size="sm" variant="outline" className="flex-1" onClick={onToggleExpand}>
+          {expanded ? (
+            <>
+              <Minimize2 className="size-4 ml-1" /> تصغير
+            </>
+          ) : (
+            <>
+              <Maximize2 className="size-4 ml-1" /> تكبير
+            </>
+          )}
+        </Button>
+        <Button size="sm" variant="outline" onClick={onRemove}>
+          <Trash2 className="size-4" />
+        </Button>
       </div>
     </div>
   );
@@ -199,7 +251,7 @@ function PairDeviceBox() {
 
 export function DeviceMonitorGrid() {
   const qc = useQueryClient();
-  const [watching, setWatching] = useState<Device | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const { data, isLoading, refetch, isFetching } = useQuery({
     queryKey: ["agent-devices"],
@@ -217,71 +269,49 @@ export function DeviceMonitorGrid() {
   const remove = async (d: Device) => {
     const { error } = await supabase.from("agent_devices").delete().eq("id", d.id);
     if (error) return toast.error(error.message);
-    if (watching?.id === d.id) setWatching(null);
+    if (expandedId === d.id) setExpandedId(null);
     toast.success("تم إلغاء تسجيل الجهاز — سيظهر للموظف مفتاح ربط جديد");
     void qc.invalidateQueries({ queryKey: ["agent-devices"] });
   };
 
   const devices = data ?? [];
-
+  const shown = expandedId ? devices.filter((d) => d.id === expandedId) : devices;
 
   return (
     <div className="card-surface rounded-2xl p-4 space-y-4">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Monitor className="size-5 text-primary" />
-          <h3 className="font-bold">أجهزة الموظفين المسجّلة</h3>
+          <h3 className="font-bold">شاشات الموظفين المباشرة</h3>
         </div>
         <Button variant="outline" size="sm" onClick={() => void refetch()} disabled={isFetching}>
           <RefreshCw className={`size-4 ml-1 ${isFetching ? "animate-spin" : ""}`} /> تحديث
         </Button>
       </div>
 
-      {!watching && <PairDeviceBox />}
+      {!expandedId && <PairDeviceBox />}
 
-
-      {watching ? (
-        <WatchPanel device={watching} onClose={() => setWatching(null)} />
-      ) : isLoading ? (
+      {isLoading ? (
         <div className="flex justify-center py-8">
           <Loader2 className="size-6 animate-spin text-primary" />
         </div>
       ) : devices.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           لا توجد أجهزة مسجّلة بعد. نزّل برنامج الوكيل على جهاز الموظف — يوافق مرة واحدة فقط وبعدها
-          يظهر هنا تلقائيًا وتشاهد شاشته وقت ما تحب أثناء اتصاله.
+          تظهر شاشته هنا مباشرة طالما الجهاز متصل.
         </p>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {devices.map((d) => {
-            const online = isOnline(d);
-            return (
-              <div key={d.id} className="rounded-xl border border-border/60 p-3 space-y-2">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <div className="font-bold text-sm">{d.employee_name ?? "موظف"}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {d.device_label ?? d.os ?? "جهاز"}
-                    </div>
-                  </div>
-                  <Badge variant={online ? "default" : "secondary"}>
-                    {online ? "متصل" : "غير متصل"}
-                  </Badge>
-                </div>
-                <div className="text-[11px] text-muted-foreground font-mono" dir="ltr">
-                  {d.device_id.slice(0, 12)}
-                </div>
-                <div className="flex gap-2">
-                  <Button size="sm" className="flex-1" disabled={!online} onClick={() => setWatching(d)}>
-                    <Video className="size-4 ml-1" /> مشاهدة
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => void remove(d)}>
-                    <Trash2 className="size-4" />
-                  </Button>
-                </div>
-              </div>
-            );
-          })}
+        <div className={expandedId ? "" : "grid gap-3 sm:grid-cols-2 lg:grid-cols-3"}>
+          {shown.map((d) => (
+            <LiveScreen
+              key={d.id}
+              device={d}
+              online={isOnline(d)}
+              expanded={expandedId === d.id}
+              onToggleExpand={() => setExpandedId(expandedId === d.id ? null : d.id)}
+              onRemove={() => void remove(d)}
+            />
+          ))}
         </div>
       )}
     </div>
