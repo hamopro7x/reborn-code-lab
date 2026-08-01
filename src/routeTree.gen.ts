@@ -29,6 +29,7 @@ import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[
 import { Route as AuthenticatedCoursesIdRouteImport } from './routes/_authenticated/courses.$id'
 import { Route as ApiPublicAgentDownloadRouteImport } from './routes/api/public/agent-download'
 import { Route as ApiPublicAgentDownloadDotexeRouteImport } from './routes/api/public/agent-download[.]exe'
+import { Route as ApiPublicAgentVersionRouteImport } from './routes/api/public/agent-version'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -133,6 +134,11 @@ const ApiPublicAgentDownloadDotexeRoute =
     path: '/api/public/agent-download.exe',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicAgentVersionRoute = ApiPublicAgentVersionRouteImport.update({
+  id: '/api/public/agent-version',
+  path: '/api/public/agent-version',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -154,6 +160,7 @@ export interface FileRoutesByFullPath {
   '/courses/$id': typeof AuthenticatedCoursesIdRoute
   '/api/public/agent-download': typeof ApiPublicAgentDownloadRoute
   '/api/public/agent-download.exe': typeof ApiPublicAgentDownloadDotexeRoute
+  '/api/public/agent-version': typeof ApiPublicAgentVersionRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -175,6 +182,7 @@ export interface FileRoutesByTo {
   '/courses/$id': typeof AuthenticatedCoursesIdRoute
   '/api/public/agent-download': typeof ApiPublicAgentDownloadRoute
   '/api/public/agent-download.exe': typeof ApiPublicAgentDownloadDotexeRoute
+  '/api/public/agent-version': typeof ApiPublicAgentVersionRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -198,6 +206,7 @@ export interface FileRoutesById {
   '/_authenticated/courses/$id': typeof AuthenticatedCoursesIdRoute
   '/api/public/agent-download': typeof ApiPublicAgentDownloadRoute
   '/api/public/agent-download.exe': typeof ApiPublicAgentDownloadDotexeRoute
+  '/api/public/agent-version': typeof ApiPublicAgentVersionRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -221,6 +230,7 @@ export interface FileRouteTypes {
     | '/courses/$id'
     | '/api/public/agent-download'
     | '/api/public/agent-download.exe'
+    | '/api/public/agent-version'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -242,6 +252,7 @@ export interface FileRouteTypes {
     | '/courses/$id'
     | '/api/public/agent-download'
     | '/api/public/agent-download.exe'
+    | '/api/public/agent-version'
   id:
     | '__root__'
     | '/'
@@ -264,6 +275,7 @@ export interface FileRouteTypes {
     | '/_authenticated/courses/$id'
     | '/api/public/agent-download'
     | '/api/public/agent-download.exe'
+    | '/api/public/agent-version'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -285,6 +297,7 @@ export interface RootRouteChildren {
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiPublicAgentDownloadRoute: typeof ApiPublicAgentDownloadRoute
   ApiPublicAgentDownloadDotexeRoute: typeof ApiPublicAgentDownloadDotexeRoute
+  ApiPublicAgentVersionRoute: typeof ApiPublicAgentVersionRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -429,6 +442,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicAgentDownloadDotexeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/agent-version': {
+      id: '/api/public/agent-version'
+      path: '/api/public/agent-version'
+      fullPath: '/api/public/agent-version'
+      preLoaderRoute: typeof ApiPublicAgentVersionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -465,6 +485,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiPublicAgentDownloadRoute: ApiPublicAgentDownloadRoute,
   ApiPublicAgentDownloadDotexeRoute: ApiPublicAgentDownloadDotexeRoute,
+  ApiPublicAgentVersionRoute: ApiPublicAgentVersionRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
