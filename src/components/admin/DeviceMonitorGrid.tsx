@@ -289,7 +289,7 @@ function useRemoveDevice(onRemoved?: (id: string) => void) {
   };
 }
 
-/** أجهزة موظف واحد — تُعرض شاشاتها مباشرة داخل بيانات الموظف */
+/** أجهزة موظف واحد — بيانات ومفاتيح فقط (بدون شاشة بث؛ البث في قسم الوصول عن بعد) */
 export function EmployeeDevices({
   userId,
   employeeName,
@@ -298,11 +298,8 @@ export function EmployeeDevices({
   employeeName?: string | null;
 }) {
   const qc = useQueryClient();
-  const [expandedId, setExpandedId] = useState<string | null>(null);
   const { data, isLoading } = useAgentDevices();
-  const remove = useRemoveDevice((id) => {
-    if (expandedId === id) setExpandedId(null);
-  });
+  const remove = useRemoveDevice();
 
   const all = data ?? [];
   const name = (employeeName ?? "").trim().toLowerCase();
@@ -320,8 +317,6 @@ export function EmployeeDevices({
     void qc.invalidateQueries({ queryKey: ["agent-devices"] });
   };
 
-  const shown = expandedId ? mine.filter((d) => d.id === expandedId) : mine;
-
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
@@ -336,19 +331,39 @@ export function EmployeeDevices({
       ) : mine.length === 0 ? (
         <p className="text-xs text-muted-foreground">لا توجد أجهزة مربوطة بهذا الموظف بعد.</p>
       ) : (
-        <div className={expandedId ? "" : "grid gap-3 sm:grid-cols-2"}>
-          {shown.map((d) => (
-            <LiveScreen
-              key={d.id}
-              device={d}
-              online={isOnline(d)}
-              expanded={expandedId === d.id}
-              onToggleExpand={() => setExpandedId(expandedId === d.id ? null : d.id)}
-              onRemove={() => void remove(d)}
-            />
+        <div className="grid gap-2 sm:grid-cols-2">
+          {mine.map((d) => (
+            <div key={d.id} className="rounded-xl border border-border/60 p-3 space-y-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm font-bold truncate">
+                  {d.device_label ?? d.employee_name ?? "جهاز"}
+                </span>
+                <Badge variant={isOnline(d) ? "default" : "secondary"} className="text-[10px]">
+                  {isOnline(d) ? "متصل" : "غير متصل"}
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">{d.os ?? "—"}</p>
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <KeyRound className="size-3" />
+                <span dir="ltr" className="truncate">{d.device_id}</span>
+              </p>
+              <p className="text-xs text-muted-foreground">
+                الحالة: {d.approved ? "مصرّح له" : "غير مصرّح"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                آخر ظهور: {d.last_seen_at ? new Date(d.last_seen_at).toLocaleString("ar-EG") : "—"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                أُضيف: {new Date(d.created_at).toLocaleDateString("ar-EG")}
+              </p>
+              <Button size="sm" variant="outline" onClick={() => void remove(d)}>
+                <Trash2 className="size-3.5 me-1" /> إلغاء التسجيل
+              </Button>
+            </div>
           ))}
         </div>
       )}
+
 
       <PairDeviceBox userId={userId} title="ربط جهاز جديد لهذا الموظف" />
 
