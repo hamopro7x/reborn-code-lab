@@ -175,9 +175,14 @@ function osLabel() {
 async function captureScreen() {
   const sourceId = await window.agent.getScreenSource();
   if (!sourceId) throw new Error("لا توجد شاشة متاحة");
-  // نلتقط بدقة الشاشة الفعلية (بدون تصغير) لضمان أعلى وضوح.
-  const sw = Math.round((window.screen?.width || 1920) * (window.devicePixelRatio || 1));
-  const sh = Math.round((window.screen?.height || 1080) * (window.devicePixelRatio || 1));
+  // أقصى وضوح ممكن *بدون* تأخير: نحدّ الدقة عند 1440p كحد أعلى.
+  // الدقة الأعلى (4K/8K) تُشبع الشبكة فيتكوّن طابور بيانات = بث متأخر.
+  const dpr = window.devicePixelRatio || 1;
+  const rawW = Math.round((window.screen?.width || 1920) * dpr);
+  const rawH = Math.round((window.screen?.height || 1080) * dpr);
+  const scale = Math.min(1, 2560 / rawW, 1440 / rawH);
+  const capW = Math.round(rawW * scale);
+  const capH = Math.round(rawH * scale);
   const tryCapture = async (w, h, fps) =>
     navigator.mediaDevices.getUserMedia({
       audio: false,
@@ -185,25 +190,23 @@ async function captureScreen() {
         mandatory: {
           chromeMediaSource: "desktop",
           chromeMediaSourceId: sourceId,
-          minWidth: w,
           maxWidth: w,
-          minHeight: h,
           maxHeight: h,
-          minFrameRate: 30,
           maxFrameRate: fps,
         },
       },
     });
   try {
-    return await tryCapture(sw, sh, 60);
+    return await tryCapture(capW, capH, 60);
   } catch {
     try {
-      return await tryCapture(Math.min(sw, 2560), Math.min(sh, 1440), 60);
-    } catch {
       return await tryCapture(1920, 1080, 60);
+    } catch {
+      return await tryCapture(1280, 720, 30);
     }
   }
 }
+
 
 // نُفضّل H264 (يعطي وضوح أفضل للنصوص عند نفس البت-ريت) ثم VP9 ثم VP8.
 function preferCodec(pc) {
