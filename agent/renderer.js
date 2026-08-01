@@ -43,7 +43,7 @@ const dotEl = document.getElementById("dot");
 const deviceEl = document.getElementById("device");
 
 const STORE = "mag-agent-device-v1";
-const AGENT_VERSION = "1.8.3";
+const AGENT_VERSION = "1.8.4";
 
 const verBadgeEl = document.getElementById("ver-badge");
 if (verBadgeEl) verBadgeEl.textContent = "v" + AGENT_VERSION;
@@ -262,9 +262,8 @@ function boostSdp(sdp) {
     if (inVideo && /^a=fmtp:\d+ /.test(line)) {
       out[out.length - 1] =
         line +
-        // بداية متحفظة (1.2Mbps) = لا إشباع للشبكة = لا تأخير متراكم،
-        // وحد أدنى منخفض جداً حتى لا تتجمد الشاشة على النت الضعيف.
-        ";x-google-start-bitrate=1200;x-google-min-bitrate=150;x-google-max-bitrate=12000";
+        // بداية عالية (5Mbps) للحصول على صورة واضحة فوراً، وحد أدنى 800kbps.
+        ";x-google-start-bitrate=5000;x-google-min-bitrate=800;x-google-max-bitrate=12000";
     }
   }
   // b=AS بعد سطر c= الخاص بالفيديو
