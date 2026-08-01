@@ -28,6 +28,7 @@ import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as AuthenticatedCoursesIdRouteImport } from './routes/_authenticated/courses.$id'
 import { Route as ApiPublicAgentDownloadRouteImport } from './routes/api/public/agent-download'
+import { Route as ApiPublicAgentDownloadDotexeRouteImport } from './routes/api/public/agent-download[.]exe'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -126,6 +127,12 @@ const ApiPublicAgentDownloadRoute = ApiPublicAgentDownloadRouteImport.update({
   path: '/api/public/agent-download',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicAgentDownloadDotexeRoute =
+  ApiPublicAgentDownloadDotexeRouteImport.update({
+    id: '/api/public/agent-download.exe',
+    path: '/api/public/agent-download.exe',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -146,6 +153,7 @@ export interface FileRoutesByFullPath {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/courses/$id': typeof AuthenticatedCoursesIdRoute
   '/api/public/agent-download': typeof ApiPublicAgentDownloadRoute
+  '/api/public/agent-download.exe': typeof ApiPublicAgentDownloadDotexeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -166,6 +174,7 @@ export interface FileRoutesByTo {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/courses/$id': typeof AuthenticatedCoursesIdRoute
   '/api/public/agent-download': typeof ApiPublicAgentDownloadRoute
+  '/api/public/agent-download.exe': typeof ApiPublicAgentDownloadDotexeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -188,6 +197,7 @@ export interface FileRoutesById {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/courses/$id': typeof AuthenticatedCoursesIdRoute
   '/api/public/agent-download': typeof ApiPublicAgentDownloadRoute
+  '/api/public/agent-download.exe': typeof ApiPublicAgentDownloadDotexeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -210,6 +220,7 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/courses/$id'
     | '/api/public/agent-download'
+    | '/api/public/agent-download.exe'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -230,6 +241,7 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/courses/$id'
     | '/api/public/agent-download'
+    | '/api/public/agent-download.exe'
   id:
     | '__root__'
     | '/'
@@ -251,6 +263,7 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/_authenticated/courses/$id'
     | '/api/public/agent-download'
+    | '/api/public/agent-download.exe'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -271,6 +284,7 @@ export interface RootRouteChildren {
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiPublicAgentDownloadRoute: typeof ApiPublicAgentDownloadRoute
+  ApiPublicAgentDownloadDotexeRoute: typeof ApiPublicAgentDownloadDotexeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -408,6 +422,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicAgentDownloadRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/agent-download.exe': {
+      id: '/api/public/agent-download.exe'
+      path: '/api/public/agent-download.exe'
+      fullPath: '/api/public/agent-download.exe'
+      preLoaderRoute: typeof ApiPublicAgentDownloadDotexeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -443,6 +464,7 @@ const rootRouteChildren: RootRouteChildren = {
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiPublicAgentDownloadRoute: ApiPublicAgentDownloadRoute,
+  ApiPublicAgentDownloadDotexeRoute: ApiPublicAgentDownloadDotexeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
