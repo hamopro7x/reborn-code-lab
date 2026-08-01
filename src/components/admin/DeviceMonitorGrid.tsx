@@ -60,7 +60,9 @@ function WatchPanel({ device, onClose }: { device: Device; onClose: () => void }
         videoRef.current.srcObject = e.streams[0]!;
         void videoRef.current.play().catch(() => {});
       }
+      setFailed(false);
       setLive(true);
+
     };
 
 
@@ -121,7 +123,9 @@ function WatchPanel({ device, onClose }: { device: Device; onClose: () => void }
       <div className="flex items-center justify-between gap-2">
         <div className="text-sm">
           <span className="font-bold">{device.employee_name ?? "موظف"}</span>{" "}
-          <span className="text-muted-foreground">— {live ? "بث مباشر" : "جاري الاتصال…"}</span>
+          <span className="text-muted-foreground">
+            — {live ? "بث مباشر" : failed ? "الجهاز لم يستجب — تأكد أن البرنامج مفتوح" : "جاري الاتصال…"}
+          </span>
         </div>
         <Button variant="outline" size="sm" onClick={onClose}>
           <PhoneOff className="size-4 ml-1" /> إنهاء المشاهدة
@@ -131,9 +135,14 @@ function WatchPanel({ device, onClose }: { device: Device; onClose: () => void }
         <video ref={videoRef} className="w-full h-full object-contain" autoPlay playsInline muted />
         {!live && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <Loader2 className="size-8 animate-spin text-primary" />
+            {failed ? (
+              <span className="text-xs text-muted-foreground">تعذّر الاتصال بالجهاز</span>
+            ) : (
+              <Loader2 className="size-8 animate-spin text-primary" />
+            )}
           </div>
         )}
+
       </div>
     </div>
   );
