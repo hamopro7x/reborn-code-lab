@@ -53,6 +53,7 @@ window.agent.onUpdateProgress?.(({ received, total, percent }) => {
 
 async function startDownload(info, autoInstall = false) {
   if (!info?.url) return;
+  if (updateBusy) return; // منع تحميل ثانٍ متزامن على نفس الملف
   updateBusy = true;
   updLater.style.display = "none";
   updBtn.disabled = true;
