@@ -145,13 +145,11 @@ function LiveScreen({
   online,
   expanded,
   onToggleExpand,
-  onRemove,
 }: {
   device: Device;
   online: boolean;
   expanded: boolean;
   onToggleExpand: () => void;
-  onRemove: () => void;
 }) {
   const { videoRef, live, failed } = useDeviceStream(device.device_id, online);
 
