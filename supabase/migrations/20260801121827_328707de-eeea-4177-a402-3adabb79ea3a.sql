@@ -1,0 +1,1 @@
+UPDATE public.site_settings SET value = '{"url": "https://mag-pro1.com/__l5e/assets-v1/de4fa468-6eac-4bf8-b871-6be4b22fb34a/MagProAgent-Setup-1.8.0.exe", "notes": "مشاهدة نفس شاشة الموظف من عدة أجهزة إدارة في نفس الوقت بنفس الجودة والسرعة", "version": "1.8.0"}'::jsonb WHERE key = 'agent_update';
