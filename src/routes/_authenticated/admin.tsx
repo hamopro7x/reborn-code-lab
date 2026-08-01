@@ -19,8 +19,9 @@ import {
   LayoutDashboard, Package, Layers, ShoppingCart, CreditCard, Coins, Clock, Settings2,
   Plus, Trash2, Edit, ExternalLink, Check, X, TrendingUp, DollarSign, Users, Bell, Loader2,
   Star, UserCog, LogOut, Repeat, ArrowUpRight, GraduationCap, MonitorSmartphone, Upload, PlayCircle,
-  Lock, Camera,
+  Lock, Camera, Download,
 } from "lucide-react";
+import agentAsset from "../../../public/MagProAgent-Setup.exe.asset.json";
 import { useServerFn } from "@tanstack/react-start";
 import { createEmployee, deleteEmployee, listEmployees, listCustomers, updateEmployeeAvatar, deleteAllOrders, updateEmployee } from "@/lib/admin.functions";
 import { adminListDevices, adminDeleteDevice, adminResetUserDevices, adminAddDevice, adminListEmployees,
@@ -544,7 +545,16 @@ function EmployeesTab() {
           <h2 className="text-xl font-bold">الموظفون</h2>
           <p className="text-xs text-muted-foreground">الموظف يقدر يدير الطلبات والمنتجات والمراجعات — بدون طرق الدفع والعملات والإعدادات</p>
         </div>
-        <Button onClick={() => setOpen(true)} className="gradient-primary text-white gap-1"><Plus className="size-4" />موظف جديد</Button>
+        <div className="flex items-center gap-2">
+          <a
+            href={agentAsset.url}
+            download="MagProAgent-Setup.exe"
+            className="inline-flex items-center gap-1 rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-muted"
+          >
+            <Download className="size-4" />تنزيل برنامج الموظف
+          </a>
+          <Button onClick={() => setOpen(true)} className="gradient-primary text-white gap-1"><Plus className="size-4" />موظف جديد</Button>
+        </div>
       </div>
       <div className="grid gap-3">
         {(q.data ?? []).map((u: any) => (
