@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { KeyRound, Loader2, Maximize2, Minimize2, Monitor, MonitorOff, RefreshCw, Trash2 } from "lucide-react";
 
-import { RTC_CONFIG, openSignaling, type Signal } from "@/lib/screenshare";
+import { RTC_CONFIG, makeViewerId, openSignaling, type Signal } from "@/lib/screenshare";
 
 type Device = {
   id: string;
@@ -42,6 +42,8 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
     let closed = false;
     setLive(false);
     setFailed(false);
+    // معرّف فريد لكل مشاهد: يسمح بعدة أجهزة إدارة تشاهد نفس الجهاز في نفس الوقت
+    const viewerId = makeViewerId();
     const pc = new RTCPeerConnection(RTC_CONFIG);
 
     // نُفضّل H264 ثم VP9 للمشاهدة (وضوح أفضل للنصوص)
@@ -84,12 +86,15 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
       deviceId,
       async (s: Signal) => {
         if (closed) return;
+        // نتجاهل الإشارات الموجّهة لمشاهد آخر
+        const to = (s as { to?: string }).to;
+        if (to && to !== viewerId) return;
         if (s.type === "offer") {
           if (pc.signalingState !== "stable" && pc.signalingState !== "have-remote-offer") return;
           await pc.setRemoteDescription(s.sdp);
           const answer = await pc.createAnswer();
           await pc.setLocalDescription(answer);
-          await sig.send({ type: "answer", sdp: answer });
+          await sig.send({ type: "answer", sdp: answer, viewer: viewerId });
         } else if (s.type === "ice" && s.from === "host") {
           await pc.addIceCandidate(s.candidate).catch(() => {});
         }
@@ -99,7 +104,12 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
 
     pc.onicecandidate = (e) => {
       if (e.candidate)
-        void sig.send({ type: "ice", from: "viewer", candidate: e.candidate.toJSON() });
+        void sig.send({
+          type: "ice",
+          from: "viewer",
+          viewer: viewerId,
+          candidate: e.candidate.toJSON(),
+        });
     };
 
     // إعادة إرسال طلب الانضمام حتى يستجيب جهاز الموظف
@@ -108,7 +118,7 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
     sig.ready
       .then(() => {
         if (closed) return;
-        void sig.send({ type: "join" });
+        void sig.send({ type: "join", viewer: viewerId });
         timer = setInterval(() => {
           if (closed || pc.remoteDescription) {
             if (timer) clearInterval(timer);
@@ -120,7 +130,7 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
             setFailed(true);
             return;
           }
-          void sig.send({ type: "join" });
+          void sig.send({ type: "join", viewer: viewerId });
         }, 2000);
       })
       .catch(() => {
@@ -131,7 +141,7 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
     return () => {
       closed = true;
       if (timer) clearInterval(timer);
-      void sig.send({ type: "bye" }).catch(() => {});
+      void sig.send({ type: "bye", viewer: viewerId }).catch(() => {});
       sig.close();
       pc.close();
     };
@@ -139,6 +149,8 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
 
   return { videoRef, live, failed };
 }
+
+
 
 function LiveScreen({
   device,

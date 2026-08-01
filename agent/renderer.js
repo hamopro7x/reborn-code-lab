@@ -26,7 +26,7 @@ const dotEl = document.getElementById("dot");
 const deviceEl = document.getElementById("device");
 
 const STORE = "mag-agent-device-v1";
-const AGENT_VERSION = "1.7.9";
+const AGENT_VERSION = "1.8.0";
 
 const verBadgeEl = document.getElementById("ver-badge");
 if (verBadgeEl) verBadgeEl.textContent = "v" + AGENT_VERSION;
@@ -261,7 +261,8 @@ function boostSdp(sdp) {
 
 let stream = null;
 let channel = null;
-let pc = null;
+// كل مشاهد (جهاز إدارة) له اتصال منفصل بنفس جودة وسرعة البث
+const peers = new Map(); // viewerId -> { pc, statsTimer }
 
 function send(signal) {
   return channel.send({ type: "broadcast", event: "signal", payload: signal });
@@ -273,19 +274,17 @@ async function getStream() {
   return stream;
 }
 
-// مراقبة الشبكة: لو تكوّن طابور إرسال (تأخير) نخفّض البت-ريت فوراً،
+// مراقبة الشبكة لكل مشاهد على حدة: لو تكوّن طابور إرسال (تأخير) نخفّض البت-ريت،
 // ولو الشبكة مرتاحة نرفعه تدريجياً — هذا ما يمنع تراكم التأخير.
-let statsTimer = null;
-
-function startAdaptive(sender) {
-  if (statsTimer) clearInterval(statsTimer);
+function startAdaptive(entry, sender) {
+  if (entry.statsTimer) clearInterval(entry.statsTimer);
   const MIN = 1_500_000;
   const MAX = 14_000_000;
   let target = 6_000_000;
   let lastLost = 0;
   let lastPackets = 0;
-  statsTimer = setInterval(async () => {
-    if (!pc || pc.connectionState !== "connected") return;
+  entry.statsTimer = setInterval(async () => {
+    if (!entry.pc || entry.pc.connectionState !== "connected") return;
     try {
       const stats = await sender.getStats();
       let rtt = 0;
@@ -316,67 +315,77 @@ function startAdaptive(sender) {
   }, 2000);
 }
 
-let starting = false;
+function closePeer(viewerId) {
+  const entry = peers.get(viewerId);
+  if (!entry) return;
+  if (entry.statsTimer) clearInterval(entry.statsTimer);
+  try { entry.pc.close(); } catch {}
+  peers.delete(viewerId);
+  setStatus(peers.size > 0 ? `متصل · ${peers.size} مشاهد` : "متصل", true);
+}
 
-async function startPeer() {
-  if (starting) return; // منع بدء أكثر من اتصال في نفس الوقت
-  starting = true;
+const startingViewers = new Set();
+
+async function startPeer(viewerId) {
+  if (startingViewers.has(viewerId)) return; // منع بدء اتصالين لنفس المشاهد
+  startingViewers.add(viewerId);
   try {
-  pc?.close();
-  const s = await getStream();
-  pc = new RTCPeerConnection(RTC_CONFIG);
-  s.getVideoTracks().forEach((t) => {
-    t.contentHint = "detail"; // وضوح النصوص مع سماح بتقليل الدقة عند الحاجة
-  });
-  s.getTracks().forEach((t) => pc.addTrack(t, s));
-  preferCodec(pc);
+    closePeer(viewerId); // أي اتصال قديم لنفس المشاهد يُستبدل
+    const s = await getStream();
+    const pc = new RTCPeerConnection(RTC_CONFIG);
+    const entry = { pc, statsTimer: null };
+    peers.set(viewerId, entry);
 
-  let videoSender = null;
-  for (const sender of pc.getSenders()) {
-    if (!sender.track || sender.track.kind !== "video") continue;
-    videoSender = sender;
-    try {
-      const params = sender.getParameters();
-      // "balanced": يُفضّل استمرار سرعة البث على التمسك بالدقة = أقل تأخير
-      params.degradationPreference = "balanced";
-      params.encodings = [
-        {
-          ...(params.encodings?.[0] ?? {}),
-          maxBitrate: 6_000_000,
-          maxFramerate: 60,
-          scaleResolutionDownBy: 1,
-          networkPriority: "high",
-          priority: "high",
-        },
-      ];
-      await sender.setParameters(params);
-    } catch {
-      // بعض النسخ لا تدعم كل الخصائص
-    }
-  }
+    s.getVideoTracks().forEach((t) => {
+      t.contentHint = "detail"; // وضوح النصوص مع سماح بتقليل الدقة عند الحاجة
+    });
+    s.getTracks().forEach((t) => pc.addTrack(t, s));
+    preferCodec(pc);
 
-  pc.onicecandidate = (e) => {
-    if (e.candidate) void send({ type: "ice", from: "host", candidate: e.candidate.toJSON() });
-  };
-  pc.onconnectionstatechange = () => {
-    if (pc.connectionState === "connected") setStatus("متصل", true);
-    if (["failed", "disconnected", "closed"].includes(pc.connectionState)) {
-      if (statsTimer) clearInterval(statsTimer);
-      statsTimer = null;
-      try { pc.close(); } catch {}
-      pc = null;
-      setStatus("متصل", true);
+    let videoSender = null;
+    for (const sender of pc.getSenders()) {
+      if (!sender.track || sender.track.kind !== "video") continue;
+      videoSender = sender;
+      try {
+        const params = sender.getParameters();
+        params.degradationPreference = "balanced";
+        params.encodings = [
+          {
+            ...(params.encodings?.[0] ?? {}),
+            maxBitrate: 6_000_000,
+            maxFramerate: 60,
+            scaleResolutionDownBy: 1,
+            networkPriority: "high",
+            priority: "high",
+          },
+        ];
+        await sender.setParameters(params);
+      } catch {
+        // بعض النسخ لا تدعم كل الخصائص
+      }
     }
-  };
-  const offer = await pc.createOffer();
-  offer.sdp = boostSdp(offer.sdp);
-  await pc.setLocalDescription(offer);
-  await send({ type: "offer", sdp: { type: offer.type, sdp: offer.sdp } });
-  if (videoSender) startAdaptive(videoSender);
+
+    pc.onicecandidate = (e) => {
+      if (e.candidate)
+        void send({ type: "ice", from: "host", to: viewerId, candidate: e.candidate.toJSON() });
+    };
+    pc.onconnectionstatechange = () => {
+      if (pc.connectionState === "connected")
+        setStatus(`متصل · ${peers.size} مشاهد`, true);
+      if (["failed", "disconnected", "closed"].includes(pc.connectionState)) {
+        closePeer(viewerId);
+      }
+    };
+    const offer = await pc.createOffer();
+    offer.sdp = boostSdp(offer.sdp);
+    await pc.setLocalDescription(offer);
+    await send({ type: "offer", to: viewerId, sdp: { type: offer.type, sdp: offer.sdp } });
+    if (videoSender) startAdaptive(entry, videoSender);
   } finally {
-    starting = false;
+    startingViewers.delete(viewerId);
   }
 }
+
 
 async function heartbeat(device) {
   try {
@@ -401,11 +410,11 @@ function stopSession() {
   running = false;
   if (hbTimer) clearInterval(hbTimer);
   hbTimer = null;
-  try { pc?.close(); } catch {}
-  pc = null;
+  for (const id of Array.from(peers.keys())) closePeer(id);
   try { if (channel) supabase.removeChannel(channel); } catch {}
   channel = null;
 }
+
 
 // ============ شاشة مفتاح الربط ============
 // نستخدم fetch مباشر مع مهلة زمنية بدل supabase-js عشان الطلب ميعلّقش للأبد
@@ -522,25 +531,26 @@ async function run(device) {
   });
   channel.on("broadcast", { event: "signal" }, async ({ payload }) => {
     const s = payload;
+    const viewerId = s.viewer || s.from_id || "legacy";
     try {
       if (s.type === "join") {
-        await startPeer();
+        await startPeer(viewerId);
       } else if (s.type === "answer") {
-        // نتجاهل أي إجابة مكرّرة (لو أكثر من مشاهد أرسل إجابة لنفس العرض)
-        if (pc && pc.signalingState === "have-local-offer") {
-          await pc.setRemoteDescription(s.sdp);
+        const entry = peers.get(viewerId);
+        if (entry?.pc && entry.pc.signalingState === "have-local-offer") {
+          await entry.pc.setRemoteDescription(s.sdp);
         }
       } else if (s.type === "ice" && s.from === "viewer") {
-        if (pc) await pc.addIceCandidate(s.candidate).catch(() => {});
+        const entry = peers.get(viewerId);
+        if (entry?.pc) await entry.pc.addIceCandidate(s.candidate).catch(() => {});
       } else if (s.type === "bye") {
-        pc?.close();
-        pc = null;
-        setStatus("متصل", true);
+        closePeer(viewerId);
       }
     } catch (err) {
       setStatus("خطأ: " + (err?.message || err), false);
     }
   });
+
   const subscribed = await new Promise((resolve) => {
     let done = false;
     const finish = (ok) => { if (!done) { done = true; resolve(ok); } };

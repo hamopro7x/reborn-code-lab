@@ -22,11 +22,19 @@ export function makeCode(): string {
 }
 
 export type Signal =
-  | { type: "join" }
-  | { type: "offer"; sdp: RTCSessionDescriptionInit }
-  | { type: "answer"; sdp: RTCSessionDescriptionInit }
-  | { type: "ice"; from: "host" | "viewer"; candidate: RTCIceCandidateInit }
-  | { type: "bye" };
+  | { type: "join"; viewer?: string }
+  | { type: "offer"; sdp: RTCSessionDescriptionInit; to?: string }
+  | { type: "answer"; sdp: RTCSessionDescriptionInit; viewer?: string }
+  | { type: "ice"; from: "host" | "viewer"; candidate: RTCIceCandidateInit; viewer?: string; to?: string }
+  | { type: "bye"; viewer?: string };
+
+export function makeViewerId(): string {
+  return (
+    globalThis.crypto?.randomUUID?.().slice(0, 12) ??
+    Math.random().toString(36).slice(2, 14)
+  );
+}
+
 
 export function openSignaling(
   code: string,
