@@ -639,27 +639,46 @@ function EmployeesTab() {
             </div>
             </div>
             {expanded === u.user_id && (
-              <div className="space-y-4 pt-3 border-t border-border/60">
-                <div className="flex items-center justify-between gap-2">
-                  <h3 className="text-sm font-bold">تعديل البيانات</h3>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setEditing({ user_id: u.user_id, full_name: u.full_name ?? "", email: u.email ?? "", password: "" })}
-                  >
-                    <Edit className="size-4 ml-1" /> تعديل
-                  </Button>
+              <div className="space-y-5 pt-3 border-t border-border/60">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="text-sm font-bold">البيانات الشخصية</h3>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setEditing({ user_id: u.user_id, full_name: u.full_name ?? "", email: u.email ?? "", password: "" })}
+                    >
+                      <Edit className="size-4 ml-1" /> تعديل
+                    </Button>
+                  </div>
+                  <div className="rounded-xl border border-border/60 p-3 space-y-1.5 text-xs">
+                    <div className="flex justify-between gap-2">
+                      <span className="text-muted-foreground">الاسم كامل</span>
+                      <span className="font-bold truncate">{u.full_name || "—"}</span>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <span className="text-muted-foreground">البريد الإلكتروني</span>
+                      <span className="font-bold truncate" dir="ltr">{u.email || "—"}</span>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <span className="text-muted-foreground">كلمة السر</span>
+                      <span className="font-bold tracking-widest">••••••••</span>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-sm font-bold mb-2">أجهزة هذا الموظف</h3>
+
+                <div className="border-t border-border/60 pt-4">
+                  <h3 className="text-sm font-bold mb-2">أجهزة الموظف</h3>
                   <EmployeeDevices userId={u.user_id} employeeName={u.full_name} />
                 </div>
-                <div>
-                  <h3 className="text-sm font-bold mb-2 flex items-center gap-2"><MonitorSmartphone className="size-4 text-primary" /> أجهزة الموظفين (الأذن)</h3>
+
+                <div className="border-t border-border/60 pt-4">
+                  <h3 className="text-sm font-bold mb-2 flex items-center gap-2"><MonitorSmartphone className="size-4 text-primary" /> تفعيل جهاز الموظف</h3>
                   <DevicesTab />
                 </div>
               </div>
             )}
+
           </div>
         ))}
         {(q.data ?? []).length === 0 && <div className="card-surface rounded-2xl p-12 text-center text-muted-foreground col-span-full">لا يوجد موظفون</div>}
