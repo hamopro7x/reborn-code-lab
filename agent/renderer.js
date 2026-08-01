@@ -311,7 +311,12 @@ function startAdaptive(sender) {
   }, 2000);
 }
 
+let starting = false;
+
 async function startPeer() {
+  if (starting) return; // منع بدء أكثر من اتصال في نفس الوقت
+  starting = true;
+  try {
   pc?.close();
   const s = await getStream();
   pc = new RTCPeerConnection(RTC_CONFIG);
