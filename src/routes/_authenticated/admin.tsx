@@ -1870,9 +1870,10 @@ function DevicesTab() {
             <Label className="text-xs">الموظف</Label>
             <select value={newUserId} onChange={(e) => setNewUserId(e.target.value)} className="w-full h-10 rounded-xl border border-border/60 bg-background px-3 text-sm">
               <option value="">— اختر —</option>
-              {(employees.data ?? []).map((u: any) => (
-                <option key={u.id} value={u.id}>{u.full_name || u.email}</option>
-              ))}
+              {(employees.data ?? []).map((u: any) => {
+                const uid = u.id ?? u.user_id;
+                return <option key={uid} value={uid}>{u.full_name || u.email}</option>;
+              })}
             </select>
           </div>
           <div>
