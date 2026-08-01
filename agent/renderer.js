@@ -42,8 +42,9 @@ const mb = (n) => (n / 1048576).toFixed(1) + " MB";
 window.agent.onUpdateProgress?.(({ received, total, percent }) => {
   updBar.style.display = "block";
   if (percent != null) {
-    updFill.style.width = percent + "%";
-    updProg.textContent = `جارٍ التحميل… ${percent}% (${mb(received)} / ${mb(total)})`;
+    const safePercent = Math.min(100, Math.max(0, percent));
+    updFill.style.width = safePercent + "%";
+    updProg.textContent = `جارٍ التحميل… ${safePercent}% (${mb(Math.min(received, total))} / ${mb(total)})`;
   } else {
     updFill.style.width = "100%";
     updProg.textContent = `جارٍ التحميل… ${mb(received)}`;

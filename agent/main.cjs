@@ -174,10 +174,12 @@ ipcMain.handle("download-update", async (_e, url) => {
   }
   const fs = require("fs");
   const os = require("os");
+  const crypto = require("crypto");
   const isSetup = /\.exe(\?|$)/i.test(url);
+  const downloadId = crypto.createHash("sha256").update(url).digest("hex").slice(0, 12);
   const target = path.join(
     os.tmpdir(),
-    isSetup ? "mag-pro-agent-setup.exe" : "mag-pro-agent-update.zip",
+    isSetup ? `mag-pro-agent-setup-${downloadId}.exe` : `mag-pro-agent-update-${downloadId}.zip`,
   );
 
   let received = 0;
@@ -198,7 +200,7 @@ ipcMain.handle("download-update", async (_e, url) => {
       win.webContents.send("update-progress", {
         received,
         total,
-        percent: total ? Math.round((received / total) * 100) : null,
+        percent: total ? Math.min(100, Math.max(0, Math.round((received / total) * 100))) : null,
       });
     }
   };
@@ -210,6 +212,7 @@ ipcMain.handle("download-update", async (_e, url) => {
       httpGet(
         url,
         (res) => {
+          const requestedOffset = received;
           if (res.statusCode === 200 && received > 0) {
             // السيرفر مش بيدعم الإكمال — نبدأ من الأول
             received = 0;
@@ -218,7 +221,13 @@ ipcMain.handle("download-update", async (_e, url) => {
             } catch {}
           }
           const len = Number(res.headers["content-length"] || 0);
-          total = received + len;
+          const contentRange = String(res.headers["content-range"] || "");
+          const rangeMatch = /^bytes\s+(\d+)-(\d+)\/(\d+)$/i.exec(contentRange);
+          if (res.statusCode === 206 && (!rangeMatch || Number(rangeMatch[1]) !== requestedOffset)) {
+            res.destroy();
+            return reject(new Error("استجابة استكمال غير صالحة"));
+          }
+          total = rangeMatch ? Number(rangeMatch[3]) : received + len;
           const file = fs.createWriteStream(target, { flags: received > 0 ? "a" : "w" });
           let done = false;
           let stallTimer = null;
@@ -264,7 +273,15 @@ ipcMain.handle("download-update", async (_e, url) => {
                 size = fs.statSync(target).size;
               } catch {}
               received = size || received;
-              if (total && received < total) return reject(new Error("تحميل غير مكتمل"));
+              if (total && received !== total) {
+                if (received > total) {
+                  try {
+                    fs.unlinkSync(target);
+                  } catch {}
+                  received = 0;
+                }
+                return reject(new Error("تحميل غير مكتمل"));
+              }
               sendProgress(true);
               resolve({ path: target });
             });
