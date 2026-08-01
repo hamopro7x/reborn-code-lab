@@ -21,7 +21,7 @@ import {
   Star, UserCog, LogOut, Repeat, ArrowUpRight, GraduationCap, MonitorSmartphone, Upload, PlayCircle,
   Lock, Camera, Download,
 } from "lucide-react";
-import agentAsset from "../../../public/MagProAgent-Setup.exe.asset.json";
+
 import { useServerFn } from "@tanstack/react-start";
 import { createEmployee, deleteEmployee, listEmployees, listCustomers, updateEmployeeAvatar, deleteAllOrders, updateEmployee } from "@/lib/admin.functions";
 import { adminListDevices, adminDeleteDevice, adminResetUserDevices, adminAddDevice, adminListEmployees,
