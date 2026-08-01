@@ -26,7 +26,7 @@ const dotEl = document.getElementById("dot");
 const deviceEl = document.getElementById("device");
 
 const STORE = "mag-agent-device-v1";
-const AGENT_VERSION = "1.7.5";
+const AGENT_VERSION = "1.7.6";
 
 
 const updateEl = document.getElementById("update");
@@ -549,13 +549,38 @@ void checkUpdate();
 updTimer = setInterval(() => void checkUpdate(), 60 * 1000);
 window.addEventListener("focus", () => void checkUpdate());
 
-// زر التحديث أعلى اليمين: يعيد تحميل الصفحة ويفحص التحديثات فوراً
-document.getElementById("refresh")?.addEventListener("click", (e) => {
-  e.currentTarget.classList.add("spin");
-  window.location.reload();
+// إعادة اتصال ناعمة: تعيد قناة الإشارات فقط دون إعادة تحميل الصفحة،
+// وبالتالي يفضل البث (WebRTC) شغالاً كما هو بدون الحاجة لاتصال جديد.
+let reconnecting = false;
+async function softReconnect() {
+  if (reconnecting) return;
+  const d = loadDevice();
+  if (!d) return;
+  reconnecting = true;
+  try {
+    if (hbTimer) { clearInterval(hbTimer); hbTimer = null; }
+    if (channel) { try { await supabase.removeChannel(channel); } catch {} channel = null; }
+    running = false; // ملاحظة: لا نلمس pc/stream إطلاقاً حتى لا ينقطع البث
+    await run(d);
+  } finally {
+    reconnecting = false;
+  }
+}
+
+// زر التحديث أعلى اليمين: يفحص التحديثات ويجدّد الاتصال بدون إعادة تحميل
+document.getElementById("refresh")?.addEventListener("click", async (e) => {
+  const btn = e.currentTarget;
+  btn.classList.add("spin");
+  try {
+    await checkUpdate();
+    await softReconnect();
+  } finally {
+    setTimeout(() => btn.classList.remove("spin"), 600);
+  }
 });
 
 // إعادة الاتصال تلقائياً لما الشبكة ترجع (بعد قفل اللابتوب/فقد النت)
 window.addEventListener("online", () => {
-  setTimeout(() => window.location.reload(), 1500);
+  setTimeout(() => void softReconnect(), 1500);
 });
+
