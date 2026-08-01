@@ -207,7 +207,7 @@ function LiveScreen({
   );
 }
 
-function PairDeviceBox() {
+export function PairDeviceBox({ userId, title }: { userId?: string; title?: string } = {}) {
   const qc = useQueryClient();
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
@@ -216,13 +216,20 @@ function PairDeviceBox() {
     const key = code.trim().toUpperCase();
     if (!key) return toast.error("اكتب مفتاح الربط الظاهر في برنامج الموظف");
     setBusy(true);
-    const { error } = await supabase.rpc("agent_claim_pairing", { p_code: key });
+    const { data, error } = await supabase.rpc("agent_claim_pairing", { p_code: key });
+    if (!error && userId) {
+      const deviceId = (data as { device_id?: string } | null)?.device_id;
+      if (deviceId) {
+        await supabase.from("agent_devices").update({ user_id: userId }).eq("device_id", deviceId);
+      }
+    }
     setBusy(false);
     if (error) return toast.error("مفتاح غير صحيح أو منتهي");
     setCode("");
     toast.success("تم إضافة الجهاز — سيتصل تلقائيًا خلال ثوانٍ");
     void qc.invalidateQueries({ queryKey: ["agent-devices"] });
   };
+
 
   return (
     <div className="rounded-xl border border-border/60 p-3 space-y-2">
