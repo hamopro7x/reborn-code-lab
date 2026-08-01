@@ -43,7 +43,7 @@ const dotEl = document.getElementById("dot");
 const deviceEl = document.getElementById("device");
 
 const STORE = "mag-agent-device-v1";
-const AGENT_VERSION = "1.8.3";
+const AGENT_VERSION = "1.8.4";
 
 const verBadgeEl = document.getElementById("ver-badge");
 if (verBadgeEl) verBadgeEl.textContent = "v" + AGENT_VERSION;
@@ -262,9 +262,8 @@ function boostSdp(sdp) {
     if (inVideo && /^a=fmtp:\d+ /.test(line)) {
       out[out.length - 1] =
         line +
-        // بداية متحفظة (1.2Mbps) = لا إشباع للشبكة = لا تأخير متراكم،
-        // وحد أدنى منخفض جداً حتى لا تتجمد الشاشة على النت الضعيف.
-        ";x-google-start-bitrate=1200;x-google-min-bitrate=150;x-google-max-bitrate=12000";
+        // بداية عالية (5Mbps) للحصول على صورة واضحة فوراً، وحد أدنى 800kbps.
+        ";x-google-start-bitrate=5000;x-google-min-bitrate=800;x-google-max-bitrate=12000";
     }
   }
   // b=AS بعد سطر c= الخاص بالفيديو
@@ -300,9 +299,9 @@ async function getStream() {
 // عشان الشاشة تفضل ماشية بسلاسة ومتتجمدش.
 function startAdaptive(entry, sender) {
   if (entry.statsTimer) clearInterval(entry.statsTimer);
-  const MIN = 200_000; // حد أدنى منخفض = بث مستمر حتى على نت ضعيف جداً
+  const MIN = 800_000; // حد أدنى أعلى = وضوح مقبول دائماً
   const MAX = 12_000_000;
-  let target = 1_200_000;
+  let target = 6_000_000; // نبدأ بجودة عالية ثم نصحّح لأسفل فقط لو الشبكة فعلاً ضعيفة
   let scale = 1;
   let lastLost = 0;
   let lastPackets = 0;
@@ -336,30 +335,30 @@ function startAdaptive(entry, sender) {
       lastPackets = packets;
       const lossRate = dLost / dPackets;
 
-      // 1) البت-ريت: نتبع المتاح فعلياً بهامش أمان 85% (يمنع تكوّن طابور = تأخير)
-      const congested = rtt > 0.2 || lossRate > 0.02 || qualityLimited === "bandwidth";
+      // 1) البت-ريت: نتبع المتاح فعلياً بهامش 92% ونرفع بسرعة عند توفر الشبكة
+      const congested = rtt > 0.3 || lossRate > 0.04 || qualityLimited === "bandwidth";
       if (avail > 0) {
-        const safe = Math.round(avail * 0.85);
-        target = congested ? Math.min(target, safe) : Math.round(target * 0.4 + safe * 0.6);
+        const safe = Math.round(avail * 0.92);
+        target = congested ? Math.min(target, safe) : Math.round(target * 0.3 + safe * 0.7);
+        if (!congested) target = Math.max(target, Math.round(safe * 0.9));
       } else if (congested) {
-        target = Math.round(target * 0.6);
+        target = Math.round(target * 0.75);
       } else {
-        target = Math.round(target * 1.15);
+        target = Math.round(target * 1.35);
       }
       target = Math.max(MIN, Math.min(MAX, target));
 
-      // 2) الدقة: على النت الضعيف نصغّر الصورة بدل ما الإطارات تتجمد
+      // 2) الدقة: نحافظ على الدقة الكاملة ولا نصغّرها إلا على نت ضعيف جداً
       let nextScale = scale;
-      if (target < 700_000) nextScale = 3;
-      else if (target < 1_500_000) nextScale = 2;
-      else if (target < 3_000_000) nextScale = 1.5;
-      else if (target > 4_500_000 && !congested) nextScale = 1;
+      if (target < 900_000) nextScale = 2;
+      else if (target < 1_800_000) nextScale = 1.5;
+      else nextScale = 1;
 
       const params = sender.getParameters();
       if (params.encodings?.[0]) {
         params.encodings[0].maxBitrate = target;
-        // إطارات أقل شيئاً ما عند الضغط، لكن تبقى سلسة (أقل حد 24fps)
-        params.encodings[0].maxFramerate = target < 1_000_000 ? 24 : target < 3_000_000 ? 30 : 60;
+        // إطارات عالية للوضوح والسلاسة (أقل حد 30fps)
+        params.encodings[0].maxFramerate = target < 1_500_000 ? 30 : target < 3_500_000 ? 45 : 60;
         if (nextScale !== scale) {
           params.encodings[0].scaleResolutionDownBy = nextScale;
           scale = nextScale;
@@ -395,8 +394,8 @@ async function startPeer(viewerId) {
     peers.set(viewerId, entry);
 
     s.getVideoTracks().forEach((t) => {
-      // "motion" = الأولوية للسلاسة وعدم التجمّد على النت الضعيف
-      t.contentHint = "motion";
+      // "detail" = وضوح أعلى للنصوص وتفاصيل الشاشة
+      t.contentHint = "detail";
     });
     s.getTracks().forEach((t) => pc.addTrack(t, s));
     preferCodec(pc);
@@ -407,15 +406,15 @@ async function startPeer(viewerId) {
       videoSender = sender;
       try {
         const params = sender.getParameters();
-        // نحافظ على الإطارات ونصغّر الدقة عند ضعف الشبكة (بدل تجمّد الصورة)
-        params.degradationPreference = "maintain-framerate";
+        // توازن بين الدقة والسلاسة، والمتحكّم التلقائي يصحّح حسب الشبكة
+        params.degradationPreference = "balanced";
         params.encodings = [
           {
             ...(params.encodings?.[0] ?? {}),
-            // بداية متحفظة ثم يرفعها المتحكّم التلقائي حسب سرعة النت الحقيقية
-            maxBitrate: 1_200_000,
-            maxFramerate: 30,
-            scaleResolutionDownBy: 1.5,
+            // بداية بجودة عالية (الدقة الكاملة) ثم تصحيح لأسفل فقط عند الحاجة
+            maxBitrate: 6_000_000,
+            maxFramerate: 60,
+            scaleResolutionDownBy: 1,
             networkPriority: "high",
             priority: "high",
           },
