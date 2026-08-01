@@ -46,6 +46,7 @@ export type Database = {
       }
       agent_devices: {
         Row: {
+          app_version: string | null
           approved: boolean
           created_at: string
           device_id: string
@@ -59,6 +60,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          app_version?: string | null
           approved?: boolean
           created_at?: string
           device_id: string
@@ -72,6 +74,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          app_version?: string | null
           approved?: boolean
           created_at?: string
           device_id?: string
@@ -914,10 +917,12 @@ export type Database = {
     }
     Functions: {
       agent_claim_pairing: { Args: { p_code: string }; Returns: Json }
-      agent_heartbeat: {
-        Args: { p_device_id: string; p_secret: string }
-        Returns: boolean
-      }
+      agent_heartbeat:
+        | { Args: { p_device_id: string; p_secret: string }; Returns: boolean }
+        | {
+            Args: { p_device_id: string; p_secret: string; p_version?: string }
+            Returns: boolean
+          }
       agent_pair_request: {
         Args: {
           p_device_id: string
@@ -928,16 +933,28 @@ export type Database = {
         }
         Returns: string
       }
-      agent_register: {
-        Args: {
-          p_device_id: string
-          p_device_label: string
-          p_employee_name: string
-          p_os: string
-          p_secret: string
-        }
-        Returns: boolean
-      }
+      agent_register:
+        | {
+            Args: {
+              p_device_id: string
+              p_device_label: string
+              p_employee_name: string
+              p_os: string
+              p_secret: string
+            }
+            Returns: boolean
+          }
+        | {
+            Args: {
+              p_device_id: string
+              p_device_label: string
+              p_employee_name: string
+              p_os: string
+              p_secret: string
+              p_version?: string
+            }
+            Returns: boolean
+          }
       gen_order_code: { Args: never; Returns: string }
     }
     Enums: {
