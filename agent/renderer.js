@@ -31,7 +31,6 @@ const AGENT_VERSION = "1.7.1";
 
 const updateEl = document.getElementById("update");
 const updVerEl = document.getElementById("upd-ver");
-const updNotesEl = document.getElementById("upd-notes");
 const updBtn = document.getElementById("upd-btn");
 const updBar = document.getElementById("upd-bar");
 const updFill = document.getElementById("upd-fill");
@@ -117,7 +116,6 @@ async function checkUpdate() {
     // تحديث تلقائي في الخلفية: ينزل ويثبت بدون الحاجة لفتح البرنامج أو إغلاقه يدوياً
     if (!updateBusy) void startDownload(info, true);
     updVerEl.textContent = "v" + info.version;
-    updNotesEl.textContent = info.notes || "نسخة أحدث متاحة للتحميل";
     updBtn.textContent = "تحميل التحديث";
     updBtn.disabled = false;
     updBtn.onclick = () => startDownload(info);
@@ -299,7 +297,7 @@ async function startPeer() {
   pc.onconnectionstatechange = () => {
     if (pc.connectionState === "connected") setStatus("متصل", true);
     if (["failed", "disconnected", "closed"].includes(pc.connectionState)) {
-      setStatus("متصل — في انتظار طلب المشاهدة", true);
+      setStatus("متصل", true);
     }
   };
   const offer = await pc.createOffer();
@@ -416,14 +414,14 @@ async function run(device) {
       } else if (s.type === "bye") {
         pc?.close();
         pc = null;
-        setStatus("متصل — في انتظار طلب المشاهدة", true);
+        setStatus("متصل", true);
       }
     } catch (err) {
       setStatus("خطأ: " + (err?.message || err), false);
     }
   });
   await new Promise((resolve) => channel.subscribe((st) => st === "SUBSCRIBED" && resolve()));
-  setStatus("متصل — في انتظار طلب المشاهدة", true);
+  setStatus("متصل", true);
 }
 
 approveBtn.addEventListener("click", async () => {
