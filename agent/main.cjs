@@ -483,8 +483,12 @@ function cleanupOldDownloads() {
   }
 }
 
+let installing = false;
+
 async function installUpdate() {
+  if (installing) return true;
   if (!downloadedFile) throw new Error("لم يتم تنزيل التحديث");
+  installing = true;
   cleanupOldDownloads();
   const fs = require("fs");
   const os = require("os");
