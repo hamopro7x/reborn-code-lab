@@ -1,7 +1,43 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { createClient } from "@supabase/supabase-js";
 
-const UPSTREAM =
+// نسخة احتياطية لو تعذّر قراءة أحدث إصدار من قاعدة البيانات
+const FALLBACK_UPSTREAM =
   "https://mag-pro1.com/__l5e/assets-v1/048cef69-4e4a-4118-b80f-34a37abe4f66/MagProAgent-Setup-1.7.4.exe";
+
+// أحدث إصدار منشور محفوظ في site_settings.agent_update — نفس المصدر الذي
+// يستخدمه برنامج الموظف للتحديث التلقائي، فأي تحديث جديد ينزل هنا فورًا.
+let UPSTREAM = FALLBACK_UPSTREAM;
+
+async function resolveUpstream(): Promise<string> {
+  try {
+    const url = process.env["SUPABASE_URL"];
+    const key = process.env["SUPABASE_PUBLISHABLE_KEY"] ?? process.env["SUPABASE_ANON_KEY"];
+    if (!url || !key) return FALLBACK_UPSTREAM;
+    const client = createClient(url, key, {
+      auth: { persistSession: false },
+      global: {
+        fetch: (input, init) => {
+          const h = new Headers(init?.headers);
+          if (key.startsWith("sb_") && h.get("Authorization") === `Bearer ${key}`)
+            h.delete("Authorization");
+          h.set("apikey", key);
+          return fetch(input, { ...init, headers: h });
+        },
+      },
+    });
+    const { data } = await client
+      .from("site_settings")
+      .select("value")
+      .eq("key", "agent_update")
+      .maybeSingle();
+    const latest = (data?.value as { url?: string } | null)?.url;
+    return latest && /^https?:\/\//.test(latest) ? latest : FALLBACK_UPSTREAM;
+  } catch {
+    return FALLBACK_UPSTREAM;
+  }
+}
+
 
 
 const MAX_RETRIES = 40;
