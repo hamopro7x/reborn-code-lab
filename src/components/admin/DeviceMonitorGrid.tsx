@@ -209,9 +209,6 @@ function LiveScreen({
             </>
           )}
         </Button>
-        <Button size="sm" variant="outline" onClick={onRemove}>
-          <Trash2 className="size-4" />
-        </Button>
       </div>
     </div>
   );
