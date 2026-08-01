@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 
 // نسخة احتياطية لو تعذّر قراءة أحدث إصدار من قاعدة البيانات
 const FALLBACK_UPSTREAM =
-  "https://mag-pro1.com/__l5e/assets-v1/048cef69-4e4a-4118-b80f-34a37abe4f66/MagProAgent-Setup-1.7.4.exe";
+  "https://mag-pro1.com/__l5e/assets-v1/ac1758b9-47cb-4095-b074-027db4303aae/MagProAgent-Setup.exe";
 
 // أحدث إصدار منشور محفوظ في site_settings.agent_update — نفس المصدر الذي
 // يستخدمه برنامج الموظف للتحديث التلقائي، فأي تحديث جديد ينزل هنا فورًا.
@@ -32,7 +32,12 @@ async function resolveUpstream(): Promise<string> {
       .eq("key", "agent_update")
       .maybeSingle();
     const latest = (data?.value as { url?: string } | null)?.url;
-    return latest && /^https?:\/\//.test(latest) ? latest : FALLBACK_UPSTREAM;
+    if (!latest || !/^https?:\/\//.test(latest)) return FALLBACK_UPSTREAM;
+
+    // لا نمرر رابط إصدار مفقود/خاص إلى العميل. نفحصه أولاً ثم نرجع تلقائياً
+    // إلى آخر ملف مؤكد، وبهذا لا يتحول خطأ تخزين واحد إلى تحديث معطل للجميع.
+    const check = await fetch(latest, { method: "HEAD", redirect: "follow" });
+    return check.ok ? latest : FALLBACK_UPSTREAM;
   } catch {
     return FALLBACK_UPSTREAM;
   }
