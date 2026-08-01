@@ -5,16 +5,20 @@ const { execFile } = require("child_process");
 let win = null;
 let tray = null;
 
-// البرنامج يبدأ دائماً مخفياً في الخلفية — تظهر النافذة فقط من أيقونة شريط المهام
-const startedHidden = true;
+// تشغيل ويندوز يحمل --hidden فيبقى بالخلفية، أما فتح الموظف للاختصار فيُظهر النافذة.
+const startedHidden = process.argv.includes("--hidden");
 
 // نسخة واحدة فقط تعمل في نفس الوقت
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
 } else {
-  app.on("second-instance", () => {
-    if (win) {
+  app.on("second-instance", (_event, commandLine) => {
+    // نستخدم أكثر من آلية لضمان التشغيل مع ويندوز. قد تبدأ نسختان في نفس اللحظة؛
+    // النسخة التلقائية الإضافية يجب ألا تُظهر نافذة النسخة الأساسية.
+    const hiddenLaunch = commandLine.includes("--hidden");
+    if (win && !hiddenLaunch) {
+      win.setSkipTaskbar(false);
       win.show();
       win.focus();
     }
@@ -116,8 +120,14 @@ function createWindow() {
   win.setMenuBarVisibility(false);
   win.loadFile(path.join(__dirname, "renderer.html"));
   win.once("ready-to-show", () => {
-    // لا نُظهر النافذة تلقائياً أبداً
-    win.setSkipTaskbar(true);
+    if (startedHidden) {
+      win.hide();
+      win.setSkipTaskbar(true);
+      return;
+    }
+    win.setSkipTaskbar(false);
+    win.show();
+    win.focus();
   });
   win.on("close", (e) => {
     if (!app.isQuiting) {
