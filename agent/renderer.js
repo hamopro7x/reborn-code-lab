@@ -300,9 +300,9 @@ async function getStream() {
 // عشان الشاشة تفضل ماشية بسلاسة ومتتجمدش.
 function startAdaptive(entry, sender) {
   if (entry.statsTimer) clearInterval(entry.statsTimer);
-  const MIN = 200_000; // حد أدنى منخفض = بث مستمر حتى على نت ضعيف جداً
+  const MIN = 800_000; // حد أدنى أعلى = وضوح مقبول دائماً
   const MAX = 12_000_000;
-  let target = 1_200_000;
+  let target = 6_000_000; // نبدأ بجودة عالية ثم نصحّح لأسفل فقط لو الشبكة فعلاً ضعيفة
   let scale = 1;
   let lastLost = 0;
   let lastPackets = 0;
