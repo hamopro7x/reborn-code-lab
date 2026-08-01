@@ -311,7 +311,12 @@ function startAdaptive(sender) {
   }, 2000);
 }
 
+let starting = false;
+
 async function startPeer() {
+  if (starting) return; // منع بدء أكثر من اتصال في نفس الوقت
+  starting = true;
+  try {
   pc?.close();
   const s = await getStream();
   pc = new RTCPeerConnection(RTC_CONFIG);
@@ -363,6 +368,9 @@ async function startPeer() {
   await pc.setLocalDescription(offer);
   await send({ type: "offer", sdp: { type: offer.type, sdp: offer.sdp } });
   if (videoSender) startAdaptive(videoSender);
+  } finally {
+    starting = false;
+  }
 }
 
 async function heartbeat(device) {
@@ -466,7 +474,10 @@ async function run(device) {
       if (s.type === "join") {
         await startPeer();
       } else if (s.type === "answer") {
-        if (pc) await pc.setRemoteDescription(s.sdp);
+        // نتجاهل أي إجابة مكرّرة (لو أكثر من مشاهد أرسل إجابة لنفس العرض)
+        if (pc && pc.signalingState === "have-local-offer") {
+          await pc.setRemoteDescription(s.sdp);
+        }
       } else if (s.type === "ice" && s.from === "viewer") {
         if (pc) await pc.addIceCandidate(s.candidate).catch(() => {});
       } else if (s.type === "bye") {
