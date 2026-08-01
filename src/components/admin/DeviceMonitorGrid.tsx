@@ -393,9 +393,6 @@ export function EmployeeDevices({
 export function DeviceMonitorGrid({ screensOnly = false }: { screensOnly?: boolean } = {}) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const { data, isLoading, refetch, isFetching } = useAgentDevices();
-  const remove = useRemoveDevice((id) => {
-    if (expandedId === id) setExpandedId(null);
-  });
 
   const devices = data ?? [];
   const shown = expandedId ? devices.filter((d) => d.id === expandedId) : devices;
