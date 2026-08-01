@@ -90,23 +90,30 @@ function WatchPanel({ device, onClose }: { device: Device; onClose: () => void }
     // إعادة إرسال طلب الانضمام حتى يستجيب جهاز الموظف (يمنع التعليق على "جاري الاتصال")
     let tries = 0;
     let timer: ReturnType<typeof setInterval> | undefined;
-    void sig.ready.then(() => {
-      if (closed) return;
-      void sig.send({ type: "join" });
-      timer = setInterval(() => {
-        if (closed || pc.remoteDescription) {
-          if (timer) clearInterval(timer);
-          return;
-        }
-        tries += 1;
-        if (tries > 20) {
-          if (timer) clearInterval(timer);
-          setFailed(true);
-          return;
-        }
+    sig.ready
+      .then(() => {
+        if (closed) return;
         void sig.send({ type: "join" });
-      }, 2000);
-    });
+        timer = setInterval(() => {
+          if (closed || pc.remoteDescription) {
+            if (timer) clearInterval(timer);
+            return;
+          }
+          tries += 1;
+          if (tries > 20) {
+            if (timer) clearInterval(timer);
+            setFailed(true);
+            return;
+          }
+          void sig.send({ type: "join" });
+        }, 2000);
+      })
+      .catch(() => {
+        if (closed) return;
+        setFailed(true);
+        toast.error("تعذّر الاتصال بسيرفر البث — حاول مرة أخرى");
+      });
+
 
     return () => {
       closed = true;

@@ -95,8 +95,13 @@ function SharePage() {
       }
     });
     sigRef.current = sig;
-    await sig.ready;
+    try {
+      await sig.ready;
+    } catch {
+      toast.error("تعذّر الاتصال بسيرفر المشاركة — تحقق من الإنترنت وحاول مرة أخرى");
+    }
   };
+
 
   return (
     <main className="container mx-auto max-w-2xl px-4 py-12 space-y-6">
