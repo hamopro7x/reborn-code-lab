@@ -143,17 +143,22 @@ ipcMain.handle("open-external", (_e, url) => {
   return true;
 });
 
-// ===== تحديث داخلي: تنزيل بشريط تقدّم ثم تثبيت =====
+// ===== تحديث داخلي: تنزيل بشريط تقدّم ثم تثبيت صامت =====
 let downloadedFile = null;
+let activeDownload = null;
 
-function httpGet(url, onResponse, onError, redirects = 0, headers = {}) {
+// المسار الوسيط الدائم: يتحقق من الملف على السيرفر قبل تسليمه، ويدعم الاستكمال.
+const PERMANENT_DOWNLOAD_URL = "https://mag-pro1.com/api/public/agent-download.exe";
+const VERSION_ENDPOINT = "https://mag-pro1.com/api/public/agent-version";
+
+function httpGet(url, onResponse, onError, redirects = 0, headers = {}, method = "GET") {
   const https = require("https");
   https
-    .get(url, { headers }, (res) => {
+    .request(url, { headers, method }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         if (redirects > 5) return onError(new Error("عدد كبير من التحويلات"));
         res.resume();
-        return httpGet(res.headers.location, onResponse, onError, redirects + 1, headers);
+        return httpGet(res.headers.location, onResponse, onError, redirects + 1, headers, method);
       }
       if (res.statusCode !== 200 && res.statusCode !== 206 && res.statusCode !== 416) {
         res.resume();
@@ -161,20 +166,87 @@ function httpGet(url, onResponse, onError, redirects = 0, headers = {}) {
       }
       onResponse(res);
     })
-    .on("error", onError);
+    .on("error", onError)
+    .end();
 }
 
-ipcMain.handle("download-update", async (_e, url, version) => {
-  if (typeof url !== "string" || !/^https:\/\//.test(url)) {
-    throw new Error("رابط غير صالح");
+function headSize(url) {
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (v) => {
+      if (!settled) {
+        settled = true;
+        resolve(v);
+      }
+    };
+    setTimeout(() => finish(0), 20000);
+    httpGet(
+      url,
+      (res) => {
+        res.resume();
+        const len = Number(res.headers["content-length"] || 0);
+        finish(Number.isFinite(len) && len > 0 ? len : 0);
+      },
+      () => finish(0),
+      0,
+      {},
+      "HEAD",
+    );
+  });
+}
+
+function httpJson(url) {
+  return new Promise((resolve, reject) => {
+    httpGet(
+      url,
+      (res) => {
+        let raw = "";
+        res.setEncoding("utf8");
+        res.on("data", (c) => (raw += c));
+        res.on("end", () => {
+          try {
+            resolve(JSON.parse(raw));
+          } catch (err) {
+            reject(err);
+          }
+        });
+        res.on("error", reject);
+      },
+      reject,
+    );
+  });
+}
+
+function cmpVersion(a, b) {
+  const pa = String(a || "0").split(".").map(Number);
+  const pb = String(b || "0").split(".").map(Number);
+  for (let i = 0; i < 3; i++) {
+    if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) - (pb[i] || 0);
   }
+  return 0;
+}
+
+function looksLikeInstaller(file) {
+  // كل ملف تثبيت ويندوز يبدأ بالتوقيع MZ — لو الملف ناقص/صفحة خطأ لن يبدأ به.
+  try {
+    const fs = require("fs");
+    const fd = fs.openSync(file, "r");
+    const head = Buffer.alloc(2);
+    fs.readSync(fd, head, 0, 2, 0);
+    fs.closeSync(fd);
+    return head.toString("latin1") === "MZ";
+  } catch {
+    return false;
+  }
+}
+
+async function performDownload(url, version, notify) {
   const fs = require("fs");
   const os = require("os");
   const crypto = require("crypto");
-  const isSetup = /\.exe(\?|$)/i.test(url);
-  const safeVersion = typeof version === "string" && /^\d+\.\d+\.\d+$/.test(version)
-    ? version
-    : "unknown";
+  const isSetup = /\.exe(\?|$)/i.test(url) || url === PERMANENT_DOWNLOAD_URL;
+  const safeVersion =
+    typeof version === "string" && /^\d+\.\d+\.\d+$/.test(version) ? version : "unknown";
   const downloadId = crypto
     .createHash("sha256")
     .update(`${url}|${safeVersion}`)
@@ -193,13 +265,12 @@ ipcMain.handle("download-update", async (_e, url, version) => {
     received = 0;
   }
 
-  // تحديث الواجهة بمعدل ثابت (كل 250ms) لمنع التقطيع في شريط التقدم
   let lastSent = 0;
   const sendProgress = (force = false) => {
     const now = Date.now();
     if (!force && now - lastSent < 250) return;
     lastSent = now;
-    if (win && !win.isDestroyed()) {
+    if (notify && win && !win.isDestroyed()) {
       win.webContents.send("update-progress", {
         received,
         total,
@@ -208,12 +279,21 @@ ipcMain.handle("download-update", async (_e, url, version) => {
     }
   };
 
-  // لو رابط الإصدار المخزن تعطل، ننتقل آلياً لمسار التنزيل الدائم بدلاً من
-  // تكرار نفس HTTP 400/500 عشرات المرات.
-  const permanentDownloadUrl = "https://mag-pro1.com/api/public/agent-download.exe";
   let activeUrl = url;
+  // الحجم المتوقع يُقرأ مسبقاً حتى لو الاستجابة رجعت بدون content-length،
+  // فبدون حجم معروف كان الملف الناقص يُعتبر مكتملاً ثم يفشل التثبيت بصمت.
+  let expected = await headSize(activeUrl);
+  if (!expected && activeUrl !== PERMANENT_DOWNLOAD_URL) {
+    activeUrl = PERMANENT_DOWNLOAD_URL;
+    expected = await headSize(activeUrl);
+  }
+  if (expected && received > expected) {
+    try {
+      fs.unlinkSync(target);
+    } catch {}
+    received = 0;
+  }
 
-  // محاولة واحدة: تكمل من مكان التوقف عبر Range + كشف التوقف (stall)
   const attempt = () =>
     new Promise((resolve, reject) => {
       const headers = received > 0 ? { Range: `bytes=${received}-` } : {};
@@ -224,9 +304,9 @@ ipcMain.handle("download-update", async (_e, url, version) => {
           if (res.statusCode === 416) {
             const unsatisfiedRange = String(res.headers["content-range"] || "");
             const totalMatch = /^bytes\s+\*\/(\d+)$/i.exec(unsatisfiedRange);
-            const expectedSize = totalMatch ? Number(totalMatch[1]) : 0;
+            const expectedSize = totalMatch ? Number(totalMatch[1]) : expected;
             res.resume();
-            if (expectedSize > 0 && received === expectedSize) {
+            if (expectedSize > 0 && received === expectedSize && looksLikeInstaller(target)) {
               total = expectedSize;
               sendProgress(true);
               return resolve({ path: target });
@@ -235,11 +315,10 @@ ipcMain.handle("download-update", async (_e, url, version) => {
               fs.unlinkSync(target);
             } catch {}
             received = 0;
-            total = expectedSize;
+            total = 0;
             return reject(new Error("تم تنظيف ملف تحميل قديم"));
           }
           if (res.statusCode === 200 && received > 0) {
-            // السيرفر مش بيدعم الإكمال — نبدأ من الأول
             received = 0;
             try {
               fs.unlinkSync(target);
@@ -252,8 +331,8 @@ ipcMain.handle("download-update", async (_e, url, version) => {
             res.destroy();
             return reject(new Error("استجابة استكمال غير صالحة"));
           }
-          total = rangeMatch ? Number(rangeMatch[3]) : received + len;
-          if (!Number.isFinite(total) || total < 0) total = 0;
+          total = rangeMatch ? Number(rangeMatch[3]) : len ? received + len : expected;
+          if (!Number.isFinite(total) || total < 0) total = expected;
           const file = fs.createWriteStream(target, { flags: received > 0 ? "a" : "w" });
           let done = false;
           let stallTimer = null;
@@ -299,8 +378,10 @@ ipcMain.handle("download-update", async (_e, url, version) => {
                 size = fs.statSync(target).size;
               } catch {}
               received = size || received;
-              if (total && received !== total) {
-                if (received > total) {
+              const goal = total || expected;
+              if (!goal) return reject(new Error("حجم التحديث غير معروف"));
+              if (received !== goal) {
+                if (received > goal) {
                   try {
                     fs.unlinkSync(target);
                   } catch {}
@@ -308,6 +389,14 @@ ipcMain.handle("download-update", async (_e, url, version) => {
                 }
                 return reject(new Error("تحميل غير مكتمل"));
               }
+              if (isSetup && !looksLikeInstaller(target)) {
+                try {
+                  fs.unlinkSync(target);
+                } catch {}
+                received = 0;
+                return reject(new Error("ملف التحديث تالف"));
+              }
+              total = goal;
               sendProgress(true);
               resolve({ path: target });
             });
@@ -329,17 +418,18 @@ ipcMain.handle("download-update", async (_e, url, version) => {
       lastErr = err;
       const message = String(err?.message || err);
       if (
-        activeUrl !== permanentDownloadUrl &&
+        activeUrl !== PERMANENT_DOWNLOAD_URL &&
         (/HTTP\s+(400|403|404|410|500|502|503|504)/.test(message) || i >= 2)
       ) {
-        activeUrl = permanentDownloadUrl;
+        activeUrl = PERMANENT_DOWNLOAD_URL;
+        expected = await headSize(activeUrl);
         try {
           if (fs.existsSync(target)) fs.unlinkSync(target);
         } catch {}
         received = 0;
         total = 0;
       }
-      // نُحدّث الحجم الفعلي على القرص قبل الاستئناف
+      if (!expected) expected = await headSize(activeUrl);
       try {
         received = fs.existsSync(target) ? fs.statSync(target).size : 0;
       } catch {
@@ -350,7 +440,25 @@ ipcMain.handle("download-update", async (_e, url, version) => {
     }
   }
   throw new Error("فشل التحميل بعد عدة محاولات: " + (lastErr?.message || lastErr));
+}
+
+// تنزيل واحد فقط في نفس الوقت — لو الواجهة والخلفية طلبتا التحديث معاً
+// يشتركان في نفس العملية بدل إتلاف نفس الملف المؤقت.
+function downloadUpdate(url, version, notify = true) {
+  if (activeDownload) return activeDownload;
+  activeDownload = performDownload(url, version, notify).finally(() => {
+    activeDownload = null;
+  });
+  return activeDownload;
+}
+
+ipcMain.handle("download-update", async (_e, url, version) => {
+  if (typeof url !== "string" || !/^https:\/\//.test(url)) {
+    throw new Error("رابط غير صالح");
+  }
+  return downloadUpdate(url, version, true);
 });
+
 
 
 function cleanupOldDownloads() {
