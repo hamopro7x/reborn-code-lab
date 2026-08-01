@@ -495,6 +495,15 @@ function EmployeesTab() {
     finally { setSavingEdit(false); }
   }
 
+  const latestAgent = useQuery({
+    queryKey: ["agent-latest-version"],
+    queryFn: async () => {
+      const r = await fetch("/api/public/agent-version", { cache: "no-store" });
+      if (!r.ok) return { version: null, notes: null };
+      return (await r.json()) as { version: string | null; notes: string | null };
+    },
+    refetchInterval: 60_000,
+  });
 
 
   async function onPickAvatar(userId: string, file: File | null) {
@@ -546,14 +555,25 @@ function EmployeesTab() {
           <p className="text-xs text-muted-foreground">الموظف يقدر يدير الطلبات والمنتجات والمراجعات — بدون طرق الدفع والعملات والإعدادات</p>
         </div>
         <div className="flex items-center gap-2">
-          <a
-            href="/api/public/agent-download.exe"
-            download="MagProAgent-Setup.exe"
-            className="inline-flex items-center gap-1 rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-muted"
-            title="ينزّل دائمًا أحدث إصدار منشور تلقائيًا"
-          >
-            <Download className="size-4" />تنزيل برنامج الموظف (أحدث نسخة)
-          </a>
+          <div className="flex flex-col items-end gap-1">
+            <a
+              href="/api/public/agent-download.exe"
+              download={`MagProAgent-Setup${latestAgent.data?.version ? `-${latestAgent.data.version}` : ""}.exe`}
+              className="inline-flex items-center gap-1 rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-muted"
+              title="ينزّل دائمًا أحدث إصدار منشور تلقائيًا"
+            >
+              <Download className="size-4" />
+              تنزيل برنامج الموظف
+              {latestAgent.data?.version ? ` (v${latestAgent.data.version})` : " (أحدث نسخة)"}
+            </a>
+            {latestAgent.data?.version && (
+              <span className="text-[11px] text-muted-foreground">
+                آخر إصدار: v{latestAgent.data.version}
+                {latestAgent.data.notes ? ` — ${latestAgent.data.notes}` : ""}
+              </span>
+            )}
+          </div>
+
           <Button onClick={() => setOpen(true)} className="gradient-primary text-white gap-1"><Plus className="size-4" />موظف جديد</Button>
         </div>
       </div>
