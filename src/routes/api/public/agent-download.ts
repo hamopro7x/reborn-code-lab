@@ -23,6 +23,33 @@ async function fetchFrom(offset: number): Promise<Response> {
   throw lastErr ?? new Error("upstream failed");
 }
 
+async function openReaderAt(offset: number) {
+  const response = await fetchFrom(offset);
+  if (!response.body) throw new Error("no body");
+
+  const reader = response.body.getReader();
+  let pending: Uint8Array | null = null;
+
+  // بعض خوادم الأصول تتجاهل Range مؤقتًا وتعيد الملف كاملًا بـ 200.
+  // نتجاوز البايتات المحمّلة بدل إرسالها مرة ثانية وإفساد الملف.
+  if (offset > 0 && response.status === 200) {
+    let remaining = offset;
+    while (remaining > 0) {
+      const { done, value } = await reader.read();
+      if (done) throw new Error("upstream ended before resume offset");
+      if (!value) continue;
+      if (value.byteLength <= remaining) {
+        remaining -= value.byteLength;
+      } else {
+        pending = value.slice(remaining);
+        remaining = 0;
+      }
+    }
+  }
+
+  return { reader, pending };
+}
+
 async function handle(request: Request) {
   // حجم الملف من الأبستريم
   const head = await fetchFrom(0);
@@ -56,16 +83,25 @@ async function handle(request: Request) {
 
   let offset = start;
   let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
+  let pending: Uint8Array | null = null;
+  let retries = 0;
 
   const stream = new ReadableStream<Uint8Array>({
     async pull(controller) {
-      let retries = 0;
       while (true) {
         try {
           if (!reader) {
-            const res = await fetchFrom(offset);
-            if (!res.body) throw new Error("no body");
-            reader = res.body.getReader();
+            const opened = await openReaderAt(offset);
+            reader = opened.reader;
+            pending = opened.pending;
+          }
+          if (pending) {
+            const value = pending;
+            pending = null;
+            offset += value.byteLength;
+            retries = 0;
+            controller.enqueue(value);
+            return;
           }
           const { done, value } = await reader.read();
           if (done) {
@@ -80,6 +116,7 @@ async function handle(request: Request) {
           }
           if (value) {
             offset += value.byteLength;
+            retries = 0;
             controller.enqueue(value);
           }
           return;
