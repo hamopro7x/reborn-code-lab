@@ -116,7 +116,7 @@ function Admin() {
       items: [
         { key: "employees", label: "الموظفون", icon: UserCog, adminOnly: true },
         { key: "courses", label: "كورسات التدريب", icon: GraduationCap },
-        { key: "devices", label: "أجهزة الموظفين", icon: MonitorSmartphone, adminOnly: true },
+        
         { key: "remote", label: "الوصول عن بُعد", icon: MonitorPlay, adminOnly: true },
         { key: "payments", label: "طرق الدفع", icon: CreditCard, adminOnly: true },
         { key: "currencies", label: "العملات", icon: Coins, adminOnly: true },
@@ -205,7 +205,7 @@ function Admin() {
             {panel === "timers" && !isEmployee && <TimersTab />}
             {panel === "employees" && adminOnly && <EmployeesTab />}
             {panel === "courses" && <CoursesTab isAdmin={adminOnly} />}
-            {panel === "devices" && adminOnly && <DevicesTab />}
+            
             {panel === "remote" && adminOnly && <DeviceMonitorGrid screensOnly />}
             {panel === "payments" && adminOnly && <PaymentsTab />}
             {panel === "currencies" && adminOnly && <CurrenciesTab />}
@@ -609,6 +609,10 @@ function EmployeesTab() {
           </div>
         ))}
         {(q.data ?? []).length === 0 && <div className="card-surface rounded-2xl p-12 text-center text-muted-foreground col-span-full">لا يوجد موظفون</div>}
+      </div>
+      <div className="pt-6 border-t border-border/60 space-y-4">
+        <h2 className="text-xl font-bold flex items-center gap-2"><MonitorSmartphone className="size-5 text-primary" /> أجهزة الموظفين</h2>
+        <DevicesTab />
       </div>
       <Dialog open={!!editing} onOpenChange={(o) => { if (!o) setEditing(null); }}>
         <DialogContent>
