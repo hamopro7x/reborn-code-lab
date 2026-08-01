@@ -145,13 +145,11 @@ function LiveScreen({
   online,
   expanded,
   onToggleExpand,
-  onRemove,
 }: {
   device: Device;
   online: boolean;
   expanded: boolean;
   onToggleExpand: () => void;
-  onRemove: () => void;
 }) {
   const { videoRef, live, failed } = useDeviceStream(device.device_id, online);
 
@@ -208,9 +206,6 @@ function LiveScreen({
               <Maximize2 className="size-4 ml-1" /> تكبير
             </>
           )}
-        </Button>
-        <Button size="sm" variant="outline" onClick={onRemove}>
-          <Trash2 className="size-4" />
         </Button>
       </div>
     </div>
@@ -398,9 +393,6 @@ export function EmployeeDevices({
 export function DeviceMonitorGrid({ screensOnly = false }: { screensOnly?: boolean } = {}) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const { data, isLoading, refetch, isFetching } = useAgentDevices();
-  const remove = useRemoveDevice((id) => {
-    if (expandedId === id) setExpandedId(null);
-  });
 
   const devices = data ?? [];
   const shown = expandedId ? devices.filter((d) => d.id === expandedId) : devices;
@@ -430,7 +422,7 @@ export function DeviceMonitorGrid({ screensOnly = false }: { screensOnly?: boole
           تظهر شاشته هنا مباشرة طالما الجهاز متصل.
         </p>
       ) : (
-        <div className={expandedId ? "" : "grid gap-3 sm:grid-cols-2 lg:grid-cols-3"}>
+        <div className={expandedId ? "" : "grid gap-3 grid-cols-1 sm:grid-cols-2"}>
           {shown.map((d) => (
             <LiveScreen
               key={d.id}
@@ -438,7 +430,7 @@ export function DeviceMonitorGrid({ screensOnly = false }: { screensOnly?: boole
               online={isOnline(d)}
               expanded={expandedId === d.id}
               onToggleExpand={() => setExpandedId(expandedId === d.id ? null : d.id)}
-              onRemove={() => void remove(d)}
+              
             />
           ))}
         </div>
