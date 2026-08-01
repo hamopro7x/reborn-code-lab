@@ -378,6 +378,7 @@ async function heartbeat(device) {
     const { data } = await supabase.rpc("agent_heartbeat", {
       p_device_id: device.device_id,
       p_secret: device.secret,
+      p_version: AGENT_VERSION,
     });
     return data === true;
   } catch {
@@ -524,6 +525,7 @@ approveBtn.addEventListener("click", async () => {
       p_employee_name: employee_name,
       p_device_label: osLabel() + " · " + (navigator.platform || ""),
       p_os: osLabel(),
+      p_version: AGENT_VERSION,
     });
     if (error) throw error;
     saveDevice(device);
