@@ -56,6 +56,12 @@
       }
       .topbar {
         position: fixed; top: 10px; right: 12px; display: flex; gap: 8px; z-index: 5;
+        align-items: center;
+      }
+      .ver-badge {
+        background: #16213e; border: 1px solid #24365f; color: #93c5fd;
+        border-radius: 10px; padding: 6px 10px; font-size: 12px; font-weight: 700;
+        line-height: 1; direction: ltr;
       }
       .icon-btn {
         background: #16213e; border: 1px solid #24365f; color: #e8edf7;
@@ -74,6 +80,7 @@
   </head>
   <body>
     <div class="topbar">
+      <span class="ver-badge" id="ver-badge" title="الإصدار المثبّت"></span>
       <button class="icon-btn" id="refresh" title="تحديث الصفحة والبحث عن تحديث">⟳</button>
     </div>
     <div class="screen" id="consent">
