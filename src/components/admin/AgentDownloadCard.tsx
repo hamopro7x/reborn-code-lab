@@ -1,5 +1,4 @@
 import { Download } from "lucide-react";
-import agentAsset from "../../../public/MagProAgent-Setup.exe.asset.json";
 
 const steps = [
   "نزّل ملف التثبيت MagProAgent-Setup.exe على جهاز الموظف.",
