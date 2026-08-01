@@ -951,12 +951,10 @@ export type Database = {
         Args: { p_employee_name?: string; p_note?: string }
         Returns: string
       }
-      agent_heartbeat:
-        | { Args: { p_device_id: string; p_secret: string }; Returns: boolean }
-        | {
-            Args: { p_device_id: string; p_secret: string; p_version?: string }
-            Returns: boolean
-          }
+      agent_heartbeat: {
+        Args: { p_device_id: string; p_secret: string; p_version?: string }
+        Returns: boolean
+      }
       agent_pair_request: {
         Args: {
           p_device_id: string
@@ -967,40 +965,18 @@ export type Database = {
         }
         Returns: string
       }
-      agent_register:
-        | {
-            Args: {
-              p_device_id: string
-              p_device_label: string
-              p_employee_name: string
-              p_os: string
-              p_secret: string
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              p_device_id: string
-              p_device_label: string
-              p_employee_name: string
-              p_os: string
-              p_secret: string
-              p_version?: string
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              p_device_id: string
-              p_device_label: string
-              p_employee_name: string
-              p_enroll_code?: string
-              p_os: string
-              p_secret: string
-              p_version?: string
-            }
-            Returns: boolean
-          }
+      agent_register: {
+        Args: {
+          p_device_id: string
+          p_device_label: string
+          p_employee_name: string
+          p_enroll_code?: string
+          p_os: string
+          p_secret: string
+          p_version?: string
+        }
+        Returns: boolean
+      }
       gen_order_code: { Args: never; Returns: string }
     }
     Enums: {
