@@ -65,23 +65,19 @@ function startupFolderAutoLaunch() {
 
 function scheduledTaskAutoLaunch() {
   if (process.platform !== "win32") return;
+  // schtasks يحتاج تهريب الاقتباسات داخل /TR وإلا يقطع المسار عند أول مسافة
+  // (مسارات Program Files / AppData\Local\Programs بها مسافات دائمًا).
+  const tr = `\\"${process.execPath}\\" --hidden`;
   execFile(
     "schtasks.exe",
-    [
-      "/Create",
-      "/TN",
-      RUN_NAME,
-      "/SC",
-      "ONLOGON",
-      "/TR",
-      startupCommand(),
-      "/RL",
-      "LIMITED",
-      "/F",
-    ],
-    () => {},
+    ["/Create", "/TN", RUN_NAME, "/SC", "ONLOGON", "/TR", tr, "/RL", "LIMITED", "/F"],
+    { windowsVerbatimArguments: true },
+    (err) => {
+      if (err) console.error("[autolaunch] schtasks failed:", err.message);
+    },
   );
 }
+
 
 function enableAutoLaunch() {
   try {
