@@ -651,17 +651,17 @@ function EmployeesTab() {
                       <Edit className="size-4 ml-1" /> تعديل
                     </Button>
                   </div>
-                  <div className="rounded-xl border border-border/60 p-3 space-y-1.5 text-xs">
-                    <div className="flex justify-between gap-2">
-                      <span className="text-muted-foreground">الاسم كامل</span>
+                  <div className="rounded-xl border border-border/60 p-3 space-y-1.5 text-xs text-right">
+                    <div className="flex justify-start gap-2">
+                      <span className="text-muted-foreground shrink-0">الاسم كامل :</span>
                       <span className="font-bold truncate">{u.full_name || "—"}</span>
                     </div>
-                    <div className="flex justify-between gap-2">
-                      <span className="text-muted-foreground">البريد الإلكتروني</span>
+                    <div className="flex justify-start gap-2">
+                      <span className="text-muted-foreground shrink-0">البريد الإلكتروني :</span>
                       <span className="font-bold truncate" dir="ltr">{u.email || "—"}</span>
                     </div>
-                    <div className="flex justify-between gap-2">
-                      <span className="text-muted-foreground">كلمة السر</span>
+                    <div className="flex justify-start gap-2">
+                      <span className="text-muted-foreground shrink-0">كلمة السر :</span>
                       <span className="font-bold tracking-widest">••••••••</span>
                     </div>
                   </div>
