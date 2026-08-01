@@ -84,6 +84,7 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
       async (s: Signal) => {
         if (closed) return;
         if (s.type === "offer") {
+          if (pc.signalingState !== "stable" && pc.signalingState !== "have-remote-offer") return;
           await pc.setRemoteDescription(s.sdp);
           const answer = await pc.createAnswer();
           await pc.setLocalDescription(answer);
