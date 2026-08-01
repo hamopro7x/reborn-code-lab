@@ -483,7 +483,7 @@ function cleanupOldDownloads() {
   }
 }
 
-ipcMain.handle("install-update", async () => {
+async function installUpdate() {
   if (!downloadedFile) throw new Error("لم يتم تنزيل التحديث");
   cleanupOldDownloads();
   const fs = require("fs");
@@ -495,31 +495,49 @@ ipcMain.handle("install-update", async () => {
   }
   // بعض الروابط لا تنتهي بـ .exe (مسار وسيط) — نتعرف على ملف التثبيت من التوقيع MZ
   let isExeFile = /\.exe$/i.test(downloadedFile);
-  if (!isExeFile) {
+  if (!isExeFile && looksLikeInstaller(downloadedFile)) {
     try {
-      const fd = fs.openSync(downloadedFile, "r");
-      const head = Buffer.alloc(2);
-      fs.readSync(fd, head, 0, 2, 0);
-      fs.closeSync(fd);
-      if (head.toString("latin1") === "MZ") {
-        const renamed = downloadedFile.replace(/\.zip$/i, "") + ".exe";
-        fs.renameSync(downloadedFile, renamed);
-        downloadedFile = renamed;
-        isExeFile = true;
-      }
+      const renamed = downloadedFile.replace(/\.zip$/i, "") + ".exe";
+      fs.renameSync(downloadedFile, renamed);
+      downloadedFile = renamed;
+      isExeFile = true;
     } catch {
       /* ignore */
     }
   }
   if (isExeFile) {
+    if (!looksLikeInstaller(downloadedFile)) {
+      try {
+        fs.unlinkSync(downloadedFile);
+      } catch {}
+      downloadedFile = null;
+      throw new Error("ملف التثبيت تالف — سيُعاد تنزيله");
+    }
+    // ملف دفعي مستقل: يثبت بصمت ثم يعيد تشغيل البرنامج بالخلفية.
+    // بدون هذه الخطوة كان البرنامج يخرج ولا يعود إلا بتشغيل يدوي.
+    const relaunchTarget = process.execPath;
+    const script = path.join(os.tmpdir(), `mag-pro-agent-install-${Date.now()}.cmd`);
+    fs.writeFileSync(
+      script,
+      [
+        "@echo off",
+        "timeout /t 2 /nobreak >nul",
+        `start "" /wait "${downloadedFile}" /S`,
+        "timeout /t 3 /nobreak >nul",
+        `if exist "${relaunchTarget}" start "" "${relaunchTarget}" --hidden`,
+        `del "%~f0" >nul 2>&1`,
+      ].join("\r\n"),
+      "utf8",
+    );
     const { spawn } = require("child_process");
-    spawn(downloadedFile, ["/S"], { detached: true, stdio: "ignore" }).unref();
+    spawn("cmd.exe", ["/c", script], { detached: true, stdio: "ignore", windowsHide: true }).unref();
     setTimeout(() => {
       app.isQuiting = true;
       app.quit();
     }, 1200);
     return true;
   }
+
 
   await new Promise((resolve, reject) => {
     execFile(
