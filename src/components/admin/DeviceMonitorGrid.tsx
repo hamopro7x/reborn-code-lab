@@ -397,7 +397,7 @@ export function EmployeeDevices({
       )}
 
 
-      <PairDeviceBox userId={userId} title="ربط جهاز جديد لهذا الموظف" />
+      <PairDeviceBox userId={userId} employeeName={employeeName} title="كود تسجيل جهاز لهذا الموظف" />
 
       {unassigned.length > 0 && (
         <div className="rounded-xl border border-border/60 p-3 space-y-2">
