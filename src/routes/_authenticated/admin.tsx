@@ -495,6 +495,15 @@ function EmployeesTab() {
     finally { setSavingEdit(false); }
   }
 
+  const latestAgent = useQuery({
+    queryKey: ["agent-latest-version"],
+    queryFn: async () => {
+      const r = await fetch("/api/public/agent-version", { cache: "no-store" });
+      if (!r.ok) return { version: null, notes: null };
+      return (await r.json()) as { version: string | null; notes: string | null };
+    },
+    refetchInterval: 60_000,
+  });
 
 
   async function onPickAvatar(userId: string, file: File | null) {
