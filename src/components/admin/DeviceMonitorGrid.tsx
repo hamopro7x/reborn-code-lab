@@ -235,7 +235,7 @@ export function PairDeviceBox({ userId, title }: { userId?: string; title?: stri
     <div className="rounded-xl border border-border/60 p-3 space-y-2">
       <div className="flex items-center gap-2">
         <KeyRound className="size-4 text-primary" />
-        <span className="text-sm font-bold">إضافة جهاز بمفتاح الربط</span>
+        <span className="text-sm font-bold">{title ?? "إضافة جهاز بمفتاح الربط"}</span>
       </div>
       <p className="text-xs text-muted-foreground">
         الموظف يفتح البرنامج فيظهر له مفتاح ربط — اكتبه هنا ليعمل الجهاز دائمًا حتى تحذفه بنفسك.
