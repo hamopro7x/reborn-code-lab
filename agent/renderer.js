@@ -28,6 +28,11 @@ const deviceEl = document.getElementById("device");
 const STORE = "mag-agent-device-v1";
 const AGENT_VERSION = "1.7.8";
 
+const verBadgeEl = document.getElementById("ver-badge");
+if (verBadgeEl) verBadgeEl.textContent = "v" + AGENT_VERSION;
+
+
+
 
 const updateEl = document.getElementById("update");
 const updVerEl = document.getElementById("upd-ver");
