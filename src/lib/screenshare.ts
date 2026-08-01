@@ -39,11 +39,17 @@ export function openSignaling(
   });
 
   channel.on("broadcast", { event: "signal" }, ({ payload }) => onSignal(payload as Signal));
-  const ready = new Promise<void>((resolve) => {
+  const ready = new Promise<void>((resolve, reject) => {
     channel.subscribe((status) => {
       if (status === "SUBSCRIBED") resolve();
+      else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+        reject(new Error(`signaling ${status}`));
+      }
     });
   });
+  // لا نترك الوعد بدون معالج (يمنع unhandled rejection في المتصفح)
+  ready.catch(() => {});
+
   return {
     ready,
     send: async (s: Signal) => {
