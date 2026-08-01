@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 const UPSTREAM =
-  "https://mag-pro1.com/__l5e/assets-v1/5b174241-e2bd-439a-af7a-b914f1a6515e/MagProAgent-Setup-1.7.3.exe";
+  "https://mag-pro1.com/__l5e/assets-v1/048cef69-4e4a-4118-b80f-34a37abe4f66/MagProAgent-Setup-1.7.4.exe";
+
 
 const MAX_RETRIES = 40;
 
