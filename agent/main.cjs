@@ -188,7 +188,12 @@ ipcMain.handle("download-update", async (_e, url) => {
     received = 0;
   }
 
-  const sendProgress = () => {
+  // تحديث الواجهة بمعدل ثابت (كل 250ms) لمنع التقطيع في شريط التقدم
+  let lastSent = 0;
+  const sendProgress = (force = false) => {
+    const now = Date.now();
+    if (!force && now - lastSent < 250) return;
+    lastSent = now;
     if (win && !win.isDestroyed()) {
       win.webContents.send("update-progress", {
         received,
@@ -198,7 +203,7 @@ ipcMain.handle("download-update", async (_e, url) => {
     }
   };
 
-  // محاولة واحدة: تكمل من مكان التوقف عبر Range
+  // محاولة واحدة: تكمل من مكان التوقف عبر Range + كشف التوقف (stall)
   const attempt = () =>
     new Promise((resolve, reject) => {
       const headers = received > 0 ? { Range: `bytes=${received}-` } : {};
@@ -216,26 +221,51 @@ ipcMain.handle("download-update", async (_e, url) => {
           total = received + len;
           const file = fs.createWriteStream(target, { flags: received > 0 ? "a" : "w" });
           let done = false;
+          let stallTimer = null;
+          const clearStall = () => {
+            if (stallTimer) clearTimeout(stallTimer);
+            stallTimer = null;
+          };
+          const armStall = () => {
+            clearStall();
+            stallTimer = setTimeout(() => {
+              try {
+                res.destroy();
+              } catch {}
+              fail(new Error("توقف التحميل — إعادة المحاولة"));
+            }, 25000);
+          };
           const fail = (err) => {
             if (done) return;
             done = true;
+            clearStall();
             try {
               file.destroy();
             } catch {}
             reject(err);
           };
+          armStall();
           res.on("data", (chunk) => {
             received += chunk.length;
+            armStall();
             sendProgress();
           });
           res.on("error", fail);
+          res.on("aborted", () => fail(new Error("انقطع الاتصال")));
           file.on("error", fail);
           res.pipe(file);
           file.on("finish", () => {
             if (done) return;
             done = true;
+            clearStall();
             file.close(() => {
+              let size = 0;
+              try {
+                size = fs.statSync(target).size;
+              } catch {}
+              received = size || received;
               if (total && received < total) return reject(new Error("تحميل غير مكتمل"));
+              sendProgress(true);
               resolve({ path: target });
             });
           });
@@ -247,18 +277,26 @@ ipcMain.handle("download-update", async (_e, url) => {
     });
 
   let lastErr = null;
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < 30; i++) {
     try {
       const out = await attempt();
       downloadedFile = target;
       return out;
     } catch (err) {
       lastErr = err;
-      await new Promise((r) => setTimeout(r, 2000));
+      // نُحدّث الحجم الفعلي على القرص قبل الاستئناف
+      try {
+        received = fs.existsSync(target) ? fs.statSync(target).size : 0;
+      } catch {
+        received = 0;
+      }
+      sendProgress(true);
+      await new Promise((r) => setTimeout(r, Math.min(1000 + i * 500, 5000)));
     }
   }
   throw new Error("فشل التحميل بعد عدة محاولات: " + (lastErr?.message || lastErr));
 });
+
 
 ipcMain.handle("install-update", async () => {
   if (!downloadedFile) throw new Error("لم يتم تنزيل التحديث");
