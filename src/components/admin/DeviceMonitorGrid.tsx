@@ -18,7 +18,10 @@ type Device = {
   approved: boolean;
   last_seen_at: string | null;
   created_at: string;
+  created_at: string;
+  user_id?: string | null;
 };
+
 
 const isOnline = (d: Device) =>
   !!d.last_seen_at && Date.now() - new Date(d.last_seen_at).getTime() < 60_000;
