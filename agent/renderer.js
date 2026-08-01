@@ -7,8 +7,23 @@ const RTC_CONFIG = {
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:stun1.l.google.com:19302" },
+    // مُرحّل (TURN) كخط بديل: يمنع فشل/تعليق البث على شبكات NAT الصعبة
+    {
+      urls: [
+        "turn:openrelay.metered.ca:80",
+        "turn:openrelay.metered.ca:443",
+        "turn:openrelay.metered.ca:443?transport=tcp",
+      ],
+      username: "openrelayproject",
+      credential: "openrelayproject",
+    },
   ],
+  iceTransportPolicy: "all",
+  bundlePolicy: "max-bundle",
+  rtcpMuxPolicy: "require",
+  iceCandidatePoolSize: 4,
 };
+
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
@@ -28,7 +43,7 @@ const dotEl = document.getElementById("dot");
 const deviceEl = document.getElementById("device");
 
 const STORE = "mag-agent-device-v1";
-const AGENT_VERSION = "1.8.2";
+const AGENT_VERSION = "1.8.3";
 
 const verBadgeEl = document.getElementById("ver-badge");
 if (verBadgeEl) verBadgeEl.textContent = "v" + AGENT_VERSION;
@@ -247,7 +262,9 @@ function boostSdp(sdp) {
     if (inVideo && /^a=fmtp:\d+ /.test(line)) {
       out[out.length - 1] =
         line +
-        ";x-google-start-bitrate=6000;x-google-min-bitrate=1500;x-google-max-bitrate=14000";
+        // بداية متحفظة (1.2Mbps) = لا إشباع للشبكة = لا تأخير متراكم،
+        // وحد أدنى منخفض جداً حتى لا تتجمد الشاشة على النت الضعيف.
+        ";x-google-start-bitrate=1200;x-google-min-bitrate=150;x-google-max-bitrate=12000";
     }
   }
   // b=AS بعد سطر c= الخاص بالفيديو
@@ -256,7 +273,8 @@ function boostSdp(sdp) {
   for (const line of out) {
     if (line.startsWith("m=")) seenVideo = line.startsWith("m=video");
     res.push(line);
-    if (seenVideo && line.startsWith("c=")) res.push("b=AS:14000", "b=TIAS:14000000");
+    if (seenVideo && line.startsWith("c=")) res.push("b=AS:12000", "b=TIAS:12000000");
+
   }
   return res.join("\r\n");
 }
@@ -276,13 +294,16 @@ async function getStream() {
   return stream;
 }
 
-// مراقبة الشبكة لكل مشاهد على حدة: لو تكوّن طابور إرسال (تأخير) نخفّض البت-ريت،
-// ولو الشبكة مرتاحة نرفعه تدريجياً — هذا ما يمنع تراكم التأخير.
+// تحكّم سريع في الشبكة لكل مشاهد: نستخدم البت-ريت المتاح فعلياً (availableOutgoingBitrate)
+// + التأخير (RTT) + فقد الحزم + طابور الإرسال، ونصحّح كل 700ms.
+// على النت الضعيف نُنزّل الدقة (scaleResolutionDownBy) ونحافظ على معدل الإطارات
+// عشان الشاشة تفضل ماشية بسلاسة ومتتجمدش.
 function startAdaptive(entry, sender) {
   if (entry.statsTimer) clearInterval(entry.statsTimer);
-  const MIN = 1_500_000;
-  const MAX = 14_000_000;
-  let target = 6_000_000;
+  const MIN = 200_000; // حد أدنى منخفض = بث مستمر حتى على نت ضعيف جداً
+  const MAX = 12_000_000;
+  let target = 1_200_000;
+  let scale = 1;
   let lastLost = 0;
   let lastPackets = 0;
   entry.statsTimer = setInterval(async () => {
@@ -292,30 +313,65 @@ function startAdaptive(entry, sender) {
       let rtt = 0;
       let lost = 0;
       let packets = 0;
+      let avail = 0;
+      let qualityLimited = "";
       stats.forEach((r) => {
         if (r.type === "remote-inbound-rtp") {
           if (typeof r.roundTripTime === "number") rtt = r.roundTripTime;
           if (typeof r.packetsLost === "number") lost = r.packetsLost;
         }
-        if (r.type === "outbound-rtp" && typeof r.packetsSent === "number") packets = r.packetsSent;
+        if (r.type === "candidate-pair" && r.state === "succeeded") {
+          if (typeof r.availableOutgoingBitrate === "number") avail = r.availableOutgoingBitrate;
+          if (typeof r.currentRoundTripTime === "number" && !rtt) rtt = r.currentRoundTripTime;
+        }
+        if (r.type === "outbound-rtp") {
+          if (typeof r.packetsSent === "number") packets = r.packetsSent;
+          if (typeof r.qualityLimitationReason === "string")
+            qualityLimited = r.qualityLimitationReason;
+        }
       });
       const dLost = Math.max(0, lost - lastLost);
       const dPackets = Math.max(1, packets - lastPackets);
       lastLost = lost;
       lastPackets = packets;
       const lossRate = dLost / dPackets;
-      if (rtt > 0.25 || lossRate > 0.03) target = Math.max(MIN, Math.round(target * 0.6));
-      else if (rtt < 0.12 && lossRate < 0.005) target = Math.min(MAX, Math.round(target * 1.15));
+
+      // 1) البت-ريت: نتبع المتاح فعلياً بهامش أمان 85% (يمنع تكوّن طابور = تأخير)
+      const congested = rtt > 0.2 || lossRate > 0.02 || qualityLimited === "bandwidth";
+      if (avail > 0) {
+        const safe = Math.round(avail * 0.85);
+        target = congested ? Math.min(target, safe) : Math.round(target * 0.4 + safe * 0.6);
+      } else if (congested) {
+        target = Math.round(target * 0.6);
+      } else {
+        target = Math.round(target * 1.15);
+      }
+      target = Math.max(MIN, Math.min(MAX, target));
+
+      // 2) الدقة: على النت الضعيف نصغّر الصورة بدل ما الإطارات تتجمد
+      let nextScale = scale;
+      if (target < 700_000) nextScale = 3;
+      else if (target < 1_500_000) nextScale = 2;
+      else if (target < 3_000_000) nextScale = 1.5;
+      else if (target > 4_500_000 && !congested) nextScale = 1;
+
       const params = sender.getParameters();
       if (params.encodings?.[0]) {
         params.encodings[0].maxBitrate = target;
+        // إطارات أقل شيئاً ما عند الضغط، لكن تبقى سلسة (أقل حد 24fps)
+        params.encodings[0].maxFramerate = target < 1_000_000 ? 24 : target < 3_000_000 ? 30 : 60;
+        if (nextScale !== scale) {
+          params.encodings[0].scaleResolutionDownBy = nextScale;
+          scale = nextScale;
+        }
         await sender.setParameters(params);
       }
     } catch {
       /* تجاهل */
     }
-  }, 2000);
+  }, 700);
 }
+
 
 function closePeer(viewerId) {
   const entry = peers.get(viewerId);
@@ -339,7 +395,8 @@ async function startPeer(viewerId) {
     peers.set(viewerId, entry);
 
     s.getVideoTracks().forEach((t) => {
-      t.contentHint = "detail"; // وضوح النصوص مع سماح بتقليل الدقة عند الحاجة
+      // "motion" = الأولوية للسلاسة وعدم التجمّد على النت الضعيف
+      t.contentHint = "motion";
     });
     s.getTracks().forEach((t) => pc.addTrack(t, s));
     preferCodec(pc);
@@ -350,13 +407,15 @@ async function startPeer(viewerId) {
       videoSender = sender;
       try {
         const params = sender.getParameters();
-        params.degradationPreference = "balanced";
+        // نحافظ على الإطارات ونصغّر الدقة عند ضعف الشبكة (بدل تجمّد الصورة)
+        params.degradationPreference = "maintain-framerate";
         params.encodings = [
           {
             ...(params.encodings?.[0] ?? {}),
-            maxBitrate: 6_000_000,
-            maxFramerate: 60,
-            scaleResolutionDownBy: 1,
+            // بداية متحفظة ثم يرفعها المتحكّم التلقائي حسب سرعة النت الحقيقية
+            maxBitrate: 1_200_000,
+            maxFramerate: 30,
+            scaleResolutionDownBy: 1.5,
             networkPriority: "high",
             priority: "high",
           },
@@ -366,6 +425,7 @@ async function startPeer(viewerId) {
         // بعض النسخ لا تدعم كل الخصائص
       }
     }
+
 
     pc.onicecandidate = (e) => {
       if (e.candidate)

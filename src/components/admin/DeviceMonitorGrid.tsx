@@ -67,13 +67,14 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
     }
 
     pc.ontrack = (e) => {
-      // تقليل زمن التأخير: أصغر مخزن مؤقت ممكن
+      // تأخير منخفض جداً مع مخزن صغير (60ms) يمنع التقطيع على النت الضعيف
       try {
-        (e.receiver as unknown as { jitterBufferTarget?: number }).jitterBufferTarget = 0;
-        (e.receiver as unknown as { playoutDelayHint?: number }).playoutDelayHint = 0;
+        (e.receiver as unknown as { jitterBufferTarget?: number }).jitterBufferTarget = 60;
+        (e.receiver as unknown as { playoutDelayHint?: number }).playoutDelayHint = 0.06;
       } catch {
         /* غير مدعوم في بعض المتصفحات */
       }
+
       if (videoRef.current) {
         videoRef.current.srcObject = e.streams[0]!;
         void videoRef.current.play().catch(() => {});
