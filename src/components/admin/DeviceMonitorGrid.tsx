@@ -164,9 +164,14 @@ function LiveScreen({
             {device.device_label ?? device.os ?? "جهاز"}
           </div>
         </div>
-        <Badge variant={online ? "default" : "secondary"}>
-          {!online ? "غير متصل" : live ? "بث مباشر" : failed ? "لا يستجيب" : "جاري الاتصال…"}
-        </Badge>
+        <div className="flex items-center gap-1.5">
+          <Badge variant="outline" className="text-[10px]" dir="ltr">
+            {device.app_version ? "v" + device.app_version : "—"}
+          </Badge>
+          <Badge variant={online ? "default" : "secondary"}>
+            {!online ? "غير متصل" : live ? "بث مباشر" : failed ? "لا يستجيب" : "جاري الاتصال…"}
+          </Badge>
+        </div>
       </div>
 
       <div className="relative rounded-lg overflow-hidden bg-black aspect-video">
