@@ -25,7 +25,9 @@ const isOnline = (d: Device) =>
 
 function WatchPanel({ device, onClose }: { device: Device; onClose: () => void }) {
   const [live, setLive] = useState(false);
+  const [failed, setFailed] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+
 
   useEffect(() => {
     let closed = false;
@@ -83,15 +85,36 @@ function WatchPanel({ device, onClose }: { device: Device; onClose: () => void }
       if (e.candidate) void sig.send({ type: "ice", from: "viewer", candidate: e.candidate.toJSON() });
     };
 
-    void sig.ready.then(() => sig.send({ type: "join" }));
+    // إعادة إرسال طلب الانضمام حتى يستجيب جهاز الموظف (يمنع التعليق على "جاري الاتصال")
+    let tries = 0;
+    let timer: ReturnType<typeof setInterval> | undefined;
+    void sig.ready.then(() => {
+      if (closed) return;
+      void sig.send({ type: "join" });
+      timer = setInterval(() => {
+        if (closed || pc.remoteDescription) {
+          if (timer) clearInterval(timer);
+          return;
+        }
+        tries += 1;
+        if (tries > 20) {
+          if (timer) clearInterval(timer);
+          setFailed(true);
+          return;
+        }
+        void sig.send({ type: "join" });
+      }, 2000);
+    });
 
     return () => {
       closed = true;
+      if (timer) clearInterval(timer);
       void sig.send({ type: "bye" }).catch(() => {});
       sig.close();
       pc.close();
     };
   }, [device.device_id]);
+
 
   return (
     <div className="space-y-3">
