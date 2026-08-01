@@ -228,7 +228,7 @@ function preferCodec(pc) {
 }
 
 
-// نجبر الكوديك يبدأ ويستمر على بت-ريت عالي بدل التدرّج من جودة ضعيفة
+// بت-ريت واقعي عالي: يبدأ سريع بدون إشباع الشبكة (الإشباع = تأخير متراكم)
 function boostSdp(sdp) {
   const lines = sdp.split(/\r?\n/);
   const out = [];
@@ -240,7 +240,7 @@ function boostSdp(sdp) {
     if (inVideo && /^a=fmtp:\d+ /.test(line)) {
       out[out.length - 1] =
         line +
-        ";x-google-start-bitrate=30000;x-google-min-bitrate=12000;x-google-max-bitrate=60000";
+        ";x-google-start-bitrate=6000;x-google-min-bitrate=1500;x-google-max-bitrate=14000";
     }
   }
   // b=AS بعد سطر c= الخاص بالفيديو
@@ -249,7 +249,7 @@ function boostSdp(sdp) {
   for (const line of out) {
     if (line.startsWith("m=")) seenVideo = line.startsWith("m=video");
     res.push(line);
-    if (seenVideo && line.startsWith("c=")) res.push("b=AS:60000", "b=TIAS:60000000");
+    if (seenVideo && line.startsWith("c=")) res.push("b=AS:14000", "b=TIAS:14000000");
   }
   return res.join("\r\n");
 }
