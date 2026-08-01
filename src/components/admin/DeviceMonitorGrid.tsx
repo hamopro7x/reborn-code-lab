@@ -427,7 +427,7 @@ export function DeviceMonitorGrid({ screensOnly = false }: { screensOnly?: boole
           تظهر شاشته هنا مباشرة طالما الجهاز متصل.
         </p>
       ) : (
-        <div className={expandedId ? "" : "grid gap-3 sm:grid-cols-2 lg:grid-cols-3"}>
+        <div className={expandedId ? "" : "grid gap-3 grid-cols-1 sm:grid-cols-2"}>
           {shown.map((d) => (
             <LiveScreen
               key={d.id}
