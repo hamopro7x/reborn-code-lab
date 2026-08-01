@@ -56,6 +56,7 @@ export type Database = {
           os: string | null
           secret_hash: string
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           approved?: boolean
@@ -68,6 +69,7 @@ export type Database = {
           os?: string | null
           secret_hash: string
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           approved?: boolean
@@ -80,6 +82,7 @@ export type Database = {
           os?: string | null
           secret_hash?: string
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
