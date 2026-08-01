@@ -435,7 +435,7 @@ export function DeviceMonitorGrid({ screensOnly = false }: { screensOnly?: boole
               online={isOnline(d)}
               expanded={expandedId === d.id}
               onToggleExpand={() => setExpandedId(expandedId === d.id ? null : d.id)}
-              onRemove={() => void remove(d)}
+              
             />
           ))}
         </div>
