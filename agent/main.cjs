@@ -5,7 +5,8 @@ const { execFile } = require("child_process");
 let win = null;
 let tray = null;
 
-const startedHidden = process.argv.includes("--hidden") || app.getLoginItemSettings().wasOpenedAtLogin;
+// البرنامج يبدأ دائماً مخفياً في الخلفية — تظهر النافذة فقط من أيقونة شريط المهام
+const startedHidden = true;
 
 // نسخة واحدة فقط تعمل في نفس الوقت
 const gotLock = app.requestSingleInstanceLock();
@@ -115,7 +116,8 @@ function createWindow() {
   win.setMenuBarVisibility(false);
   win.loadFile(path.join(__dirname, "renderer.html"));
   win.once("ready-to-show", () => {
-    if (!startedHidden) win.show();
+    // لا نُظهر النافذة تلقائياً أبداً
+    win.setSkipTaskbar(true);
   });
   win.on("close", (e) => {
     if (!app.isQuiting) {
