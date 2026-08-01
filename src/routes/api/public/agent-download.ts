@@ -126,6 +126,14 @@ export async function handleAgentDownload(request: Request) {
   UPSTREAM = await resolveUpstream();
   const total = await upstreamSize();
 
+  // بدون حجم معروف لا يمكن للبرنامج التحقق من اكتمال الملف، فينتهي بملف
+  // ناقص وتثبيت فاشل بصمت. نرفض الطلب ليعيد المحاولة بدل تسليم ملف مشكوك فيه.
+  if (!total) {
+    return new Response("upstream size unavailable", {
+      status: 503,
+      headers: { "cache-control": "no-store", "retry-after": "5" },
+    });
+  }
 
   const rangeHeader = request.headers.get("range");
   let start = 0;
@@ -137,6 +145,7 @@ export async function handleAgentDownload(request: Request) {
   // فتدخل في حلقة HTTP 416. تجاهل الـ Range هنا يجبرها على حذف الملف
   // المؤقت وإعادة تنزيل نسخة نظيفة ثم تثبيتها داخل التطبيق.
   if (total && start >= total) start = 0;
+
 
   if (request.method === "HEAD") {
     return new Response(null, {
