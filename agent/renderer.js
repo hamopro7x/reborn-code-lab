@@ -26,7 +26,7 @@ const dotEl = document.getElementById("dot");
 const deviceEl = document.getElementById("device");
 
 const STORE = "mag-agent-device-v1";
-const AGENT_VERSION = "1.7.3";
+const AGENT_VERSION = "1.7.4";
 
 
 const updateEl = document.getElementById("update");
@@ -85,6 +85,9 @@ async function startDownload(info, autoInstall = false) {
     updBtn.textContent = "إعادة المحاولة";
     updBtn.disabled = false;
     updBtn.onclick = () => startDownload(info);
+  } finally {
+    // مهم: بدون تصفير الحالة كان الفحص التلقائي للتحديث يتوقف للأبد
+    updateBusy = false;
   }
 }
 
@@ -298,6 +301,8 @@ async function startPeer() {
   pc.onconnectionstatechange = () => {
     if (pc.connectionState === "connected") setStatus("متصل", true);
     if (["failed", "disconnected", "closed"].includes(pc.connectionState)) {
+      try { pc.close(); } catch {}
+      pc = null;
       setStatus("متصل", true);
     }
   };
@@ -421,7 +426,21 @@ async function run(device) {
       setStatus("خطأ: " + (err?.message || err), false);
     }
   });
-  await new Promise((resolve) => channel.subscribe((st) => st === "SUBSCRIBED" && resolve()));
+  const subscribed = await new Promise((resolve) => {
+    let done = false;
+    const finish = (ok) => { if (!done) { done = true; resolve(ok); } };
+    const t = setTimeout(() => finish(false), 15000);
+    channel.subscribe((st) => {
+      if (st === "SUBSCRIBED") { clearTimeout(t); finish(true); }
+      else if (["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(st)) { clearTimeout(t); finish(false); }
+    });
+  });
+  if (!subscribed) {
+    setStatus("تعذّر الاتصال — إعادة المحاولة…", false);
+    try { await supabase.removeChannel(channel); } catch {}
+    setTimeout(() => { if (running) void run(device); }, 5000);
+    return;
+  }
   setStatus("متصل", true);
 }
 
