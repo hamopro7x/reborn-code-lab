@@ -25,7 +25,9 @@ const isOnline = (d: Device) =>
 
 function WatchPanel({ device, onClose }: { device: Device; onClose: () => void }) {
   const [live, setLive] = useState(false);
+  const [failed, setFailed] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+
 
   useEffect(() => {
     let closed = false;
@@ -58,7 +60,9 @@ function WatchPanel({ device, onClose }: { device: Device; onClose: () => void }
         videoRef.current.srcObject = e.streams[0]!;
         void videoRef.current.play().catch(() => {});
       }
+      setFailed(false);
       setLive(true);
+
     };
 
 
@@ -83,22 +87,52 @@ function WatchPanel({ device, onClose }: { device: Device; onClose: () => void }
       if (e.candidate) void sig.send({ type: "ice", from: "viewer", candidate: e.candidate.toJSON() });
     };
 
-    void sig.ready.then(() => sig.send({ type: "join" }));
+    // إعادة إرسال طلب الانضمام حتى يستجيب جهاز الموظف (يمنع التعليق على "جاري الاتصال")
+    let tries = 0;
+    let timer: ReturnType<typeof setInterval> | undefined;
+    sig.ready
+      .then(() => {
+        if (closed) return;
+        void sig.send({ type: "join" });
+        timer = setInterval(() => {
+          if (closed || pc.remoteDescription) {
+            if (timer) clearInterval(timer);
+            return;
+          }
+          tries += 1;
+          if (tries > 20) {
+            if (timer) clearInterval(timer);
+            setFailed(true);
+            return;
+          }
+          void sig.send({ type: "join" });
+        }, 2000);
+      })
+      .catch(() => {
+        if (closed) return;
+        setFailed(true);
+        toast.error("تعذّر الاتصال بسيرفر البث — حاول مرة أخرى");
+      });
+
 
     return () => {
       closed = true;
+      if (timer) clearInterval(timer);
       void sig.send({ type: "bye" }).catch(() => {});
       sig.close();
       pc.close();
     };
   }, [device.device_id]);
 
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2">
         <div className="text-sm">
           <span className="font-bold">{device.employee_name ?? "موظف"}</span>{" "}
-          <span className="text-muted-foreground">— {live ? "بث مباشر" : "جاري الاتصال…"}</span>
+          <span className="text-muted-foreground">
+            — {live ? "بث مباشر" : failed ? "الجهاز لم يستجب — تأكد أن البرنامج مفتوح" : "جاري الاتصال…"}
+          </span>
         </div>
         <Button variant="outline" size="sm" onClick={onClose}>
           <PhoneOff className="size-4 ml-1" /> إنهاء المشاهدة
@@ -108,9 +142,14 @@ function WatchPanel({ device, onClose }: { device: Device; onClose: () => void }
         <video ref={videoRef} className="w-full h-full object-contain" autoPlay playsInline muted />
         {!live && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <Loader2 className="size-8 animate-spin text-primary" />
+            {failed ? (
+              <span className="text-xs text-muted-foreground">تعذّر الاتصال بالجهاز</span>
+            ) : (
+              <Loader2 className="size-8 animate-spin text-primary" />
+            )}
           </div>
         )}
+
       </div>
     </div>
   );

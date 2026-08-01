@@ -1,7 +1,7 @@
 {
   "name": "mag-pro-agent",
   "productName": "MagProAgent",
-  "version": "1.7.3",
+  "version": "1.7.4",
   "description": "Mag Pro remote screen agent",
   "main": "main.cjs",
   "author": "Mag Pro",

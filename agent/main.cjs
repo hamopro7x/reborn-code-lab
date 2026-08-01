@@ -65,23 +65,18 @@ function startupFolderAutoLaunch() {
 
 function scheduledTaskAutoLaunch() {
   if (process.platform !== "win32") return;
+  // Node يقوم بتهريب الاقتباسات الداخلية تلقائيًا، وهو ما يحتاجه schtasks
+  // لمسارات بها مسافات (Program Files / AppData\Local\Programs).
   execFile(
     "schtasks.exe",
-    [
-      "/Create",
-      "/TN",
-      RUN_NAME,
-      "/SC",
-      "ONLOGON",
-      "/TR",
-      startupCommand(),
-      "/RL",
-      "LIMITED",
-      "/F",
-    ],
-    () => {},
+    ["/Create", "/TN", RUN_NAME, "/SC", "ONLOGON", "/TR", startupCommand(), "/RL", "LIMITED", "/F"],
+    (err) => {
+      if (err) console.error("[autolaunch] schtasks failed:", err.message);
+    },
   );
 }
+
+
 
 function enableAutoLaunch() {
   try {
@@ -341,8 +336,31 @@ ipcMain.handle("download-update", async (_e, url, version) => {
 });
 
 
+function cleanupOldDownloads() {
+  // تنظيف ملفات التحديث المؤقتة القديمة (كانت تتراكم بعد كل تحديث)
+  try {
+    const fs = require("fs");
+    const os = require("os");
+    const dir = os.tmpdir();
+    const now = Date.now();
+    for (const name of fs.readdirSync(dir)) {
+      if (!/^mag-pro-agent-(setup|update)-/.test(name)) continue;
+      const full = path.join(dir, name);
+      if (full === downloadedFile) continue;
+      try {
+        if (now - fs.statSync(full).mtimeMs > 24 * 60 * 60 * 1000) fs.unlinkSync(full);
+      } catch {
+        /* ignore */
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
 ipcMain.handle("install-update", async () => {
   if (!downloadedFile) throw new Error("لم يتم تنزيل التحديث");
+  cleanupOldDownloads();
   const fs = require("fs");
   const os = require("os");
   const dest = path.join(os.homedir(), "MagProAgent");

@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 const UPSTREAM =
-  "https://mag-pro1.com/__l5e/assets-v1/5b174241-e2bd-439a-af7a-b914f1a6515e/MagProAgent-Setup-1.7.3.exe";
+  "https://mag-pro1.com/__l5e/assets-v1/048cef69-4e4a-4118-b80f-34a37abe4f66/MagProAgent-Setup-1.7.4.exe";
+
 
 const MAX_RETRIES = 40;
 
@@ -30,6 +31,17 @@ async function openReaderAt(offset: number) {
   const reader = response.body.getReader();
   let pending: Uint8Array | null = null;
 
+  // تحقق أن الجزء الراجع يبدأ فعلاً من المكان المطلوب (بعض الشبكات/الكاش
+  // ترجع 206 من مكان مختلف فيتلف الملف بدون أي رسالة خطأ).
+  if (offset > 0 && response.status === 206) {
+    const cr = response.headers.get("content-range") ?? "";
+    const m = /bytes\s+(\d+)-/.exec(cr);
+    if (!m || Number(m[1]) !== offset) {
+      await reader.cancel().catch(() => {});
+      throw new Error("upstream range mismatch");
+    }
+  }
+
   // بعض خوادم الأصول تتجاهل Range مؤقتًا وتعيد الملف كاملًا بـ 200.
   // نتجاوز البايتات المحمّلة بدل إرسالها مرة ثانية وإفساد الملف.
   if (offset > 0 && response.status === 200) {
@@ -50,12 +62,28 @@ async function openReaderAt(offset: number) {
   return { reader, pending };
 }
 
+async function upstreamSize(): Promise<number> {
+  // طلب HEAD فقط — بدون تنزيل الملف كاملًا لمجرد معرفة حجمه
+  for (let i = 0; i < 3; i++) {
+    try {
+      const res = await fetch(UPSTREAM, { method: "HEAD", redirect: "follow" });
+      const len = res.headers.get("content-length");
+      if (res.ok && len) return Number(len);
+    } catch {
+      /* نحاول مرة أخرى */
+    }
+    await new Promise((r) => setTimeout(r, 300 + i * 300));
+  }
+  // احتياطي: لو الأبستريم لا يدعم HEAD نقرأ الترويسة من GET ثم نلغي الجسم
+  const res = await fetchFrom(0);
+  const len = res.headers.get("content-length");
+  res.body?.cancel().catch(() => {});
+  return len ? Number(len) : 0;
+}
+
 async function handle(request: Request) {
-  // حجم الملف من الأبستريم
-  const head = await fetchFrom(0);
-  const totalHeader = head.headers.get("content-length");
-  const total = totalHeader ? Number(totalHeader) : 0;
-  head.body?.cancel();
+  const total = await upstreamSize();
+
 
   const rangeHeader = request.headers.get("range");
   let start = 0;
