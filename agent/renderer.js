@@ -20,13 +20,15 @@ const pairingEl = document.getElementById("pairing");
 const pairCodeEl = document.getElementById("pair-code");
 const pairStatusEl = document.getElementById("pair-status");
 const nameEl = document.getElementById("employee-name");
+const enrollEl = document.getElementById("enroll-code");
+const consentNoteEl = document.getElementById("consent-note");
 const approveBtn = document.getElementById("approve");
 const statusEl = document.getElementById("status");
 const dotEl = document.getElementById("dot");
 const deviceEl = document.getElementById("device");
 
 const STORE = "mag-agent-device-v1";
-const AGENT_VERSION = "1.8.0";
+const AGENT_VERSION = "1.8.1";
 
 const verBadgeEl = document.getElementById("ver-badge");
 if (verBadgeEl) verBadgeEl.textContent = "v" + AGENT_VERSION;
@@ -455,37 +457,16 @@ async function requestPairing(device) {
   });
 }
 
-async function showPairing(device, note) {
+// لا يوجد مفتاح يولّده البرنامج — التسجيل يتم بكود تصدره الإدارة فقط
+async function showPairing(_device, note) {
   stopSession();
-  consentEl.style.display = "none";
+  try { localStorage.removeItem(STORE); } catch {}
+  if (pairTimer) { clearInterval(pairTimer); pairTimer = null; }
+  if (pairingEl) pairingEl.style.display = "none";
   runningEl.style.display = "none";
-  pairingEl.style.display = "flex";
-  pairStatusEl.textContent = note || "جارٍ توليد المفتاح…";
-
-  const tick = async () => {
-    try {
-      const code = await requestPairing(device);
-      if (code === "REGISTERED") {
-        if (pairTimer) clearInterval(pairTimer);
-        pairTimer = null;
-        pairingEl.style.display = "none";
-        await run(device);
-        return;
-      }
-      if (typeof code === "string" && code.length >= 6) {
-        pairCodeEl.textContent = code;
-        pairStatusEl.textContent = "في انتظار موافقة الإدارة…";
-      } else {
-        pairStatusEl.textContent = "تعذّر توليد المفتاح — إعادة المحاولة…";
-      }
-    } catch (err) {
-      pairStatusEl.textContent =
-        "تعذّر الاتصال بالسيرفر — إعادة المحاولة… " + String(err?.message || err).slice(0, 80);
-    }
-  };
-
-  if (!pairTimer) pairTimer = setInterval(() => void tick(), 5000);
-  void tick();
+  consentEl.style.display = "flex";
+  if (consentNoteEl) consentNoteEl.textContent = note || "اطلب كود تسجيل جديد من الإدارة";
+  if (approveBtn) approveBtn.disabled = false;
 }
 
 
@@ -502,12 +483,12 @@ async function run(device) {
   const first = await heartbeat(device);
   if (first === false) {
     // الإدارة حذفت الجهاز — نطلب مفتاح ربط جديد
-    return showPairing(device, "تم حذف تسجيل هذا الجهاز — سلّم المفتاح للإدارة");
+    return showPairing(device, "تم حذف تسجيل هذا الجهاز — اطلب كود تسجيل جديد من الإدارة");
   }
 
   hbTimer = setInterval(async () => {
     const ok = await heartbeat(device);
-    if (ok === false) void showPairing(device, "تم حذف تسجيل هذا الجهاز — سلّم المفتاح للإدارة");
+    if (ok === false) void showPairing(device, "تم حذف تسجيل هذا الجهاز — اطلب كود تسجيل جديد من الإدارة");
   }, 20000);
 
   void checkUpdate();
@@ -572,29 +553,35 @@ async function run(device) {
 approveBtn.addEventListener("click", async () => {
   approveBtn.disabled = true;
   const employee_name = nameEl.value.trim();
+  const enrollCode = (enrollEl?.value || "").trim().toUpperCase();
   if (!employee_name) {
     approveBtn.disabled = false;
     return alert("اكتب اسمك أولاً");
+  }
+  if (enrollCode.length < 6) {
+    approveBtn.disabled = false;
+    return alert("اكتب كود التسجيل الذي أعطته لك الإدارة");
   }
   const device = { device_id: rand(16), secret: rand(24), employee_name };
   try {
     // نطلب صلاحية الشاشة مرة واحدة هنا للتأكد أنها تعمل
     await getStream();
-    const { error } = await supabase.rpc("agent_register", {
+    await rpcFetch("agent_register", {
       p_device_id: device.device_id,
       p_secret: device.secret,
       p_employee_name: employee_name,
       p_device_label: osLabel() + " · " + (navigator.platform || ""),
       p_os: osLabel(),
       p_version: AGENT_VERSION,
+      p_enroll_code: enrollCode,
     });
-    if (error) throw error;
     saveDevice(device);
     try { await window.agent.enableAutoLaunch(); } catch {}
     await run(device);
   } catch (err) {
     approveBtn.disabled = false;
-    alert("فشل التسجيل: " + (err?.message || err));
+    const m = String(err?.message || err);
+    alert(/invalid or used enrollment code/i.test(m) ? "كود التسجيل غير صحيح أو مستخدم بالفعل — اطلب كودًا جديدًا من الإدارة" : "فشل التسجيل: " + m);
   }
 });
 

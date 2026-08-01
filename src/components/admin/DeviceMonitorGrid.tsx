@@ -235,54 +235,59 @@ function LiveScreen({
   );
 }
 
-export function PairDeviceBox({ userId, title }: { userId?: string; title?: string } = {}) {
+export function PairDeviceBox({
+  employeeName,
+  title,
+}: { userId?: string; employeeName?: string | null; title?: string } = {}) {
   const qc = useQueryClient();
-  const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
+  const [issued, setIssued] = useState<string | null>(null);
 
-  const add = async () => {
-    const key = code.trim().toUpperCase();
-    if (!key) return toast.error("اكتب مفتاح الربط الظاهر في برنامج الموظف");
+  const generate = async () => {
     setBusy(true);
-    const { data, error } = await supabase.rpc("agent_claim_pairing", { p_code: key });
-    if (!error && userId) {
-      const deviceId = (data as { device_id?: string } | null)?.device_id;
-      if (deviceId) {
-        await supabase.from("agent_devices").update({ user_id: userId }).eq("device_id", deviceId);
-      }
-    }
+    const { data, error } = await supabase.rpc("agent_create_enroll_code", {
+      p_employee_name: (employeeName ?? "").trim() || undefined,
+    });
     setBusy(false);
-    if (error) return toast.error("مفتاح غير صحيح أو منتهي");
-    setCode("");
-    toast.success("تم إضافة الجهاز — سيتصل تلقائيًا خلال ثوانٍ");
+    if (error || typeof data !== "string") return toast.error("تعذّر إنشاء كود التسجيل");
+    setIssued(data);
+    toast.success("تم إنشاء كود التسجيل — سلّمه للموظف");
     void qc.invalidateQueries({ queryKey: ["agent-devices"] });
   };
-
 
   return (
     <div className="rounded-xl border border-border/60 p-3 space-y-2">
       <div className="flex items-center gap-2">
         <KeyRound className="size-4 text-primary" />
-        <span className="text-sm font-bold">{title ?? "إضافة جهاز بمفتاح الربط"}</span>
+        <span className="text-sm font-bold">{title ?? "كود تسجيل جهاز موظف"}</span>
       </div>
       <p className="text-xs text-muted-foreground">
-        الموظف يفتح البرنامج فيظهر له مفتاح ربط — اكتبه هنا ليعمل الجهاز دائمًا حتى تحذفه بنفسك.
+        الموظف لا يستطيع تسجيل البرنامج إلا بكود تصدره أنت من هنا. الكود يُستخدم لمرة واحدة فقط.
       </p>
-      <div className="flex gap-2">
-        <Input
-          value={code}
-          onChange={(e) => setCode(e.target.value.toUpperCase())}
-          placeholder="مفتاح الربط (8 خانات)"
-          className="font-mono tracking-widest"
-          dir="ltr"
-        />
-        <Button onClick={() => void add()} disabled={busy}>
-          {busy ? <Loader2 className="size-4 animate-spin" /> : "إضافة"}
-        </Button>
-      </div>
+      {issued && (
+        <div className="flex items-center justify-between gap-2 rounded-lg bg-muted/40 px-3 py-2">
+          <span className="font-mono text-lg font-black tracking-widest" dir="ltr">
+            {issued}
+          </span>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              void navigator.clipboard?.writeText(issued);
+              toast.success("تم نسخ الكود");
+            }}
+          >
+            نسخ
+          </Button>
+        </div>
+      )}
+      <Button onClick={() => void generate()} disabled={busy} className="w-full">
+        {busy ? <Loader2 className="size-4 animate-spin" /> : "إنشاء كود تسجيل جديد"}
+      </Button>
     </div>
   );
 }
+
 
 const DEVICE_COLUMNS =
   "id, device_id, employee_name, device_label, os, approved, last_seen_at, created_at, user_id, app_version";
@@ -392,7 +397,7 @@ export function EmployeeDevices({
       )}
 
 
-      <PairDeviceBox userId={userId} title="ربط جهاز جديد لهذا الموظف" />
+      <PairDeviceBox userId={userId} employeeName={employeeName} title="كود تسجيل جهاز لهذا الموظف" />
 
       {unassigned.length > 0 && (
         <div className="rounded-xl border border-border/60 p-3 space-y-2">

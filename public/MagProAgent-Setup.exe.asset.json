@@ -1,11 +1,11 @@
 {
   "version": 1,
-  "asset_id": "de4fa468-6eac-4bf8-b871-6be4b22fb34a",
+  "asset_id": "5a7c55da-5042-49a4-973b-e5904a1b8fb2",
   "project_id": "335637d3-bc9b-407f-9e44-b28bda5c78dc",
-  "url": "/__l5e/assets-v1/de4fa468-6eac-4bf8-b871-6be4b22fb34a/MagProAgent-Setup-1.8.0.exe",
-  "r2_key": "a/v1/335637d3-bc9b-407f-9e44-b28bda5c78dc/de4fa468-6eac-4bf8-b871-6be4b22fb34a/MagProAgent-Setup-1.8.0.exe",
-  "original_filename": "MagProAgent-Setup-1.8.0.exe",
-  "size": 110554441,
+  "url": "/__l5e/assets-v1/5a7c55da-5042-49a4-973b-e5904a1b8fb2/MagProAgent-Setup-1.8.1.exe",
+  "r2_key": "a/v1/335637d3-bc9b-407f-9e44-b28bda5c78dc/5a7c55da-5042-49a4-973b-e5904a1b8fb2/MagProAgent-Setup-1.8.1.exe",
+  "original_filename": "MagProAgent-Setup-1.8.1.exe",
+  "size": 110540332,
   "content_type": "application/octet-stream",
-  "created_at": "2026-08-01T12:17:47Z"
+  "created_at": "2026-08-01T12:46:20Z"
 }

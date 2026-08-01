@@ -89,6 +89,36 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_enroll_codes: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          employee_name: string | null
+          note: string | null
+          used_at: string | null
+          used_by_device: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          employee_name?: string | null
+          note?: string | null
+          used_at?: string | null
+          used_by_device?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          employee_name?: string | null
+          note?: string | null
+          used_at?: string | null
+          used_by_device?: string | null
+        }
+        Relationships: []
+      }
       agent_pairings: {
         Row: {
           code: string
@@ -917,6 +947,10 @@ export type Database = {
     }
     Functions: {
       agent_claim_pairing: { Args: { p_code: string }; Returns: Json }
+      agent_create_enroll_code: {
+        Args: { p_employee_name?: string; p_note?: string }
+        Returns: string
+      }
       agent_heartbeat:
         | { Args: { p_device_id: string; p_secret: string }; Returns: boolean }
         | {
@@ -949,6 +983,18 @@ export type Database = {
               p_device_id: string
               p_device_label: string
               p_employee_name: string
+              p_os: string
+              p_secret: string
+              p_version?: string
+            }
+            Returns: boolean
+          }
+        | {
+            Args: {
+              p_device_id: string
+              p_device_label: string
+              p_employee_name: string
+              p_enroll_code?: string
               p_os: string
               p_secret: string
               p_version?: string
