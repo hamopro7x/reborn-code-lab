@@ -531,25 +531,26 @@ async function run(device) {
   });
   channel.on("broadcast", { event: "signal" }, async ({ payload }) => {
     const s = payload;
+    const viewerId = s.viewer || s.from_id || "legacy";
     try {
       if (s.type === "join") {
-        await startPeer();
+        await startPeer(viewerId);
       } else if (s.type === "answer") {
-        // نتجاهل أي إجابة مكرّرة (لو أكثر من مشاهد أرسل إجابة لنفس العرض)
-        if (pc && pc.signalingState === "have-local-offer") {
-          await pc.setRemoteDescription(s.sdp);
+        const entry = peers.get(viewerId);
+        if (entry?.pc && entry.pc.signalingState === "have-local-offer") {
+          await entry.pc.setRemoteDescription(s.sdp);
         }
       } else if (s.type === "ice" && s.from === "viewer") {
-        if (pc) await pc.addIceCandidate(s.candidate).catch(() => {});
+        const entry = peers.get(viewerId);
+        if (entry?.pc) await entry.pc.addIceCandidate(s.candidate).catch(() => {});
       } else if (s.type === "bye") {
-        pc?.close();
-        pc = null;
-        setStatus("متصل", true);
+        closePeer(viewerId);
       }
     } catch (err) {
       setStatus("خطأ: " + (err?.message || err), false);
     }
   });
+
   const subscribed = await new Promise((resolve) => {
     let done = false;
     const finish = (ok) => { if (!done) { done = true; resolve(ok); } };
