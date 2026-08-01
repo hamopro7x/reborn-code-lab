@@ -470,6 +470,30 @@ function EmployeesTab() {
   const [form, setForm] = useState({ email: "", password: "", full_name: "" });
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const upd = useServerFn(updateEmployee);
+  const [editing, setEditing] = useState<{ user_id: string; full_name: string; email: string; password: string } | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  async function saveEdit() {
+    if (!editing) return;
+    if (editing.full_name.trim().length < 2) return toast.error("اكتب اسم صحيح");
+    if (editing.password && editing.password.length < 6) return toast.error("كلمة السر 6 أحرف على الأقل");
+    setSavingEdit(true);
+    try {
+      await upd({ data: {
+        user_id: editing.user_id,
+        full_name: editing.full_name.trim(),
+        email: editing.email.trim(),
+        ...(editing.password ? { password: editing.password } : {}),
+      } });
+      toast.success("تم تحديث بيانات الموظف");
+      setEditing(null);
+      qc.invalidateQueries({ queryKey: ["admin-employees"] });
+    } catch (e: any) { toast.error(e?.message ?? "خطأ"); }
+    finally { setSavingEdit(false); }
+  }
+
+
 
   async function onPickAvatar(userId: string, file: File | null) {
     if (!file) return;
