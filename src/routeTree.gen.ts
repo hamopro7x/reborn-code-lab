@@ -27,6 +27,7 @@ import { Route as ProductSlugRouteImport } from './routes/product.$slug'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as AuthenticatedCoursesIdRouteImport } from './routes/_authenticated/courses.$id'
+import { Route as ApiPublicAgentDownloadRouteImport } from './routes/api/public/agent-download'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -120,6 +121,11 @@ const AuthenticatedCoursesIdRoute = AuthenticatedCoursesIdRouteImport.update({
   path: '/courses/$id',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiPublicAgentDownloadRoute = ApiPublicAgentDownloadRouteImport.update({
+  id: '/api/public/agent-download',
+  path: '/api/public/agent-download',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -139,6 +145,7 @@ export interface FileRoutesByFullPath {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/courses/$id': typeof AuthenticatedCoursesIdRoute
+  '/api/public/agent-download': typeof ApiPublicAgentDownloadRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -158,6 +165,7 @@ export interface FileRoutesByTo {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/courses/$id': typeof AuthenticatedCoursesIdRoute
+  '/api/public/agent-download': typeof ApiPublicAgentDownloadRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -179,6 +187,7 @@ export interface FileRoutesById {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/courses/$id': typeof AuthenticatedCoursesIdRoute
+  '/api/public/agent-download': typeof ApiPublicAgentDownloadRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -200,6 +209,7 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/courses/$id'
+    | '/api/public/agent-download'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -219,6 +229,7 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/courses/$id'
+    | '/api/public/agent-download'
   id:
     | '__root__'
     | '/'
@@ -239,6 +250,7 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/_authenticated/courses/$id'
+    | '/api/public/agent-download'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -258,6 +270,7 @@ export interface RootRouteChildren {
   ProductSlugRoute: typeof ProductSlugRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
+  ApiPublicAgentDownloadRoute: typeof ApiPublicAgentDownloadRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -388,6 +401,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCoursesIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/agent-download': {
+      id: '/api/public/agent-download'
+      path: '/api/public/agent-download'
+      fullPath: '/api/public/agent-download'
+      preLoaderRoute: typeof ApiPublicAgentDownloadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -422,6 +442,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProductSlugRoute: ProductSlugRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
+  ApiPublicAgentDownloadRoute: ApiPublicAgentDownloadRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
