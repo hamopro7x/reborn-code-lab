@@ -588,16 +588,17 @@ function EmployeesTab() {
                 </div>
                 <div className="text-xs text-muted-foreground truncate">{u.email}</div>
                 <div className="text-[10px] text-muted-foreground">مُضاف: {new Date(u.created_at).toLocaleDateString("ar-EG")}</div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mt-2 rounded-full"
+                  onClick={() => setExpanded(expanded === u.user_id ? null : u.user_id)}
+                >
+                  {expanded === u.user_id ? "إخفاء البيانات" : "عرض كل البيانات"}
+                </Button>
               </div>
             </div>
             <div className="flex items-center gap-1 shrink-0">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setEditing({ user_id: u.user_id, full_name: u.full_name ?? "", email: u.email ?? "", password: "" })}
-              >
-                <Edit className="size-4 ml-1" /> تعديل
-              </Button>
               {u.role !== "admin" && (
                 <Button size="icon" variant="ghost" onClick={() => remove(u.user_id)}>
                   <Trash2 className="size-4 text-destructive" />
@@ -605,15 +606,33 @@ function EmployeesTab() {
               )}
             </div>
             </div>
-            <EmployeeDevices userId={u.user_id} employeeName={u.full_name} />
+            {expanded === u.user_id && (
+              <div className="space-y-4 pt-3 border-t border-border/60">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-sm font-bold">تعديل البيانات</h3>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setEditing({ user_id: u.user_id, full_name: u.full_name ?? "", email: u.email ?? "", password: "" })}
+                  >
+                    <Edit className="size-4 ml-1" /> تعديل
+                  </Button>
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold mb-2">أجهزة هذا الموظف</h3>
+                  <EmployeeDevices userId={u.user_id} employeeName={u.full_name} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold mb-2 flex items-center gap-2"><MonitorSmartphone className="size-4 text-primary" /> أجهزة الموظفين (الأذن)</h3>
+                  <DevicesTab />
+                </div>
+              </div>
+            )}
           </div>
         ))}
         {(q.data ?? []).length === 0 && <div className="card-surface rounded-2xl p-12 text-center text-muted-foreground col-span-full">لا يوجد موظفون</div>}
       </div>
-      <div className="pt-6 border-t border-border/60 space-y-4">
-        <h2 className="text-xl font-bold flex items-center gap-2"><MonitorSmartphone className="size-5 text-primary" /> أجهزة الموظفين</h2>
-        <DevicesTab />
-      </div>
+
       <Dialog open={!!editing} onOpenChange={(o) => { if (!o) setEditing(null); }}>
         <DialogContent>
           <DialogHeader><DialogTitle>تعديل بيانات الموظف</DialogTitle></DialogHeader>
