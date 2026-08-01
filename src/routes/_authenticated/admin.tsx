@@ -547,11 +547,12 @@ function EmployeesTab() {
         </div>
         <div className="flex items-center gap-2">
           <a
-            href={agentAsset.url}
+            href="/api/public/agent-download.exe"
             download="MagProAgent-Setup.exe"
             className="inline-flex items-center gap-1 rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-muted"
+            title="ينزّل دائمًا أحدث إصدار منشور تلقائيًا"
           >
-            <Download className="size-4" />تنزيل برنامج الموظف
+            <Download className="size-4" />تنزيل برنامج الموظف (أحدث نسخة)
           </a>
           <Button onClick={() => setOpen(true)} className="gradient-primary text-white gap-1"><Plus className="size-4" />موظف جديد</Button>
         </div>
