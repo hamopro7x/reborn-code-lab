@@ -268,27 +268,71 @@ async function getStream() {
   return stream;
 }
 
+// مراقبة الشبكة: لو تكوّن طابور إرسال (تأخير) نخفّض البت-ريت فوراً،
+// ولو الشبكة مرتاحة نرفعه تدريجياً — هذا ما يمنع تراكم التأخير.
+let statsTimer = null;
+
+function startAdaptive(sender) {
+  if (statsTimer) clearInterval(statsTimer);
+  const MIN = 1_500_000;
+  const MAX = 14_000_000;
+  let target = 6_000_000;
+  let lastLost = 0;
+  let lastPackets = 0;
+  statsTimer = setInterval(async () => {
+    if (!pc || pc.connectionState !== "connected") return;
+    try {
+      const stats = await sender.getStats();
+      let rtt = 0;
+      let lost = 0;
+      let packets = 0;
+      stats.forEach((r) => {
+        if (r.type === "remote-inbound-rtp") {
+          if (typeof r.roundTripTime === "number") rtt = r.roundTripTime;
+          if (typeof r.packetsLost === "number") lost = r.packetsLost;
+        }
+        if (r.type === "outbound-rtp" && typeof r.packetsSent === "number") packets = r.packetsSent;
+      });
+      const dLost = Math.max(0, lost - lastLost);
+      const dPackets = Math.max(1, packets - lastPackets);
+      lastLost = lost;
+      lastPackets = packets;
+      const lossRate = dLost / dPackets;
+      if (rtt > 0.25 || lossRate > 0.03) target = Math.max(MIN, Math.round(target * 0.6));
+      else if (rtt < 0.12 && lossRate < 0.005) target = Math.min(MAX, Math.round(target * 1.15));
+      const params = sender.getParameters();
+      if (params.encodings?.[0]) {
+        params.encodings[0].maxBitrate = target;
+        await sender.setParameters(params);
+      }
+    } catch {
+      /* تجاهل */
+    }
+  }, 2000);
+}
+
 async function startPeer() {
   pc?.close();
   const s = await getStream();
   pc = new RTCPeerConnection(RTC_CONFIG);
-  pc.getConfiguration?.();
   s.getVideoTracks().forEach((t) => {
-    t.contentHint = "text"; // يعطي الأولوية للحدة والوضوح على الحركة
+    t.contentHint = "detail"; // وضوح النصوص مع سماح بتقليل الدقة عند الحاجة
   });
   s.getTracks().forEach((t) => pc.addTrack(t, s));
   preferCodec(pc);
 
-  // جودة عالية جداً + حفاظ على الدقة الأصلية للشاشة
+  let videoSender = null;
   for (const sender of pc.getSenders()) {
     if (!sender.track || sender.track.kind !== "video") continue;
+    videoSender = sender;
     try {
       const params = sender.getParameters();
-      params.degradationPreference = "maintain-resolution";
+      // "balanced": يُفضّل استمرار سرعة البث على التمسك بالدقة = أقل تأخير
+      params.degradationPreference = "balanced";
       params.encodings = [
         {
           ...(params.encodings?.[0] ?? {}),
-          maxBitrate: 60_000_000,
+          maxBitrate: 6_000_000,
           maxFramerate: 60,
           scaleResolutionDownBy: 1,
           networkPriority: "high",
@@ -307,16 +351,18 @@ async function startPeer() {
   pc.onconnectionstatechange = () => {
     if (pc.connectionState === "connected") setStatus("متصل", true);
     if (["failed", "disconnected", "closed"].includes(pc.connectionState)) {
+      if (statsTimer) clearInterval(statsTimer);
+      statsTimer = null;
       try { pc.close(); } catch {}
       pc = null;
       setStatus("متصل", true);
     }
   };
   const offer = await pc.createOffer();
-  // نفرض جودة عالية جداً من أول لحظة (لا نبدأ بجودة منخفضة ثم نرتفع)
   offer.sdp = boostSdp(offer.sdp);
   await pc.setLocalDescription(offer);
   await send({ type: "offer", sdp: { type: offer.type, sdp: offer.sdp } });
+  if (videoSender) startAdaptive(videoSender);
 }
 
 async function heartbeat(device) {
