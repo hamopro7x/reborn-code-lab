@@ -1,0 +1,1 @@
+update public.site_settings set value = jsonb_build_object('version','1.7.4','url','https://mag-pro1.com/api/public/agent-download'), updated_at = now() where key = 'agent_update';
