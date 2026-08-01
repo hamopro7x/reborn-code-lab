@@ -28,7 +28,7 @@ const dotEl = document.getElementById("dot");
 const deviceEl = document.getElementById("device");
 
 const STORE = "mag-agent-device-v1";
-const AGENT_VERSION = "1.8.1";
+const AGENT_VERSION = "1.8.2";
 
 const verBadgeEl = document.getElementById("ver-badge");
 if (verBadgeEl) verBadgeEl.textContent = "v" + AGENT_VERSION;
@@ -89,10 +89,15 @@ async function startDownload(info, autoInstall = false) {
     updBtn.onclick = install;
     if (autoInstall) void install();
   } catch (err) {
-    updProg.textContent = "فشل التحميل: " + (err?.message || err);
-    updBtn.textContent = "إعادة المحاولة";
-    updBtn.disabled = false;
-    updBtn.onclick = () => startDownload(info);
+    updProg.textContent = "فشل التحميل: " + (err?.message || err) + " — إعادة المحاولة تلقائياً…";
+    updBtn.textContent = "جارٍ التحديث تلقائياً…";
+    updBtn.disabled = true;
+    updBtn.onclick = null;
+    // إعادة محاولة تلقائية بدون تدخل الموظف
+    setTimeout(() => {
+      updateBusy = false;
+      void startDownload(info, true);
+    }, 30000);
   } finally {
     // مهم: بدون تصفير الحالة كان الفحص التلقائي للتحديث يتوقف للأبد
     updateBusy = false;
@@ -124,18 +129,12 @@ async function checkUpdate() {
       updateEl.style.display = "none";
       return;
     }
-    if (info.version === dismissedVersion) return;
     updVerEl.textContent = "v" + info.version;
-    updBtn.onclick = () => startDownload(info);
-    if (!updateBusy) {
-      updBtn.textContent = "تحميل التحديث";
-      updBtn.disabled = false;
-    }
-    updLater.style.display = "inline-block";
-    updLater.onclick = () => {
-      dismissedVersion = info.version;
-      updateEl.style.display = "none";
-    };
+    updBtn.textContent = "جارٍ التحديث تلقائياً…";
+    updBtn.disabled = true;
+    updBtn.onclick = null;
+    // التحديث إجباري وتلقائي: لا يوجد خيار تأجيل
+    updLater.style.display = "none";
     updateEl.style.display = "flex";
     // تحديث تلقائي في الخلفية: ينزل ويثبت بدون تدخل الموظف
     void startDownload(info, true);
@@ -143,6 +142,7 @@ async function checkUpdate() {
     /* تجاهل — نحاول لاحقاً */
   }
 }
+
 
 
 function rand(len) {
