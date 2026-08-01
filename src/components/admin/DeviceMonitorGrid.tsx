@@ -154,15 +154,15 @@ function LiveScreen({
   const { videoRef, live, failed } = useDeviceStream(device.device_id, online);
 
   return (
-    <div className="rounded-xl border border-border/60 p-3 space-y-2">
+    <div className="w-full rounded-xl border border-border/60 p-3 space-y-2 flex flex-col">
       <div className="flex items-start justify-between gap-2">
-        <div>
-          <div className="font-bold text-sm">{device.employee_name ?? "موظف"}</div>
-          <div className="text-xs text-muted-foreground">
+        <div className="min-w-0">
+          <div className="font-bold text-sm truncate">{device.employee_name ?? "موظف"}</div>
+          <div className="text-xs text-muted-foreground truncate">
             {device.device_label ?? device.os ?? "جهاز"}
           </div>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 shrink-0">
           <Badge variant="outline" className="text-[10px]" dir="ltr">
             {device.app_version ? "v" + device.app_version : "—"}
           </Badge>
@@ -172,16 +172,19 @@ function LiveScreen({
         </div>
       </div>
 
-      <div className="relative rounded-lg overflow-hidden bg-black aspect-video">
+      <div
+        className={`relative w-full rounded-lg overflow-hidden bg-black ${expanded ? "h-[70vh]" : "aspect-video"}`}
+      >
         {online ? (
           <video
             ref={videoRef}
-            className="w-full h-full object-contain"
+            className="absolute inset-0 w-full h-full object-cover"
             autoPlay
             playsInline
             muted
           />
         ) : null}
+
         {!live && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black">
             {!online ? (
