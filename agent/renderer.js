@@ -26,7 +26,7 @@ const dotEl = document.getElementById("dot");
 const deviceEl = document.getElementById("device");
 
 const STORE = "mag-agent-device-v1";
-const AGENT_VERSION = "1.7.4";
+const AGENT_VERSION = "1.7.5";
 
 
 const updateEl = document.getElementById("update");
@@ -175,9 +175,14 @@ function osLabel() {
 async function captureScreen() {
   const sourceId = await window.agent.getScreenSource();
   if (!sourceId) throw new Error("لا توجد شاشة متاحة");
-  // نلتقط بدقة الشاشة الفعلية (بدون تصغير) لضمان أعلى وضوح.
-  const sw = Math.round((window.screen?.width || 1920) * (window.devicePixelRatio || 1));
-  const sh = Math.round((window.screen?.height || 1080) * (window.devicePixelRatio || 1));
+  // أقصى وضوح ممكن *بدون* تأخير: نحدّ الدقة عند 1440p كحد أعلى.
+  // الدقة الأعلى (4K/8K) تُشبع الشبكة فيتكوّن طابور بيانات = بث متأخر.
+  const dpr = window.devicePixelRatio || 1;
+  const rawW = Math.round((window.screen?.width || 1920) * dpr);
+  const rawH = Math.round((window.screen?.height || 1080) * dpr);
+  const scale = Math.min(1, 2560 / rawW, 1440 / rawH);
+  const capW = Math.round(rawW * scale);
+  const capH = Math.round(rawH * scale);
   const tryCapture = async (w, h, fps) =>
     navigator.mediaDevices.getUserMedia({
       audio: false,
@@ -185,25 +190,23 @@ async function captureScreen() {
         mandatory: {
           chromeMediaSource: "desktop",
           chromeMediaSourceId: sourceId,
-          minWidth: w,
           maxWidth: w,
-          minHeight: h,
           maxHeight: h,
-          minFrameRate: 30,
           maxFrameRate: fps,
         },
       },
     });
   try {
-    return await tryCapture(sw, sh, 60);
+    return await tryCapture(capW, capH, 60);
   } catch {
     try {
-      return await tryCapture(Math.min(sw, 2560), Math.min(sh, 1440), 60);
-    } catch {
       return await tryCapture(1920, 1080, 60);
+    } catch {
+      return await tryCapture(1280, 720, 30);
     }
   }
 }
+
 
 // نُفضّل H264 (يعطي وضوح أفضل للنصوص عند نفس البت-ريت) ثم VP9 ثم VP8.
 function preferCodec(pc) {
@@ -225,7 +228,7 @@ function preferCodec(pc) {
 }
 
 
-// نجبر الكوديك يبدأ ويستمر على بت-ريت عالي بدل التدرّج من جودة ضعيفة
+// بت-ريت واقعي عالي: يبدأ سريع بدون إشباع الشبكة (الإشباع = تأخير متراكم)
 function boostSdp(sdp) {
   const lines = sdp.split(/\r?\n/);
   const out = [];
@@ -237,7 +240,7 @@ function boostSdp(sdp) {
     if (inVideo && /^a=fmtp:\d+ /.test(line)) {
       out[out.length - 1] =
         line +
-        ";x-google-start-bitrate=30000;x-google-min-bitrate=12000;x-google-max-bitrate=60000";
+        ";x-google-start-bitrate=6000;x-google-min-bitrate=1500;x-google-max-bitrate=14000";
     }
   }
   // b=AS بعد سطر c= الخاص بالفيديو
@@ -246,7 +249,7 @@ function boostSdp(sdp) {
   for (const line of out) {
     if (line.startsWith("m=")) seenVideo = line.startsWith("m=video");
     res.push(line);
-    if (seenVideo && line.startsWith("c=")) res.push("b=AS:60000", "b=TIAS:60000000");
+    if (seenVideo && line.startsWith("c=")) res.push("b=AS:14000", "b=TIAS:14000000");
   }
   return res.join("\r\n");
 }
@@ -265,27 +268,71 @@ async function getStream() {
   return stream;
 }
 
+// مراقبة الشبكة: لو تكوّن طابور إرسال (تأخير) نخفّض البت-ريت فوراً،
+// ولو الشبكة مرتاحة نرفعه تدريجياً — هذا ما يمنع تراكم التأخير.
+let statsTimer = null;
+
+function startAdaptive(sender) {
+  if (statsTimer) clearInterval(statsTimer);
+  const MIN = 1_500_000;
+  const MAX = 14_000_000;
+  let target = 6_000_000;
+  let lastLost = 0;
+  let lastPackets = 0;
+  statsTimer = setInterval(async () => {
+    if (!pc || pc.connectionState !== "connected") return;
+    try {
+      const stats = await sender.getStats();
+      let rtt = 0;
+      let lost = 0;
+      let packets = 0;
+      stats.forEach((r) => {
+        if (r.type === "remote-inbound-rtp") {
+          if (typeof r.roundTripTime === "number") rtt = r.roundTripTime;
+          if (typeof r.packetsLost === "number") lost = r.packetsLost;
+        }
+        if (r.type === "outbound-rtp" && typeof r.packetsSent === "number") packets = r.packetsSent;
+      });
+      const dLost = Math.max(0, lost - lastLost);
+      const dPackets = Math.max(1, packets - lastPackets);
+      lastLost = lost;
+      lastPackets = packets;
+      const lossRate = dLost / dPackets;
+      if (rtt > 0.25 || lossRate > 0.03) target = Math.max(MIN, Math.round(target * 0.6));
+      else if (rtt < 0.12 && lossRate < 0.005) target = Math.min(MAX, Math.round(target * 1.15));
+      const params = sender.getParameters();
+      if (params.encodings?.[0]) {
+        params.encodings[0].maxBitrate = target;
+        await sender.setParameters(params);
+      }
+    } catch {
+      /* تجاهل */
+    }
+  }, 2000);
+}
+
 async function startPeer() {
   pc?.close();
   const s = await getStream();
   pc = new RTCPeerConnection(RTC_CONFIG);
-  pc.getConfiguration?.();
   s.getVideoTracks().forEach((t) => {
-    t.contentHint = "text"; // يعطي الأولوية للحدة والوضوح على الحركة
+    t.contentHint = "detail"; // وضوح النصوص مع سماح بتقليل الدقة عند الحاجة
   });
   s.getTracks().forEach((t) => pc.addTrack(t, s));
   preferCodec(pc);
 
-  // جودة عالية جداً + حفاظ على الدقة الأصلية للشاشة
+  let videoSender = null;
   for (const sender of pc.getSenders()) {
     if (!sender.track || sender.track.kind !== "video") continue;
+    videoSender = sender;
     try {
       const params = sender.getParameters();
-      params.degradationPreference = "maintain-resolution";
+      // "balanced": يُفضّل استمرار سرعة البث على التمسك بالدقة = أقل تأخير
+      params.degradationPreference = "balanced";
       params.encodings = [
         {
           ...(params.encodings?.[0] ?? {}),
-          maxBitrate: 60_000_000,
+          maxBitrate: 6_000_000,
           maxFramerate: 60,
           scaleResolutionDownBy: 1,
           networkPriority: "high",
@@ -304,16 +351,18 @@ async function startPeer() {
   pc.onconnectionstatechange = () => {
     if (pc.connectionState === "connected") setStatus("متصل", true);
     if (["failed", "disconnected", "closed"].includes(pc.connectionState)) {
+      if (statsTimer) clearInterval(statsTimer);
+      statsTimer = null;
       try { pc.close(); } catch {}
       pc = null;
       setStatus("متصل", true);
     }
   };
   const offer = await pc.createOffer();
-  // نفرض جودة عالية جداً من أول لحظة (لا نبدأ بجودة منخفضة ثم نرتفع)
   offer.sdp = boostSdp(offer.sdp);
   await pc.setLocalDescription(offer);
   await send({ type: "offer", sdp: { type: offer.type, sdp: offer.sdp } });
+  if (videoSender) startAdaptive(videoSender);
 }
 
 async function heartbeat(device) {
