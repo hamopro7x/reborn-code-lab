@@ -151,8 +151,6 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
 }
 
 
-  return { videoRef, live, failed };
-}
 
 function LiveScreen({
   device,
