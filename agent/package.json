@@ -1,9 +1,46 @@
 {
   "name": "mag-pro-agent",
   "productName": "MagProAgent",
-  "version": "1.8.5",
+  "version": "1.8.6",
   "description": "Mag Pro remote screen agent",
   "main": "main.cjs",
   "author": "Mag Pro",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.magpro.agent",
+    "productName": "MagProAgent",
+    "files": [
+      "main.cjs",
+      "preload.cjs",
+      "renderer.html",
+      "renderer.js",
+      "package.json"
+    ],
+    "directories": {
+      "output": "/tmp/agent-release"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "MagProAgent-Setup.exe",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false,
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": false
+    }
+  }
 }
