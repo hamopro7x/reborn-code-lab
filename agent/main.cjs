@@ -146,6 +146,7 @@ ipcMain.handle("open-external", (_e, url) => {
 // ===== تحديث داخلي: تنزيل بشريط تقدّم ثم تثبيت صامت =====
 let downloadedFile = null;
 let activeDownload = null;
+let updatePipeline = null;
 
 // المسار الوسيط الدائم: يتحقق من الملف على السيرفر قبل تسليمه، ويدعم الاستكمال.
 const PERMANENT_DOWNLOAD_URL = "https://mag-pro1.com/api/public/agent-download.exe";
@@ -292,6 +293,20 @@ async function performDownload(url, version, notify) {
       fs.unlinkSync(target);
     } catch {}
     received = 0;
+  }
+
+  // إذا كان ملف نفس الإصدار قد اكتمل في محاولة سابقة، استخدمه مباشرة.
+  // هذا يمنع إعادة تنزيل 77MB بعد اكتمال التحميل أو بعد إعادة فتح الواجهة.
+  if (expected && received === expected && (!isSetup || looksLikeInstaller(target))) {
+    downloadedFile = target;
+    if (notify && win && !win.isDestroyed()) {
+      win.webContents.send("update-progress", {
+        received,
+        total: expected,
+        percent: 100,
+      });
+    }
+    return { path: target };
   }
 
   const attempt = () =>
@@ -601,6 +616,16 @@ let bootUpdateDone = false;
 
 async function runBootUpdate(attempt = 0) {
   if (bootUpdateDone) return;
+  // التشغيل، استعادة الجهاز، والواجهة قد تطلب الفحص في نفس اللحظة.
+  // جميعها تشترك في دورة تحديث واحدة حتى انتهاء التثبيت.
+  if (updatePipeline) return updatePipeline;
+  updatePipeline = runBootUpdateOnce(attempt).finally(() => {
+    updatePipeline = null;
+  });
+  return updatePipeline;
+}
+
+async function runBootUpdateOnce(attempt = 0) {
   const retry = () => {
     const delay = attempt < 6 ? 30000 : 15 * 60 * 1000;
     setTimeout(() => void runBootUpdate(attempt + 1), delay);
@@ -613,7 +638,6 @@ async function runBootUpdate(attempt = 0) {
       setTimeout(() => void runBootUpdate(attempt + 1), 15 * 60 * 1000);
       return;
     }
-    if (activeDownload) return retry();
     await downloadUpdate(PERMANENT_DOWNLOAD_URL, latest, true);
     bootUpdateDone = true;
     await installUpdate();

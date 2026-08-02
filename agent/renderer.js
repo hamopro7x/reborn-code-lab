@@ -43,7 +43,7 @@ const dotEl = document.getElementById("dot");
 const deviceEl = document.getElementById("device");
 
 const STORE = "mag-agent-device-v1";
-const AGENT_VERSION = "1.8.9";
+const AGENT_VERSION = "1.8.10";
 
 const verBadgeEl = document.getElementById("ver-badge");
 if (verBadgeEl) verBadgeEl.textContent = "v" + AGENT_VERSION;
@@ -613,12 +613,6 @@ async function run(device) {
     if (ok === false) void showPairing(device, "تم حذف تسجيل هذا الجهاز — اطلب كود تسجيل جديد من الإدارة");
   }, 20000);
 
-  void checkUpdate();
-  // فحص دوري كل دقيقة كخطة احتياطية لو الريلتايم اتقطع
-  setInterval(() => void checkUpdate(), 60000);
-  // اشتراك فوري: أي تحديث جديد يتحفظ في site_settings يظهر مباشرة
-
-
   // قناة الإشارات القديمة المفتوحة أُزيلت. البرنامج يسحب فقط الطلبات
   // التي مرّت بسياسة الأدمن، مستخدماً مفتاح الجهاز السري.
   await exchangeSignals(device);
@@ -670,10 +664,8 @@ if (existing) {
   pairingEl.style.display = "none";
 }
 
-// فحص التحديث بشكل مستقل عن الجلسة — كل دقيقة والبرنامج مفتوح
-void checkUpdate();
-updTimer = setInterval(() => void checkUpdate(), 60 * 1000);
-window.addEventListener("focus", () => void checkUpdate());
+// التحديث تديره عملية الخلفية حصراً. عدم تشغيل فاحص ثانٍ هنا يمنع تنزيل
+// نفس الإصدار مجدداً عند التركيز على النافذة أو إعادة اتصال البرنامج.
 
 // إعادة اتصال ناعمة: تعيد قناة الإشارات فقط دون إعادة تحميل الصفحة،
 // وبالتالي يفضل البث (WebRTC) شغالاً كما هو بدون الحاجة لاتصال جديد.
@@ -698,7 +690,6 @@ document.getElementById("refresh")?.addEventListener("click", async (e) => {
   const btn = e.currentTarget;
   btn.classList.add("spin");
   try {
-    await checkUpdate();
     await softReconnect();
   } finally {
     setTimeout(() => btn.classList.remove("spin"), 600);
