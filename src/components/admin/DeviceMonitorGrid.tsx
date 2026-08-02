@@ -93,33 +93,19 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
     };
     const pendingIce: RTCIceCandidateInit[] = [];
 
-    // نُفضّل H264 ثم VP9 للمشاهدة (وضوح أفضل للنصوص)
+    // مستقبل فيديو واحد بالإعدادات الافتراضية للمتصفح.
+    // (ترتيب الكودك يدوياً كان يسبب سقوط أول keyframe = شاشة سوداء)
     try {
-      const caps = (
-        RTCRtpReceiver as unknown as {
-          getCapabilities?: (k: string) => { codecs: Array<{ mimeType: string }> } | null;
-        }
-      ).getCapabilities?.("video");
-      if (caps) {
-        const order = ["video/H264", "video/VP9", "video/AV1", "video/VP8"];
-        const rank = (mimeType: string) => {
-          const index = order.indexOf(mimeType);
-          return index === -1 ? order.length : index;
-        };
-        const sorted = [...caps.codecs].sort((a, b) => rank(a.mimeType) - rank(b.mimeType));
-        pc.addTransceiver("video", { direction: "recvonly" }).setCodecPreferences?.(
-          sorted as unknown as RTCRtpCodec[],
-        );
-      }
+      pc.addTransceiver("video", { direction: "recvonly" });
     } catch {
       /* غير مدعوم */
     }
 
     pc.ontrack = (e) => {
-      // مخزن تشغيل صغير جداً؛ الهدف عرض أحدث frame بدل تراكم فيديو قديم.
+      // مخزن تشغيل صغير لكن ليس صفراً: 0.03s كان يسبب تجميد/سواد عند أي فقد حزم.
       try {
-        (e.receiver as unknown as { jitterBufferTarget?: number }).jitterBufferTarget = 30;
-        (e.receiver as unknown as { playoutDelayHint?: number }).playoutDelayHint = 0.03;
+        (e.receiver as unknown as { jitterBufferTarget?: number }).jitterBufferTarget = 150;
+        (e.receiver as unknown as { playoutDelayHint?: number }).playoutDelayHint = 0.15;
       } catch {
         /* غير مدعوم في بعض المتصفحات */
       }
@@ -130,14 +116,33 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
         setLive(false);
         scheduleReconnect(1000);
       });
+      // كتم المسار مؤقتاً (انقطاع حزم) = نُظهر مؤشر الانتظار بدل شاشة سوداء
+      e.track.addEventListener("mute", () => {
+        if (!closed) setLive(false);
+      });
+      e.track.addEventListener("unmute", () => {
+        if (!closed) setFailed(false);
+      });
 
-      if (videoRef.current) {
-        videoRef.current.srcObject = e.streams[0]!;
-        void videoRef.current.play().catch(() => {});
+      const v = videoRef.current;
+      if (v) {
+        v.srcObject = e.streams[0]!;
+        // لا نعلن "بث مباشر" إلا عند وصول أول إطار حقيقي
+        const markLive = () => {
+          if (!closed) {
+            setFailed(false);
+            setLive(true);
+          }
+        };
+        const rvfc = (v as unknown as { requestVideoFrameCallback?: (cb: () => void) => number })
+          .requestVideoFrameCallback;
+        if (typeof rvfc === "function") rvfc.call(v, markLive);
+        else v.addEventListener("timeupdate", markLive, { once: true });
+        void v.play().catch(() => {});
       }
       setFailed(false);
-      setLive(true);
     };
+
 
 
     const sig = openSignaling(
@@ -203,7 +208,7 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
         scheduleReconnect(8000);
       });
 
-    // مراقب توقّف الصورة: لو الفيديو واقف 8 ثوانٍ نعيد الاتصال
+    // مراقب توقّف الصورة: نحاول إصلاح الشبكة أولاً قبل إعادة بناء الاتصال
     let lastTime = -1;
     let stalled = 0;
     const watchdog = setInterval(() => {
@@ -211,7 +216,16 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
       if (closed || !v || !v.srcObject) return;
       if (v.currentTime === lastTime) {
         stalled += 1;
-        if (stalled >= 4) {
+        if (stalled === 2) {
+          // تجميد ~4 ثوانٍ: إصلاح مسار ICE بدون قطع البث
+          setLive(false);
+          try {
+            pc.restartIce();
+          } catch {
+            /* غير مدعوم */
+          }
+          void v.play().catch(() => {});
+        } else if (stalled >= 5) {
           stalled = 0;
           setLive(false);
           scheduleReconnect(500);
@@ -219,8 +233,10 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
       } else {
         stalled = 0;
         lastTime = v.currentTime;
+        setLive(true);
       }
     }, 2000);
+
 
     return () => {
       closed = true;
