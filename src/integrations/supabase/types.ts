@@ -866,6 +866,36 @@ export type Database = {
           },
         ]
       }
+      screenshare_signals: {
+        Row: {
+          created_at: string
+          device_id: string
+          expires_at: string
+          id: string
+          payload: Json
+          sender: string
+          viewer_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_id: string
+          expires_at?: string
+          id?: string
+          payload: Json
+          sender: string
+          viewer_id: string
+        }
+        Update: {
+          created_at?: string
+          device_id?: string
+          expires_at?: string
+          id?: string
+          payload?: Json
+          sender?: string
+          viewer_id?: string
+        }
+        Relationships: []
+      }
       site_settings: {
         Row: {
           key: string
@@ -950,6 +980,10 @@ export type Database = {
       agent_create_enroll_code: {
         Args: { p_employee_name?: string; p_note?: string }
         Returns: string
+      }
+      agent_exchange_signals: {
+        Args: { p_device_id: string; p_outgoing?: Json; p_secret: string }
+        Returns: Json
       }
       agent_heartbeat: {
         Args: { p_device_id: string; p_secret: string; p_version?: string }
