@@ -525,7 +525,6 @@ async function heartbeat(device) {
 
 let hbTimer = null;
 let pairTimer = null;
-let updTimer = null;
 let running = false;
 
 function stopSession() {
