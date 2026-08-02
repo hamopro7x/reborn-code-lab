@@ -77,12 +77,8 @@ async function startDownload(info, autoInstall = false) {
   if (!info?.url) return;
   if (updateBusy) return; // منع تحميل ثانٍ متزامن على نفس الملف
   updateBusy = true;
-  updLater.style.display = "none";
-  updBtn.disabled = true;
-  updBtn.textContent = "جارٍ التحميل…";
-  updBar.style.display = "block";
-  updFill.style.width = "0%";
-  updProg.textContent = "جارٍ بدء التحميل…";
+  // تحديث صامت: لا نظهر أي شيء للموظف
+  updateEl.style.display = "none";
   try {
     await window.agent.downloadUpdate(info.url, info.version);
     updFill.style.width = "100%";
@@ -132,27 +128,21 @@ let updateBusy = false;
 let dismissedVersion = null;
 
 async function checkUpdate() {
-  if (updateBusy) return; // تحميل/تثبيت جارٍ — لا نلمس الواجهة
+  if (updateBusy) return; // تحميل/تثبيت جارٍ
   try {
-    const { data } = await supabase
-      .from("site_settings")
-      .select("value")
-      .eq("key", "agent_update")
-      .maybeSingle();
-    const info = data?.value;
-    if (!info?.version || cmpVersion(info.version, AGENT_VERSION) <= 0) {
-      updateEl.style.display = "none";
-      return;
-    }
-    updVerEl.textContent = "v" + info.version;
-    updBtn.textContent = "جارٍ التحديث تلقائياً…";
-    updBtn.disabled = true;
-    updBtn.onclick = null;
-    // التحديث إجباري وتلقائي: لا يوجد خيار تأجيل
-    updLater.style.display = "none";
-    updateEl.style.display = "flex";
-    // تحديث تلقائي في الخلفية: ينزل ويثبت بدون تدخل الموظف
-    void startDownload(info, true);
+    // المصدر الوحيد للتحديث = الموقع المنشور. لا يظهر أي تحديث للموظف
+    // إلا بعد نشر النسخة الجديدة من لوحة الموقع (Publish changes).
+    const res = await fetch("https://mag-pro1.com/api/public/agent-version", {
+      cache: "no-store",
+    });
+    const info = await res.json();
+    if (!info?.version || cmpVersion(info.version, AGENT_VERSION) <= 0) return;
+    // تحديث صامت بالكامل: بدون أي إشعار أو زر — ينزل ويثبت في الخلفية.
+    updateEl.style.display = "none";
+    void startDownload(
+      { version: info.version, url: "https://mag-pro1.com/api/public/agent-download.exe" },
+      true,
+    );
   } catch {
     /* تجاهل — نحاول لاحقاً */
   }
@@ -636,16 +626,6 @@ async function run(device) {
   // فحص دوري كل دقيقة كخطة احتياطية لو الريلتايم اتقطع
   setInterval(() => void checkUpdate(), 60000);
   // اشتراك فوري: أي تحديث جديد يتحفظ في site_settings يظهر مباشرة
-  try {
-    supabase
-      .channel("agent-update-watch")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "site_settings", filter: "key=eq.agent_update" },
-        () => void checkUpdate(),
-      )
-      .subscribe();
-  } catch {}
 
 
   // قناة الإشارات القديمة المفتوحة أُزيلت. البرنامج يسحب فقط الطلبات
