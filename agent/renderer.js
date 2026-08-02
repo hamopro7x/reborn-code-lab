@@ -347,7 +347,7 @@ async function getStream() {
 // نهبط فوراً عند الازدحام ونصعد ببطء بعد استقرار الشبكة.
 function startAdaptive(entry, sender) {
   if (entry.statsTimer) clearInterval(entry.statsTimer);
-  if (entry.recoverTimer) clearTimeout(entry.recoverTimer);
+
   const MIN = 450_000;
   const MAX = 8_000_000;
   let target = 3_500_000;
