@@ -104,8 +104,9 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
     pc.ontrack = (e) => {
       // مخزن تشغيل صغير لكن ليس صفراً: 0.03s كان يسبب تجميد/سواد عند أي فقد حزم.
       try {
-        (e.receiver as unknown as { jitterBufferTarget?: number }).jitterBufferTarget = 150;
-        (e.receiver as unknown as { playoutDelayHint?: number }).playoutDelayHint = 0.15;
+        // مخزن صغير (80ms) = صورة أسرع بتأخير أقل، وما زال يمتص فقد الحزم
+        (e.receiver as unknown as { jitterBufferTarget?: number }).jitterBufferTarget = 80;
+        (e.receiver as unknown as { playoutDelayHint?: number }).playoutDelayHint = 0.08;
       } catch {
         /* غير مدعوم في بعض المتصفحات */
       }
@@ -192,7 +193,7 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
             return;
           }
           tries += 1;
-          if (tries > 10) {
+          if (tries > 14) {
             if (timer) clearInterval(timer);
             setFailed(true);
             // لا نتوقف نهائياً: نحاول من جديد بعد قليل
@@ -200,7 +201,7 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
             return;
           }
           void sig.send({ type: "join", viewer: viewerId });
-        }, 2000);
+        }, 900);
       })
       .catch(() => {
         if (closed) return;
@@ -235,7 +236,7 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
         lastTime = v.currentTime;
         setLive(true);
       }
-    }, 2000);
+    }, 1500);
 
 
     return () => {
@@ -524,7 +525,15 @@ export function EmployeeDevices({
 
 export function DeviceMonitorGrid({ screensOnly = false }: { screensOnly?: boolean } = {}) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  // زيادة هذا الرقم تعيد بناء كل اتصالات البث من الصفر
+  const [reloadKey, setReloadKey] = useState(0);
   const { data, isLoading, refetch, isFetching } = useAgentDevices();
+
+  const handleRefresh = async () => {
+    setReloadKey((n) => n + 1);
+    await refetch();
+    toast.success("تم تحديث الأجهزة وإعادة تشغيل البث");
+  };
 
   const devices = data ?? [];
   const shown = expandedId ? devices.filter((d) => d.id === expandedId) : devices;
@@ -536,7 +545,7 @@ export function DeviceMonitorGrid({ screensOnly = false }: { screensOnly?: boole
           <Monitor className="size-5 text-primary" />
           <h3 className="font-bold">شاشات الموظفين المباشرة</h3>
         </div>
-        <Button variant="outline" size="sm" onClick={() => void refetch()} disabled={isFetching}>
+        <Button variant="outline" size="sm" onClick={() => void handleRefresh()} disabled={isFetching}>
           <RefreshCw className={`size-4 ml-1 ${isFetching ? "animate-spin" : ""}`} /> تحديث
         </Button>
       </div>
@@ -557,7 +566,7 @@ export function DeviceMonitorGrid({ screensOnly = false }: { screensOnly?: boole
         <div className={expandedId ? "" : "grid gap-3 grid-cols-2 items-stretch"}>
           {shown.map((d) => (
             <LiveScreen
-              key={d.id}
+              key={`${d.id}:${reloadKey}`}
               device={d}
               online={isOnline(d)}
               expanded={expandedId === d.id}

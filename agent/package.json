@@ -1,7 +1,7 @@
 {
-  "name": "mag-pro-agent",
-  "productName": "MagProAgent",
-  "version": "1.8.13",
+  "name": "mag-pro",
+  "productName": "Mag Pro",
+  "version": "2.0.0",
   "description": "Mag Pro remote screen agent",
   "main": "main.cjs",
   "author": "Mag Pro",
@@ -11,8 +11,8 @@
     "electron-builder": "^24.13.3"
   },
   "build": {
-    "appId": "com.magpro.agent",
-    "productName": "MagProAgent",
+    "appId": "com.magpro.app",
+    "productName": "Mag Pro",
     "files": [
       "main.cjs",
       "preload.cjs",
@@ -26,21 +26,13 @@
     "win": {
       "target": [
         {
-          "target": "nsis",
+          "target": "dir",
           "arch": [
             "x64"
           ]
         }
       ],
-      "artifactName": "MagProAgent-Setup.exe",
       "signAndEditExecutable": false
-    },
-    "nsis": {
-      "oneClick": true,
-      "perMachine": false,
-      "allowToChangeInstallationDirectory": false,
-      "runAfterFinish": true,
-      "deleteAppDataOnUninstall": false
     }
   }
 }

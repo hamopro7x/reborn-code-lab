@@ -43,7 +43,7 @@ const dotEl = document.getElementById("dot");
 const deviceEl = document.getElementById("device");
 
 const STORE = "mag-agent-device-v1";
-const AGENT_VERSION = "1.8.13";
+const AGENT_VERSION = "2.0.0";
 
 const verBadgeEl = document.getElementById("ver-badge");
 if (verBadgeEl) verBadgeEl.textContent = "v" + AGENT_VERSION;
@@ -59,17 +59,44 @@ const updFill = document.getElementById("upd-fill");
 const updProg = document.getElementById("upd-progress");
 const updLater = document.getElementById("upd-later");
 
-const mb = (n) => (n / 1048576).toFixed(1) + " MB";
+const size = (n) => {
+  const v = Number(n) || 0;
+  return v >= 1073741824 ? (v / 1073741824).toFixed(2) + " GB" : (v / 1048576).toFixed(1) + " MB";
+};
 
-// التحديث صامت — نتجاهل مؤشر التقدم ولا نعرض شيئاً للموظف
-window.agent.onUpdateProgress?.(() => {});
+// شريط التقدّم أسفل رقم الإصدار: النسبة المئوية + الحجم المحمّل من الإجمالي
+const topProg = document.getElementById("top-progress");
+const topFill = document.getElementById("top-fill");
+const topText = document.getElementById("top-text");
+let hideProgTimer = null;
+
+function showProgress(received, total, percent) {
+  if (!topProg) return;
+  topProg.style.display = "flex";
+  const pct = percent ?? (total ? Math.round((received / total) * 100) : 0);
+  if (topFill) topFill.style.width = Math.max(0, Math.min(100, pct)) + "%";
+  if (topText)
+    topText.textContent = `${pct}% · ${size(received)}${total ? " / " + size(total) : ""}`;
+  if (hideProgTimer) clearTimeout(hideProgTimer);
+  if (pct >= 100) {
+    hideProgTimer = setTimeout(() => {
+      if (topProg) topProg.style.display = "none";
+    }, 4000);
+  }
+}
+
+window.agent.onUpdateProgress?.((p) => {
+  if (!p) return;
+  showProgress(p.received || 0, p.total || 0, p.percent);
+});
 
 async function startDownload(info, autoInstall = false) {
   if (!info?.url) return;
   if (updateBusy) return; // منع تحميل ثانٍ متزامن على نفس الملف
   updateBusy = true;
-  // تحديث صامت: لا نظهر أي شيء للموظف
+  // بدون إشعارات أو أزرار — يظهر شريط التقدّم فقط أسفل رقم الإصدار
   updateEl.style.display = "none";
+  showProgress(0, 0, 0);
   try {
     await window.agent.downloadUpdate(info.url, info.version);
     updFill.style.width = "100%";
@@ -621,7 +648,7 @@ async function run(device) {
   // قناة الإشارات القديمة المفتوحة أُزيلت. البرنامج يسحب فقط الطلبات
   // التي مرّت بسياسة الأدمن، مستخدماً مفتاح الجهاز السري.
   await exchangeSignals(device);
-  signalTimer = setInterval(() => void exchangeSignals(device), 300);
+  signalTimer = setInterval(() => void exchangeSignals(device), 120);
   setStatus("متصل", true);
 }
 

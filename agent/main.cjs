@@ -26,7 +26,8 @@ if (!gotLock) {
 }
 
 const RUN_KEY = "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run";
-const RUN_NAME = "MagProAgent";
+const RUN_NAME = "MagPro";
+const LEGACY_RUN_NAME = "MagProAgent";
 
 function startupCommand() {
   return `"${process.execPath}" --hidden`;
@@ -36,6 +37,8 @@ function startupCommand() {
 // استخدام أكثر من آلية يعالج الأجهزة التي يعطّل فيها ويندوز إحدى طرق بدء التشغيل.
 function registryAutoLaunch() {
   if (process.platform !== "win32") return;
+  // إزالة تسجيل الحزمة القديمة حتى لا يعمل برنامجان مع بدء التشغيل
+  execFile("reg.exe", ["delete", RUN_KEY, "/v", LEGACY_RUN_NAME, "/f"], () => {});
   execFile(
     "reg.exe",
     ["add", RUN_KEY, "/v", RUN_NAME, "/t", "REG_SZ", "/d", startupCommand(), "/f"],
@@ -57,11 +60,16 @@ function startupFolderAutoLaunch() {
     );
     fs.mkdirSync(startupDir, { recursive: true });
     // ملف VBScript بدل .cmd حتى لا تظهر نافذة أوامر عند تشغيل ويندوز
-    const legacyFile = path.join(startupDir, `${RUN_NAME}.cmd`);
-    try {
-      fs.unlinkSync(legacyFile);
-    } catch {
-      /* لم يكن موجودًا */
+    for (const stale of [
+      path.join(startupDir, `${RUN_NAME}.cmd`),
+      path.join(startupDir, `${LEGACY_RUN_NAME}.cmd`),
+      path.join(startupDir, `${LEGACY_RUN_NAME}.vbs`),
+    ]) {
+      try {
+        fs.unlinkSync(stale);
+      } catch {
+        /* لم يكن موجودًا */
+      }
     }
     const commandFile = path.join(startupDir, `${RUN_NAME}.vbs`);
     fs.writeFileSync(
@@ -80,6 +88,7 @@ function startupFolderAutoLaunch() {
 
 function scheduledTaskAutoLaunch() {
   if (process.platform !== "win32") return;
+  execFile("schtasks.exe", ["/Delete", "/TN", LEGACY_RUN_NAME, "/F"], () => {});
   // Node يقوم بتهريب الاقتباسات الداخلية تلقائيًا، وهو ما يحتاجه schtasks
   // لمسارات بها مسافات (Program Files / AppData\Local\Programs).
   execFile(
@@ -119,7 +128,7 @@ function createWindow() {
     resizable: false,
     show: false,
     skipTaskbar: startedHidden,
-    title: "Mag Pro Agent",
+    title: "Mag Pro",
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),
       contextIsolation: true,
@@ -520,7 +529,9 @@ function cleanupOldDownloads() {
       const full = path.join(dir, name);
       if (full === downloadedFile) continue;
       try {
-        if (now - fs.statSync(full).mtimeMs > 24 * 60 * 60 * 1000) fs.unlinkSync(full);
+        // أي ملف تحديث لا يخص الإصدار الحالي يُحذف فوراً حتى لا يُثبَّت
+        // إصدار قديم متبقٍ من محاولة سابقة.
+        fs.unlinkSync(full);
       } catch {
         /* ignore */
       }
@@ -682,6 +693,10 @@ async function runBootUpdateOnce(attempt = 0) {
       typeof info?.url === "string" && /^https:\/\//.test(info.url)
         ? info.url
         : PERMANENT_DOWNLOAD_URL;
+    // ننزل الإصدار الأحدث فقط. أي ملف تحديث قديم متبقٍ يُحذف أولاً حتى لا
+    // يُثبَّت إصدار وسيط بالترتيب.
+    downloadedFile = null;
+    cleanupOldDownloads();
     await downloadUpdate(publishedUrl, latest, true);
     bootUpdateDone = true;
     await installUpdate();
@@ -698,7 +713,7 @@ app.whenReady().then(() => {
   try {
 
     tray = new Tray(nativeImage.createEmpty());
-    tray.setToolTip("Mag Pro Agent");
+    tray.setToolTip("Mag Pro");
     tray.setContextMenu(
       Menu.buildFromTemplate([
         {
