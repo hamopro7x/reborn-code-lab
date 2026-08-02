@@ -5,7 +5,7 @@ import { AGENT_RELEASE } from "@/lib/agent-release";
 // لا يتغير إلا بعد نشر الموقع (Publish changes).
 const FALLBACK_UPSTREAM = AGENT_RELEASE.url;
 
-let UPSTREAM = FALLBACK_UPSTREAM;
+let UPSTREAM: string = FALLBACK_UPSTREAM;
 
 async function resolveUpstream(): Promise<string> {
   return AGENT_RELEASE.url;
