@@ -693,6 +693,10 @@ async function runBootUpdateOnce(attempt = 0) {
       typeof info?.url === "string" && /^https:\/\//.test(info.url)
         ? info.url
         : PERMANENT_DOWNLOAD_URL;
+    // ننزل الإصدار الأحدث فقط. أي ملف تحديث قديم متبقٍ يُحذف أولاً حتى لا
+    // يُثبَّت إصدار وسيط بالترتيب.
+    downloadedFile = null;
+    cleanupOldDownloads();
     await downloadUpdate(publishedUrl, latest, true);
     bootUpdateDone = true;
     await installUpdate();
