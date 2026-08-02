@@ -56,8 +56,23 @@ function startupFolderAutoLaunch() {
       "Startup",
     );
     fs.mkdirSync(startupDir, { recursive: true });
-    const commandFile = path.join(startupDir, `${RUN_NAME}.cmd`);
-    fs.writeFileSync(commandFile, `@echo off\r\nstart "" ${startupCommand()}\r\n`, "utf8");
+    // ملف VBScript بدل .cmd حتى لا تظهر نافذة أوامر عند تشغيل ويندوز
+    const legacyFile = path.join(startupDir, `${RUN_NAME}.cmd`);
+    try {
+      fs.unlinkSync(legacyFile);
+    } catch {
+      /* لم يكن موجودًا */
+    }
+    const commandFile = path.join(startupDir, `${RUN_NAME}.vbs`);
+    fs.writeFileSync(
+      commandFile,
+      [
+        'Set sh = CreateObject("WScript.Shell")',
+        `sh.Run """${process.execPath.replace(/"/g, '""')}"" --hidden", 0, False`,
+      ].join("\r\n"),
+      "utf8",
+    );
+
   } catch {
     // ignore
   }
@@ -548,25 +563,33 @@ async function installUpdate() {
       downloadedFile = null;
       throw new Error("ملف التثبيت تالف — سيُعاد تنزيله");
     }
-    // ملف دفعي مستقل: يثبت بصمت ثم يعيد تشغيل البرنامج بالخلفية.
-    // بدون هذه الخطوة كان البرنامج يخرج ولا يعود إلا بتشغيل يدوي.
+    // سكربت VBScript بدل الملف الدفعي: wscript.exe لا يفتح أي نافذة أوامر،
+    // وكل الأوامر تُشغّل بنمط مخفي (0) حتى لا يرى الموظف شاشة الترمينال.
     const relaunchTarget = process.execPath;
-    const script = path.join(os.tmpdir(), `mag-pro-agent-install-${Date.now()}.cmd`);
+    const script = path.join(os.tmpdir(), `mag-pro-agent-install-${Date.now()}.vbs`);
+    const vbsQuote = (value) => String(value).replace(/"/g, '""');
     fs.writeFileSync(
       script,
       [
-        "@echo off",
-        "timeout /t 2 /nobreak >nul",
-        `start "" /wait "${downloadedFile}" /S`,
-        "timeout /t 3 /nobreak >nul",
-        `if exist "${relaunchTarget}" start "" "${relaunchTarget}" --hidden`,
-        `del "%~f0" >nul 2>&1`,
+        'Set sh = CreateObject("WScript.Shell")',
+        'Set fso = CreateObject("Scripting.FileSystemObject")',
+        "WScript.Sleep 2000",
+        `sh.Run """${vbsQuote(downloadedFile)}"" /S", 0, True`,
+        "WScript.Sleep 3000",
+        `If fso.FileExists("${vbsQuote(relaunchTarget)}") Then sh.Run """${vbsQuote(relaunchTarget)}"" --hidden", 0, False`,
+        "WScript.Sleep 500",
+        "fso.DeleteFile WScript.ScriptFullName, True",
       ].join("\r\n"),
       "utf8",
     );
     installing = true;
     const { spawn } = require("child_process");
-    spawn("cmd.exe", ["/c", script], { detached: true, stdio: "ignore", windowsHide: true }).unref();
+    spawn("wscript.exe", ["//B", "//Nologo", script], {
+      detached: true,
+      stdio: "ignore",
+      windowsHide: true,
+    }).unref();
+
     setTimeout(() => {
       app.isQuiting = true;
       app.quit();
