@@ -187,9 +187,11 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
             return;
           }
           tries += 1;
-          if (tries > 20) {
+          if (tries > 10) {
             if (timer) clearInterval(timer);
             setFailed(true);
+            // لا نتوقف نهائياً: نحاول من جديد بعد قليل
+            scheduleReconnect(8000);
             return;
           }
           void sig.send({ type: "join", viewer: viewerId });
@@ -198,16 +200,39 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
       .catch(() => {
         if (closed) return;
         setFailed(true);
+        scheduleReconnect(8000);
       });
+
+    // مراقب توقّف الصورة: لو الفيديو واقف 8 ثوانٍ نعيد الاتصال
+    let lastTime = -1;
+    let stalled = 0;
+    const watchdog = setInterval(() => {
+      const v = videoRef.current;
+      if (closed || !v || !v.srcObject) return;
+      if (v.currentTime === lastTime) {
+        stalled += 1;
+        if (stalled >= 4) {
+          stalled = 0;
+          setLive(false);
+          scheduleReconnect(500);
+        }
+      } else {
+        stalled = 0;
+        lastTime = v.currentTime;
+      }
+    }, 2000);
 
     return () => {
       closed = true;
       if (timer) clearInterval(timer);
+      clearInterval(watchdog);
+      cancelReconnect();
       void sig.send({ type: "bye", viewer: viewerId }).catch(() => {});
       sig.close();
       pc.close();
     };
-  }, [deviceId, enabled]);
+  }, [deviceId, sticky, attempt]);
+
 
   return { videoRef, live, failed };
 }
