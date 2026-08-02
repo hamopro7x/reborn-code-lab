@@ -154,21 +154,38 @@ const VERSION_ENDPOINT = "https://mag-pro1.com/api/public/agent-version";
 
 function httpGet(url, onResponse, onError, redirects = 0, headers = {}, method = "GET") {
   const https = require("https");
-  https
-    .request(url, { headers, method }, (res) => {
+  let settled = false;
+  const fail = (err) => {
+    if (settled) return;
+    settled = true;
+    onError(err);
+  };
+  const req = https
+    .request(url, {
+      headers: {
+        "user-agent": `MagProAgent/${app.getVersion()}`,
+        "cache-control": "no-cache",
+        ...headers,
+      },
+      method,
+    }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         if (redirects > 5) return onError(new Error("عدد كبير من التحويلات"));
         res.resume();
-        return httpGet(res.headers.location, onResponse, onError, redirects + 1, headers, method);
+        const nextUrl = new URL(res.headers.location, url).toString();
+        settled = true;
+        return httpGet(nextUrl, onResponse, onError, redirects + 1, headers, method);
       }
       if (res.statusCode !== 200 && res.statusCode !== 206 && res.statusCode !== 416) {
         res.resume();
-        return onError(new Error("HTTP " + res.statusCode));
+        return fail(new Error("HTTP " + res.statusCode));
       }
+      settled = true;
       onResponse(res);
     })
-    .on("error", onError)
-    .end();
+    .on("error", fail);
+  req.setTimeout(30000, () => req.destroy(new Error("انتهت مهلة الاتصال")));
+  req.end();
 }
 
 function headSize(url) {
@@ -638,7 +655,11 @@ async function runBootUpdateOnce(attempt = 0) {
       setTimeout(() => void runBootUpdate(attempt + 1), 15 * 60 * 1000);
       return;
     }
-    await downloadUpdate(PERMANENT_DOWNLOAD_URL, latest, true);
+    const publishedUrl =
+      typeof info?.url === "string" && /^https:\/\//.test(info.url)
+        ? info.url
+        : PERMANENT_DOWNLOAD_URL;
+    await downloadUpdate(publishedUrl, latest, true);
     bootUpdateDone = true;
     await installUpdate();
   } catch {
