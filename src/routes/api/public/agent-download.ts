@@ -1,46 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { createClient } from "@supabase/supabase-js";
+import { AGENT_RELEASE } from "@/lib/agent-release";
 
-// نسخة احتياطية لو تعذّر قراءة أحدث إصدار من قاعدة البيانات
-const FALLBACK_UPSTREAM =
-  "https://mag-pro1.com/__l5e/assets-v1/cf58bbf9-9195-4f94-8d39-9c930a258ac9/MagProAgent-Setup-1.8.8.exe";
+// الملف الذي ينزله الموظف = الإصدار المضمّن في كود الموقع.
+// لا يتغير إلا بعد نشر الموقع (Publish changes).
+const FALLBACK_UPSTREAM = AGENT_RELEASE.url;
 
-// أحدث إصدار منشور محفوظ في site_settings.agent_update — نفس المصدر الذي
-// يستخدمه برنامج الموظف للتحديث التلقائي، فأي تحديث جديد ينزل هنا فورًا.
-let UPSTREAM = FALLBACK_UPSTREAM;
+let UPSTREAM: string = FALLBACK_UPSTREAM;
 
 async function resolveUpstream(): Promise<string> {
-  try {
-    const url = process.env["SUPABASE_URL"];
-    const key = process.env["SUPABASE_PUBLISHABLE_KEY"] ?? process.env["SUPABASE_ANON_KEY"];
-    if (!url || !key) return FALLBACK_UPSTREAM;
-    const client = createClient(url, key, {
-      auth: { persistSession: false },
-      global: {
-        fetch: (input, init) => {
-          const h = new Headers(init?.headers);
-          if (key.startsWith("sb_") && h.get("Authorization") === `Bearer ${key}`)
-            h.delete("Authorization");
-          h.set("apikey", key);
-          return fetch(input, { ...init, headers: h });
-        },
-      },
-    });
-    const { data } = await client
-      .from("site_settings")
-      .select("value")
-      .eq("key", "agent_update")
-      .maybeSingle();
-    const latest = (data?.value as { url?: string } | null)?.url;
-    if (!latest || !/^https?:\/\//.test(latest)) return FALLBACK_UPSTREAM;
-
-    // لا نمرر رابط إصدار مفقود/خاص إلى العميل. نفحصه أولاً ثم نرجع تلقائياً
-    // إلى آخر ملف مؤكد، وبهذا لا يتحول خطأ تخزين واحد إلى تحديث معطل للجميع.
-    const check = await fetch(latest, { method: "HEAD", redirect: "follow" });
-    return check.ok ? latest : FALLBACK_UPSTREAM;
-  } catch {
-    return FALLBACK_UPSTREAM;
-  }
+  return AGENT_RELEASE.url;
 }
 
 
