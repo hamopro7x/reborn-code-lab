@@ -976,6 +976,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_allow_signup: { Args: { p_email: string }; Returns: boolean }
       agent_claim_pairing: { Args: { p_code: string }; Returns: Json }
       agent_create_enroll_code: {
         Args: { p_employee_name?: string; p_note?: string }
