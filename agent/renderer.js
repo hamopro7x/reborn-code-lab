@@ -43,7 +43,7 @@ const dotEl = document.getElementById("dot");
 const deviceEl = document.getElementById("device");
 
 const STORE = "mag-agent-device-v1";
-const AGENT_VERSION = "1.8.10";
+const AGENT_VERSION = "1.8.11";
 
 const verBadgeEl = document.getElementById("ver-badge");
 if (verBadgeEl) verBadgeEl.textContent = "v" + AGENT_VERSION;
@@ -422,6 +422,8 @@ function closePeer(viewerId) {
   if (entry.statsTimer) clearInterval(entry.statsTimer);
   if (entry.recoverTimer) clearTimeout(entry.recoverTimer);
   try { entry.pc.close(); } catch {}
+  // نوقف نسخة المسار الخاصة بهذا المشاهد فقط — المصدر يبقى للباقين
+  try { entry.track?.stop(); } catch {}
   peers.delete(viewerId);
   setStatus(peers.size > 0 ? `متصل · ${peers.size} مشاهد` : "متصل", true);
 }
@@ -440,11 +442,15 @@ async function startPeer(viewerId) {
     const entry = { pc, statsTimer: null, pendingIce: [], recoverTimer: null };
     peers.set(viewerId, entry);
 
-    s.getVideoTracks().forEach((t) => {
-      // "detail" = وضوح أعلى للنصوص وتفاصيل الشاشة
-      t.contentHint = "detail";
-    });
-    s.getTracks().forEach((t) => pc.addTrack(t, s));
+    // كل مشاهد يحصل على نسخة مستقلة من مسار الشاشة (clone) => مشفّر منفصل
+    // ومعدّل بت-ريت منفصل. مشاركة نفس المسار بين اتصالين كانت تجعل
+    // التكيّف (scaleResolutionDownBy/framerate) يتصارع فيتوقف البث الثاني.
+    const base = s.getVideoTracks()[0];
+    if (!base) throw new Error("لا يوجد مسار فيديو");
+    const track = base.clone();
+    track.contentHint = "detail";
+    entry.track = track;
+    pc.addTrack(track, new MediaStream([track]));
     preferCodec(pc);
 
     let videoSender = null;
