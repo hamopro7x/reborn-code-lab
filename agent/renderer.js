@@ -43,7 +43,7 @@ const dotEl = document.getElementById("dot");
 const deviceEl = document.getElementById("device");
 
 const STORE = "mag-agent-device-v1";
-const AGENT_VERSION = "1.8.6";
+const AGENT_VERSION = "1.8.7";
 
 const verBadgeEl = document.getElementById("ver-badge");
 if (verBadgeEl) verBadgeEl.textContent = "v" + AGENT_VERSION;
@@ -282,11 +282,59 @@ function boostSdp(sdp) {
 
 let stream = null;
 let channel = null;
+let signalTimer = null;
+let signalPolling = false;
+const outgoingSignals = [];
 // كل مشاهد (جهاز إدارة) له اتصال منفصل بنفس جودة وسرعة البث
 const peers = new Map(); // viewerId -> { pc, statsTimer }
 
 function send(signal) {
-  return channel.send({ type: "broadcast", event: "signal", payload: signal });
+  const viewerId = signal.viewer || signal.to;
+  if (!viewerId) return Promise.reject(new Error("missing viewer identity"));
+  outgoingSignals.push({ viewer_id: viewerId, payload: signal });
+  return Promise.resolve();
+}
+
+async function exchangeSignals(device) {
+  if (signalPolling) return;
+  signalPolling = true;
+  const batch = outgoingSignals.splice(0);
+  try {
+    const incoming = await rpcFetch("agent_exchange_signals", {
+      p_device_id: device.device_id,
+      p_secret: device.secret,
+      p_outgoing: batch,
+    }, 5000);
+    for (const row of Array.isArray(incoming) ? incoming : []) {
+      await handleViewerSignal(row.payload);
+    }
+  } catch {
+    outgoingSignals.unshift(...batch);
+  } finally {
+    signalPolling = false;
+  }
+}
+
+async function handleViewerSignal(s) {
+  const viewerId = s.viewer || s.from_id;
+  if (!viewerId) return;
+  if (s.type === "join") {
+    await startPeer(viewerId);
+  } else if (s.type === "answer") {
+    const entry = peers.get(viewerId);
+    if (entry?.pc && entry.pc.signalingState === "have-local-offer") {
+      await entry.pc.setRemoteDescription(s.sdp);
+      for (const candidate of entry.pendingIce.splice(0)) {
+        await entry.pc.addIceCandidate(candidate).catch(() => {});
+      }
+    }
+  } else if (s.type === "ice" && s.from === "viewer") {
+    const entry = peers.get(viewerId);
+    if (entry?.pc?.remoteDescription) await entry.pc.addIceCandidate(s.candidate).catch(() => {});
+    else if (entry) entry.pendingIce.push(s.candidate);
+  } else if (s.type === "bye") {
+    closePeer(viewerId);
+  }
 }
 
 async function getStream() {
@@ -487,6 +535,8 @@ function stopSession() {
   running = false;
   if (hbTimer) clearInterval(hbTimer);
   hbTimer = null;
+  if (signalTimer) clearInterval(signalTimer);
+  signalTimer = null;
   for (const id of Array.from(peers.keys())) closePeer(id);
   try { if (channel) supabase.removeChannel(channel); } catch {}
   channel = null;
@@ -582,50 +632,10 @@ async function run(device) {
   } catch {}
 
 
-  channel = supabase.channel(`screenshare-${device.device_id}`, {
-    config: { broadcast: { self: false } },
-  });
-  channel.on("broadcast", { event: "signal" }, async ({ payload }) => {
-    const s = payload;
-    const viewerId = s.viewer || s.from_id || "legacy";
-    try {
-      if (s.type === "join") {
-        await startPeer(viewerId);
-      } else if (s.type === "answer") {
-        const entry = peers.get(viewerId);
-        if (entry?.pc && entry.pc.signalingState === "have-local-offer") {
-          await entry.pc.setRemoteDescription(s.sdp);
-          for (const candidate of entry.pendingIce.splice(0)) {
-            await entry.pc.addIceCandidate(candidate).catch(() => {});
-          }
-        }
-      } else if (s.type === "ice" && s.from === "viewer") {
-        const entry = peers.get(viewerId);
-        if (entry?.pc?.remoteDescription) await entry.pc.addIceCandidate(s.candidate).catch(() => {});
-        else if (entry) entry.pendingIce.push(s.candidate);
-      } else if (s.type === "bye") {
-        closePeer(viewerId);
-      }
-    } catch (err) {
-      setStatus("خطأ: " + (err?.message || err), false);
-    }
-  });
-
-  const subscribed = await new Promise((resolve) => {
-    let done = false;
-    const finish = (ok) => { if (!done) { done = true; resolve(ok); } };
-    const t = setTimeout(() => finish(false), 15000);
-    channel.subscribe((st) => {
-      if (st === "SUBSCRIBED") { clearTimeout(t); finish(true); }
-      else if (["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(st)) { clearTimeout(t); finish(false); }
-    });
-  });
-  if (!subscribed) {
-    setStatus("تعذّر الاتصال — إعادة المحاولة…", false);
-    try { await supabase.removeChannel(channel); } catch {}
-    setTimeout(() => { if (running) void run(device); }, 5000);
-    return;
-  }
+  // قناة الإشارات القديمة المفتوحة أُزيلت. البرنامج يسحب فقط الطلبات
+  // التي مرّت بسياسة الأدمن، مستخدماً مفتاح الجهاز السري.
+  await exchangeSignals(device);
+  signalTimer = setInterval(() => void exchangeSignals(device), 300);
   setStatus("متصل", true);
 }
 

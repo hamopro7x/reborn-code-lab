@@ -1,7 +1,8 @@
-// WebRTC screen sharing over Supabase Realtime broadcast signaling.
+// WebRTC screen sharing with database-backed, admin-authorized signaling.
 // Host = employee (shares screen), Viewer = admin (watches inside the panel).
 
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 
 export const RTC_CONFIG: RTCConfiguration = {
   iceServers: [
@@ -24,17 +25,6 @@ export const RTC_CONFIG: RTCConfiguration = {
 };
 
 
-export function channelName(code: string) {
-  return `screenshare-${code.trim().toUpperCase()}`;
-}
-
-export function makeCode(): string {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let out = "";
-  for (let i = 0; i < 6; i++) out += chars[Math.floor(Math.random() * chars.length)];
-  return out;
-}
-
 export type Signal =
   | { type: "join"; viewer?: string }
   | { type: "offer"; sdp: RTCSessionDescriptionInit; to?: string }
@@ -55,12 +45,22 @@ export function openSignaling(
   onSignal: (s: Signal) => void,
   opts?: { raw?: boolean },
 ) {
-  const name = opts?.raw ? `screenshare-${code}` : channelName(code);
-  const channel = supabase.channel(name, {
-    config: { broadcast: { self: false } },
-  });
-
-  channel.on("broadcast", { event: "signal" }, ({ payload }) => onSignal(payload as Signal));
+  const deviceId = opts?.raw ? code : code.trim().toUpperCase();
+  const channel = supabase
+    .channel(`admin-screenshare-${makeViewerId()}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "screenshare_signals",
+        filter: `device_id=eq.${deviceId}`,
+      },
+      ({ new: row }) => {
+        const record = row as { sender?: string; payload?: Signal };
+        if (record.sender === "host" && record.payload) onSignal(record.payload);
+      },
+    );
   const ready = new Promise<void>((resolve, reject) => {
     channel.subscribe((status) => {
       if (status === "SUBSCRIBED") resolve();
@@ -76,7 +76,15 @@ export function openSignaling(
     ready,
     send: async (s: Signal) => {
       await ready;
-      await channel.send({ type: "broadcast", event: "signal", payload: s });
+      const viewerId = "viewer" in s ? s.viewer : "to" in s ? s.to : undefined;
+      if (!viewerId) throw new Error("Missing viewer identity");
+      const { error } = await supabase.from("screenshare_signals").insert({
+        device_id: deviceId,
+        viewer_id: viewerId,
+        sender: "viewer",
+        payload: s as unknown as Json,
+      });
+      if (error) throw error;
     },
     close: () => {
       supabase.removeChannel(channel);
