@@ -91,6 +91,17 @@ async function upstreamSize(): Promise<number> {
 }
 
 export async function handleAgentDownload(request: Request) {
+  // التحويل المباشر إلى مخزن الأصول أكثر ثباتاً من تمرير ملف 100MB عبر
+  // دالة الموقع. برامج الموظفين القديمة والجديدة تتبع التحويل تلقائياً.
+  if (request.method === "GET" || request.method === "HEAD") {
+    return new Response(null, {
+      status: 302,
+      headers: {
+        location: AGENT_RELEASE.url,
+        "cache-control": "no-store",
+      },
+    });
+  }
   UPSTREAM = await resolveUpstream();
   const total = await upstreamSize();
 
