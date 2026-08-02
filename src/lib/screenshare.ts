@@ -2,6 +2,7 @@
 // Host = employee (shares screen), Viewer = admin (watches inside the panel).
 
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 
 export const RTC_CONFIG: RTCConfiguration = {
   iceServers: [
@@ -92,7 +93,7 @@ export function openSignaling(
         device_id: deviceId,
         viewer_id: viewerId,
         sender: "viewer",
-        payload: s,
+        payload: s as unknown as Json,
       });
       if (error) throw error;
     },
