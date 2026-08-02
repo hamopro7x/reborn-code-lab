@@ -1,6 +1,6 @@
 Unicode True
 Name "MagProAgent"
-OutFile "/tmp/agent-release/MagProAgent-Setup-1.8.12.exe"
+OutFile "/tmp/agent-release/MagProAgent-Setup-1.8.13.exe"
 InstallDir "$LOCALAPPDATA\Programs\MagProAgent"
 RequestExecutionLevel user
 SilentInstall normal
