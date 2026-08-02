@@ -21,11 +21,16 @@ export const createEmployee = createServerFn({ method: "POST" })
     await assertAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
+    // Pre-approve this email server-side (private allowlist) so the DB signup gate
+    // allows it. Never rely on client-supplied user_metadata for this decision.
+    const { error: allowErr } = await supabaseAdmin.rpc("admin_allow_signup", { p_email: data.email });
+    if (allowErr) throw new Error(allowErr.message);
+
     const { data: created, error: cErr } = await supabaseAdmin.auth.admin.createUser({
       email: data.email,
       password: data.password,
       email_confirm: true,
-      user_metadata: { full_name: data.full_name, via_admin: true },
+      user_metadata: { full_name: data.full_name },
     });
     if (cErr || !created?.user) throw new Error(cErr?.message || "Failed to create user");
 
