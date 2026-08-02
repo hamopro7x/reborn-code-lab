@@ -347,6 +347,7 @@ async function getStream() {
 // نهبط فوراً عند الازدحام ونصعد ببطء بعد استقرار الشبكة.
 function startAdaptive(entry, sender) {
   if (entry.statsTimer) clearInterval(entry.statsTimer);
+
   const MIN = 450_000;
   const MAX = 8_000_000;
   let target = 3_500_000;
@@ -438,6 +439,7 @@ function closePeer(viewerId) {
   const entry = peers.get(viewerId);
   if (!entry) return;
   if (entry.statsTimer) clearInterval(entry.statsTimer);
+  if (entry.recoverTimer) clearTimeout(entry.recoverTimer);
   try { entry.pc.close(); } catch {}
   peers.delete(viewerId);
   setStatus(peers.size > 0 ? `متصل · ${peers.size} مشاهد` : "متصل", true);
@@ -454,7 +456,7 @@ async function startPeer(viewerId) {
     closePeer(viewerId); // أي اتصال قديم لنفس المشاهد يُستبدل
     const s = await getStream();
     const pc = new RTCPeerConnection(RTC_CONFIG);
-    const entry = { pc, statsTimer: null, pendingIce: [] };
+    const entry = { pc, statsTimer: null, pendingIce: [], recoverTimer: null };
     peers.set(viewerId, entry);
 
     s.getVideoTracks().forEach((t) => {
@@ -495,12 +497,26 @@ async function startPeer(viewerId) {
         void send({ type: "ice", from: "host", to: viewerId, candidate: e.candidate.toJSON() });
     };
     pc.onconnectionstatechange = () => {
-      if (pc.connectionState === "connected")
+      if (pc.connectionState === "connected") {
+        if (entry.recoverTimer) { clearTimeout(entry.recoverTimer); entry.recoverTimer = null; }
         setStatus(`متصل · ${peers.size} مشاهد`, true);
-      if (["failed", "disconnected", "closed"].includes(pc.connectionState)) {
+      }
+      // انقطاع مؤقت للشبكة: نحاول إصلاح مسار ICE بدل قطع البث فوراً
+      if (pc.connectionState === "disconnected") {
+        try { pc.restartIce(); } catch {}
+        if (!entry.recoverTimer) {
+          entry.recoverTimer = setTimeout(() => {
+            entry.recoverTimer = null;
+            if (pc.connectionState !== "connected") closePeer(viewerId);
+          }, 8000);
+        }
+        return;
+      }
+      if (["failed", "closed"].includes(pc.connectionState)) {
         closePeer(viewerId);
       }
     };
+
     const offer = await pc.createOffer();
     offer.sdp = boostSdp(offer.sdp);
     await pc.setLocalDescription(offer);
