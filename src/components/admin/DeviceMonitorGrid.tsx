@@ -31,10 +31,23 @@ const isOnline = (d: Device) =>
 function useDeviceStream(deviceId: string, enabled: boolean) {
   const [live, setLive] = useState(false);
   const [failed, setFailed] = useState(false);
+  // كل زيادة تعيد بناء الاتصال من الصفر (إعادة اتصال تلقائية)
+  const [attempt, setAttempt] = useState(0);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
+  // مهلة سماح: لا نقطع البث لمجرد تأخّر نبضة الجهاز 15-60 ثانية
+  const [sticky, setSticky] = useState(enabled);
   useEffect(() => {
-    if (!enabled) {
+    if (enabled) {
+      setSticky(true);
+      return;
+    }
+    const t = setTimeout(() => setSticky(false), 45_000);
+    return () => clearTimeout(t);
+  }, [enabled]);
+
+  useEffect(() => {
+    if (!sticky) {
       setLive(false);
       setFailed(false);
       return;
@@ -45,6 +58,39 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
     // معرّف فريد لكل مشاهد: يسمح بعدة أجهزة إدارة تشاهد نفس الجهاز في نفس الوقت
     const viewerId = makeViewerId();
     const pc = new RTCPeerConnection(RTC_CONFIG);
+
+    // إعادة الاتصال تلقائياً عند انقطاع/فشل مسار ICE
+    let recoverTimer: ReturnType<typeof setTimeout> | undefined;
+    const scheduleReconnect = (delay: number) => {
+      if (closed || recoverTimer) return;
+      recoverTimer = setTimeout(() => {
+        if (closed) return;
+        setAttempt((n) => n + 1);
+      }, delay);
+    };
+    const cancelReconnect = () => {
+      if (recoverTimer) clearTimeout(recoverTimer);
+      recoverTimer = undefined;
+    };
+    pc.onconnectionstatechange = () => {
+      if (closed) return;
+      if (pc.connectionState === "connected") {
+        cancelReconnect();
+        setFailed(false);
+        return;
+      }
+      if (pc.connectionState === "disconnected") {
+        try {
+          pc.restartIce();
+        } catch {
+          /* غير مدعوم */
+        }
+        scheduleReconnect(4000);
+      } else if (pc.connectionState === "failed" || pc.connectionState === "closed") {
+        setLive(false);
+        scheduleReconnect(1200);
+      }
+    };
     const pendingIce: RTCIceCandidateInit[] = [];
 
     // نُفضّل H264 ثم VP9 للمشاهدة (وضوح أفضل للنصوص)
