@@ -124,6 +124,13 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
         /* غير مدعوم في بعض المتصفحات */
       }
 
+      // انتهاء المسار من جهة الموظف = إعادة اتصال فوري
+      e.track.addEventListener("ended", () => {
+        if (closed) return;
+        setLive(false);
+        scheduleReconnect(1000);
+      });
+
       if (videoRef.current) {
         videoRef.current.srcObject = e.streams[0]!;
         void videoRef.current.play().catch(() => {});
@@ -131,6 +138,7 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
       setFailed(false);
       setLive(true);
     };
+
 
     const sig = openSignaling(
       deviceId,
