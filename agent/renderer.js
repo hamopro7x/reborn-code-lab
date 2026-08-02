@@ -347,6 +347,7 @@ async function getStream() {
 // نهبط فوراً عند الازدحام ونصعد ببطء بعد استقرار الشبكة.
 function startAdaptive(entry, sender) {
   if (entry.statsTimer) clearInterval(entry.statsTimer);
+  if (entry.recoverTimer) clearTimeout(entry.recoverTimer);
   const MIN = 450_000;
   const MAX = 8_000_000;
   let target = 3_500_000;
@@ -438,6 +439,7 @@ function closePeer(viewerId) {
   const entry = peers.get(viewerId);
   if (!entry) return;
   if (entry.statsTimer) clearInterval(entry.statsTimer);
+  if (entry.recoverTimer) clearTimeout(entry.recoverTimer);
   try { entry.pc.close(); } catch {}
   peers.delete(viewerId);
   setStatus(peers.size > 0 ? `متصل · ${peers.size} مشاهد` : "متصل", true);
@@ -454,7 +456,7 @@ async function startPeer(viewerId) {
     closePeer(viewerId); // أي اتصال قديم لنفس المشاهد يُستبدل
     const s = await getStream();
     const pc = new RTCPeerConnection(RTC_CONFIG);
-    const entry = { pc, statsTimer: null, pendingIce: [] };
+    const entry = { pc, statsTimer: null, pendingIce: [], recoverTimer: null };
     peers.set(viewerId, entry);
 
     s.getVideoTracks().forEach((t) => {
