@@ -7,7 +7,7 @@
   "author": "Mag Pro",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^31.7.7",
+    "electron": "31.7.7",
     "electron-builder": "^24.13.3"
   },
   "build": {
