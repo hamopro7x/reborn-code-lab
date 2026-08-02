@@ -208,7 +208,7 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
         scheduleReconnect(8000);
       });
 
-    // مراقب توقّف الصورة: لو الفيديو واقف 8 ثوانٍ نعيد الاتصال
+    // مراقب توقّف الصورة: نحاول إصلاح الشبكة أولاً قبل إعادة بناء الاتصال
     let lastTime = -1;
     let stalled = 0;
     const watchdog = setInterval(() => {
@@ -216,7 +216,16 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
       if (closed || !v || !v.srcObject) return;
       if (v.currentTime === lastTime) {
         stalled += 1;
-        if (stalled >= 4) {
+        if (stalled === 2) {
+          // تجميد ~4 ثوانٍ: إصلاح مسار ICE بدون قطع البث
+          setLive(false);
+          try {
+            pc.restartIce();
+          } catch {
+            /* غير مدعوم */
+          }
+          void v.play().catch(() => {});
+        } else if (stalled >= 5) {
           stalled = 0;
           setLive(false);
           scheduleReconnect(500);
@@ -224,8 +233,10 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
       } else {
         stalled = 0;
         lastTime = v.currentTime;
+        setLive(true);
       }
     }, 2000);
+
 
     return () => {
       closed = true;
