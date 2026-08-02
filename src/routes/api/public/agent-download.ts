@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 
 // نسخة احتياطية لو تعذّر قراءة أحدث إصدار من قاعدة البيانات
 const FALLBACK_UPSTREAM =
-  "https://mag-pro1.com/__l5e/assets-v1/ac1758b9-47cb-4095-b074-027db4303aae/MagProAgent-Setup.exe";
+  "https://mag-pro1.com/__l5e/assets-v1/cf58bbf9-9195-4f94-8d39-9c930a258ac9/MagProAgent-Setup-1.8.8.exe";
 
 // أحدث إصدار منشور محفوظ في site_settings.agent_update — نفس المصدر الذي
 // يستخدمه برنامج الموظف للتحديث التلقائي، فأي تحديث جديد ينزل هنا فورًا.
