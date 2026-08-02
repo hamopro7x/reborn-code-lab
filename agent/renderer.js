@@ -422,6 +422,8 @@ function closePeer(viewerId) {
   if (entry.statsTimer) clearInterval(entry.statsTimer);
   if (entry.recoverTimer) clearTimeout(entry.recoverTimer);
   try { entry.pc.close(); } catch {}
+  // نوقف نسخة المسار الخاصة بهذا المشاهد فقط — المصدر يبقى للباقين
+  try { entry.track?.stop(); } catch {}
   peers.delete(viewerId);
   setStatus(peers.size > 0 ? `متصل · ${peers.size} مشاهد` : "متصل", true);
 }
