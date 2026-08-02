@@ -56,8 +56,23 @@ function startupFolderAutoLaunch() {
       "Startup",
     );
     fs.mkdirSync(startupDir, { recursive: true });
-    const commandFile = path.join(startupDir, `${RUN_NAME}.cmd`);
-    fs.writeFileSync(commandFile, `@echo off\r\nstart "" ${startupCommand()}\r\n`, "utf8");
+    // ملف VBScript بدل .cmd حتى لا تظهر نافذة أوامر عند تشغيل ويندوز
+    const legacyFile = path.join(startupDir, `${RUN_NAME}.cmd`);
+    try {
+      fs.unlinkSync(legacyFile);
+    } catch {
+      /* لم يكن موجودًا */
+    }
+    const commandFile = path.join(startupDir, `${RUN_NAME}.vbs`);
+    fs.writeFileSync(
+      commandFile,
+      [
+        'Set sh = CreateObject("WScript.Shell")',
+        `sh.Run """${process.execPath.replace(/"/g, '""')}"" --hidden", 0, False`,
+      ].join("\r\n"),
+      "utf8",
+    );
+
   } catch {
     // ignore
   }
