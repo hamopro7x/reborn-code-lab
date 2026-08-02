@@ -43,7 +43,7 @@ const dotEl = document.getElementById("dot");
 const deviceEl = document.getElementById("device");
 
 const STORE = "mag-agent-device-v1";
-const AGENT_VERSION = "1.8.8";
+const AGENT_VERSION = "1.8.9";
 
 const verBadgeEl = document.getElementById("ver-badge");
 if (verBadgeEl) verBadgeEl.textContent = "v" + AGENT_VERSION;
