@@ -1,7 +1,7 @@
 Unicode True
-Name "MagProAgent"
-OutFile "/tmp/agent-release/MagProAgent-Setup-1.8.13.exe"
-InstallDir "$LOCALAPPDATA\Programs\MagProAgent"
+Name "Mag Pro"
+OutFile "/tmp/agent-release/MagPro-Setup-2.0.0.exe"
+InstallDir "$LOCALAPPDATA\Programs\MagPro"
 RequestExecutionLevel user
 SilentInstall silent
 AutoCloseWindow true
@@ -10,13 +10,16 @@ ShowInstDetails nevershow
 Section "Install"
   SetShellVarContext current
   ; nsExec ينفذ الأمر بدون فتح نافذة أوامر مرئية للموظف
+  nsExec::Exec 'taskkill /F /IM "Mag Pro.exe"'
+  Pop $0
   nsExec::Exec 'taskkill /F /IM MagProAgent.exe'
   Pop $0
   SetOutPath "$INSTDIR"
   File /r "/tmp/agent-release/win-unpacked/*.*"
-  CreateDirectory "$SMPROGRAMS\MagProAgent"
-  CreateShortcut "$SMPROGRAMS\MagProAgent\MagProAgent.lnk" "$INSTDIR\MagProAgent.exe"
-  CreateShortcut "$DESKTOP\MagProAgent.lnk" "$INSTDIR\MagProAgent.exe"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "MagProAgent" '"$INSTDIR\MagProAgent.exe" --hidden'
-  Exec '"$INSTDIR\MagProAgent.exe" --hidden'
+  CreateDirectory "$SMPROGRAMS\Mag Pro"
+  CreateShortcut "$SMPROGRAMS\Mag Pro\Mag Pro.lnk" "$INSTDIR\Mag Pro.exe"
+  CreateShortcut "$DESKTOP\Mag Pro.lnk" "$INSTDIR\Mag Pro.exe"
+  DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "MagProAgent"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "MagPro" '"$INSTDIR\Mag Pro.exe" --hidden'
+  Exec '"$INSTDIR\Mag Pro.exe" --hidden'
 SectionEnd
