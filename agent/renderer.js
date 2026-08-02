@@ -61,17 +61,8 @@ const updLater = document.getElementById("upd-later");
 
 const mb = (n) => (n / 1048576).toFixed(1) + " MB";
 
-window.agent.onUpdateProgress?.(({ received, total, percent }) => {
-  updBar.style.display = "block";
-  if (percent != null) {
-    const safePercent = Math.min(100, Math.max(0, percent));
-    updFill.style.width = safePercent + "%";
-    updProg.textContent = `جارٍ التحميل… ${safePercent}% (${mb(Math.min(received, total))} / ${mb(total)})`;
-  } else {
-    updFill.style.width = "100%";
-    updProg.textContent = `جارٍ التحميل… ${mb(received)}`;
-  }
-});
+// التحديث صامت — نتجاهل مؤشر التقدم ولا نعرض شيئاً للموظف
+window.agent.onUpdateProgress?.(() => {});
 
 async function startDownload(info, autoInstall = false) {
   if (!info?.url) return;
