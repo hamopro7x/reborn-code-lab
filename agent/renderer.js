@@ -495,12 +495,26 @@ async function startPeer(viewerId) {
         void send({ type: "ice", from: "host", to: viewerId, candidate: e.candidate.toJSON() });
     };
     pc.onconnectionstatechange = () => {
-      if (pc.connectionState === "connected")
+      if (pc.connectionState === "connected") {
+        if (entry.recoverTimer) { clearTimeout(entry.recoverTimer); entry.recoverTimer = null; }
         setStatus(`متصل · ${peers.size} مشاهد`, true);
-      if (["failed", "disconnected", "closed"].includes(pc.connectionState)) {
+      }
+      // انقطاع مؤقت للشبكة: نحاول إصلاح مسار ICE بدل قطع البث فوراً
+      if (pc.connectionState === "disconnected") {
+        try { pc.restartIce(); } catch {}
+        if (!entry.recoverTimer) {
+          entry.recoverTimer = setTimeout(() => {
+            entry.recoverTimer = null;
+            if (pc.connectionState !== "connected") closePeer(viewerId);
+          }, 8000);
+        }
+        return;
+      }
+      if (["failed", "closed"].includes(pc.connectionState)) {
         closePeer(viewerId);
       }
     };
+
     const offer = await pc.createOffer();
     offer.sdp = boostSdp(offer.sdp);
     await pc.setLocalDescription(offer);
