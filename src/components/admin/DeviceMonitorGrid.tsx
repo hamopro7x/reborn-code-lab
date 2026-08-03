@@ -543,6 +543,10 @@ export function DeviceMonitorGrid({ screensOnly = false }: { screensOnly?: boole
   // زيادة هذا الرقم تعيد بناء كل اتصالات البث من الصفر
   const [reloadKey, setReloadKey] = useState(0);
   const { data, isLoading, refetch, isFetching } = useAgentDevices();
+  const removeDevice = useRemoveDevice((id) => {
+    setExpandedId((cur) => (cur === id ? null : cur));
+  });
+
 
   const handleRefresh = async () => {
     setReloadKey((n) => n + 1);
