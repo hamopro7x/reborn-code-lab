@@ -30,7 +30,7 @@ import { getDeviceFingerprint } from "@/lib/device";
 import { ShieldAlert } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { ReportsTab } from "@/components/admin/ReportsTab";
-import { FileBarChart, MonitorPlay, Image as ImageIcon } from "lucide-react";
+import { FileBarChart, MonitorPlay, Image as ImageIcon, ChevronUp, ChevronDown } from "lucide-react";
 import { LessonUploader } from "@/components/admin/LessonUploader";
 import { DeviceMonitorGrid } from "@/components/admin/DeviceMonitorGrid";
 import { EmployeeDevices } from "@/components/admin/DeviceMonitorGrid";
@@ -1741,6 +1741,20 @@ function LessonsManagerInner({ courseId, courseTitle }: { courseId: string; cour
     if (!confirm("حذف المحاضرة؟")) return;
     await supabase.storage.from("course-videos").remove([l.video_path]);
     await supabase.from("course_lessons").delete().eq("id", l.id);
+    qc.invalidateQueries({ queryKey: ["admin-lessons", courseId] });
+  }
+
+  async function moveLesson(index: number, dir: -1 | 1) {
+    const arr = (lessons.data ?? []) as any[];
+    const target = index + dir;
+    if (target < 0 || target >= arr.length) return;
+    const a = arr[index];
+    const b = arr[target];
+    const { error } = await supabase.from("course_lessons").upsert([
+      { id: a.id, course_id: courseId, title: a.title, video_path: a.video_path, sort_order: target },
+      { id: b.id, course_id: courseId, title: b.title, video_path: b.video_path, sort_order: index },
+    ]);
+    if (error) { toast.error(error.message); return; }
     qc.invalidateQueries({ queryKey: ["admin-lessons", courseId] });
   }
 
