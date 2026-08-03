@@ -43,7 +43,8 @@ const dotEl = document.getElementById("dot");
 const deviceEl = document.getElementById("device");
 
 const STORE = "mag-agent-device-v1";
-const AGENT_VERSION = "2.0.5";
+// رقم الإصدار الحقيقي من الحزمة المثبتة، بدل رقم ثابت قديم داخل الواجهة.
+const AGENT_VERSION = await window.agent.getVersion();
 
 const verBadgeEl = document.getElementById("ver-badge");
 if (verBadgeEl) verBadgeEl.textContent = "v" + AGENT_VERSION;
@@ -376,6 +377,7 @@ function closePeer(viewerId) {
   // نوقف نسخة المسار الخاصة بهذا المشاهد فقط — المصدر يبقى للباقين
   try { entry.track?.stop(); } catch {}
   peers.delete(viewerId);
+  window.agent.setViewerCount?.(peers.size);
   setStatus(peers.size > 0 ? `متصل · ${peers.size} مشاهد` : "متصل", true);
 }
 
@@ -399,6 +401,7 @@ async function startPeer(viewerId) {
     const pc = new RTCPeerConnection(RTC_CONFIG);
     const entry = { pc, statsTimer: null, pendingIce: [], recoverTimer: null, offer: null };
     peers.set(viewerId, entry);
+    window.agent.setViewerCount?.(peers.size);
 
     // كل مشاهد يحصل على نسخة مستقلة من مسار الشاشة (clone) => مشفّر منفصل
     // ومعدّل بت-ريت منفصل. مشاركة نفس المسار بين اتصالين كانت تجعل
