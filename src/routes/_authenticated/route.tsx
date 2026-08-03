@@ -10,9 +10,12 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
-  beforeLoad: async () => {
+  beforeLoad: async ({ location }) => {
     const { data, error } = await supabase.auth.getUser();
-    if (error || !data.user) throw redirect({ to: "/auth" });
+    if (error || !data.user) {
+      const next = `${location.pathname}${location.searchStr ?? ""}`;
+      throw redirect({ to: "/auth", search: next && next !== "/" ? { next } : {} });
+    }
     return { user: data.user };
   },
   component: DeviceGate,
