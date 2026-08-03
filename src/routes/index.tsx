@@ -128,15 +128,18 @@ function Home() {
         {/* CATEGORIES */}
         <section className="container mx-auto px-4 py-12">
           <div className="flex items-end justify-between mb-8">
-            <div>
-              <h2 className="text-3xl font-black">الأقسام</h2>
-              <p className="text-muted-foreground text-sm mt-1">تصفح جميع الأقسام</p>
+            <div className="flex items-center gap-3">
+              <span className="h-8 w-1.5 rounded-full bg-primary" />
+              <div>
+                <h2 className="text-3xl font-black">الأقسام</h2>
+                <p className="text-muted-foreground text-sm mt-1">تصفح جميع الأقسام</p>
+              </div>
             </div>
             <Link to="/shop" className="text-primary text-sm flex items-center gap-1 hover:gap-2 transition-all">
               كل المنتجات <ArrowLeft className="size-4" />
             </Link>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
             {categoriesQ.isLoading &&
               Array.from({ length: 4 }).map((_, i) => (
                 <div key={`cat-skeleton-${i}`} className="card-surface rounded-2xl p-4 h-[13rem] animate-pulse" />
@@ -146,27 +149,33 @@ function Home() {
                 key={c.id}
                 to="/shop"
                 search={{ category: c.slug } as any}
-                className="card-surface rounded-2xl p-4 flex flex-col items-center justify-between gap-3 h-[13rem] hover:glow-purple hover:-translate-y-1 transition-all animate-slide-up"
+                className="group relative rounded-2xl p-[1px] bg-gradient-to-br from-white/10 via-transparent to-transparent hover:from-primary/60 hover:to-primary/10 transition-all duration-300 animate-slide-up"
                 style={{ animationDelay: `${i * 80}ms` }}
               >
-                <div className="w-full flex-1 rounded-xl overflow-hidden bg-muted/20 flex items-center justify-center">
-                  {c.banner_image ? (
-                    <img
-                      src={c.banner_image}
-                      alt={c.name}
-                      width={480}
-                      height={320}
-                      loading="lazy"
-                      className="w-full h-full object-contain p-2"
-                    />
-                  ) : (
-                    <div className="text-5xl">{c.icon ?? "🎁"}</div>
-                  )}
+                <div className="relative overflow-hidden card-surface rounded-[15px] h-[13rem] p-4 flex flex-col items-center justify-between gap-3 transition-transform duration-300 group-hover:-translate-y-1">
+                  <div className="pointer-events-none absolute -top-12 -left-12 size-32 rounded-full bg-primary/15 blur-2xl opacity-60 group-hover:opacity-100 transition-opacity" />
+                  <div className="relative w-full flex-1 rounded-xl overflow-hidden bg-muted/20 ring-1 ring-border/50 flex items-center justify-center">
+                    {c.banner_image ? (
+                      <img
+                        src={c.banner_image}
+                        alt={c.name}
+                        width={480}
+                        height={320}
+                        loading="lazy"
+                        className="w-full h-full object-contain p-2 transition-transform duration-500 group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className="text-5xl transition-transform duration-500 group-hover:scale-110">{c.icon ?? "🎁"}</div>
+                    )}
+                  </div>
+                  <div className="relative font-bold text-sm text-center line-clamp-1 w-full group-hover:text-primary transition-colors">
+                    {c.name}
+                  </div>
                 </div>
-                <div className="font-bold text-sm text-center line-clamp-1 w-full">{c.name}</div>
               </Link>
             ))}
           </div>
+
         </section>
 
       </main>
