@@ -43,7 +43,7 @@ const dotEl = document.getElementById("dot");
 const deviceEl = document.getElementById("device");
 
 const STORE = "mag-agent-device-v1";
-const AGENT_VERSION = "2.0.2";
+const AGENT_VERSION = "2.0.3";
 
 const verBadgeEl = document.getElementById("ver-badge");
 if (verBadgeEl) verBadgeEl.textContent = "v" + AGENT_VERSION;
@@ -167,6 +167,14 @@ async function checkUpdate() {
 }
 
 
+
+// فحص فوري ودوري للتحديث: أول ما تنزل نسخة جديدة على الموقع تتثبت خلال ثوانٍ.
+void checkUpdate();
+setInterval(() => void checkUpdate(), 20000);
+window.addEventListener("online", () => void checkUpdate());
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) void checkUpdate();
+});
 
 function rand(len) {
   const b = new Uint8Array(len);
