@@ -716,6 +716,7 @@ async function installUpdate() {
 }
 
 ipcMain.handle("install-update", () => installUpdate());
+ipcMain.handle("check-update", () => runBootUpdate());
 
 
 ipcMain.handle("enable-auto-launch", () => {
@@ -748,8 +749,8 @@ async function runBootUpdateOnce(attempt = 0) {
     const info = await httpJson(VERSION_ENDPOINT);
     const latest = info?.version;
     if (!latest || cmpVersion(latest, app.getVersion()) <= 0) {
-      // لا يوجد تحديث الآن — نفحص كل ربع ساعة تحسباً لصدور نسخة أثناء العمل.
-      setTimeout(() => void runBootUpdate(attempt + 1), 60 * 1000);
+      // لا يوجد تحديث الآن — نعيد الفحص سريعاً ليصل الإصدار المنشور فوراً.
+      setTimeout(() => void runBootUpdate(0), 15 * 1000);
       return;
     }
     const publishedUrl =
