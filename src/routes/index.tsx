@@ -152,9 +152,8 @@ function Home() {
                 className="group relative rounded-2xl p-[1px] bg-gradient-to-br from-white/10 via-transparent to-transparent hover:from-primary/60 hover:to-primary/10 transition-all duration-300 animate-slide-up"
                 style={{ animationDelay: `${i * 80}ms` }}
               >
-                <div className="relative overflow-hidden card-surface rounded-[15px] h-[13rem] p-4 flex flex-col items-center justify-between gap-3 transition-transform duration-300 group-hover:-translate-y-1">
-                  <div className="pointer-events-none absolute -top-12 -left-12 size-32 rounded-full bg-primary/15 blur-2xl opacity-60 group-hover:opacity-100 transition-opacity" />
-                  <div className="relative w-full flex-1 rounded-xl overflow-hidden bg-muted/20 ring-1 ring-border/50 flex items-center justify-center">
+                <div className="relative overflow-hidden card-surface rounded-[15px] h-[13rem] flex flex-col transition-transform duration-300 group-hover:-translate-y-1">
+                  <div className="relative flex-1 overflow-hidden bg-muted/20 flex items-center justify-center">
                     {c.banner_image ? (
                       <img
                         src={c.banner_image}
@@ -162,16 +161,17 @@ function Home() {
                         width={480}
                         height={320}
                         loading="lazy"
-                        className="w-full h-full object-contain p-2 transition-transform duration-500 group-hover:scale-105"
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       />
                     ) : (
-                      <div className="text-5xl transition-transform duration-500 group-hover:scale-110">{c.icon ?? "🎁"}</div>
+                      <div className="text-6xl transition-transform duration-500 group-hover:scale-110">{c.icon ?? "🎁"}</div>
                     )}
                   </div>
-                  <div className="relative font-bold text-sm text-center line-clamp-1 w-full group-hover:text-primary transition-colors">
+                  <div className="relative shrink-0 border-t border-border/50 bg-card/80 px-3 py-2.5 font-bold text-sm text-center line-clamp-1 w-full group-hover:text-primary transition-colors">
                     {c.name}
                   </div>
                 </div>
+
               </Link>
             ))}
           </div>
