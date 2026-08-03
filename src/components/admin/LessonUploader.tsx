@@ -32,10 +32,14 @@ export function LessonUploader({
   const nextOrder = () => orderRef.current++;
 
   useEffect(() => {
-    return uploadManager.onLessonAdded((cid) => {
+    const off = uploadManager.onLessonAdded((cid) => {
       if (cid === courseId) onUploaded();
     });
+    return () => {
+      off();
+    };
   }, [courseId, onUploaded]);
+
 
   function addFiles(files: FileList | null) {
     if (!files?.length) return;
