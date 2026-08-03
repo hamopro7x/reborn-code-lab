@@ -2,11 +2,11 @@
 // دائماً آخر إصدار فقط — البرنامج ينزل هذا الإصدار مباشرة ولا يمر بأي
 // إصدارات وسيطة بالترتيب.
 export const AGENT_RELEASE = {
-  version: "2.0.7",
-  notes: "تحديث تلقائي موثوق: تحقق من بصمة الملف وإعادة محاولة دائمة حتى ينجح التثبيت.",
+  version: "2.0.8",
+  notes: "إظهار رقم الإصدار الحقيقي وتأجيل التثبيت تلقائياً حتى انتهاء المشاهدة النشطة لمنع انقطاع البث.",
   url: "https://mag-pro1.com/api/public/agent-download.exe",
   storageBucket: "site-assets",
-  storagePath: "releases/MagPro-Setup-2.0.7.exe",
-  size: 110513343,
-  sha256: "d18d0f550f5972b186b751d080ebda4d03be64ef581b45dc71376682748ef710",
+  storagePath: "releases/MagPro-Setup-2.0.8.exe",
+  size: 110513543,
+  sha256: "a4903d2f17c26c07526806a6d1f57ad69e1c79b5486750e0299b0cf5abdab20f",
 } as const;
