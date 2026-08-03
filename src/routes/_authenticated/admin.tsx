@@ -67,7 +67,12 @@ function useRole() {
 function Admin() {
   const search = Route.useSearch();
   const role = useRole();
-  const [panel, setPanel] = useState<PanelKey>(search.panel ?? "overview");
+  const navigate = useNavigate();
+  const [panel, setPanelState] = useState<PanelKey>(search.panel ?? "overview");
+  const setPanel = (key: PanelKey) => {
+    setPanelState(key);
+    navigate({ to: "/admin", search: { panel: key }, replace: true });
+  };
   const isEmployee = role === "employee";
   const adminOnly = role === "admin";
   const identityFn = useServerFn(getViewerIdentity);
