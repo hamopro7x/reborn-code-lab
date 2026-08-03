@@ -39,10 +39,6 @@ function Home() {
     queryKey: ["featured"],
     queryFn: async () => (await supabase.from("products").select("*, category:categories(icon,name)").eq("active", true).eq("featured", true).order("sort_order").limit(8)).data ?? [],
   });
-  const latestQ = useQuery({
-    queryKey: ["latest"],
-    queryFn: async () => (await supabase.from("products").select("*, category:categories(icon,name)").eq("active", true).order("created_at", { ascending: false }).limit(8)).data ?? [],
-  });
   const timerQ = useQuery({
     queryKey: ["timer"],
     queryFn: async () => (await supabase.from("countdown_timers").select("*").eq("active", true).gt("ends_at", new Date().toISOString()).order("ends_at").limit(1).maybeSingle()).data,
