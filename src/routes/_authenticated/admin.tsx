@@ -1758,30 +1758,15 @@ function LessonsManagerInner({ courseId, courseTitle }: { courseId: string; cour
         <DialogHeader><DialogTitle>محاضرات: {courseTitle}</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <div className="card-surface rounded-xl p-3 space-y-2">
-            <div className="text-sm font-semibold">إضافة محاضرة جديدة</div>
-            <Input placeholder="عنوان المحاضرة" value={title} onChange={(e) => setTitle(e.target.value)} />
-            <Input ref={fileInputRef} type="file" accept="video/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-            {file && !uploading && (
-              <div className="text-[11px] text-muted-foreground">
-                {file.name} — {(file.size / 1024 / 1024).toFixed(1)} MB
-              </div>
-            )}
-            {!uploading ? (
-              <Button onClick={upload} className="gradient-primary text-white w-full">
-                <Upload className="size-4 ml-1" />رفع الفيديو
-              </Button>
-            ) : (
-              <div className="space-y-2">
-                <Progress value={progress} className="h-2" />
-                <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                  <span>{progress}% — {speed}{eta ? ` — متبقّي ${eta}` : ""}</span>
-                  <Button size="sm" variant="outline" onClick={cancelUpload}>
-                    <X className="size-3 ml-1" />إلغاء
-                  </Button>
-                </div>
-                <div className="text-[10px] text-muted-foreground">رفع متوازي عالي السرعة — مقاوم لانقطاع الشبكة</div>
-              </div>
-            )}
+            <div className="text-sm font-semibold">إضافة محاضرات جديدة</div>
+            <LessonUploader
+              courseId={courseId}
+              startOrder={lessons.data?.length ?? 0}
+              onUploaded={() => {
+                qc.invalidateQueries({ queryKey: ["admin-lessons", courseId] });
+                qc.invalidateQueries({ queryKey: ["admin-courses"] });
+              }}
+            />
           </div>
 
           <div className="space-y-2 max-h-72 overflow-y-auto">
