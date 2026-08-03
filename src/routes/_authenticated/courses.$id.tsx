@@ -87,14 +87,21 @@ function CourseView() {
   return (
     <div className="min-h-screen p-4 md:p-6" dir="rtl">
       <div className="max-w-[1800px] mx-auto space-y-4">
-        <div className="flex items-center justify-between gap-2">
-          <Link to="/admin" search={{ panel: "courses" }} preload={false} onClick={releaseVideoBeforeLeave}><Button variant="outline" size="sm">العودة <ArrowRight className="size-4" /></Button></Link>
-          <div className="text-xs text-muted-foreground">مرحباً {viewer?.full_name || viewer?.email}</div>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-2 min-w-0">
+            <Link to="/admin" search={{ panel: "courses" }} preload={false} onClick={releaseVideoBeforeLeave} className="shrink-0 mt-0.5">
+              <Button variant="outline" size="sm" aria-label="العودة">
+                <ArrowRight className="size-4" /> العودة
+              </Button>
+            </Link>
+            <div className="min-w-0">
+              <h1 className="text-2xl font-bold truncate">{course.data?.title}</h1>
+              {course.data?.description && <p className="text-sm text-muted-foreground mt-1">{course.data.description}</p>}
+            </div>
+          </div>
+          <div className="text-xs text-muted-foreground shrink-0">مرحباً {viewer?.full_name || viewer?.email}</div>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold">{course.data?.title}</h1>
-          {course.data?.description && <p className="text-sm text-muted-foreground mt-1">{course.data.description}</p>}
-        </div>
+
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4">
           <div>
