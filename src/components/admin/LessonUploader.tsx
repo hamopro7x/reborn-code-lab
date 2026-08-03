@@ -1,4 +1,5 @@
-import { useEffect, useRef, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Upload, X, CheckCircle2, RotateCcw, Loader2, Pause, Play } from "lucide-react";
@@ -34,6 +35,7 @@ export function LessonUploader({
   const all = useSyncExternalStore(uploadManager.subscribe, uploadManager.getSnapshot, () => []);
   const items = all.filter((i) => i.courseId === courseId);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const [lessonTitle, setLessonTitle] = useState("");
   const orderRef = useRef(startOrder);
   orderRef.current = Math.max(orderRef.current, startOrder);
   const nextOrder = () => orderRef.current++;
@@ -60,10 +62,13 @@ export function LessonUploader({
       const ext = /^[a-z0-9]{2,5}$/.test(rawExt) ? rawExt : "mp4";
       // مسار ثابت بحروف ASCII فقط → يسمح باستكمال الرفع من نفس النقطة
       const objectName = `${courseId}/${asciiSlug(file.name)}-${hashName(file.name)}-${file.size}.${ext}`;
-      uploadManager.add(courseId, file, objectName, nextOrder);
+      const base = lessonTitle.trim();
+      const title = base ? (files.length > 1 ? `${base} ${added + 1}` : base) : undefined;
+      uploadManager.add(courseId, file, objectName, nextOrder, title);
       added++;
 
     }
+    if (added) setLessonTitle("");
     if (added) toast.success("بدأ الرفع — يكمل في الخلفية حتى لو أغلقت النافذة");
     if (inputRef.current) inputRef.current.value = "";
   }
@@ -79,6 +84,12 @@ export function LessonUploader({
         multiple
         className="hidden"
         onChange={(e) => addFiles(e.target.files)}
+      />
+      <Input
+        value={lessonTitle}
+        onChange={(e) => setLessonTitle(e.target.value)}
+        placeholder="اسم المحاضرة (اختياري — لو أكثر من ملف يتم ترقيمه)"
+        className="h-9"
       />
       <Button onClick={() => inputRef.current?.click()} className="gradient-primary text-white w-full">
         <Upload className="size-4 ml-1" />
@@ -96,7 +107,8 @@ export function LessonUploader({
             <div key={it.id} className="rounded-xl border border-border/40 p-2.5 space-y-2">
               <div className="flex items-center gap-2">
                 <div className="min-w-0 flex-1">
-                  <div className="text-xs font-medium truncate">{it.fileName}</div>
+                  <div className="text-xs font-medium truncate">{it.title}</div>
+                  <div className="text-[10px] text-muted-foreground truncate">{it.fileName}</div>
                   <div className="text-[10px] text-muted-foreground">
                     {(it.sent / 1024 / 1024).toFixed(1)} / {(it.total / 1024 / 1024).toFixed(1)} MB
                     {it.speed && it.status === "uploading" ? ` — ${it.speed}` : ""}
