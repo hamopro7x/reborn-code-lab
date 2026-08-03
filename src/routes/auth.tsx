@@ -34,6 +34,7 @@ export const Route = createFileRoute("/auth")({
 });
 
 function AuthPage() {
+  useAdminTheme();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
