@@ -1757,6 +1757,27 @@ function LessonsManagerInner({ courseId, courseTitle }: { courseId: string; cour
       <DialogContent className="max-w-2xl">
         <DialogHeader><DialogTitle>محاضرات: {courseTitle}</DialogTitle></DialogHeader>
         <div className="space-y-3">
+          {(() => {
+            const arr = (lessons.data ?? []) as Array<{ duration_sec: number | null }>;
+            const totalSec = arr.reduce((s, l) => s + (l.duration_sec ?? 0), 0);
+            const h = Math.floor(totalSec / 3600);
+            const m = Math.floor((totalSec % 3600) / 60);
+            const sec = Math.floor(totalSec % 60);
+            const hoursText = h > 0 ? `${h} ساعة و${m} دقيقة` : m > 0 ? `${m} دقيقة و${sec} ثانية` : `${sec} ثانية`;
+            return (
+              <div className="grid grid-cols-2 gap-2">
+                <div className="card-surface rounded-xl p-3 text-center">
+                  <div className="text-[11px] text-muted-foreground">عدد المحاضرات</div>
+                  <div className="text-lg font-bold tabular-nums">{arr.length}</div>
+                </div>
+                <div className="card-surface rounded-xl p-3 text-center">
+                  <div className="text-[11px] text-muted-foreground">إجمالي المدة</div>
+                  <div className="text-lg font-bold tabular-nums">{hoursText}</div>
+                </div>
+              </div>
+            );
+          })()}
+
           <div className="card-surface rounded-xl p-3 space-y-2">
             <div className="text-sm font-semibold">إضافة محاضرات جديدة</div>
             <LessonUploader
