@@ -8,6 +8,8 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { CartProvider } from "@/lib/cart";
 import { CurrencyProvider } from "@/lib/currency-context";
 import { supabase } from "@/integrations/supabase/client";
+import { useAutoRefreshOnDeploy } from "@/lib/use-auto-refresh";
+
 
 function NotFoundComponent() {
   return (
@@ -112,7 +114,9 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
+  useAutoRefreshOnDeploy();
   useEffect(() => {
+
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") {
         router.invalidate();
