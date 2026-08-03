@@ -5,15 +5,22 @@ import { Upload, X, CheckCircle2, RotateCcw, Loader2, Pause, Play } from "lucide
 import { toast } from "sonner";
 import { uploadManager } from "@/lib/upload-manager";
 
-function slug(name: string) {
-  return (
-    name
-      .replace(/\.[^.]+$/, "")
-      .replace(/[^a-zA-Z0-9\u0600-\u06FF]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, 48) || "video"
-  );
+// مسار التخزين لازم يكون ASCII فقط (Storage يرفض الحروف العربية)
+function asciiSlug(name: string) {
+  const base = name
+    .replace(/\.[^.]+$/, "")
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40);
+  return base || "video";
 }
+
+function hashName(name: string) {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return h.toString(36);
+}
+
 
 export function LessonUploader({
   courseId,
@@ -49,10 +56,13 @@ export function LessonUploader({
         toast.error(`${file.name}: الملف ليس فيديو`);
         continue;
       }
-      const ext = file.name.split(".").pop()?.toLowerCase() || "mp4";
-      // مسار ثابت → يسمح باستكمال الرفع من نفس النقطة
-      uploadManager.add(courseId, file, `${courseId}/${slug(file.name)}-${file.size}.${ext}`, nextOrder);
+      const rawExt = file.name.split(".").pop()?.toLowerCase() || "mp4";
+      const ext = /^[a-z0-9]{2,5}$/.test(rawExt) ? rawExt : "mp4";
+      // مسار ثابت بحروف ASCII فقط → يسمح باستكمال الرفع من نفس النقطة
+      const objectName = `${courseId}/${asciiSlug(file.name)}-${hashName(file.name)}-${file.size}.${ext}`;
+      uploadManager.add(courseId, file, objectName, nextOrder);
       added++;
+
     }
     if (added) toast.success("بدأ الرفع — يكمل في الخلفية حتى لو أغلقت النافذة");
     if (inputRef.current) inputRef.current.value = "";
