@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import logo from "@/assets/logo.png";
+
 
 const navLinks = [
   { to: "/", label: "الرئيسية" },
