@@ -5,15 +5,22 @@ import { Upload, X, CheckCircle2, RotateCcw, Loader2, Pause, Play } from "lucide
 import { toast } from "sonner";
 import { uploadManager } from "@/lib/upload-manager";
 
-function slug(name: string) {
-  return (
-    name
-      .replace(/\.[^.]+$/, "")
-      .replace(/[^a-zA-Z0-9\u0600-\u06FF]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, 48) || "video"
-  );
+// مسار التخزين لازم يكون ASCII فقط (Storage يرفض الحروف العربية)
+function asciiSlug(name: string) {
+  const base = name
+    .replace(/\.[^.]+$/, "")
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40);
+  return base || "video";
 }
+
+function hashName(name: string) {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return h.toString(36);
+}
+
 
 export function LessonUploader({
   courseId,
