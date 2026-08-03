@@ -475,6 +475,26 @@ function EmployeesTab() {
   const [editing, setEditing] = useState<{ user_id: string; full_name: string; email: string; password: string } | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [prof, setProf] = useState<{ user_id: string; full_name: string; email: string; password: string } | null>(null);
+
+  async function saveProfile() {
+    if (!prof) return;
+    if (prof.full_name.trim().length < 2) return toast.error("اكتب اسم صحيح");
+    if (prof.password && prof.password.length < 6) return toast.error("كلمة السر 6 أحرف على الأقل");
+    setSavingEdit(true);
+    try {
+      await upd({ data: {
+        user_id: prof.user_id,
+        full_name: prof.full_name.trim(),
+        email: prof.email.trim(),
+        ...(prof.password ? { password: prof.password } : {}),
+      } });
+      toast.success("تم تحديث بيانات الموظف");
+      setProf({ ...prof, password: "" });
+      qc.invalidateQueries({ queryKey: ["admin-employees"] });
+    } catch (e: any) { toast.error(e?.message ?? "خطأ"); }
+    finally { setSavingEdit(false); }
+  }
 
   async function saveEdit() {
     if (!editing) return;
