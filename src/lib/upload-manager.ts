@@ -1,5 +1,6 @@
 import * as tus from "tus-js-client";
 import { supabase } from "@/integrations/supabase/client";
+import { uploadStore } from "@/lib/upload-store";
 
 export type UploadStatus = "queued" | "uploading" | "paused" | "done" | "error";
 
@@ -9,6 +10,7 @@ export type UploadItem = {
   fileName: string;
   objectName: string;
   title: string;
+  sortOrder: number;
   progress: number;
   sent: number;
   total: number;
@@ -19,7 +21,7 @@ export type UploadItem = {
 
 type Internal = {
   item: UploadItem;
-  file: File;
+  file: Blob;
   upload?: tus.Upload;
   startedAt: number;
   startBytes: number;
@@ -27,7 +29,8 @@ type Internal = {
 
 /**
  * مدير رفع عالمي (خارج React) — الرفع يكمل في الخلفية
- * حتى لو تم إغلاق النافذة أو الخروج من القسم.
+ * حتى لو تم إغلاق النافذة أو الخروج من القسم، ويُستأنف تلقائياً
+ * بعد تحديث الصفحة (الملفات محفوظة في IndexedDB).
  */
 class UploadManager {
   private map = new Map<string, Internal>();
@@ -35,9 +38,11 @@ class UploadManager {
   private doneListeners = new Set<(courseId: string) => void>();
   private snapshot: UploadItem[] = [];
   private beforeUnloadBound = false;
+  private restored = false;
 
   subscribe = (cb: () => void) => {
     this.listeners.add(cb);
+    void this.restore();
     return () => this.listeners.delete(cb);
   };
 
@@ -50,6 +55,36 @@ class UploadManager {
 
   itemsFor(courseId: string) {
     return this.snapshot.filter((i) => i.courseId === courseId);
+  }
+
+  /** استعادة الرفعات غير المكتملة من IndexedDB واستئنافها تلقائياً */
+  async restore() {
+    if (this.restored || typeof window === "undefined") return;
+    this.restored = true;
+    const pending = await uploadStore.all();
+    for (const rec of pending) {
+      if (this.map.has(rec.id)) continue;
+      this.map.set(rec.id, {
+        file: rec.file,
+        startedAt: Date.now(),
+        startBytes: 0,
+        item: {
+          id: rec.id,
+          courseId: rec.courseId,
+          fileName: rec.fileName,
+          objectName: rec.objectName,
+          title: rec.title,
+          sortOrder: rec.sortOrder,
+          progress: 0,
+          sent: 0,
+          total: rec.file.size,
+          speed: "",
+          status: "queued",
+        },
+      });
+      this.emit();
+      void this.start(rec.id);
+    }
   }
 
   private emit() {
@@ -69,6 +104,11 @@ class UploadManager {
     }
   }
 
+  /** هل يوجد رفع جاري الآن؟ (يُستخدم لتأجيل التحديث التلقائي للصفحة) */
+  hasActive() {
+    return this.snapshot.some((i) => i.status === "uploading" || i.status === "queued");
+  }
+
   private warn = (e: BeforeUnloadEvent) => {
     e.preventDefault();
     e.returnValue = "";
@@ -83,6 +123,9 @@ class UploadManager {
 
   add(courseId: string, file: File, objectName: string, nextOrder: () => number, title?: string) {
     const id = crypto.randomUUID();
+    const finalTitle =
+      (title ?? "").trim() || file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ").trim() || "درس";
+    const sortOrder = nextOrder();
     this.map.set(id, {
       file,
       startedAt: Date.now(),
@@ -92,7 +135,8 @@ class UploadManager {
         courseId,
         fileName: file.name,
         objectName,
-        title: (title ?? "").trim() || file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ").trim() || "درس",
+        title: finalTitle,
+        sortOrder,
         progress: 0,
         sent: 0,
         total: file.size,
@@ -100,12 +144,22 @@ class UploadManager {
         status: "queued",
       },
     });
+    void uploadStore.put({
+      id,
+      courseId,
+      objectName,
+      title: finalTitle,
+      sortOrder,
+      fileName: file.name,
+      fileType: file.type || "video/mp4",
+      file,
+    });
     this.emit();
-    void this.start(id, nextOrder);
+    void this.start(id);
     return id;
   }
 
-  async start(id: string, nextOrder: () => number) {
+  async start(id: string) {
     const rec = this.map.get(id);
     if (!rec) return;
 
@@ -127,11 +181,13 @@ class UploadManager {
       parallelUploads: 1,
       removeFingerprintOnSuccess: true,
       uploadDataDuringCreation: true,
+      // بصمة ثابتة حتى يُستأنف نفس الرفع بعد تحديث الصفحة
+      fingerprint: async () => `magpro-${rec.item.objectName}-${rec.item.total}`,
       headers: { authorization: `Bearer ${token}`, "x-upsert": "true" },
       metadata: {
         bucketName: "course-videos",
         objectName: rec.item.objectName,
-        contentType: rec.file.type || "video/mp4",
+        contentType: rec.item.fileName.endsWith(".mp4") ? "video/mp4" : rec.file.type || "video/mp4",
         cacheControl: "3600",
       },
       onError: (err) => this.patch(id, { status: "error", error: err?.message || "فشل الرفع" }),
@@ -149,13 +205,13 @@ class UploadManager {
       },
       onSuccess: async () => {
         this.patch(id, { status: "done", progress: 100 });
+        void uploadStore.remove(id);
         const duration = await probeDuration(rec.file);
-        const title = rec.item.title;
         const { error } = await supabase.from("course_lessons").insert({
           course_id: rec.item.courseId,
-          title,
+          title: rec.item.title,
           video_path: rec.item.objectName,
-          sort_order: nextOrder(),
+          sort_order: rec.item.sortOrder,
           duration_sec: duration,
         });
         if (error) {
@@ -179,14 +235,15 @@ class UploadManager {
     this.patch(id, { status: "paused" });
   }
 
-  resume(id: string, nextOrder: () => number) {
-    void this.start(id, nextOrder);
+  resume(id: string) {
+    void this.start(id);
   }
 
   cancel(id: string) {
     const rec = this.map.get(id);
     void rec?.upload?.abort(true);
     this.map.delete(id);
+    void uploadStore.remove(id);
     this.emit();
   }
 
@@ -198,7 +255,7 @@ class UploadManager {
   }
 }
 
-function probeDuration(file: File): Promise<number | null> {
+function probeDuration(file: Blob): Promise<number | null> {
   return new Promise((resolve) => {
     const url = URL.createObjectURL(file);
     const v = document.createElement("video");
