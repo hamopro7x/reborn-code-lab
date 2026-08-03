@@ -563,13 +563,19 @@ async function performDownload(url, version, notify) {
 
 // تنزيل واحد فقط في نفس الوقت — لو الواجهة والخلفية طلبتا التحديث معاً
 // يشتركان في نفس العملية بدل إتلاف نفس الملف المؤقت.
+// المشاركة مقيّدة بنفس الإصدار حتى لا يُسلَّم ملف إصدار أقدم لطلب أحدث.
+let activeDownloadKey = null;
 function downloadUpdate(url, version, notify = true) {
-  if (activeDownload) return activeDownload;
+  const key = `${url}|${version}`;
+  if (activeDownload && activeDownloadKey === key) return activeDownload;
+  activeDownloadKey = key;
   activeDownload = performDownload(url, version, notify).finally(() => {
     activeDownload = null;
+    activeDownloadKey = null;
   });
   return activeDownload;
 }
+
 
 ipcMain.handle("download-update", async (_e, url, version) => {
   if (typeof url !== "string" || !/^https:\/\//.test(url)) {
@@ -761,13 +767,47 @@ async function runBootUpdateOnce(attempt = 0) {
     // يُثبَّت إصدار وسيط بالترتيب.
     downloadedFile = null;
     cleanupOldDownloads();
-    await downloadUpdate(publishedUrl, latest, true);
-    bootUpdateDone = true;
+    const out = await downloadUpdate(publishedUrl, latest, true);
+    // تحقق من بصمة الملف قبل التثبيت: أي ملف ناقص أو تالف يُحذف ويُعاد تنزيله
+    // بدل تثبيت فاشل صامت يُبقي الموظف على إصدار قديم.
+    if (typeof info?.sha256 === "string" && /^[0-9a-f]{64}$/i.test(info.sha256)) {
+      const ok = await verifySha256(out?.path || downloadedFile, info.sha256);
+      if (!ok) {
+        try {
+          require("fs").unlinkSync(out?.path || downloadedFile);
+        } catch {}
+        downloadedFile = null;
+        throw new Error("بصمة ملف التحديث غير مطابقة");
+      }
+    }
     await installUpdate();
+    // لا نوقف دورة الفحص إلا بعد نجاح التثبيت فعلاً، وإلا يبقى الجهاز
+    // على إصدار قديم للأبد بعد أي فشل مؤقت.
+    bootUpdateDone = true;
   } catch {
+    bootUpdateDone = false;
     retry();
   }
 }
+
+function verifySha256(file, expected) {
+  return new Promise((resolve) => {
+    try {
+      const fs = require("fs");
+      const crypto = require("crypto");
+      const hash = crypto.createHash("sha256");
+      const stream = fs.createReadStream(file);
+      stream.on("data", (c) => hash.update(c));
+      stream.on("error", () => resolve(false));
+      stream.on("end", () =>
+        resolve(hash.digest("hex").toLowerCase() === String(expected).toLowerCase()),
+      );
+    } catch {
+      resolve(false);
+    }
+  });
+}
+
 
 app.whenReady().then(() => {
   createWindow();
