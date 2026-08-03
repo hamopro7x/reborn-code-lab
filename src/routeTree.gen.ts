@@ -29,6 +29,7 @@ import { Route as AuthenticatedCoursesIdRouteImport } from './routes/_authentica
 import { Route as ApiPublicAgentDownloadRouteImport } from './routes/api/public/agent-download'
 import { Route as ApiPublicAgentDownloadDotexeRouteImport } from './routes/api/public/agent-download[.]exe'
 import { Route as ApiPublicAgentVersionRouteImport } from './routes/api/public/agent-version'
+import { Route as ApiPublicBuildVersionRouteImport } from './routes/api/public/build-version'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -133,6 +134,11 @@ const ApiPublicAgentVersionRoute = ApiPublicAgentVersionRouteImport.update({
   path: '/api/public/agent-version',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicBuildVersionRoute = ApiPublicBuildVersionRouteImport.update({
+  id: '/api/public/build-version',
+  path: '/api/public/build-version',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -154,6 +160,7 @@ export interface FileRoutesByFullPath {
   '/api/public/agent-download': typeof ApiPublicAgentDownloadRoute
   '/api/public/agent-download.exe': typeof ApiPublicAgentDownloadDotexeRoute
   '/api/public/agent-version': typeof ApiPublicAgentVersionRoute
+  '/api/public/build-version': typeof ApiPublicBuildVersionRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -175,6 +182,7 @@ export interface FileRoutesByTo {
   '/api/public/agent-download': typeof ApiPublicAgentDownloadRoute
   '/api/public/agent-download.exe': typeof ApiPublicAgentDownloadDotexeRoute
   '/api/public/agent-version': typeof ApiPublicAgentVersionRoute
+  '/api/public/build-version': typeof ApiPublicBuildVersionRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -198,6 +206,7 @@ export interface FileRoutesById {
   '/api/public/agent-download': typeof ApiPublicAgentDownloadRoute
   '/api/public/agent-download.exe': typeof ApiPublicAgentDownloadDotexeRoute
   '/api/public/agent-version': typeof ApiPublicAgentVersionRoute
+  '/api/public/build-version': typeof ApiPublicBuildVersionRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -221,6 +230,7 @@ export interface FileRouteTypes {
     | '/api/public/agent-download'
     | '/api/public/agent-download.exe'
     | '/api/public/agent-version'
+    | '/api/public/build-version'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -242,6 +252,7 @@ export interface FileRouteTypes {
     | '/api/public/agent-download'
     | '/api/public/agent-download.exe'
     | '/api/public/agent-version'
+    | '/api/public/build-version'
   id:
     | '__root__'
     | '/'
@@ -264,6 +275,7 @@ export interface FileRouteTypes {
     | '/api/public/agent-download'
     | '/api/public/agent-download.exe'
     | '/api/public/agent-version'
+    | '/api/public/build-version'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -285,6 +297,7 @@ export interface RootRouteChildren {
   ApiPublicAgentDownloadRoute: typeof ApiPublicAgentDownloadRoute
   ApiPublicAgentDownloadDotexeRoute: typeof ApiPublicAgentDownloadDotexeRoute
   ApiPublicAgentVersionRoute: typeof ApiPublicAgentVersionRoute
+  ApiPublicBuildVersionRoute: typeof ApiPublicBuildVersionRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -429,6 +442,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicAgentVersionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/build-version': {
+      id: '/api/public/build-version'
+      path: '/api/public/build-version'
+      fullPath: '/api/public/build-version'
+      preLoaderRoute: typeof ApiPublicBuildVersionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -465,6 +485,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicAgentDownloadRoute: ApiPublicAgentDownloadRoute,
   ApiPublicAgentDownloadDotexeRoute: ApiPublicAgentDownloadDotexeRoute,
   ApiPublicAgentVersionRoute: ApiPublicAgentVersionRoute,
+  ApiPublicBuildVersionRoute: ApiPublicBuildVersionRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
