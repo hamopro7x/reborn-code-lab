@@ -771,6 +771,8 @@ async function runBootUpdateOnce(attempt = 0) {
 app.whenReady().then(() => {
   createWindow();
   enableAutoLaunch();
+  // إزالة أي حزمة قديمة (قبل Mag Pro) لضمان عدم بقاء نسختين على الجهاز.
+  cleanupLegacyInstall();
   // مهلة قصيرة حتى تجهز الشبكة بعد تشغيل ويندوز
   setTimeout(() => void runBootUpdate(), 8000);
   try {
