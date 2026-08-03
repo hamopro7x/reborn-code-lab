@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { ShieldAlert, Loader2, Copy, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { useAdminTheme } from "@/lib/use-admin-theme";
+import { ScreenCaptureGuard } from "@/components/ScreenCaptureGuard";
+
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -100,9 +102,11 @@ function DeviceGate() {
 
   return (
 
-    <div className="admin-theme min-h-screen">
+    <div className="admin-theme min-h-screen select-none">
+      <ScreenCaptureGuard />
       <Outlet />
     </div>
   );
 
 }
+
