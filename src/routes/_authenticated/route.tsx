@@ -91,7 +91,10 @@ function DeviceGate() {
         </div>
       </div>
     );
+  }
+
   return (
+
     <div className="admin-theme min-h-screen">
       <Outlet />
     </div>
