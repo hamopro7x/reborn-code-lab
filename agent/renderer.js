@@ -421,8 +421,8 @@ async function startPeer(viewerId) {
         params.encodings = [
           {
             ...(params.encodings?.[0] ?? {}),
-            // بداية خفيفة تمنع الشاشة السوداء؛ المتحكم يرفعها بعد استقرار المسار.
-            maxBitrate: 1_200_000,
+            // جودة عالية ثابتة من أول إطار — لا تنخفض مع الحركة
+            maxBitrate: 14_000_000,
             maxFramerate: 30,
             scaleResolutionDownBy: 1,
             networkPriority: "high",
