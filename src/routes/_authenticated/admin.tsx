@@ -671,7 +671,7 @@ function EmployeesTab() {
 
           </div>
 
-          <div className="border-t border-border/60 pt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="border-t border-border/60 pt-4 grid grid-cols-2 gap-4 items-start">
             <div className="min-w-0">
               <h3 className="text-sm font-bold mb-2">أجهزة الموظف</h3>
               <EmployeeDevices userId={u.user_id} employeeName={u.full_name} />
