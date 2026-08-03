@@ -43,7 +43,7 @@ const dotEl = document.getElementById("dot");
 const deviceEl = document.getElementById("device");
 
 const STORE = "mag-agent-device-v1";
-const AGENT_VERSION = "2.0.0";
+const AGENT_VERSION = "2.0.2";
 
 const verBadgeEl = document.getElementById("ver-badge");
 if (verBadgeEl) verBadgeEl.textContent = "v" + AGENT_VERSION;
@@ -273,7 +273,7 @@ function boostSdp(sdp) {
       out[out.length - 1] =
         line +
         // بداية واضحة بدون ملء طابور الشبكة، مع سقف مناسب لـ1080p/30.
-        ";x-google-start-bitrate=3500;x-google-min-bitrate=500;x-google-max-bitrate=8000";
+        ";x-google-start-bitrate=2500;x-google-min-bitrate=400;x-google-max-bitrate=6000";
     }
   }
   // b=AS بعد سطر c= الخاص بالفيديو
@@ -282,7 +282,7 @@ function boostSdp(sdp) {
   for (const line of out) {
     if (line.startsWith("m=")) seenVideo = line.startsWith("m=video");
     res.push(line);
-    if (seenVideo && line.startsWith("c=")) res.push("b=AS:8000", "b=TIAS:8000000");
+    if (seenVideo && line.startsWith("c=")) res.push("b=AS:6000", "b=TIAS:6000000");
 
   }
   return res.join("\r\n");
@@ -357,8 +357,8 @@ function startAdaptive(entry, sender) {
   if (entry.statsTimer) clearInterval(entry.statsTimer);
 
   const MIN = 450_000;
-  const MAX = 8_000_000;
-  let target = 3_500_000;
+  const MAX = 6_000_000;
+  let target = 2_200_000;
   let scale = 1;
   let lastLost = 0;
   let lastPackets = 0;
@@ -405,19 +405,19 @@ function startAdaptive(entry, sender) {
       // هامش 30% يمنع امتلاء bufferbloat. RTT أو الفقد يسببان خفضاً فورياً.
       const cpuLimited = qualityLimited === "cpu";
       const severe = rtt > 0.35 || lossRate > 0.06;
-      const congested = severe || rtt > 0.18 || lossRate > 0.025 || qualityLimited === "bandwidth";
+      const congested = severe || rtt > 0.12 || lossRate > 0.015 || qualityLimited === "bandwidth";
       if (avail > 0) {
         const safe = Math.round(avail * 0.7);
         if (severe) target = Math.min(Math.round(target * 0.62), safe);
         else if (congested) target = Math.min(Math.round(target * 0.82), safe);
-        else target = Math.min(safe, Math.round(target * 1.08 + 80_000));
+        else target = Math.min(safe, Math.round(target * 1.04 + 50_000));
       } else if (congested) {
         target = Math.round(target * (severe ? 0.62 : 0.82));
       } else {
-        target = Math.round(target * 1.06 + 60_000);
+        target = Math.round(target * 1.03 + 40_000);
       }
       // لو المشفّر لا يستطيع تصريف الهدف، لا نرفع أكثر لمجرد أن التقدير النظري مرتفع.
-      if (sendRate > 0 && congested) target = Math.min(target, Math.round(sendRate * 0.9));
+      if (sendRate > 0 && congested) target = Math.min(target, Math.round(sendRate * 0.85));
       target = Math.max(MIN, Math.min(MAX, target));
 
       // نخفض الدقة قبل أن تتراكم ثوانٍ من الفيديو، ونبقي 30fps للاستجابة السريعة.
@@ -475,7 +475,7 @@ async function startPeer(viewerId) {
     const base = s.getVideoTracks()[0];
     if (!base) throw new Error("لا يوجد مسار فيديو");
     const track = base.clone();
-    track.contentHint = "detail";
+    track.contentHint = "motion";
     entry.track = track;
     pc.addTrack(track, new MediaStream([track]));
     preferCodec(pc);
@@ -487,12 +487,12 @@ async function startPeer(viewerId) {
       try {
         const params = sender.getParameters();
         // الحفاظ على الدقة مع إسقاط الإطارات عند اللزوم يمنع طابور frames قديم.
-        params.degradationPreference = "maintain-resolution";
+        params.degradationPreference = "balanced";
         params.encodings = [
           {
             ...(params.encodings?.[0] ?? {}),
             // بداية بجودة عالية (الدقة الكاملة) ثم تصحيح لأسفل فقط عند الحاجة
-            maxBitrate: 3_500_000,
+            maxBitrate: 2_200_000,
             maxFramerate: 30,
             scaleResolutionDownBy: 1,
             networkPriority: "high",
@@ -648,7 +648,7 @@ async function run(device) {
   // قناة الإشارات القديمة المفتوحة أُزيلت. البرنامج يسحب فقط الطلبات
   // التي مرّت بسياسة الأدمن، مستخدماً مفتاح الجهاز السري.
   await exchangeSignals(device);
-  signalTimer = setInterval(() => void exchangeSignals(device), 120);
+  signalTimer = setInterval(() => void exchangeSignals(device), 80);
   setStatus("متصل", true);
 }
 
