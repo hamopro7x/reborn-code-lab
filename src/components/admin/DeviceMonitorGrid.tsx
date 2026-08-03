@@ -102,14 +102,14 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
     }
 
     pc.ontrack = (e) => {
-      // مخزن تشغيل صغير لكن ليس صفراً: 0.03s كان يسبب تجميد/سواد عند أي فقد حزم.
+      // أقل تأخير ممكن: مخزن تشغيل 40ms فقط (كان 80ms) بدون سواد
       try {
-        // مخزن صغير (80ms) = صورة أسرع بتأخير أقل، وما زال يمتص فقد الحزم
-        (e.receiver as unknown as { jitterBufferTarget?: number }).jitterBufferTarget = 80;
-        (e.receiver as unknown as { playoutDelayHint?: number }).playoutDelayHint = 0.08;
+        (e.receiver as unknown as { jitterBufferTarget?: number }).jitterBufferTarget = 40;
+        (e.receiver as unknown as { playoutDelayHint?: number }).playoutDelayHint = 0;
       } catch {
         /* غير مدعوم في بعض المتصفحات */
       }
+
 
       // انتهاء المسار من جهة الموظف = إعادة اتصال فوري
       e.track.addEventListener("ended", () => {
