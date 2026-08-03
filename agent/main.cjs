@@ -121,6 +121,69 @@ function enableAutoLaunch() {
 }
 
 
+// إزالة أي تثبيت قديم من الحزم السابقة (قبل Mag Pro).
+// تُشغَّل مرة واحدة عند بدء التطبيق الجديد فتحذف مجلد التثبيت القديم،
+// اختصاراته، مهامه المجدولة، ومفاتيح Run بأسماء قديمة.
+function cleanupLegacyInstall() {
+  if (process.platform !== "win32") return;
+  const fs = require("fs");
+  const localAppData = process.env.LOCALAPPDATA || path.join(require("os").homedir(), "AppData", "Local");
+  const appData = process.env.APPDATA || path.join(require("os").homedir(), "AppData", "Roaming");
+  const legacyProcNames = [
+    "MAG PRO Agent.exe",
+    "mag-pro-agent.exe",
+    "MagProAgent.exe",
+    "magpro-agent.exe",
+  ];
+  for (const name of legacyProcNames) {
+    execFile("taskkill.exe", ["/F", "/IM", name], { windowsHide: true }, () => {});
+  }
+  const currentDir = path.dirname(process.execPath).toLowerCase();
+  const legacyDirs = [
+    path.join(localAppData, "Programs", "mag-pro-agent"),
+    path.join(localAppData, "Programs", "MAG PRO Agent"),
+    path.join(localAppData, "Programs", "magpro-agent"),
+    path.join(localAppData, "Programs", "MagProAgent"),
+    path.join(localAppData, "Programs", "mag-pro"),
+  ];
+  for (const dir of legacyDirs) {
+    if (dir.toLowerCase() === currentDir) continue;
+    try { fs.rmSync(dir, { recursive: true, force: true }); } catch { /* ignore */ }
+  }
+  const legacyShortcuts = [
+    path.join(appData, "Microsoft", "Windows", "Start Menu", "Programs", "MAG PRO Agent.lnk"),
+    path.join(appData, "Microsoft", "Windows", "Start Menu", "Programs", "MagProAgent.lnk"),
+    path.join(require("os").homedir(), "Desktop", "MAG PRO Agent.lnk"),
+    path.join(require("os").homedir(), "Desktop", "MagProAgent.lnk"),
+    path.join(require("os").homedir(), "Desktop", "mag-pro-agent.lnk"),
+  ];
+  for (const link of legacyShortcuts) {
+    try { fs.rmSync(link, { force: true }); } catch { /* ignore */ }
+  }
+  try {
+    fs.rmSync(
+      path.join(appData, "Microsoft", "Windows", "Start Menu", "Programs", "MAG PRO Agent"),
+      { recursive: true, force: true },
+    );
+  } catch { /* ignore */ }
+  for (const runName of ["MagProAgent", "mag-pro-agent", "MAG PRO Agent"]) {
+    execFile("reg.exe", ["delete", RUN_KEY, "/v", runName, "/f"], { windowsHide: true }, () => {});
+  }
+  for (const taskName of ["MagProAgent", "MAG PRO Agent", "mag-pro-agent"]) {
+    execFile("schtasks.exe", ["/Delete", "/TN", taskName, "/F"], { windowsHide: true }, () => {});
+  }
+  for (const key of [
+    "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\mag-pro-agent",
+    "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\MAG PRO Agent",
+    "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\MagProAgent",
+  ]) {
+    execFile("reg.exe", ["delete", key, "/f"], { windowsHide: true }, () => {});
+  }
+}
+
+
+
+
 function createWindow() {
   win = new BrowserWindow({
     width: 460,
