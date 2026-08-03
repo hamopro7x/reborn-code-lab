@@ -39,10 +39,6 @@ function Home() {
     queryKey: ["featured"],
     queryFn: async () => (await supabase.from("products").select("*, category:categories(icon,name)").eq("active", true).eq("featured", true).order("sort_order").limit(8)).data ?? [],
   });
-  const latestQ = useQuery({
-    queryKey: ["latest"],
-    queryFn: async () => (await supabase.from("products").select("*, category:categories(icon,name)").eq("active", true).order("created_at", { ascending: false }).limit(8)).data ?? [],
-  });
   const timerQ = useQuery({
     queryKey: ["timer"],
     queryFn: async () => (await supabase.from("countdown_timers").select("*").eq("active", true).gt("ends_at", new Date().toISOString()).order("ends_at").limit(1).maybeSingle()).data,
@@ -143,76 +139,36 @@ function Home() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {categoriesQ.isLoading &&
               Array.from({ length: 4 }).map((_, i) => (
-                <div key={`cat-skeleton-${i}`} className="card-surface rounded-2xl p-6 h-[11.5rem] animate-pulse" />
+                <div key={`cat-skeleton-${i}`} className="card-surface rounded-2xl p-4 h-[13rem] animate-pulse" />
               ))}
             {(categoriesQ.data ?? []).map((c: any, i: number) => (
               <Link
                 key={c.id}
                 to="/shop"
                 search={{ category: c.slug } as any}
-                className="card-surface rounded-2xl p-6 text-center hover:glow-purple hover:-translate-y-1 transition-all animate-slide-up"
+                className="card-surface rounded-2xl p-4 flex flex-col items-center justify-between gap-3 h-[13rem] hover:glow-purple hover:-translate-y-1 transition-all animate-slide-up"
                 style={{ animationDelay: `${i * 80}ms` }}
               >
-                {c.banner_image ? (
-                  <img src={c.banner_image} alt={c.name} width={480} height={96} loading="lazy" className="w-full h-24 object-cover rounded-xl mb-3" />
-                ) : (
-                  <div className="text-5xl mb-3">{c.icon ?? "🎁"}</div>
-                )}
-                <div className="font-bold">{c.name}</div>
+                <div className="w-full flex-1 rounded-xl overflow-hidden bg-muted/20 flex items-center justify-center">
+                  {c.banner_image ? (
+                    <img
+                      src={c.banner_image}
+                      alt={c.name}
+                      width={480}
+                      height={320}
+                      loading="lazy"
+                      className="w-full h-full object-contain p-2"
+                    />
+                  ) : (
+                    <div className="text-5xl">{c.icon ?? "🎁"}</div>
+                  )}
+                </div>
+                <div className="font-bold text-sm text-center line-clamp-1 w-full">{c.name}</div>
               </Link>
             ))}
           </div>
         </section>
 
-        {/* FEATURED */}
-        {(featuredQ.isLoading || (featuredQ.data ?? []).length > 0) && (
-          <section className="container mx-auto px-4 py-12">
-            <div className="flex items-end justify-between mb-8">
-              <div>
-                <h2 className="text-3xl font-black">منتجات مميزة</h2>
-                <p className="text-muted-foreground text-sm mt-1">اختيارات الفريق</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {featuredQ.isLoading
-                ? Array.from({ length: 4 }).map((_, i) => (
-                    <div key={`feat-skeleton-${i}`} className="card-surface rounded-2xl overflow-hidden animate-pulse">
-                      <div className="aspect-[4/3] bg-muted/30" />
-                      <div className="h-[6.5rem]" />
-                    </div>
-                  ))
-                : featuredQ.data!.map((p: any) => <ProductCard key={p.id} p={p} />)}
-            </div>
-          </section>
-        )}
-
-        {/* LATEST */}
-        <section className="container mx-auto px-4 py-12">
-          <div className="flex items-end justify-between mb-8">
-            <div>
-              <h2 className="text-3xl font-black">أحدث المنتجات</h2>
-              <p className="text-muted-foreground text-sm mt-1">وصل حديثاً</p>
-            </div>
-          </div>
-          {latestQ.isLoading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={`latest-skeleton-${i}`} className="card-surface rounded-2xl overflow-hidden animate-pulse">
-                  <div className="aspect-[4/3] bg-muted/30" />
-                  <div className="h-[6.5rem]" />
-                </div>
-              ))}
-            </div>
-          ) : latestQ.data && latestQ.data.length ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {latestQ.data.map((p: any) => <ProductCard key={p.id} p={p} />)}
-            </div>
-          ) : (
-            <div className="card-surface rounded-2xl p-12 text-center text-muted-foreground">
-              لم تتم إضافة منتجات بعد — انتقل للوحة الإدارة لإضافة أول منتج.
-            </div>
-          )}
-        </section>
       </main>
       <Footer />
       <WhatsAppFab />
