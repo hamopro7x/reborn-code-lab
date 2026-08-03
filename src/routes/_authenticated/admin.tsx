@@ -1613,26 +1613,55 @@ function CoursesTab({ isAdmin }: { isAdmin: boolean }) {
           <div className="space-y-3">
             <div><Label>العنوان</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
             <div><Label>الوصف</Label><Textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
-            <div>
+            <div className="space-y-2">
               <Label>صورة الغلاف</Label>
-              {form.cover_url && <img src={form.cover_url} alt="" className="w-32 h-20 object-cover rounded-lg mb-2" />}
-              <input
-                type="file"
-                accept="image/*"
-                onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  const ext = file.name.split(".").pop();
-                  const path = `courses/${crypto.randomUUID()}.${ext}`;
-                  const { error } = await supabase.storage.from("product-images").upload(path, file);
-                  if (error) { toast.error(error.message); return; }
-                  const { data: signed, error: sErr } = await supabase.storage.from("product-images").createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
-                  if (sErr || !signed?.signedUrl) { toast.error(sErr?.message || "فشل توليد الرابط"); return; }
-                  setForm({ ...form, cover_url: signed.signedUrl });
-                  toast.success("تم رفع الصورة");
-                }}
-              />
-              <Input className="mt-2" value={form.cover_url} onChange={(e) => setForm({ ...form, cover_url: e.target.value })} placeholder="أو ألصق رابط الصورة https://..." />
+              <div className="flex items-center gap-3">
+                <div className="w-40 h-24 shrink-0 rounded-xl overflow-hidden border border-border/60 bg-muted/30 flex items-center justify-center">
+                  {form.cover_url ? (
+                    <img src={form.cover_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <ImageIcon className="size-6 text-muted-foreground" />
+                  )}
+                </div>
+                <div className="flex-1 space-y-2">
+                  <input
+                    ref={coverInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setCoverUploading(true);
+                      try {
+                        const ext = file.name.split(".").pop();
+                        const path = `courses/${crypto.randomUUID()}.${ext}`;
+                        const { error } = await supabase.storage.from("product-images").upload(path, file);
+                        if (error) throw error;
+                        const { data: signed, error: sErr } = await supabase.storage.from("product-images").createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
+                        if (sErr || !signed?.signedUrl) throw new Error(sErr?.message || "فشل توليد الرابط");
+                        setForm((f: any) => ({ ...f, cover_url: signed.signedUrl }));
+                        toast.success("تم رفع الصورة");
+                      } catch (err: any) {
+                        toast.error(err?.message ?? "فشل رفع الصورة");
+                      } finally {
+                        setCoverUploading(false);
+                        if (coverInputRef.current) coverInputRef.current.value = "";
+                      }
+                    }}
+                  />
+                  <Button type="button" variant="outline" className="w-full" disabled={coverUploading} onClick={() => coverInputRef.current?.click()}>
+                    {coverUploading ? <Loader2 className="size-4 animate-spin ml-1" /> : <Upload className="size-4 ml-1" />}
+                    تحميل صورة
+                  </Button>
+                  {form.cover_url && (
+                    <Button type="button" variant="ghost" size="sm" className="w-full text-destructive" onClick={() => setForm({ ...form, cover_url: "" })}>
+                      <X className="size-3.5 ml-1" />إزالة الصورة
+                    </Button>
+                  )}
+                  <p className="text-[10px] text-muted-foreground">المقاس المفضّل 1280×800 (16:10)</p>
+                </div>
+              </div>
             </div>
             <div><Label>الترتيب</Label><Input type="number" value={form.sort_order} onChange={(e) => setForm({ ...form, sort_order: Number(e.target.value) })} /></div>
             <label className="flex items-center gap-2"><Switch checked={form.is_published} onCheckedChange={(v) => setForm({ ...form, is_published: v })} />منشور</label>
