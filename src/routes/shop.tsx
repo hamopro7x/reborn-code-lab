@@ -63,10 +63,11 @@ function Shop() {
         </div>
 
         <div className="mb-6 flex gap-3 flex-col md:flex-row">
-          <div className="relative flex-1">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="ابحث عن منتج..." className="pr-10 h-12 bg-card/60" />
+          <div className="relative w-full md:w-1/4">
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="ابحث عن منتج..." className="pr-9 h-10 text-sm bg-card/60" />
           </div>
+
         </div>
 
         <div className="mb-6 flex flex-wrap gap-2">
