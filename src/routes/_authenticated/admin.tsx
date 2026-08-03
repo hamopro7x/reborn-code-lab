@@ -569,6 +569,16 @@ function EmployeesTab() {
 
   const selected = (q.data ?? []).find((u: any) => u.user_id === expanded) ?? null;
 
+  useEffect(() => {
+    if (!selected) { setProf(null); return; }
+    setProf((p) => (p && p.user_id === selected.user_id ? p : {
+      user_id: selected.user_id,
+      full_name: selected.full_name ?? "",
+      email: selected.email ?? "",
+      password: "",
+    }));
+  }, [selected?.user_id, selected]);
+
   if (selected) {
     const u: any = selected;
     return (
