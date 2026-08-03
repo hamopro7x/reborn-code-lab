@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld("agent", {
   openExternal: (url) => ipcRenderer.invoke("open-external", url),
   downloadUpdate: (url, version) => ipcRenderer.invoke("download-update", url, version),
   installUpdate: () => ipcRenderer.invoke("install-update"),
+  checkUpdate: () => ipcRenderer.invoke("check-update"),
   onUpdateProgress: (cb) => {
     ipcRenderer.on("update-progress", (_e, data) => cb(data));
   },

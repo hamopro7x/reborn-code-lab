@@ -25,7 +25,7 @@ type Device = {
 
 
 const isOnline = (d: Device) =>
-  !!d.last_seen_at && Date.now() - new Date(d.last_seen_at).getTime() < 60_000;
+  !!d.last_seen_at && Date.now() - new Date(d.last_seen_at).getTime() < 75_000;
 
 /** يفتح بثاً مباشراً للجهاز تلقائياً طالما enabled = true (زي كاميرات المراقبة) */
 function useDeviceStream(deviceId: string, enabled: boolean) {
@@ -193,15 +193,15 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
             return;
           }
           tries += 1;
-          if (tries > 14) {
+          if (tries > 30) {
             if (timer) clearInterval(timer);
             setFailed(true);
             // لا نتوقف نهائياً: نحاول من جديد بعد قليل
-            scheduleReconnect(8000);
+            scheduleReconnect(3000);
             return;
           }
           void sig.send({ type: "join", viewer: viewerId });
-        }, 500);
+        }, 350);
       })
       .catch(() => {
         if (closed) return;

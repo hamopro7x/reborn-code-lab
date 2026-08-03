@@ -168,13 +168,8 @@ async function checkUpdate() {
 
 
 
-// فحص فوري ودوري للتحديث: أول ما تنزل نسخة جديدة على الموقع تتثبت خلال ثوانٍ.
-void checkUpdate();
-setInterval(() => void checkUpdate(), 20000);
-window.addEventListener("online", () => void checkUpdate());
-document.addEventListener("visibilitychange", () => {
-  if (!document.hidden) void checkUpdate();
-});
+// عملية Electron الخلفية هي المصدر الوحيد للتحديث، حتى لا يبدأ تنزيلان لنفس
+// الملف من الواجهة والخلفية في الوقت نفسه.
 
 function rand(len) {
   const b = new Uint8Array(len);
@@ -549,7 +544,6 @@ async function rpcFetch(fn, body, ms = 8000) {
       headers: {
         "Content-Type": "application/json",
         apikey: SUPABASE_KEY,
-        Authorization: `Bearer ${SUPABASE_KEY}`,
       },
       body: JSON.stringify(body),
       signal: ctrl.signal,
@@ -694,6 +688,7 @@ document.getElementById("refresh")?.addEventListener("click", async (e) => {
   const btn = e.currentTarget;
   btn.classList.add("spin");
   try {
+    await window.agent.checkUpdate?.();
     await softReconnect();
   } finally {
     setTimeout(() => btn.classList.remove("spin"), 600);
