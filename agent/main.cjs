@@ -200,7 +200,10 @@ function createWindow() {
     },
   });
   win.setMenuBarVisibility(false);
+  // حماية ضد تصوير الشاشة: أي Print Screen / أداة قص / برنامج تسجيل يطلع أسود
+  try { win.setContentProtection(true); } catch {}
   win.loadFile(path.join(__dirname, "renderer.html"));
+
   win.once("ready-to-show", () => {
     if (startedHidden) {
       win.hide();
@@ -233,12 +236,43 @@ ipcMain.on("viewer-count", (_event, count) => {
   activeViewerCount = Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
 });
 
+// نافذة الموقع المحمية: محصّنة ضد التصوير على مستوى ويندوز (الاسكرين يطلع أسود)
+
+let siteWin = null;
+function openProtectedSite(url) {
+  if (siteWin && !siteWin.isDestroyed()) {
+    siteWin.show();
+    siteWin.focus();
+    siteWin.loadURL(url);
+    return;
+  }
+  siteWin = new BrowserWindow({
+    width: 1280,
+    height: 820,
+    title: "Mag Pro — محتوى محمي",
+    autoHideMenuBar: true,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      backgroundThrottling: false,
+    },
+  });
+  try { siteWin.setContentProtection(true); } catch {}
+  siteWin.setMenuBarVisibility(false);
+  siteWin.loadURL(url);
+  siteWin.on("closed", () => { siteWin = null; });
+}
+
 ipcMain.handle("open-external", (_e, url) => {
-  if (typeof url === "string" && /^https:\/\//.test(url)) void shell.openExternal(url);
+  if (typeof url !== "string" || !/^https:\/\//.test(url)) return true;
+  // روابط موقع mag-pro1 تفتح داخل نافذة محمية بدل المتصفح
+  if (/^https:\/\/([a-z0-9-]+\.)*mag-pro1\.com(\/|$)/i.test(url)) openProtectedSite(url);
+  else void shell.openExternal(url);
   return true;
 });
 
 // ===== تحديث داخلي: تنزيل بشريط تقدّم ثم تثبيت صامت =====
+
 let downloadedFile = null;
 let activeDownload = null;
 let updatePipeline = null;
