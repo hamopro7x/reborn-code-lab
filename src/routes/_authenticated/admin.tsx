@@ -1791,8 +1791,16 @@ function LessonsManagerInner({ courseId, courseTitle }: { courseId: string; cour
           </div>
 
           <div className="space-y-2 max-h-72 overflow-y-auto">
-            {lessons.data?.map((l: any) => (
-              <LessonRow key={l.id} lesson={l} onSave={updateLesson} onDelete={() => removeLesson(l)} />
+            {lessons.data?.map((l: any, idx: number) => (
+              <LessonRow
+                key={l.id}
+                lesson={l}
+                index={idx}
+                total={lessons.data.length}
+                onSave={updateLesson}
+                onMove={(dir) => moveLesson(idx, dir)}
+                onDelete={() => removeLesson(l)}
+              />
             ))}
             {!lessons.data?.length && <div className="text-center text-xs text-muted-foreground p-4">لا توجد محاضرات</div>}
           </div>
@@ -1802,19 +1810,42 @@ function LessonsManagerInner({ courseId, courseTitle }: { courseId: string; cour
   );
 }
 
-function LessonRow({ lesson, onSave, onDelete }: { lesson: any; onSave: (id: string, patch: { title?: string; sort_order?: number }) => void; onDelete: () => void }) {
+function LessonRow({
+  lesson,
+  index,
+  total,
+  onSave,
+  onMove,
+  onDelete,
+}: {
+  lesson: any;
+  index: number;
+  total: number;
+  onSave: (id: string, patch: { title?: string; sort_order?: number }) => void;
+  onMove: (dir: -1 | 1) => void;
+  onDelete: () => void;
+}) {
   const [title, setTitle] = useState(lesson.title ?? "");
-  const [order, setOrder] = useState<number>(lesson.sort_order ?? 0);
-  const dirty = title !== (lesson.title ?? "") || order !== (lesson.sort_order ?? 0);
+  useEffect(() => { setTitle(lesson.title ?? ""); }, [lesson.title]);
+  const dirty = title !== (lesson.title ?? "");
   return (
     <div className="flex items-center gap-2 p-2 rounded-xl border border-border/40">
-      <Input className="flex-1 h-9" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="عنوان المحاضرة" />
-      <Input className="w-16 h-9" type="number" value={order} onChange={(e) => setOrder(Number(e.target.value))} title="الترتيب" />
-      <Button size="sm" variant="outline" disabled={!dirty || !title.trim()} onClick={() => onSave(lesson.id, { title: title.trim(), sort_order: order })}>حفظ</Button>
+      <span className="w-6 text-center text-xs text-muted-foreground tabular-nums">{index + 1}</span>
+      <div className="flex flex-col gap-0.5">
+        <Button size="icon" variant="ghost" className="size-6" disabled={index === 0} onClick={() => onMove(-1)} title="تحريك لأعلى">
+          <ChevronUp className="size-3.5" />
+        </Button>
+        <Button size="icon" variant="ghost" className="size-6" disabled={index === total - 1} onClick={() => onMove(1)} title="تحريك لأسفل">
+          <ChevronDown className="size-3.5" />
+        </Button>
+      </div>
+      <Input className="flex-1 h-9" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="اسم المحاضرة" />
+      <Button size="sm" variant="outline" disabled={!dirty || !title.trim()} onClick={() => onSave(lesson.id, { title: title.trim() })}>حفظ</Button>
       <Button size="sm" variant="outline" onClick={onDelete}><Trash2 className="size-4 text-destructive" /></Button>
     </div>
   );
 }
+
 
 function CourseAccessManager({ courseId, courseTitle }: { courseId: string; courseTitle: string }) {
   const qc = useQueryClient();
