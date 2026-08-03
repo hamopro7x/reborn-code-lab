@@ -590,8 +590,11 @@ export function DeviceMonitorGrid({ screensOnly = false }: { screensOnly?: boole
               online={isOnline(d)}
               expanded={expandedId === d.id}
               onToggleExpand={() => setExpandedId(expandedId === d.id ? null : d.id)}
-              
+              onRemove={() => {
+                if (confirm(`حذف شاشة ${d.employee_name ?? "الجهاز"}؟`)) void removeDevice(d);
+              }}
             />
+
           ))}
         </div>
       )}
