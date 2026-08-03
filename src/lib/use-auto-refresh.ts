@@ -3,7 +3,7 @@ import { APP_BUILD_ID } from "./build-id";
 
 // يفحص إذا كان في نسخة جديدة منشورة من الموقع، ولو موجودة
 // يعمل تحديث تلقائي للصفحة الحالية فوراً (نفس المسار).
-export function useAutoRefreshOnDeploy(intervalMs = 20000) {
+export function useAutoRefreshOnDeploy(intervalMs = 1000) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     let stopped = false;
