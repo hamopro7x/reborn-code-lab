@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import logo from "@/assets/logo.png";
+import logoAsset from "@/assets/magpro-logo.jpg.asset.json";
 
 
 const navLinks = [
@@ -37,7 +37,7 @@ export function Header() {
     <header className="sticky top-0 z-50 border-b border-border/40 backdrop-blur-xl bg-background/80">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
         <Link to="/" className="flex items-center gap-2 shrink-0">
-          <img src={logo} alt="شعار متجر الاشتراكات الرقمية" width={36} height={36} className="size-9 rounded-xl glow-purple" />
+          <img src={logoAsset.url} alt="شعار متجر الاشتراكات الرقمية" width={36} height={36} className="size-9 rounded-xl glow-purple" />
           <div className="hidden sm:block">
             <div className="font-bold text-sm leading-none text-gradient">متجر الاشتراكات</div>
             <div className="text-[10px] text-muted-foreground mt-1">الرقمية الاحترافية</div>
