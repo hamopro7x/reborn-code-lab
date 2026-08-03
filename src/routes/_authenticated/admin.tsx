@@ -617,28 +617,29 @@ function EmployeesTab() {
                 )}
               </div>
             </div>
-            <div className="rounded-xl border border-border/60 p-3 space-y-1.5 text-xs text-right">
-              <div className="flex justify-start gap-2">
-                <span className="text-muted-foreground shrink-0">الاسم كامل :</span>
-                <span className="font-bold truncate">{u.full_name || "—"}</span>
-              </div>
-              <div className="flex justify-start gap-2">
-                <span className="text-muted-foreground shrink-0">البريد الإلكتروني :</span>
-                <span className="font-bold truncate" dir="ltr">{u.email || "—"}</span>
-              </div>
-              <div className="flex justify-start gap-2">
-                <span className="text-muted-foreground shrink-0">كلمة السر :</span>
-                <span className="font-bold tracking-widest">••••••••</span>
-              </div>
-              <div className="flex justify-start gap-2">
-                <span className="text-muted-foreground shrink-0">الصلاحية :</span>
-                <span className="font-bold">{u.role === "admin" ? "أدمن" : "موظف"}</span>
-              </div>
-              <div className="flex justify-start gap-2">
-                <span className="text-muted-foreground shrink-0">تاريخ الإضافة :</span>
-                <span className="font-bold">{new Date(u.created_at).toLocaleString("ar-EG")}</span>
+            <div className="rounded-xl border border-border/60 p-4 text-right">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                {[
+                  { label: "الاسم كامل", value: u.full_name || "—" },
+                  { label: "البريد الإلكتروني", value: u.email || "—", ltr: true },
+                  { label: "كلمة السر", value: "••••••••" },
+                  { label: "الصلاحية", value: u.role === "admin" ? "أدمن" : "موظف" },
+                  { label: "تاريخ الإضافة", value: new Date(u.created_at).toLocaleString("ar-EG") },
+                ].map((f) => (
+                  <div key={f.label} className="space-y-1.5">
+                    <div className="text-xs text-muted-foreground">{f.label}</div>
+                    <div
+                      className="rounded-md bg-muted/60 border border-border/50 px-3 py-2.5 text-sm font-medium truncate"
+                      dir={f.ltr ? "ltr" : undefined}
+                      style={f.ltr ? { textAlign: "right" } : undefined}
+                    >
+                      {f.value}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
+
           </div>
 
           <div className="border-t border-border/60 pt-4">
