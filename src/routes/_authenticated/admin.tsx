@@ -623,8 +623,8 @@ function EmployeesTab() {
           />
           <div>
             <div className="text-lg font-bold">{u.full_name || u.email.split("@")[0]}</div>
-            <div className="text-xs text-muted-foreground" dir="ltr">{u.email}</div>
           </div>
+
           <Badge variant={u.role === "admin" ? "default" : "secondary"}>{u.role === "admin" ? "أدمن" : "موظف"}</Badge>
         </div>
 
@@ -671,15 +671,17 @@ function EmployeesTab() {
 
           </div>
 
-          <div className="border-t border-border/60 pt-4">
-            <h3 className="text-sm font-bold mb-2">أجهزة الموظف</h3>
-            <EmployeeDevices userId={u.user_id} employeeName={u.full_name} />
+          <div className="border-t border-border/60 pt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="min-w-0">
+              <h3 className="text-sm font-bold mb-2">أجهزة الموظف</h3>
+              <EmployeeDevices userId={u.user_id} employeeName={u.full_name} />
+            </div>
+            <div className="min-w-0">
+              <h3 className="text-sm font-bold mb-2 flex items-center gap-2"><MonitorSmartphone className="size-4 text-primary" /> تفعيل جهاز الموظف</h3>
+              <DevicesTab />
+            </div>
           </div>
 
-          <div className="border-t border-border/60 pt-4">
-            <h3 className="text-sm font-bold mb-2 flex items-center gap-2"><MonitorSmartphone className="size-4 text-primary" /> تفعيل جهاز الموظف</h3>
-            <DevicesTab />
-          </div>
         </div>
 
         <Dialog open={!!editing} onOpenChange={(o) => { if (!o) setEditing(null); }}>
