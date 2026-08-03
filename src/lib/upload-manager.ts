@@ -8,6 +8,7 @@ export type UploadItem = {
   courseId: string;
   fileName: string;
   objectName: string;
+  title: string;
   progress: number;
   sent: number;
   total: number;
@@ -80,7 +81,7 @@ class UploadManager {
     this.emit();
   }
 
-  add(courseId: string, file: File, objectName: string, nextOrder: () => number) {
+  add(courseId: string, file: File, objectName: string, nextOrder: () => number, title?: string) {
     const id = crypto.randomUUID();
     this.map.set(id, {
       file,
@@ -91,6 +92,7 @@ class UploadManager {
         courseId,
         fileName: file.name,
         objectName,
+        title: (title ?? "").trim() || file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ").trim() || "درس",
         progress: 0,
         sent: 0,
         total: file.size,
@@ -148,8 +150,7 @@ class UploadManager {
       onSuccess: async () => {
         this.patch(id, { status: "done", progress: 100 });
         const duration = await probeDuration(rec.file);
-        const title =
-          rec.file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ").trim() || "درس";
+        const title = rec.item.title;
         const { error } = await supabase.from("course_lessons").insert({
           course_id: rec.item.courseId,
           title,
