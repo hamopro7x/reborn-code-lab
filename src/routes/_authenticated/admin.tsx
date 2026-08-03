@@ -599,53 +599,52 @@ function EmployeesTab() {
         </div>
 
         <div className="card-surface rounded-2xl p-4 space-y-5">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between gap-2">
-                <h3 className="text-sm font-bold">البيانات الشخصية</h3>
-                <div className="flex items-center gap-1">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setEditing({ user_id: u.user_id, full_name: u.full_name ?? "", email: u.email ?? "", password: "" })}
-                  >
-                    <Edit className="size-4 ml-1" /> تعديل
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-sm font-bold">البيانات الشخصية</h3>
+              <div className="flex items-center gap-1">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setEditing({ user_id: u.user_id, full_name: u.full_name ?? "", email: u.email ?? "", password: "" })}
+                >
+                  <Edit className="size-4 ml-1" /> تعديل
+                </Button>
+                {u.role !== "admin" && (
+                  <Button size="icon" variant="ghost" onClick={() => { remove(u.user_id); setExpanded(null); }}>
+                    <Trash2 className="size-4 text-destructive" />
                   </Button>
-                  {u.role !== "admin" && (
-                    <Button size="icon" variant="ghost" onClick={() => { remove(u.user_id); setExpanded(null); }}>
-                      <Trash2 className="size-4 text-destructive" />
-                    </Button>
-                  )}
-                </div>
+                )}
               </div>
-              <div className="rounded-xl border border-border/60 p-4 text-right">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                  {[
-                    { label: "الاسم كامل", value: u.full_name || "—" },
-                    { label: "البريد الإلكتروني", value: u.email || "—", ltr: true },
-                    { label: "كلمة السر", value: "••••••••" },
-                    { label: "الصلاحية", value: u.role === "admin" ? "أدمن" : "موظف" },
-                    { label: "تاريخ الإضافة", value: new Date(u.created_at).toLocaleString("ar-EG") },
-                  ].map((f) => (
-                    <div key={f.label} className="space-y-1.5">
-                      <div className="text-xs text-muted-foreground">{f.label}</div>
-                      <div
-                        className="rounded-md bg-muted/60 border border-border/50 px-3 py-2.5 text-sm font-medium truncate"
-                        dir={f.ltr ? "ltr" : undefined}
-                        style={f.ltr ? { textAlign: "right" } : undefined}
-                      >
-                        {f.value}
-                      </div>
+            </div>
+            <div className="rounded-xl border border-border/60 p-4 text-right">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                {[
+                  { label: "الاسم كامل", value: u.full_name || "—" },
+                  { label: "البريد الإلكتروني", value: u.email || "—", ltr: true },
+                  { label: "كلمة السر", value: "••••••••" },
+                  { label: "الصلاحية", value: u.role === "admin" ? "أدمن" : "موظف" },
+                  { label: "تاريخ الإضافة", value: new Date(u.created_at).toLocaleString("ar-EG") },
+                ].map((f) => (
+                  <div key={f.label} className="space-y-1.5">
+                    <div className="text-xs text-muted-foreground">{f.label}</div>
+                    <div
+                      className="rounded-md bg-muted/60 border border-border/50 px-3 py-2.5 text-sm font-medium truncate"
+                      dir={f.ltr ? "ltr" : undefined}
+                      style={f.ltr ? { textAlign: "right" } : undefined}
+                    >
+                      {f.value}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
             </div>
 
-            <div className="lg:border-r lg:border-border/60 lg:pr-5 border-t border-border/60 pt-4 lg:border-t-0 lg:pt-0">
-              <h3 className="text-sm font-bold mb-2">أجهزة الموظف</h3>
-              <EmployeeDevices userId={u.user_id} employeeName={u.full_name} />
-            </div>
+          </div>
+
+          <div className="border-t border-border/60 pt-4">
+            <h3 className="text-sm font-bold mb-2">أجهزة الموظف</h3>
+            <EmployeeDevices userId={u.user_id} employeeName={u.full_name} />
           </div>
 
           <div className="border-t border-border/60 pt-4">
@@ -653,7 +652,6 @@ function EmployeesTab() {
             <DevicesTab />
           </div>
         </div>
-
 
         <Dialog open={!!editing} onOpenChange={(o) => { if (!o) setEditing(null); }}>
           <DialogContent>
