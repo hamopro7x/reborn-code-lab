@@ -690,9 +690,6 @@ function EmployeesTab() {
 
 
 
-
-        </div>
-
         <Dialog open={!!editing} onOpenChange={(o) => { if (!o) setEditing(null); }}>
           <DialogContent>
             <DialogHeader><DialogTitle>تعديل بيانات الموظف</DialogTitle></DialogHeader>
