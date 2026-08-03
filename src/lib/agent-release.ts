@@ -2,9 +2,9 @@
 // دائماً آخر إصدار فقط — البرنامج ينزل هذا الإصدار مباشرة ولا يمر بأي
 // إصدارات وسيطة بالترتيب.
 export const AGENT_RELEASE = {
-  version: "2.0.2",
-  notes: "تقليل زمن الاتصال وتأخير البث: مخزن تشغيل أقل، تحكم أسرع في جودة الشبكة.",
-  url: "https://mag-pro1.com/__l5e/assets-v1/0e56975c-567d-4ebd-a3e0-af0049b2cd07/MagPro-Setup-2.0.2.exe",
-  size: 110513558,
-  sha256: "fc0cf7b479ad817150e95f233e8b77b8ef3a1fbb89676935e14bd4d2f01c56ec",
+  version: "2.0.1",
+  notes: "إزالة تلقائية لأي تثبيت قديم من الحزم السابقة، مع الحفاظ على التحديث الصامت.",
+  url: "https://mag-pro1.com/__l5e/assets-v1/a05e31b3-c0d5-40d2-9127-9bcd5277bf7b/MagPro-Setup-2.0.1.exe",
+  size: 110513542,
+  sha256: "98fa8846d3066621e3f004026b5b9006209b3bd1270d9bdebea81d18fbae853b",
 } as const;
