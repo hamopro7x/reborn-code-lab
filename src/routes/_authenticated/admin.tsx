@@ -671,24 +671,16 @@ function EmployeesTab() {
 
           </div>
 
-          <div className="space-y-4">
-            <section className="rounded-2xl border border-border/60 bg-muted/20 p-4">
-              <h3 className="text-base font-bold mb-3 flex items-center gap-2">
-                <MonitorSmartphone className="size-4 text-primary shrink-0" />
-                <span>أجهزة الموظف</span>
-              </h3>
+          <div className="border-t border-border/60 pt-4 grid grid-cols-2 gap-4 items-start">
+            <div className="min-w-0">
+              <h3 className="text-sm font-bold mb-2">أجهزة الموظف</h3>
               <EmployeeDevices userId={u.user_id} employeeName={u.full_name} />
-            </section>
-
-            <section className="rounded-2xl border border-border/60 bg-muted/20 p-4">
-              <h3 className="text-base font-bold mb-3 flex items-center gap-2">
-                <MonitorSmartphone className="size-4 text-primary shrink-0" />
-                <span>تفعيل جهاز جديد للموظف</span>
-              </h3>
+            </div>
+            <div className="min-w-0">
+              <h3 className="text-sm font-bold mb-2 flex items-center gap-2"><MonitorSmartphone className="size-4 text-primary" /> تفعيل جهاز الموظف</h3>
               <DevicesTab />
-            </section>
+            </div>
           </div>
-
 
         </div>
 
