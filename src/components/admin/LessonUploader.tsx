@@ -56,10 +56,13 @@ export function LessonUploader({
         toast.error(`${file.name}: الملف ليس فيديو`);
         continue;
       }
-      const ext = file.name.split(".").pop()?.toLowerCase() || "mp4";
-      // مسار ثابت → يسمح باستكمال الرفع من نفس النقطة
-      uploadManager.add(courseId, file, `${courseId}/${slug(file.name)}-${file.size}.${ext}`, nextOrder);
+      const rawExt = file.name.split(".").pop()?.toLowerCase() || "mp4";
+      const ext = /^[a-z0-9]{2,5}$/.test(rawExt) ? rawExt : "mp4";
+      // مسار ثابت بحروف ASCII فقط → يسمح باستكمال الرفع من نفس النقطة
+      const objectName = `${courseId}/${asciiSlug(file.name)}-${hashName(file.name)}-${file.size}.${ext}`;
+      uploadManager.add(courseId, file, objectName, nextOrder);
       added++;
+
     }
     if (added) toast.success("بدأ الرفع — يكمل في الخلفية حتى لو أغلقت النافذة");
     if (inputRef.current) inputRef.current.value = "";
