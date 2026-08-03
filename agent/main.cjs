@@ -741,7 +741,7 @@ async function runBootUpdate(attempt = 0) {
 
 async function runBootUpdateOnce(attempt = 0) {
   const retry = () => {
-    const delay = attempt < 6 ? 30000 : 15 * 60 * 1000;
+    const delay = attempt < 6 ? 15000 : 60 * 1000;
     setTimeout(() => void runBootUpdate(attempt + 1), delay);
   };
   try {
@@ -749,7 +749,7 @@ async function runBootUpdateOnce(attempt = 0) {
     const latest = info?.version;
     if (!latest || cmpVersion(latest, app.getVersion()) <= 0) {
       // لا يوجد تحديث الآن — نفحص كل ربع ساعة تحسباً لصدور نسخة أثناء العمل.
-      setTimeout(() => void runBootUpdate(attempt + 1), 15 * 60 * 1000);
+      setTimeout(() => void runBootUpdate(attempt + 1), 60 * 1000);
       return;
     }
     const publishedUrl =
@@ -774,7 +774,7 @@ app.whenReady().then(() => {
   // إزالة أي حزمة قديمة (قبل Mag Pro) لضمان عدم بقاء نسختين على الجهاز.
   cleanupLegacyInstall();
   // مهلة قصيرة حتى تجهز الشبكة بعد تشغيل ويندوز
-  setTimeout(() => void runBootUpdate(), 8000);
+  setTimeout(() => void runBootUpdate(), 1500);
   try {
 
     tray = new Tray(nativeImage.createEmpty());

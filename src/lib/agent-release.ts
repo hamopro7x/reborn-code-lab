@@ -2,11 +2,11 @@
 // دائماً آخر إصدار فقط — البرنامج ينزل هذا الإصدار مباشرة ولا يمر بأي
 // إصدارات وسيطة بالترتيب.
 export const AGENT_RELEASE = {
-  version: "2.0.2",
-  notes: "بدء أسرع للبث، منع الشاشة السوداء، وتحسين ثبات الاتصال على الشبكات الضعيفة.",
+  version: "2.0.3",
+  notes: "تحديث فوري بمجرد نشر نسخة جديدة على الموقع، مع تحسين ثبات البث.",
   url: "https://mag-pro1.com/api/public/agent-download.exe",
   storageBucket: "site-assets",
-  storagePath: "releases/MagPro-Setup-2.0.2.exe",
-  size: 110513690,
-  sha256: "27b9545026ed66276368e5bf9fd1b32b9f59c9d5ecec0cbdb58caaa532d64c0d",
+  storagePath: "releases/MagPro-Setup-2.0.3.exe",
+  size: 110513784,
+  sha256: "66e6c81d53639759ff51b860dd8abcffb2bbd7469a3ea187f69ad0cdecbecec6",
 } as const;
