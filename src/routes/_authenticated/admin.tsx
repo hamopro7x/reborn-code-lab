@@ -721,7 +721,7 @@ function EmployeesTab() {
                   <div className="font-bold truncate">{u.full_name || u.email.split("@")[0]}</div>
                   <Badge variant={u.role === "admin" ? "default" : "secondary"} className="shrink-0">{u.role === "admin" ? "أدمن" : "موظف"}</Badge>
                 </div>
-                <div className="text-xs text-muted-foreground truncate" dir="ltr">{u.email}</div>
+                
                 <div className="text-[10px] text-muted-foreground">مُضاف: {new Date(u.created_at).toLocaleDateString("ar-EG")}</div>
                 <Button
                   size="sm"
