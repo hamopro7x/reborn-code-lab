@@ -236,10 +236,8 @@ ipcMain.on("viewer-count", (_event, count) => {
   activeViewerCount = Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
 });
 
-ipcMain.handle("open-external", (_e, url) => {
-  if (typeof url === "string" && /^https:\/\//.test(url)) void shell.openExternal(url);
-  return true;
 // نافذة الموقع المحمية: محصّنة ضد التصوير على مستوى ويندوز (الاسكرين يطلع أسود)
+
 let siteWin = null;
 function openProtectedSite(url) {
   if (siteWin && !siteWin.isDestroyed()) {
