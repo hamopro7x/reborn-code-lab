@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Download, Loader2, TrendingUp, ShoppingCart, DollarSign } from "lucide-react";
+import { Download, Loader2, TrendingUp, ShoppingCart, DollarSign, X } from "lucide-react";
 import { toast } from "sonner";
 
 type Period = "daily" | "monthly";
@@ -116,102 +116,146 @@ export function ReportsTab() {
     );
   }
 
+  const grand = useMemo(() => {
+    return rows.reduce(
+      (a, r) => ({ orders: a.orders + r.orders, paid: a.paid + r.paid, sales: a.sales + r.sales, net: a.net + r.net, discount: a.discount + r.discount }),
+      { orders: 0, paid: 0, sales: 0, net: 0, discount: 0 },
+    );
+  }, [rows]);
+
+  function applyPreset(days: number) {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - (days - 1));
+    setFrom(start.toISOString().slice(0, 10));
+    setTo(end.toISOString().slice(0, 10));
+  }
+
+  const num = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 2 });
+
   return (
-    <div className="space-y-5">
-      <div className="card-surface rounded-2xl p-4 flex flex-wrap items-end gap-3">
-        <div className="space-y-1">
-          <Label className="text-xs">الفترة</Label>
-          <div className="flex gap-1">
-            <Button size="sm" variant={period === "daily" ? "default" : "outline"} onClick={() => setPeriod("daily")}>
-              يومي
-            </Button>
-            <Button size="sm" variant={period === "monthly" ? "default" : "outline"} onClick={() => setPeriod("monthly")}>
-              شهري
-            </Button>
+    <div className="space-y-4" dir="rtl">
+      <div className="card-surface rounded-2xl p-4 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="inline-flex rounded-xl border border-border/60 p-1 bg-muted/20">
+            {(["daily", "monthly"] as Period[]).map((p) => (
+              <button
+                key={p}
+                onClick={() => setPeriod(p)}
+                className={`px-4 h-8 rounded-lg text-xs font-semibold transition-colors ${
+                  period === p ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {p === "daily" ? "يومي" : "شهري"}
+              </button>
+            ))}
+          </div>
+          <Button size="sm" variant="outline" onClick={exportCsv}>
+            <Download className="size-4 ms-1" /> تصدير CSV
+          </Button>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="space-y-1.5">
+            <Label className="text-[11px] text-muted-foreground">من تاريخ</Label>
+            <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-10 w-full" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-[11px] text-muted-foreground">إلى تاريخ</Label>
+            <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-10 w-full" />
+          </div>
+          <div className="space-y-1.5 lg:col-span-2">
+            <Label className="text-[11px] text-muted-foreground">فترات سريعة</Label>
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" onClick={() => applyPreset(1)}>اليوم</Button>
+              <Button size="sm" variant="outline" onClick={() => applyPreset(7)}>7 أيام</Button>
+              <Button size="sm" variant="outline" onClick={() => applyPreset(30)}>30 يوم</Button>
+              <Button size="sm" variant="ghost" onClick={() => { setFrom(""); setTo(""); }}>
+                <X className="size-3.5 ms-1" />مسح
+              </Button>
+            </div>
           </div>
         </div>
-        <div className="space-y-1">
-          <Label className="text-xs">من تاريخ</Label>
-          <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="w-40" />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">إلى تاريخ</Label>
-          <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="w-40" />
-        </div>
-        <Button size="sm" variant="outline" onClick={() => { setFrom(""); setTo(""); }}>
-          مسح
-        </Button>
-        <Button size="sm" className="ms-auto" onClick={exportCsv}>
-          <Download className="size-4 me-1" /> تصدير CSV
-        </Button>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <div className="card-surface rounded-2xl p-4">
+        <div className="card-surface rounded-2xl p-4 border-s-2 border-s-primary/50">
           <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
             <ShoppingCart className="size-4" /> إجمالي الطلبات
           </div>
-          <div className="text-2xl font-bold">{totals.count}</div>
+          <div className="text-3xl font-black tabular-nums">{totals.count}</div>
         </div>
-        <div className="card-surface rounded-2xl p-4">
+        <div className="card-surface rounded-2xl p-4 border-s-2 border-s-primary/50">
           <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
             <TrendingUp className="size-4" /> الطلبات المؤكدة
           </div>
-          <div className="text-2xl font-bold">{totals.paid}</div>
+          <div className="text-3xl font-black tabular-nums">{totals.paid}</div>
         </div>
-        <div className="card-surface rounded-2xl p-4">
+        <div className="card-surface rounded-2xl p-4 border-s-2 border-s-primary/50">
           <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
             <DollarSign className="size-4" /> المبيعات حسب العملة
           </div>
           <div className="flex flex-wrap gap-2 mt-1">
             {Object.entries(totals.byCurrency).length === 0 && (
-              <span className="text-sm text-muted-foreground">—</span>
+              <span className="text-lg font-black text-muted-foreground">—</span>
             )}
             {Object.entries(totals.byCurrency).map(([c, v]) => (
-              <Badge key={c} variant="secondary" className="text-sm">
-                {v.sales.toLocaleString("en-US", { maximumFractionDigits: 2 })} {c}
+              <Badge key={c} variant="secondary" className="text-sm font-bold tabular-nums">
+                {num(v.sales)} {c}
               </Badge>
             ))}
           </div>
         </div>
       </div>
 
-      <div className="card-surface rounded-2xl overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="text-xs text-muted-foreground border-b border-border/40">
-            <tr>
-              <th className="text-start p-3">الفترة</th>
-              <th className="text-start p-3">العملة</th>
-              <th className="text-start p-3">الطلبات</th>
-              <th className="text-start p-3">المؤكدة</th>
-              <th className="text-start p-3">إجمالي المبيعات</th>
-              <th className="text-start p-3">صافي الأرباح</th>
-              <th className="text-start p-3">الخصومات</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={`${r.key}-${r.currency}`} className="border-b border-border/20 last:border-0">
-                <td className="p-3 font-medium">{r.key}</td>
-                <td className="p-3">{r.currency}</td>
-                <td className="p-3">{r.orders}</td>
-                <td className="p-3">{r.paid}</td>
-                <td className="p-3">{r.sales.toLocaleString("en-US", { maximumFractionDigits: 2 })}</td>
-                <td className="p-3 text-primary font-semibold">
-                  {r.net.toLocaleString("en-US", { maximumFractionDigits: 2 })}
-                </td>
-                <td className="p-3">{r.discount.toLocaleString("en-US", { maximumFractionDigits: 2 })}</td>
-              </tr>
-            ))}
-            {rows.length === 0 && (
+      <div className="card-surface rounded-2xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="text-[11px] uppercase tracking-wide text-muted-foreground bg-muted/20 border-b border-border/40">
               <tr>
-                <td colSpan={7} className="p-8 text-center text-muted-foreground">
-                  لا توجد بيانات في هذه الفترة
-                </td>
+                <th className="text-start p-3 font-semibold">الفترة</th>
+                <th className="text-start p-3 font-semibold">العملة</th>
+                <th className="text-end p-3 font-semibold">الطلبات</th>
+                <th className="text-end p-3 font-semibold">المؤكدة</th>
+                <th className="text-end p-3 font-semibold">إجمالي المبيعات</th>
+                <th className="text-end p-3 font-semibold">صافي الأرباح</th>
+                <th className="text-end p-3 font-semibold">الخصومات</th>
               </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={`${r.key}-${r.currency}`} className="border-b border-border/20 last:border-0 hover:bg-muted/20 transition-colors">
+                  <td className="p-3 font-semibold whitespace-nowrap">{r.key}</td>
+                  <td className="p-3 text-muted-foreground">{r.currency}</td>
+                  <td className="p-3 text-end tabular-nums">{r.orders}</td>
+                  <td className="p-3 text-end tabular-nums">{r.paid}</td>
+                  <td className="p-3 text-end tabular-nums">{num(r.sales)}</td>
+                  <td className="p-3 text-end tabular-nums text-primary font-semibold">{num(r.net)}</td>
+                  <td className="p-3 text-end tabular-nums text-muted-foreground">{num(r.discount)}</td>
+                </tr>
+              ))}
+              {rows.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="p-10 text-center text-muted-foreground">
+                    لا توجد بيانات في هذه الفترة
+                  </td>
+                </tr>
+              )}
+            </tbody>
+            {rows.length > 0 && (
+              <tfoot className="bg-muted/20 border-t border-border/40 font-bold">
+                <tr>
+                  <td className="p-3" colSpan={2}>الإجمالي</td>
+                  <td className="p-3 text-end tabular-nums">{grand.orders}</td>
+                  <td className="p-3 text-end tabular-nums">{grand.paid}</td>
+                  <td className="p-3 text-end tabular-nums">{num(grand.sales)}</td>
+                  <td className="p-3 text-end tabular-nums text-primary">{num(grand.net)}</td>
+                  <td className="p-3 text-end tabular-nums">{num(grand.discount)}</td>
+                </tr>
+              </tfoot>
             )}
-          </tbody>
-        </table>
+          </table>
+        </div>
       </div>
     </div>
   );

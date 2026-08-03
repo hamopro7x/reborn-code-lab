@@ -30,7 +30,8 @@ import { getDeviceFingerprint } from "@/lib/device";
 import { ShieldAlert } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { ReportsTab } from "@/components/admin/ReportsTab";
-import { FileBarChart, MonitorPlay } from "lucide-react";
+import { FileBarChart, MonitorPlay, Image as ImageIcon } from "lucide-react";
+import { LessonUploader } from "@/components/admin/LessonUploader";
 import { DeviceMonitorGrid } from "@/components/admin/DeviceMonitorGrid";
 import { EmployeeDevices } from "@/components/admin/DeviceMonitorGrid";
 
@@ -1469,6 +1470,8 @@ function CoursesTab({ isAdmin }: { isAdmin: boolean }) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState<any>({ title: "", description: "", cover_url: "", sort_order: 0, is_published: true });
+  const coverInputRef = useRef<HTMLInputElement | null>(null);
+  const [coverUploading, setCoverUploading] = useState(false);
 
   function startNew() { setEditing(null); setForm({ title: "", description: "", cover_url: "", sort_order: 0, is_published: true }); setOpen(true); }
   function startEdit(c: any) { setEditing(c); setForm({ title: c.title, description: c.description ?? "", cover_url: c.cover_url ?? "", sort_order: c.sort_order, is_published: c.is_published }); setOpen(true); }
@@ -1613,26 +1616,55 @@ function CoursesTab({ isAdmin }: { isAdmin: boolean }) {
           <div className="space-y-3">
             <div><Label>العنوان</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
             <div><Label>الوصف</Label><Textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
-            <div>
+            <div className="space-y-2">
               <Label>صورة الغلاف</Label>
-              {form.cover_url && <img src={form.cover_url} alt="" className="w-32 h-20 object-cover rounded-lg mb-2" />}
-              <input
-                type="file"
-                accept="image/*"
-                onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  const ext = file.name.split(".").pop();
-                  const path = `courses/${crypto.randomUUID()}.${ext}`;
-                  const { error } = await supabase.storage.from("product-images").upload(path, file);
-                  if (error) { toast.error(error.message); return; }
-                  const { data: signed, error: sErr } = await supabase.storage.from("product-images").createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
-                  if (sErr || !signed?.signedUrl) { toast.error(sErr?.message || "فشل توليد الرابط"); return; }
-                  setForm({ ...form, cover_url: signed.signedUrl });
-                  toast.success("تم رفع الصورة");
-                }}
-              />
-              <Input className="mt-2" value={form.cover_url} onChange={(e) => setForm({ ...form, cover_url: e.target.value })} placeholder="أو ألصق رابط الصورة https://..." />
+              <div className="flex items-center gap-3">
+                <div className="w-40 h-24 shrink-0 rounded-xl overflow-hidden border border-border/60 bg-muted/30 flex items-center justify-center">
+                  {form.cover_url ? (
+                    <img src={form.cover_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <ImageIcon className="size-6 text-muted-foreground" />
+                  )}
+                </div>
+                <div className="flex-1 space-y-2">
+                  <input
+                    ref={coverInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setCoverUploading(true);
+                      try {
+                        const ext = file.name.split(".").pop();
+                        const path = `courses/${crypto.randomUUID()}.${ext}`;
+                        const { error } = await supabase.storage.from("product-images").upload(path, file);
+                        if (error) throw error;
+                        const { data: signed, error: sErr } = await supabase.storage.from("product-images").createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
+                        if (sErr || !signed?.signedUrl) throw new Error(sErr?.message || "فشل توليد الرابط");
+                        setForm((f: any) => ({ ...f, cover_url: signed.signedUrl }));
+                        toast.success("تم رفع الصورة");
+                      } catch (err: any) {
+                        toast.error(err?.message ?? "فشل رفع الصورة");
+                      } finally {
+                        setCoverUploading(false);
+                        if (coverInputRef.current) coverInputRef.current.value = "";
+                      }
+                    }}
+                  />
+                  <Button type="button" variant="outline" className="w-full" disabled={coverUploading} onClick={() => coverInputRef.current?.click()}>
+                    {coverUploading ? <Loader2 className="size-4 animate-spin ml-1" /> : <Upload className="size-4 ml-1" />}
+                    تحميل صورة
+                  </Button>
+                  {form.cover_url && (
+                    <Button type="button" variant="ghost" size="sm" className="w-full text-destructive" onClick={() => setForm({ ...form, cover_url: "" })}>
+                      <X className="size-3.5 ml-1" />إزالة الصورة
+                    </Button>
+                  )}
+                  <p className="text-[10px] text-muted-foreground">المقاس المفضّل 1280×800 (16:10)</p>
+                </div>
+              </div>
             </div>
             <div><Label>الترتيب</Label><Input type="number" value={form.sort_order} onChange={(e) => setForm({ ...form, sort_order: Number(e.target.value) })} /></div>
             <label className="flex items-center gap-2"><Switch checked={form.is_published} onCheckedChange={(v) => setForm({ ...form, is_published: v })} />منشور</label>
@@ -1703,122 +1735,8 @@ function LessonsManagerInner({ courseId, courseTitle }: { courseId: string; cour
       }
     })();
   }, [open, lessons.data, courseId, qc]);
-  const [title, setTitle] = useState("");
-  const [file, setFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [speed, setSpeed] = useState<string>("");
-  const [eta, setEta] = useState<string>("");
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const uploadRequestRef = useRef<XMLHttpRequest | null>(null);
 
-  async function upload() {
-    if (!title.trim()) { toast.error("أدخل عنوان المحاضرة"); return; }
-    if (!file) { toast.error("اختر ملف الفيديو"); return; }
-    if (!file.type.startsWith("video/")) { toast.error("الملف ليس فيديو"); return; }
-    setUploading(true); setProgress(0); setSpeed(""); setEta("");
-    try {
-      const durationSec = await probeVideoDurationFromFile(file);
-      const ext = file.name.split(".").pop()?.toLowerCase() || "mp4";
-      const path = `${courseId}/${crypto.randomUUID()}.${ext}`;
 
-      const { data: signedUpload, error: signError } = await supabase
-        .storage
-        .from("course-videos")
-        .createSignedUploadUrl(path, { upsert: false });
-      if (signError || !signedUpload?.signedUrl) {
-        throw new Error(signError?.message || "فشل تجهيز رابط رفع الفيديو");
-      }
-
-      const startedAt = Date.now();
-      await new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        uploadRequestRef.current = xhr;
-        xhr.open("PUT", signedUpload.signedUrl);
-        const publishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
-        if (publishableKey) xhr.setRequestHeader("apikey", publishableKey);
-        xhr.setRequestHeader("x-upsert", "false");
-
-        xhr.upload.onprogress = (event) => {
-          if (!event.lengthComputable) return;
-          const sent = event.loaded;
-          const total = event.total || file.size;
-          const pct = Math.round((sent / total) * 100);
-          setProgress(pct);
-          const secs = Math.max(1, (Date.now() - startedAt) / 1000);
-          const mbps = (sent / 1024 / 1024) / secs;
-          setSpeed(`${mbps.toFixed(2)} MB/s`);
-          const remaining = Math.max(0, total - sent);
-          const bytesPerSec = sent / secs;
-          const etaSec = bytesPerSec > 0 ? Math.ceil(remaining / bytesPerSec) : 0;
-          if (etaSec > 0) {
-            const m = Math.floor(etaSec / 60);
-            const s = etaSec % 60;
-            setEta(m > 0 ? `${m}د ${s}ث` : `${s}ث`);
-          } else setEta("");
-        };
-
-        xhr.onerror = () => reject(new Error("فشل الاتصال أثناء رفع الفيديو"));
-        xhr.onabort = () => reject(new Error("تم إلغاء الرفع"));
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            setProgress(100);
-            resolve();
-            return;
-          }
-          let message = xhr.responseText || `فشل رفع الفيديو (${xhr.status})`;
-          try {
-            const parsed = JSON.parse(xhr.responseText);
-            message = parsed.message || parsed.error || message;
-          } catch { /* response is not JSON */ }
-          reject(new Error(message));
-        };
-
-        const formData = new FormData();
-        formData.append("cacheControl", "3600");
-        formData.append("", file, file.name);
-        xhr.send(formData);
-      });
-
-      const { data: uploadedObject, error: verifyError } = await supabase
-        .storage
-        .from("course-videos")
-        .list(courseId, { search: path.split("/").pop() });
-      if (verifyError) throw verifyError;
-      if (!uploadedObject?.some((object) => object.name === path.split("/").pop())) {
-        const { error: fallbackUploadError } = await supabase.storage.from("course-videos").upload(path, file, {
-          cacheControl: "3600",
-          contentType: file.type || "video/mp4",
-          upsert: false,
-        });
-        if (fallbackUploadError) {
-          throw new Error("تم الرفع لكن لم يتم العثور على ملف الفيديو. حاول رفعه مرة أخرى.");
-        }
-      }
-
-      const nextOrder = (lessons.data?.length ?? 0);
-      const { error } = await supabase.from("course_lessons").insert({
-        course_id: courseId, title: title.trim(), video_path: path, sort_order: nextOrder, duration_sec: durationSec,
-      });
-      if (error) throw error;
-      toast.success("تمت إضافة المحاضرة");
-      setTitle(""); setFile(null);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      qc.invalidateQueries({ queryKey: ["admin-lessons", courseId] });
-      qc.invalidateQueries({ queryKey: ["admin-courses"] });
-    } catch (e: any) {
-      toast.error(e?.message ?? "فشل الرفع");
-    } finally { setUploading(false); uploadRequestRef.current = null; }
-  }
-
-  function cancelUpload() {
-    uploadRequestRef.current?.abort();
-    uploadRequestRef.current = null;
-    setUploading(false);
-    setProgress(0);
-    setSpeed("");
-    toast.info("تم إلغاء الرفع");
-  }
   async function removeLesson(l: any) {
     if (!confirm("حذف المحاضرة؟")) return;
     await supabase.storage.from("course-videos").remove([l.video_path]);
@@ -1840,30 +1758,15 @@ function LessonsManagerInner({ courseId, courseTitle }: { courseId: string; cour
         <DialogHeader><DialogTitle>محاضرات: {courseTitle}</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <div className="card-surface rounded-xl p-3 space-y-2">
-            <div className="text-sm font-semibold">إضافة محاضرة جديدة</div>
-            <Input placeholder="عنوان المحاضرة" value={title} onChange={(e) => setTitle(e.target.value)} />
-            <Input ref={fileInputRef} type="file" accept="video/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-            {file && !uploading && (
-              <div className="text-[11px] text-muted-foreground">
-                {file.name} — {(file.size / 1024 / 1024).toFixed(1)} MB
-              </div>
-            )}
-            {!uploading ? (
-              <Button onClick={upload} className="gradient-primary text-white w-full">
-                <Upload className="size-4 ml-1" />رفع الفيديو
-              </Button>
-            ) : (
-              <div className="space-y-2">
-                <Progress value={progress} className="h-2" />
-                <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                  <span>{progress}% — {speed}{eta ? ` — متبقّي ${eta}` : ""}</span>
-                  <Button size="sm" variant="outline" onClick={cancelUpload}>
-                    <X className="size-3 ml-1" />إلغاء
-                  </Button>
-                </div>
-                <div className="text-[10px] text-muted-foreground">رفع متوازي عالي السرعة — مقاوم لانقطاع الشبكة</div>
-              </div>
-            )}
+            <div className="text-sm font-semibold">إضافة محاضرات جديدة</div>
+            <LessonUploader
+              courseId={courseId}
+              startOrder={lessons.data?.length ?? 0}
+              onUploaded={() => {
+                qc.invalidateQueries({ queryKey: ["admin-lessons", courseId] });
+                qc.invalidateQueries({ queryKey: ["admin-courses"] });
+              }}
+            />
           </div>
 
           <div className="space-y-2 max-h-72 overflow-y-auto">
