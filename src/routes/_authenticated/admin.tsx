@@ -547,14 +547,140 @@ function EmployeesTab() {
     } catch (e: any) { toast.error(e?.message ?? "خطأ"); }
   }
 
+  const selected = (q.data ?? []).find((u: any) => u.user_id === expanded) ?? null;
+
+  if (selected) {
+    const u: any = selected;
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" className="rounded-full" onClick={() => setExpanded(null)}>
+            رجوع للموظفين
+          </Button>
+        </div>
+
+        <div className="card-surface rounded-2xl p-6 flex flex-col items-center text-center gap-3">
+          <button
+            type="button"
+            onClick={() => fileRefs.current[u.user_id]?.click()}
+            disabled={uploadingId === u.user_id}
+            className="relative size-28 rounded-full overflow-hidden bg-muted flex items-center justify-center shrink-0 group border border-border hover:border-primary transition"
+            title="تغيير الصورة"
+          >
+            {u.avatar_signed_url ? (
+              <img src={u.avatar_signed_url} alt={u.full_name || u.email} className="size-full object-cover" />
+            ) : (
+              <span className="text-4xl font-bold text-muted-foreground">
+                {(u.full_name || u.email || "?").trim().charAt(0).toUpperCase()}
+              </span>
+            )}
+            <span className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+              {uploadingId === u.user_id
+                ? <Loader2 className="size-5 text-white animate-spin" />
+                : <Camera className="size-5 text-white" />}
+            </span>
+          </button>
+          <input
+            ref={(el) => { fileRefs.current[u.user_id] = el; }}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0] ?? null;
+              onPickAvatar(u.user_id, f);
+              e.target.value = "";
+            }}
+          />
+          <div>
+            <div className="text-lg font-bold">{u.full_name || u.email.split("@")[0]}</div>
+            <div className="text-xs text-muted-foreground" dir="ltr">{u.email}</div>
+          </div>
+          <Badge variant={u.role === "admin" ? "default" : "secondary"}>{u.role === "admin" ? "أدمن" : "موظف"}</Badge>
+        </div>
+
+        <div className="card-surface rounded-2xl p-4 space-y-5">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-sm font-bold">البيانات الشخصية</h3>
+              <div className="flex items-center gap-1">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setEditing({ user_id: u.user_id, full_name: u.full_name ?? "", email: u.email ?? "", password: "" })}
+                >
+                  <Edit className="size-4 ml-1" /> تعديل
+                </Button>
+                {u.role !== "admin" && (
+                  <Button size="icon" variant="ghost" onClick={() => { remove(u.user_id); setExpanded(null); }}>
+                    <Trash2 className="size-4 text-destructive" />
+                  </Button>
+                )}
+              </div>
+            </div>
+            <div className="rounded-xl border border-border/60 p-3 space-y-1.5 text-xs text-right">
+              <div className="flex justify-start gap-2">
+                <span className="text-muted-foreground shrink-0">الاسم كامل :</span>
+                <span className="font-bold truncate">{u.full_name || "—"}</span>
+              </div>
+              <div className="flex justify-start gap-2">
+                <span className="text-muted-foreground shrink-0">البريد الإلكتروني :</span>
+                <span className="font-bold truncate" dir="ltr">{u.email || "—"}</span>
+              </div>
+              <div className="flex justify-start gap-2">
+                <span className="text-muted-foreground shrink-0">كلمة السر :</span>
+                <span className="font-bold tracking-widest">••••••••</span>
+              </div>
+              <div className="flex justify-start gap-2">
+                <span className="text-muted-foreground shrink-0">الصلاحية :</span>
+                <span className="font-bold">{u.role === "admin" ? "أدمن" : "موظف"}</span>
+              </div>
+              <div className="flex justify-start gap-2">
+                <span className="text-muted-foreground shrink-0">تاريخ الإضافة :</span>
+                <span className="font-bold">{new Date(u.created_at).toLocaleString("ar-EG")}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t border-border/60 pt-4">
+            <h3 className="text-sm font-bold mb-2">أجهزة الموظف</h3>
+            <EmployeeDevices userId={u.user_id} employeeName={u.full_name} />
+          </div>
+
+          <div className="border-t border-border/60 pt-4">
+            <h3 className="text-sm font-bold mb-2 flex items-center gap-2"><MonitorSmartphone className="size-4 text-primary" /> تفعيل جهاز الموظف</h3>
+            <DevicesTab />
+          </div>
+        </div>
+
+        <Dialog open={!!editing} onOpenChange={(o) => { if (!o) setEditing(null); }}>
+          <DialogContent>
+            <DialogHeader><DialogTitle>تعديل بيانات الموظف</DialogTitle></DialogHeader>
+            {editing && (
+              <div className="space-y-3">
+                <div><Label>الاسم الكامل</Label><Input value={editing.full_name} onChange={(e) => setEditing({ ...editing, full_name: e.target.value })} /></div>
+                <div><Label>البريد الإلكتروني</Label><Input type="email" value={editing.email} onChange={(e) => setEditing({ ...editing, email: e.target.value })} /></div>
+                <div><Label>كلمة سر جديدة (اختياري)</Label><Input type="password" value={editing.password} onChange={(e) => setEditing({ ...editing, password: e.target.value })} placeholder="اتركها فاضية لو مش عايز تغييرها" /></div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button onClick={saveEdit} disabled={savingEdit} className="gradient-primary text-white">
+                {savingEdit ? <Loader2 className="size-4 animate-spin" /> : "حفظ"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 sm:flex sm:justify-between">
+        <div className="min-w-0">
           <h2 className="text-xl font-bold">الموظفون</h2>
           <p className="text-xs text-muted-foreground">الموظف يقدر يدير الطلبات والمنتجات والمراجعات — بدون طرق الدفع والعملات والإعدادات</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <div className="flex flex-col items-end gap-1">
             <a
               href="/api/public/agent-download.exe"
@@ -577,112 +703,41 @@ function EmployeesTab() {
           <Button onClick={() => setOpen(true)} className="gradient-primary text-white gap-1"><Plus className="size-4" />موظف جديد</Button>
         </div>
       </div>
-      <div className="grid gap-3">
+      <div className="grid grid-cols-2 gap-3">
         {(q.data ?? []).map((u: any) => (
-          <div key={u.user_id + u.role} className="card-surface rounded-2xl p-4 space-y-4">
-            <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0 flex-1">
-              <button
-                type="button"
-                onClick={() => fileRefs.current[u.user_id]?.click()}
-                disabled={uploadingId === u.user_id}
-                className="relative size-14 rounded-full overflow-hidden bg-muted flex items-center justify-center shrink-0 group border border-border hover:border-primary transition"
-                title="تغيير الصورة"
-              >
+          <div key={u.user_id + u.role} className="card-surface rounded-2xl p-4">
+            <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3">
+              <div className="relative size-14 rounded-full overflow-hidden bg-muted flex items-center justify-center shrink-0 border border-border">
                 {u.avatar_signed_url ? (
-                  <img src={u.avatar_signed_url} alt="" className="size-full object-cover" />
+                  <img src={u.avatar_signed_url} alt={u.full_name || u.email} className="size-full object-cover" />
                 ) : (
                   <span className="text-lg font-bold text-muted-foreground">
                     {(u.full_name || u.email || "?").trim().charAt(0).toUpperCase()}
                   </span>
                 )}
-                <span className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
-                  {uploadingId === u.user_id
-                    ? <Loader2 className="size-4 text-white animate-spin" />
-                    : <Camera className="size-4 text-white" />}
-                </span>
-              </button>
-              <input
-                ref={(el) => { fileRefs.current[u.user_id] = el; }}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const f = e.target.files?.[0] ?? null;
-                  onPickAvatar(u.user_id, f);
-                  e.target.value = "";
-                }}
-              />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 min-w-0">
                   <div className="font-bold truncate">{u.full_name || u.email.split("@")[0]}</div>
-                  <Badge variant={u.role === "admin" ? "default" : "secondary"}>{u.role === "admin" ? "أدمن" : "موظف"}</Badge>
+                  <Badge variant={u.role === "admin" ? "default" : "secondary"} className="shrink-0">{u.role === "admin" ? "أدمن" : "موظف"}</Badge>
                 </div>
-                <div className="text-xs text-muted-foreground truncate">{u.email}</div>
+                <div className="text-xs text-muted-foreground truncate" dir="ltr">{u.email}</div>
                 <div className="text-[10px] text-muted-foreground">مُضاف: {new Date(u.created_at).toLocaleDateString("ar-EG")}</div>
                 <Button
                   size="sm"
                   variant="outline"
                   className="mt-2 rounded-full"
-                  onClick={() => setExpanded(expanded === u.user_id ? null : u.user_id)}
+                  onClick={() => setExpanded(u.user_id)}
                 >
-                  {expanded === u.user_id ? "إخفاء البيانات" : "عرض كل البيانات"}
+                  عرض كل البيانات
                 </Button>
               </div>
             </div>
-            <div className="flex items-center gap-1 shrink-0">
-              {u.role !== "admin" && (
-                <Button size="icon" variant="ghost" onClick={() => remove(u.user_id)}>
-                  <Trash2 className="size-4 text-destructive" />
-                </Button>
-              )}
-            </div>
-            </div>
-            {expanded === u.user_id && (
-              <div className="space-y-5 pt-3 border-t border-border/60">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <h3 className="text-sm font-bold">البيانات الشخصية</h3>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setEditing({ user_id: u.user_id, full_name: u.full_name ?? "", email: u.email ?? "", password: "" })}
-                    >
-                      <Edit className="size-4 ml-1" /> تعديل
-                    </Button>
-                  </div>
-                  <div className="rounded-xl border border-border/60 p-3 space-y-1.5 text-xs text-right">
-                    <div className="flex justify-start gap-2">
-                      <span className="text-muted-foreground shrink-0">الاسم كامل :</span>
-                      <span className="font-bold truncate">{u.full_name || "—"}</span>
-                    </div>
-                    <div className="flex justify-start gap-2">
-                      <span className="text-muted-foreground shrink-0">البريد الإلكتروني :</span>
-                      <span className="font-bold truncate" dir="ltr">{u.email || "—"}</span>
-                    </div>
-                    <div className="flex justify-start gap-2">
-                      <span className="text-muted-foreground shrink-0">كلمة السر :</span>
-                      <span className="font-bold tracking-widest">••••••••</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="border-t border-border/60 pt-4">
-                  <h3 className="text-sm font-bold mb-2">أجهزة الموظف</h3>
-                  <EmployeeDevices userId={u.user_id} employeeName={u.full_name} />
-                </div>
-
-                <div className="border-t border-border/60 pt-4">
-                  <h3 className="text-sm font-bold mb-2 flex items-center gap-2"><MonitorSmartphone className="size-4 text-primary" /> تفعيل جهاز الموظف</h3>
-                  <DevicesTab />
-                </div>
-              </div>
-            )}
-
           </div>
         ))}
         {(q.data ?? []).length === 0 && <div className="card-surface rounded-2xl p-12 text-center text-muted-foreground col-span-full">لا يوجد موظفون</div>}
       </div>
+
 
       <Dialog open={!!editing} onOpenChange={(o) => { if (!o) setEditing(null); }}>
         <DialogContent>
