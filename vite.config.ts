@@ -15,5 +15,8 @@ export default defineConfig({
   },
   vite: {
     plugins: [mcpPlugin()],
+    // معرّف نسخة يتغيّر مع كل بناء/نشر، يستخدمه الموقع لعمل تحديث تلقائي
+    define: { __APP_BUILD_ID__: JSON.stringify(Date.now().toString(36)) },
   },
+
 });
