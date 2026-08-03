@@ -127,7 +127,7 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
 
       const v = videoRef.current;
       if (v) {
-        v.srcObject = e.streams[0]!;
+        v.srcObject = e.streams[0] ?? new MediaStream([e.track]);
         // لا نعلن "بث مباشر" إلا عند وصول أول إطار حقيقي
         const markLive = () => {
           if (!closed) {
@@ -201,7 +201,7 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
             return;
           }
           void sig.send({ type: "join", viewer: viewerId });
-        }, 900);
+        }, 500);
       })
       .catch(() => {
         if (closed) return;

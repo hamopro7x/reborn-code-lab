@@ -43,7 +43,7 @@ const dotEl = document.getElementById("dot");
 const deviceEl = document.getElementById("device");
 
 const STORE = "mag-agent-device-v1";
-const AGENT_VERSION = "2.0.3";
+const AGENT_VERSION = "2.0.4";
 
 const verBadgeEl = document.getElementById("ver-badge");
 if (verBadgeEl) verBadgeEl.textContent = "v" + AGENT_VERSION;
@@ -246,56 +246,6 @@ async function captureScreen() {
 }
 
 
-// نُفضّل H264 (يعطي وضوح أفضل للنصوص عند نفس البت-ريت) ثم VP9 ثم VP8.
-function preferCodec(pc) {
-  try {
-    const caps = RTCRtpSender.getCapabilities?.("video");
-    if (!caps) return;
-    const order = ["video/H264", "video/VP9", "video/AV1", "video/VP8"];
-    const rank = (mimeType) => {
-      const index = order.indexOf(mimeType);
-      return index === -1 ? order.length : index;
-    };
-    const sorted = [...caps.codecs].sort((a, b) => rank(a.mimeType) - rank(b.mimeType));
-    for (const tr of pc.getTransceivers()) {
-      if (tr.sender?.track?.kind === "video" || tr.receiver?.track?.kind === "video") {
-        tr.setCodecPreferences?.(sorted);
-      }
-    }
-  } catch {
-    /* غير مدعوم */
-  }
-}
-
-
-// بت-ريت واقعي عالي: يبدأ سريع بدون إشباع الشبكة (الإشباع = تأخير متراكم)
-function boostSdp(sdp) {
-  const lines = sdp.split(/\r?\n/);
-  const out = [];
-  let inVideo = false;
-  for (const line of lines) {
-    if (line.startsWith("m=")) inVideo = line.startsWith("m=video");
-    out.push(line);
-    if (inVideo && line.startsWith("m=video")) continue;
-    if (inVideo && /^a=fmtp:\d+ /.test(line)) {
-      out[out.length - 1] =
-        line +
-        // نبدأ بخفة حتى يصل أول keyframe فوراً، ثم يرفع المتحكم الجودة تدريجياً.
-        ";x-google-start-bitrate=1200;x-google-min-bitrate=350;x-google-max-bitrate=6000";
-    }
-  }
-  // b=AS بعد سطر c= الخاص بالفيديو
-  const res = [];
-  let seenVideo = false;
-  for (const line of out) {
-    if (line.startsWith("m=")) seenVideo = line.startsWith("m=video");
-    res.push(line);
-    if (seenVideo && line.startsWith("c=")) res.push("b=AS:6000", "b=TIAS:6000000");
-
-  }
-  return res.join("\r\n");
-}
-
 let stream = null;
 let channel = null;
 let signalTimer = null;
@@ -468,13 +418,20 @@ const startingViewers = new Set();
 async function startPeer(viewerId) {
   if (startingViewers.has(viewerId)) return; // منع بدء اتصالين لنفس المشاهد
   const current = peers.get(viewerId);
-  if (current?.pc && ["new", "connecting", "connected"].includes(current.pc.connectionState)) return;
+  if (current?.pc && ["new", "connecting", "connected"].includes(current.pc.connectionState)) {
+    // طلب JOIN المتكرر يعني غالباً أن أول OFFER لم يصل للمشاهد. نعيد نفس العرض
+    // فوراً بدل ترك الشاشة معلقة حتى انتهاء مهلة إعادة الاتصال.
+    if (current.offer && current.pc.connectionState !== "connected") {
+      await send({ type: "offer", to: viewerId, sdp: current.offer });
+    }
+    return;
+  }
   startingViewers.add(viewerId);
   try {
     closePeer(viewerId); // أي اتصال قديم لنفس المشاهد يُستبدل
     const s = await getStream();
     const pc = new RTCPeerConnection(RTC_CONFIG);
-    const entry = { pc, statsTimer: null, pendingIce: [], recoverTimer: null };
+    const entry = { pc, statsTimer: null, pendingIce: [], recoverTimer: null, offer: null };
     peers.set(viewerId, entry);
 
     // كل مشاهد يحصل على نسخة مستقلة من مسار الشاشة (clone) => مشفّر منفصل
@@ -486,7 +443,6 @@ async function startPeer(viewerId) {
     track.contentHint = "detail";
     entry.track = track;
     pc.addTrack(track, new MediaStream([track]));
-    preferCodec(pc);
 
     let videoSender = null;
     for (const sender of pc.getSenders()) {
@@ -542,9 +498,9 @@ async function startPeer(viewerId) {
     };
 
     const offer = await pc.createOffer();
-    offer.sdp = boostSdp(offer.sdp);
     await pc.setLocalDescription(offer);
-    await send({ type: "offer", to: viewerId, sdp: { type: offer.type, sdp: offer.sdp } });
+    entry.offer = { type: offer.type, sdp: offer.sdp };
+    await send({ type: "offer", to: viewerId, sdp: entry.offer });
     if (videoSender) startAdaptive(entry, videoSender);
   } finally {
     startingViewers.delete(viewerId);
@@ -649,6 +605,10 @@ async function run(device) {
     // الإدارة حذفت الجهاز — نطلب مفتاح ربط جديد
     return showPairing(device, "تم حذف تسجيل هذا الجهاز — اطلب كود تسجيل جديد من الإدارة");
   }
+
+  // نجهّز التقاط الشاشة أثناء فتح لوحة الإدارة، فلا نضيّع عدة ثوانٍ بعد JOIN.
+  // الفشل هنا لا يوقف البرنامج؛ startPeer سيعيد المحاولة عند أول مشاهدة.
+  void getStream().catch(() => {});
 
   hbTimer = setInterval(async () => {
     const ok = await heartbeat(device);
