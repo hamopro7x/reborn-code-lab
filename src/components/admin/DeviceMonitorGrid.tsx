@@ -259,17 +259,28 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
 function LiveScreen({
   device,
   online,
+  startupDelay,
   expanded,
   onToggleExpand,
   onRemove,
 }: {
   device: Device;
   online: boolean;
+  startupDelay: number;
   expanded: boolean;
   onToggleExpand: () => void;
   onRemove?: () => void;
 }) {
-  const { videoRef, live, failed } = useDeviceStream(device.device_id, online);
+  const [streamEnabled, setStreamEnabled] = useState(startupDelay === 0 && online);
+  useEffect(() => {
+    if (!online) {
+      setStreamEnabled(false);
+      return;
+    }
+    const timer = setTimeout(() => setStreamEnabled(true), startupDelay);
+    return () => clearTimeout(timer);
+  }, [online, startupDelay]);
+  const { videoRef, live, failed } = useDeviceStream(device.device_id, streamEnabled);
 
   return (
     <div className="w-full rounded-xl border border-border/60 p-3 space-y-2 flex flex-col">
@@ -583,11 +594,12 @@ export function DeviceMonitorGrid({ screensOnly = false }: { screensOnly?: boole
         </p>
       ) : (
         <div className={expandedId ? "" : "grid gap-3 grid-cols-2 items-stretch"}>
-          {shown.map((d) => (
+          {shown.map((d, index) => (
             <LiveScreen
               key={`${d.id}:${reloadKey}`}
               device={d}
               online={isOnline(d)}
+              startupDelay={expandedId ? 0 : Math.min(index * 140, 840)}
               expanded={expandedId === d.id}
               onToggleExpand={() => setExpandedId(expandedId === d.id ? null : d.id)}
               onRemove={() => {

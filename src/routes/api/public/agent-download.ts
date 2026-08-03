@@ -8,7 +8,12 @@ const FALLBACK_UPSTREAM = AGENT_RELEASE.url;
 let UPSTREAM: string = FALLBACK_UPSTREAM;
 
 async function resolveUpstream(): Promise<string> {
-  return AGENT_RELEASE.url;
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data, error } = await supabaseAdmin.storage
+    .from(AGENT_RELEASE.storageBucket)
+    .createSignedUrl(AGENT_RELEASE.storagePath, 300);
+  if (error || !data?.signedUrl) throw error ?? new Error("release unavailable");
+  return data.signedUrl;
 }
 
 
@@ -94,13 +99,18 @@ export async function handleAgentDownload(request: Request) {
   // التحويل المباشر إلى مخزن الأصول أكثر ثباتاً من تمرير ملف 100MB عبر
   // دالة الموقع. برامج الموظفين القديمة والجديدة تتبع التحويل تلقائياً.
   if (request.method === "GET" || request.method === "HEAD") {
-    return new Response(null, {
-      status: 302,
-      headers: {
-        location: AGENT_RELEASE.url,
-        "cache-control": "no-store",
-      },
-    });
+    try {
+      const location = await resolveUpstream();
+      return new Response(null, {
+        status: 302,
+        headers: { location, "cache-control": "no-store" },
+      });
+    } catch {
+      return new Response("release unavailable", {
+        status: 503,
+        headers: { "cache-control": "no-store", "retry-after": "10" },
+      });
+    }
   }
   UPSTREAM = await resolveUpstream();
   const total = await upstreamSize();

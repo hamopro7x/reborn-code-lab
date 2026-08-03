@@ -43,7 +43,7 @@ const dotEl = document.getElementById("dot");
 const deviceEl = document.getElementById("device");
 
 const STORE = "mag-agent-device-v1";
-const AGENT_VERSION = "2.0.0";
+const AGENT_VERSION = "2.0.2";
 
 const verBadgeEl = document.getElementById("ver-badge");
 if (verBadgeEl) verBadgeEl.textContent = "v" + AGENT_VERSION;
@@ -272,8 +272,8 @@ function boostSdp(sdp) {
     if (inVideo && /^a=fmtp:\d+ /.test(line)) {
       out[out.length - 1] =
         line +
-        // بداية واضحة بدون ملء طابور الشبكة، مع سقف مناسب لـ1080p/30.
-        ";x-google-start-bitrate=3500;x-google-min-bitrate=500;x-google-max-bitrate=8000";
+        // نبدأ بخفة حتى يصل أول keyframe فوراً، ثم يرفع المتحكم الجودة تدريجياً.
+        ";x-google-start-bitrate=1200;x-google-min-bitrate=350;x-google-max-bitrate=6000";
     }
   }
   // b=AS بعد سطر c= الخاص بالفيديو
@@ -282,7 +282,7 @@ function boostSdp(sdp) {
   for (const line of out) {
     if (line.startsWith("m=")) seenVideo = line.startsWith("m=video");
     res.push(line);
-    if (seenVideo && line.startsWith("c=")) res.push("b=AS:8000", "b=TIAS:8000000");
+    if (seenVideo && line.startsWith("c=")) res.push("b=AS:6000", "b=TIAS:6000000");
 
   }
   return res.join("\r\n");
@@ -357,8 +357,8 @@ function startAdaptive(entry, sender) {
   if (entry.statsTimer) clearInterval(entry.statsTimer);
 
   const MIN = 450_000;
-  const MAX = 8_000_000;
-  let target = 3_500_000;
+  const MAX = 6_000_000;
+  let target = 1_200_000;
   let scale = 1;
   let lastLost = 0;
   let lastPackets = 0;
@@ -491,8 +491,8 @@ async function startPeer(viewerId) {
         params.encodings = [
           {
             ...(params.encodings?.[0] ?? {}),
-            // بداية بجودة عالية (الدقة الكاملة) ثم تصحيح لأسفل فقط عند الحاجة
-            maxBitrate: 3_500_000,
+            // بداية خفيفة تمنع الشاشة السوداء؛ المتحكم يرفعها بعد استقرار المسار.
+            maxBitrate: 1_200_000,
             maxFramerate: 30,
             scaleResolutionDownBy: 1,
             networkPriority: "high",
@@ -514,6 +514,8 @@ async function startPeer(viewerId) {
       if (pc.connectionState === "connected") {
         if (entry.recoverTimer) { clearTimeout(entry.recoverTimer); entry.recoverTimer = null; }
         setStatus(`متصل · ${peers.size} مشاهد`, true);
+        // اطلب keyframe فور اكتمال ICE لتظهر الصورة بدون انتظار دورة المشفّر.
+        try { videoSender?.generateKeyFrame?.(); } catch {}
       }
       // انقطاع مؤقت للشبكة: نحاول إصلاح مسار ICE بدل قطع البث فوراً
       if (pc.connectionState === "disconnected") {
@@ -648,7 +650,9 @@ async function run(device) {
   // قناة الإشارات القديمة المفتوحة أُزيلت. البرنامج يسحب فقط الطلبات
   // التي مرّت بسياسة الأدمن، مستخدماً مفتاح الجهاز السري.
   await exchangeSignals(device);
-  signalTimer = setInterval(() => void exchangeSignals(device), 120);
+  // الطلب الطويل المتداخل كان يكوّن طابوراً من محاولات السحب. 180ms كافية
+  // لاتصال سريع وتترك الشبكة والمشفّر للبث نفسه.
+  signalTimer = setInterval(() => void exchangeSignals(device), 180);
   setStatus("متصل", true);
 }
 
