@@ -623,8 +623,8 @@ function EmployeesTab() {
           />
           <div>
             <div className="text-lg font-bold">{u.full_name || u.email.split("@")[0]}</div>
-            <div className="text-xs text-muted-foreground" dir="ltr">{u.email}</div>
           </div>
+
           <Badge variant={u.role === "admin" ? "default" : "secondary"}>{u.role === "admin" ? "أدمن" : "موظف"}</Badge>
         </div>
 
