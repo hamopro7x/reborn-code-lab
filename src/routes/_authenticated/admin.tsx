@@ -676,16 +676,17 @@ function EmployeesTab() {
 
           </div>
 
-          <div className="border-t border-border/60 pt-4 space-y-6">
-            <div className="min-w-0">
+          <div className="grid grid-cols-2 gap-4 pt-2">
+            <div className="min-w-0 card-surface rounded-2xl p-4">
               <h3 className="text-sm font-bold mb-2">أجهزة الموظف</h3>
               <EmployeeDevices userId={u.user_id} employeeName={u.full_name} />
             </div>
-            <div className="min-w-0 border-t border-border/60 pt-4">
+            <div className="min-w-0 card-surface rounded-2xl p-4">
               <h3 className="text-sm font-bold mb-2 flex items-center gap-2"><MonitorSmartphone className="size-4 text-primary" /> تفعيل جهاز الموظف</h3>
               <DevicesTab />
             </div>
           </div>
+
 
         </div>
 
