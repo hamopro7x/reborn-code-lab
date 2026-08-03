@@ -139,10 +139,10 @@ function Home() {
               كل المنتجات <ArrowLeft className="size-4" />
             </Link>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             {categoriesQ.isLoading &&
               Array.from({ length: 4 }).map((_, i) => (
-                <div key={`cat-skeleton-${i}`} className="card-surface rounded-2xl p-4 h-[10.5rem] animate-pulse" />
+                <div key={`cat-skeleton-${i}`} className="card-surface rounded-2xl p-4 h-[16rem] animate-pulse" />
               ))}
             {(categoriesQ.data ?? []).map((c: any, i: number) => (
               <Link
@@ -152,7 +152,7 @@ function Home() {
                 className="group relative rounded-2xl p-[1px] bg-gradient-to-br from-white/10 via-transparent to-transparent hover:from-primary/60 hover:to-primary/10 transition-all duration-300 animate-slide-up"
                 style={{ animationDelay: `${i * 80}ms` }}
               >
-                <div className="relative overflow-hidden card-surface rounded-[15px] h-[10.5rem] flex flex-col transition-transform duration-300 group-hover:-translate-y-1">
+                <div className="relative overflow-hidden card-surface rounded-[15px] h-[16rem] flex flex-col transition-transform duration-300 group-hover:-translate-y-1">
                   <div className="relative flex-1 overflow-hidden bg-muted/20 flex items-center justify-center">
                     {c.banner_image ? (
                       <img
