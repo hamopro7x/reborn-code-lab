@@ -261,11 +261,13 @@ function LiveScreen({
   online,
   expanded,
   onToggleExpand,
+  onRemove,
 }: {
   device: Device;
   online: boolean;
   expanded: boolean;
   onToggleExpand: () => void;
+  onRemove?: () => void;
 }) {
   const { videoRef, live, failed } = useDeviceStream(device.device_id, online);
 
@@ -279,6 +281,18 @@ function LiveScreen({
           </div>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
+          {onRemove && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-7"
+              aria-label="حذف الشاشة"
+              title="حذف الشاشة"
+              onClick={onRemove}
+            >
+              <Trash2 className="size-3.5 text-destructive" />
+            </Button>
+          )}
           <Badge variant="outline" className="text-[10px]" dir="ltr">
             {device.app_version ? "v" + device.app_version : "—"}
           </Badge>
@@ -287,6 +301,7 @@ function LiveScreen({
           </Badge>
         </div>
       </div>
+
 
       <div
         className={`relative w-full rounded-lg overflow-hidden bg-black ${expanded ? "h-[70vh]" : "aspect-video"}`}
@@ -528,6 +543,10 @@ export function DeviceMonitorGrid({ screensOnly = false }: { screensOnly?: boole
   // زيادة هذا الرقم تعيد بناء كل اتصالات البث من الصفر
   const [reloadKey, setReloadKey] = useState(0);
   const { data, isLoading, refetch, isFetching } = useAgentDevices();
+  const removeDevice = useRemoveDevice((id) => {
+    setExpandedId((cur) => (cur === id ? null : cur));
+  });
+
 
   const handleRefresh = async () => {
     setReloadKey((n) => n + 1);
@@ -571,8 +590,11 @@ export function DeviceMonitorGrid({ screensOnly = false }: { screensOnly?: boole
               online={isOnline(d)}
               expanded={expandedId === d.id}
               onToggleExpand={() => setExpandedId(expandedId === d.id ? null : d.id)}
-              
+              onRemove={() => {
+                if (confirm(`حذف شاشة ${d.employee_name ?? "الجهاز"}؟`)) void removeDevice(d);
+              }}
             />
+
           ))}
         </div>
       )}
