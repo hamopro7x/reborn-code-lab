@@ -200,7 +200,10 @@ function createWindow() {
     },
   });
   win.setMenuBarVisibility(false);
+  // حماية ضد تصوير الشاشة: أي Print Screen / أداة قص / برنامج تسجيل يطلع أسود
+  try { win.setContentProtection(true); } catch {}
   win.loadFile(path.join(__dirname, "renderer.html"));
+
   win.once("ready-to-show", () => {
     if (startedHidden) {
       win.hide();
