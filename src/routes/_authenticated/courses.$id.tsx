@@ -86,7 +86,7 @@ function CourseView() {
 
   return (
     <div className="min-h-screen p-4 md:p-6" dir="rtl">
-      <div className="max-w-6xl mx-auto space-y-4">
+      <div className="max-w-[1800px] mx-auto space-y-4">
         <div className="flex items-center justify-between gap-2">
           <Link to="/admin" search={{ panel: "courses" }} preload={false} onClick={releaseVideoBeforeLeave}><Button variant="outline" size="sm">العودة <ArrowRight className="size-4" /></Button></Link>
           <div className="text-xs text-muted-foreground">مرحباً {viewer?.full_name || viewer?.email}</div>
@@ -96,7 +96,7 @@ function CourseView() {
           {course.data?.description && <p className="text-sm text-muted-foreground mt-1">{course.data.description}</p>}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4">
           <div>
             {activeLessonId && (
               <ProtectedPlayer lessonId={activeLessonId} fingerprint={fp} watermark={viewer?.email || viewer?.full_name || "employee"} />
