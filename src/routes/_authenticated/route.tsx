@@ -39,7 +39,7 @@ function DeviceGate() {
 
   if (state.status === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="admin-theme min-h-screen flex items-center justify-center">
         <Loader2 className="size-8 animate-spin text-primary" />
       </div>
     );
@@ -47,7 +47,8 @@ function DeviceGate() {
 
   if (state.status === "blocked") {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6" dir="rtl">
+      <div className="admin-theme min-h-screen flex items-center justify-center p-6" dir="rtl">
+
         <div className="card-surface rounded-3xl p-8 max-w-md w-full text-center space-y-4">
           <div className="size-16 rounded-2xl gradient-primary mx-auto flex items-center justify-center glow-purple">
             <ShieldAlert className="size-8 text-white" />
