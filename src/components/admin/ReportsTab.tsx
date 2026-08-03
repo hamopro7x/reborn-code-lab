@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Download, Loader2, TrendingUp, ShoppingCart, DollarSign } from "lucide-react";
+import { Download, Loader2, TrendingUp, ShoppingCart, DollarSign, X } from "lucide-react";
 import { toast } from "sonner";
 
 type Period = "daily" | "monthly";
