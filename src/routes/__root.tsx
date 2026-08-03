@@ -8,6 +8,8 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { CartProvider } from "@/lib/cart";
 import { CurrencyProvider } from "@/lib/currency-context";
 import { supabase } from "@/integrations/supabase/client";
+import { useAutoRefreshOnDeploy } from "@/lib/use-auto-refresh";
+
 
 function NotFoundComponent() {
   return (
