@@ -208,12 +208,12 @@ function osLabel() {
 async function captureScreen() {
   const sourceId = await window.agent.getScreenSource();
   if (!sourceId) throw new Error("لا توجد شاشة متاحة");
-  // 1080p هو أفضل نقطة لحدة النصوص مع ترميز فوري بزمن وصول منخفض.
-  // 1440p/4K مع 60fps يضغطان المشفّر والشبكة ويكوّنان طابور إرسال متأخر.
+  // دقة عالية ثابتة: نلتقط بدقة الشاشة الأصلية (حتى 2560x1440) بدون تصغير
+  // أثناء الحركة، مع bitrate عالٍ للحفاظ على حدة النصوص والتفاصيل.
   const dpr = window.devicePixelRatio || 1;
   const rawW = Math.round((window.screen?.width || 1920) * dpr);
   const rawH = Math.round((window.screen?.height || 1080) * dpr);
-  const scale = Math.min(1, 1920 / rawW, 1080 / rawH);
+  const scale = Math.min(1, 2560 / rawW, 1440 / rawH);
   const capW = Math.round(rawW * scale);
   const capH = Math.round(rawH * scale);
   const tryCapture = async (w, h, fps) =>
