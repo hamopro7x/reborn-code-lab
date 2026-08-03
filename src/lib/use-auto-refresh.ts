@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { APP_BUILD_ID } from "./build-id";
+import { uploadManager } from "./upload-manager";
 
 // يفحص إذا كان في نسخة جديدة منشورة من الموقع، ولو موجودة
 // يعمل تحديث تلقائي للصفحة الحالية فوراً (نفس المسار).
@@ -10,6 +11,8 @@ export function useAutoRefreshOnDeploy(intervalMs = 1000) {
 
     const check = async () => {
       if (stopped || document.hidden) return;
+      // لا نعمل تحديث للصفحة أثناء رفع فيديوهات
+      if (uploadManager.hasActive()) return;
       try {
         const res = await fetch("/api/public/build-version", { cache: "no-store" });
         if (!res.ok) return;

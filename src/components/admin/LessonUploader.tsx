@@ -130,7 +130,7 @@ export function LessonUploader({
                       size="icon"
                       variant="ghost"
                       className="size-7"
-                      onClick={() => uploadManager.resume(it.id, nextOrder)}
+                      onClick={() => uploadManager.resume(it.id)}
                     >
                       {it.status === "error" ? <RotateCcw className="size-3.5" /> : <Play className="size-3.5" />}
                     </Button>
