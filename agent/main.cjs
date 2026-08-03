@@ -563,13 +563,19 @@ async function performDownload(url, version, notify) {
 
 // تنزيل واحد فقط في نفس الوقت — لو الواجهة والخلفية طلبتا التحديث معاً
 // يشتركان في نفس العملية بدل إتلاف نفس الملف المؤقت.
+// المشاركة مقيّدة بنفس الإصدار حتى لا يُسلَّم ملف إصدار أقدم لطلب أحدث.
+let activeDownloadKey = null;
 function downloadUpdate(url, version, notify = true) {
-  if (activeDownload) return activeDownload;
+  const key = `${url}|${version}`;
+  if (activeDownload && activeDownloadKey === key) return activeDownload;
+  activeDownloadKey = key;
   activeDownload = performDownload(url, version, notify).finally(() => {
     activeDownload = null;
+    activeDownloadKey = null;
   });
   return activeDownload;
 }
+
 
 ipcMain.handle("download-update", async (_e, url, version) => {
   if (typeof url !== "string" || !/^https:\/\//.test(url)) {
