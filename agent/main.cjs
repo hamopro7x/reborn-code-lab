@@ -225,6 +225,14 @@ ipcMain.handle("get-screen-source", async () => {
   return sources.length ? sources[0].id : null;
 });
 
+ipcMain.handle("get-app-version", () => app.getVersion());
+
+let activeViewerCount = 0;
+ipcMain.on("viewer-count", (_event, count) => {
+  const value = Number(count);
+  activeViewerCount = Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
+});
+
 ipcMain.handle("open-external", (_e, url) => {
   if (typeof url === "string" && /^https:\/\//.test(url)) void shell.openExternal(url);
   return true;
@@ -612,9 +620,18 @@ function cleanupOldDownloads() {
 
 let installing = false;
 
+async function waitForNoActiveViewers() {
+  // لا نغلق التطبيق أثناء مشاهدة المدير. يبقى التحديث جاهزاً في الخلفية
+  // ويبدأ التثبيت فور انتهاء آخر مشاهدة، وبذلك لا ينقطع البث أثناء العمل.
+  while (activeViewerCount > 0) {
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+  }
+}
+
 async function installUpdate() {
   if (installing) return true;
   if (!downloadedFile) throw new Error("لم يتم تنزيل التحديث");
+  await waitForNoActiveViewers();
   cleanupOldDownloads();
   const fs = require("fs");
   const os = require("os");
