@@ -304,19 +304,16 @@ async function getStream() {
   return stream;
 }
 
-// متحكّم latency-first: لا نستهلك كل الباندويث المتاح حتى لا يتراكم طابور إرسال.
-// نهبط فوراً عند الازدحام ونصعد ببطء بعد استقرار الشبكة.
+// متحكّم quality-first: الدقة ثابتة دائماً (بدون تصغير) والجودة عالية جداً.
+// أثناء الحركة لا نخفض الوضوح — نتحكّم فقط في الـ bitrate ضمن سقف عالٍ.
 function startAdaptive(entry, sender) {
   if (entry.statsTimer) clearInterval(entry.statsTimer);
 
-  const MIN = 450_000;
-  const MAX = 6_000_000;
-  let target = 1_200_000;
-  let scale = 1;
+  const MIN = 6_000_000;   // أرضية عالية: لا تقل الجودة عند الحركة
+  const MAX = 40_000_000;  // سقف عالي جداً لأعلى كفاءة وضوح
+  let target = 14_000_000;
   let lastLost = 0;
   let lastPackets = 0;
-  let lastBytes = 0;
-  let lastTimestamp = 0;
   entry.statsTimer = setInterval(async () => {
     if (!entry.pc || entry.pc.connectionState !== "connected") return;
     try {
@@ -324,9 +321,7 @@ function startAdaptive(entry, sender) {
       let rtt = 0;
       let lost = 0;
       let packets = 0;
-      let bytes = 0;
       let avail = 0;
-      let qualityLimited = "";
       stats.forEach((r) => {
         if (r.type === "remote-inbound-rtp") {
           if (typeof r.roundTripTime === "number") rtt = r.roundTripTime;
@@ -336,64 +331,40 @@ function startAdaptive(entry, sender) {
           if (typeof r.availableOutgoingBitrate === "number") avail = r.availableOutgoingBitrate;
           if (typeof r.currentRoundTripTime === "number" && !rtt) rtt = r.currentRoundTripTime;
         }
-        if (r.type === "outbound-rtp") {
-          if (typeof r.packetsSent === "number") packets = r.packetsSent;
-          if (typeof r.bytesSent === "number") bytes = r.bytesSent;
-          if (typeof r.qualityLimitationReason === "string")
-            qualityLimited = r.qualityLimitationReason;
-        }
       });
       const dLost = Math.max(0, lost - lastLost);
       const dPackets = Math.max(1, packets - lastPackets);
       lastLost = lost;
       lastPackets = packets;
       const lossRate = dLost / dPackets;
-      const now = performance.now();
-      const sendRate = lastTimestamp && bytes >= lastBytes
-        ? ((bytes - lastBytes) * 8000) / Math.max(1, now - lastTimestamp)
-        : 0;
-      lastBytes = bytes;
-      lastTimestamp = now;
 
-      // هامش 30% يمنع امتلاء bufferbloat. RTT أو الفقد يسببان خفضاً فورياً.
-      const cpuLimited = qualityLimited === "cpu";
-      const severe = rtt > 0.35 || lossRate > 0.06;
-      const congested = severe || rtt > 0.18 || lossRate > 0.025 || qualityLimited === "bandwidth";
+      const severe = rtt > 0.5 || lossRate > 0.12;
       if (avail > 0) {
-        const safe = Math.round(avail * 0.7);
-        if (severe) target = Math.min(Math.round(target * 0.62), safe);
-        else if (congested) target = Math.min(Math.round(target * 0.82), safe);
-        else target = Math.min(safe, Math.round(target * 1.08 + 80_000));
-      } else if (congested) {
-        target = Math.round(target * (severe ? 0.62 : 0.82));
+        const safe = Math.round(avail * 0.95);
+        if (severe) target = Math.max(MIN, Math.min(Math.round(target * 0.85), safe));
+        else target = Math.min(MAX, Math.max(safe, Math.round(target * 1.2 + 1_000_000)));
+      } else if (severe) {
+        target = Math.round(target * 0.85);
       } else {
-        target = Math.round(target * 1.06 + 60_000);
+        target = Math.round(target * 1.2 + 1_000_000);
       }
-      // لو المشفّر لا يستطيع تصريف الهدف، لا نرفع أكثر لمجرد أن التقدير النظري مرتفع.
-      if (sendRate > 0 && congested) target = Math.min(target, Math.round(sendRate * 0.9));
       target = Math.max(MIN, Math.min(MAX, target));
-
-      // نخفض الدقة قبل أن تتراكم ثوانٍ من الفيديو، ونبقي 30fps للاستجابة السريعة.
-      let nextScale = scale;
-      if (cpuLimited || target < 750_000) nextScale = 2;
-      else if (target < 1_500_000) nextScale = 1.5;
-      else nextScale = 1;
 
       const params = sender.getParameters();
       if (params.encodings?.[0]) {
+        params.degradationPreference = "maintain-resolution";
         params.encodings[0].maxBitrate = target;
         params.encodings[0].maxFramerate = 30;
-        if (nextScale !== scale) {
-          params.encodings[0].scaleResolutionDownBy = nextScale;
-          scale = nextScale;
-        }
+        // الدقة الكاملة دائماً — لا تصغير مهما كانت الحركة
+        params.encodings[0].scaleResolutionDownBy = 1;
         await sender.setParameters(params);
       }
     } catch {
       /* تجاهل */
     }
-  }, 500);
+  }, 1000);
 }
+
 
 
 function closePeer(viewerId) {
