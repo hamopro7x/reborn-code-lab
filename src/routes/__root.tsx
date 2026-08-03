@@ -70,7 +70,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
               "@id": "https://mag-pro1.com/#organization",
               name: "متجر الاشتراكات الرقمية",
               url: "https://mag-pro1.com/",
-              logo: "https://mag-pro1.com/favicon.ico",
+              logo: "https://mag-pro1.com/favicon.png",
             },
             {
               "@type": "WebSite",
