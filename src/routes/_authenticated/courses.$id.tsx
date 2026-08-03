@@ -98,26 +98,24 @@ function CourseView() {
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-4">
           <div>
-            {activeLessonId ? (
+            {activeLessonId && (
               <ProtectedPlayer lessonId={activeLessonId} fingerprint={fp} watermark={viewer?.email || viewer?.full_name || "employee"} />
-            ) : (
-              <div className="card-surface rounded-2xl p-10 text-center text-muted-foreground">اختر محاضرة للبدء</div>
             )}
           </div>
-          <div className="card-surface rounded-2xl p-3 space-y-1 h-fit">
-            <div className="text-base font-bold px-2 py-1">عدد المحاضرات ({lessons.data?.length ?? 0})</div>
-            {lessons.data?.map((l: any, i: number) => (
-              <button key={l.id} onClick={() => setActiveLessonId(l.id)}
-                onMouseEnter={() => prefetchLesson(l.id)}
-                onFocus={() => prefetchLesson(l.id)}
-                onTouchStart={() => prefetchLesson(l.id)}
-                className={`w-full text-right p-2 rounded-xl flex items-center gap-2 text-base transition-colors ${activeLessonId === l.id ? "bg-primary/10 text-primary" : "hover:bg-muted"}`}>
-                <PlayCircle className="size-5 shrink-0" />
-                <span className="truncate">{i + 1}. {l.title}</span>
-              </button>
-            ))}
-            {!lessons.data?.length && <div className="text-base text-muted-foreground p-3 text-center">لا توجد محاضرات بعد</div>}
-          </div>
+          {!!lessons.data?.length && (
+            <div className="card-surface rounded-2xl p-3 space-y-1 h-fit">
+              {lessons.data.map((l: any, i: number) => (
+                <button key={l.id} onClick={() => setActiveLessonId(l.id)}
+                  onMouseEnter={() => prefetchLesson(l.id)}
+                  onFocus={() => prefetchLesson(l.id)}
+                  onTouchStart={() => prefetchLesson(l.id)}
+                  className={`w-full text-right p-2 rounded-xl flex items-center gap-2 text-base transition-colors ${activeLessonId === l.id ? "bg-primary/10 text-primary" : "hover:bg-muted"}`}>
+                  <PlayCircle className="size-5 shrink-0" />
+                  <span className="truncate">{i + 1}. {l.title}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
