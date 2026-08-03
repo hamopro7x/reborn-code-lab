@@ -475,6 +475,26 @@ function EmployeesTab() {
   const [editing, setEditing] = useState<{ user_id: string; full_name: string; email: string; password: string } | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [prof, setProf] = useState<{ user_id: string; full_name: string; email: string; password: string } | null>(null);
+
+  async function saveProfile() {
+    if (!prof) return;
+    if (prof.full_name.trim().length < 2) return toast.error("اكتب اسم صحيح");
+    if (prof.password && prof.password.length < 6) return toast.error("كلمة السر 6 أحرف على الأقل");
+    setSavingEdit(true);
+    try {
+      await upd({ data: {
+        user_id: prof.user_id,
+        full_name: prof.full_name.trim(),
+        email: prof.email.trim(),
+        ...(prof.password ? { password: prof.password } : {}),
+      } });
+      toast.success("تم تحديث بيانات الموظف");
+      setProf({ ...prof, password: "" });
+      qc.invalidateQueries({ queryKey: ["admin-employees"] });
+    } catch (e: any) { toast.error(e?.message ?? "خطأ"); }
+    finally { setSavingEdit(false); }
+  }
 
   async function saveEdit() {
     if (!editing) return;
@@ -549,6 +569,16 @@ function EmployeesTab() {
 
   const selected = (q.data ?? []).find((u: any) => u.user_id === expanded) ?? null;
 
+  useEffect(() => {
+    if (!selected) { setProf(null); return; }
+    setProf((p) => (p && p.user_id === selected.user_id ? p : {
+      user_id: selected.user_id,
+      full_name: selected.full_name ?? "",
+      email: selected.email ?? "",
+      password: "",
+    }));
+  }, [selected?.user_id, selected]);
+
   if (selected) {
     const u: any = selected;
     return (
@@ -603,12 +633,8 @@ function EmployeesTab() {
             <div className="flex items-center justify-between gap-2">
               <h3 className="text-sm font-bold">البيانات الشخصية</h3>
               <div className="flex items-center gap-1">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setEditing({ user_id: u.user_id, full_name: u.full_name ?? "", email: u.email ?? "", password: "" })}
-                >
-                  <Edit className="size-4 ml-1" /> تعديل
+                <Button size="sm" onClick={saveProfile} disabled={savingEdit} className="gradient-primary text-white">
+                  {savingEdit ? <Loader2 className="size-4 animate-spin" /> : "حفظ"}
                 </Button>
                 {u.role !== "admin" && (
                   <Button size="icon" variant="ghost" onClick={() => { remove(u.user_id); setExpanded(null); }}>
@@ -619,26 +645,29 @@ function EmployeesTab() {
             </div>
             <div className="rounded-xl border border-border/60 p-4 text-right">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                {[
-                  { label: "الاسم كامل", value: u.full_name || "—" },
-                  { label: "البريد الإلكتروني", value: u.email || "—", ltr: true },
-                  { label: "كلمة السر", value: "••••••••" },
-                  { label: "الصلاحية", value: u.role === "admin" ? "أدمن" : "موظف" },
-                  { label: "تاريخ الإضافة", value: new Date(u.created_at).toLocaleString("ar-EG") },
-                ].map((f) => (
-                  <div key={f.label} className="space-y-1.5">
-                    <div className="text-xs text-muted-foreground">{f.label}</div>
-                    <div
-                      className="rounded-md bg-muted/60 border border-border/50 px-3 py-2.5 text-sm font-medium truncate"
-                      dir={f.ltr ? "ltr" : undefined}
-                      style={f.ltr ? { textAlign: "right" } : undefined}
-                    >
-                      {f.value}
-                    </div>
-                  </div>
-                ))}
+                <div className="space-y-1.5">
+                  <div className="text-xs text-muted-foreground">الاسم كامل</div>
+                  <Input value={prof?.full_name ?? ""} onChange={(e) => setProf({ ...(prof ?? { user_id: u.user_id, full_name: "", email: "", password: "" }), full_name: e.target.value })} />
+                </div>
+                <div className="space-y-1.5">
+                  <div className="text-xs text-muted-foreground">البريد الإلكتروني</div>
+                  <Input type="email" dir="ltr" style={{ textAlign: "right" }} value={prof?.email ?? ""} onChange={(e) => setProf({ ...(prof ?? { user_id: u.user_id, full_name: "", email: "", password: "" }), email: e.target.value })} />
+                </div>
+                <div className="space-y-1.5">
+                  <div className="text-xs text-muted-foreground">كلمة السر</div>
+                  <Input type="password" placeholder="اتركها فاضية لو مش عايز تغييرها" value={prof?.password ?? ""} onChange={(e) => setProf({ ...(prof ?? { user_id: u.user_id, full_name: "", email: "", password: "" }), password: e.target.value })} />
+                </div>
+                <div className="space-y-1.5">
+                  <div className="text-xs text-muted-foreground">الصلاحية</div>
+                  <div className="rounded-md bg-muted/60 border border-border/50 px-3 py-2.5 text-sm font-medium truncate">{u.role === "admin" ? "أدمن" : "موظف"}</div>
+                </div>
+                <div className="space-y-1.5">
+                  <div className="text-xs text-muted-foreground">تاريخ الإضافة</div>
+                  <div className="rounded-md bg-muted/60 border border-border/50 px-3 py-2.5 text-sm font-medium truncate">{new Date(u.created_at).toLocaleString("ar-EG")}</div>
+                </div>
               </div>
             </div>
+
 
           </div>
 
