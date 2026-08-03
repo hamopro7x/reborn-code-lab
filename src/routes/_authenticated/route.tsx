@@ -100,9 +100,11 @@ function DeviceGate() {
 
   return (
 
-    <div className="admin-theme min-h-screen">
+    <div className="admin-theme min-h-screen select-none">
+      <ScreenCaptureGuard />
       <Outlet />
     </div>
   );
 
 }
+
