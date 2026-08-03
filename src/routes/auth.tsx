@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { useAdminTheme } from "@/lib/use-admin-theme";
 import { ShieldCheck, Lock } from "lucide-react";
 
 function safeNext(value: unknown) {
@@ -86,7 +87,7 @@ function AuthPage() {
 
 
   return (
-    <div dir="rtl" className="min-h-screen flex items-center justify-center px-4 py-12 bg-background">
+    <div dir="rtl" className="admin-theme min-h-screen flex items-center justify-center px-4 py-12 bg-background">
       <div className="w-full max-w-md">
         <div className="text-center mb-6">
           <div className="size-14 rounded-2xl gradient-primary mx-auto flex items-center justify-center glow-purple mb-3">

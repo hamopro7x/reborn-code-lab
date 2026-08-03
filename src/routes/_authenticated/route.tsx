@@ -7,6 +7,7 @@ import { ensureDeviceChecked } from "@/lib/device-session";
 import { Button } from "@/components/ui/button";
 import { ShieldAlert, Loader2, Copy, LogOut } from "lucide-react";
 import { toast } from "sonner";
+import { useAdminTheme } from "@/lib/use-admin-theme";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -22,6 +23,7 @@ export const Route = createFileRoute("/_authenticated")({
 });
 
 function DeviceGate() {
+  useAdminTheme();
   const checkFn = useServerFn(checkDevice);
   const [state, setState] = useState<
     | { status: "loading" }
