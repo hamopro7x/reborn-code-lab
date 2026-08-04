@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { getBybitActivity, getBybitCardTransactions } from "@/lib/bybit.functions";
 import { Button } from "@/components/ui/button";
-import { Loader2, RefreshCw, CreditCard, AlertTriangle, ChevronLeft } from "lucide-react";
+import { RefreshCw, CreditCard, AlertTriangle, ChevronLeft } from "lucide-react";
 
 type Row = {
   id: string;
@@ -103,14 +103,6 @@ export function CardTransactionsTab() {
 
   const spent = rows.filter((r) => !isRefund(r)).reduce((s, r) => s + Math.abs(r.amount), 0);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-16 text-muted-foreground">
-        <Loader2 className="size-5 animate-spin" />
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-4" dir="ltr">
       {/* Card hero — Bybit Card dashboard style */}
@@ -193,7 +185,9 @@ export function CardTransactionsTab() {
 
         <div className="divide-y divide-border/40">
           {filtered.length === 0 && (
-            <div className="p-10 text-center text-sm text-muted-foreground">No transactions</div>
+            <div className="p-10 text-center text-sm text-muted-foreground">
+              {isLoading ? "جاري جلب المعاملات من باي بت…" : "No transactions"}
+            </div>
           )}
           {filtered.map((r) => {
             const refund = isRefund(r);
