@@ -100,21 +100,36 @@ export const getBybitActivity = createServerFn({ method: "POST" })
         }
       }
 
-      // Assets endpoint: UNIFIED requires an explicit coin list (max 10 coins).
-      try {
-        const params: Record<string, string> = { accountType };
-        if (accountType === "UNIFIED") {
-          params["coin"] = "USDT,USDC,BTC,ETH,BNB,SOL,XRP,DOGE,TON,MNT";
+      // This endpoint accepts one coin per request, not a comma-separated list.
+      // FUND can be queried without a coin; UNIFIED is queried coin-by-coin.
+      if (accountType === "UNIFIED") {
+        const supportedCoins = ["USDT", "USDC", "BTC", "ETH", "BNB", "SOL", "XRP", "DOGE", "MNT"];
+        const attempts = await Promise.allSettled(
+          supportedCoins.map((coin) =>
+            call("/v5/asset/transfer/query-account-coins-balance", { accountType, coin }),
+          ),
+        );
+        for (const attempt of attempts) {
+          if (attempt.status !== "fulfilled") continue;
+          const rows = ((attempt.value["balance"] as any[]) ?? []).map((c) => ({
+            coin: String(c.coin),
+            balance: Number(c.walletBalance ?? c.transferBalance ?? 0),
+            usdValue: 0,
+          }));
+          out.push(...rows);
         }
-        const r2 = await call("/v5/asset/transfer/query-account-coins-balance", params);
-        const rows = ((r2["balance"] as any[]) ?? []).map((c) => ({
-          coin: String(c.coin),
-          balance: Number(c.walletBalance ?? c.transferBalance ?? 0),
-          usdValue: 0,
-        }));
-        out.push(...rows);
-      } catch (e) {
-        errors.push(String((e as Error).message));
+      } else {
+        try {
+          const r2 = await call("/v5/asset/transfer/query-account-coins-balance", { accountType });
+          const rows = ((r2["balance"] as any[]) ?? []).map((c) => ({
+            coin: String(c.coin),
+            balance: Number(c.walletBalance ?? c.transferBalance ?? 0),
+            usdValue: 0,
+          }));
+          out.push(...rows);
+        } catch (e) {
+          errors.push(String((e as Error).message));
+        }
       }
       return out;
     }
