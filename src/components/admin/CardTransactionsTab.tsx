@@ -315,10 +315,10 @@ export function CardTransactionsTab() {
           <div className="flex gap-1">
             {(
               [
-                ["all", "الكل"],
-                ["purchase_ok", "المشتريات الناجحة"],
-                ["purchase_failed", "المشتريات الفاشلة"],
                 ["refund", "المبلغ المسترد"],
+                ["purchase_failed", "المشتريات الفاشلة"],
+                ["purchase_ok", "المشتريات الناجحة"],
+                ["all", "الكل"],
               ] as const
             ).map(([key, label]) => (
               <button
