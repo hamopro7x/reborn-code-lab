@@ -123,8 +123,10 @@ function MerchantIcon({ name }: { name: string }) {
 
 /** أيقونة نوعية البطاقة (بطاقة باي بت = ماستركارد) */
 function CardBrandIcon({ last4 }: { last4?: string }) {
-  const visa = !!last4 && /^4/.test(last4);
-  if (visa) {
+  // بطاقة Bybit الافتراضية فيزا؛ نعرض ماستركارد فقط لو الرقم يبدأ بـ 5 أو 2
+  const mastercard = !!last4 && /^[52]/.test(last4);
+  if (!mastercard) {
+
     return (
       <svg viewBox="0 0 48 32" className="h-5 w-8 shrink-0" role="img" aria-label="Visa">
         <rect width="48" height="32" rx="4" fill="#1434CB" />
