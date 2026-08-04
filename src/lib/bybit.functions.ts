@@ -203,7 +203,7 @@ export const getBybitActivity = createServerFn({ method: "POST" })
           ...a,
           coins,
           totalUsd,
-          spendingPower: a.kind === "internal" ? (live ?? estimated) : totalUsd,
+          spendingPower: a.kind === "internal" ? estimated : totalUsd,
         };
       });
     }
