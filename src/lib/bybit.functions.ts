@@ -355,6 +355,8 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
       merchant: string;
       status: string;
       last4: string;
+      brand: string;
+      cardKind: string;
     };
     const cardRows: CardRow[] = [];
     // Authorizations are captured too so a transaction is recorded the moment
@@ -365,15 +367,42 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
     // captured without looking further back than the local tracking start.
     const cardQueryTypes = ["SIDE_QUERY_AUTH", cardQueryType, "SIDE_QUERY_REFUND"];
 
-    const mapRow = (r: any, type: string, key: string): CardRow => ({
-      id: String(r.txnId ?? r.orderNo ?? `${type}-${key}`),
-      occurredAt: Number(r.txnCreate ?? r.createTime ?? r.txnTime ?? 0),
-      amount: (type === "SIDE_QUERY_REFUND" ? 1 : -1) * Math.abs(Number(r.basicAmount ?? r.paidAmount ?? r.transactionAmount ?? 0)),
-      currency: String(r.basicCurrency ?? r.paidCurrency ?? r.transactionCurrency ?? "USD"),
-      merchant: String(r.merchName ?? r.merchCategoryDesc ?? "Card Transaction"),
-      status: String(r.status ?? r.tradeStatus ?? "") === "1" ? "Successful" : String(r.status ?? r.tradeStatus ?? "") === "0" ? "Pending" : "Failed",
-      last4: String(r.pan4 ?? "").slice(-4),
-    });
+    const brandOf = (r: any, last4: string): string => {
+      const raw = String(
+        r.cardBrand ?? r.brand ?? r.cardOrg ?? r.cardScheme ?? r.cardNetwork ?? "",
+      ).toLowerCase();
+      if (raw.includes("master")) return "mastercard";
+      if (raw.includes("visa")) return "visa";
+      const bin = String(r.cardBin ?? r.bin ?? "");
+      if (/^[52]/.test(bin)) return "mastercard";
+      if (/^4/.test(bin)) return "visa";
+      // Fall back to the card's own digits so different cards render differently
+      if (/^[52]/.test(last4)) return "mastercard";
+      return "visa";
+    };
+
+    const kindOf = (r: any): string => {
+      const raw = String(r.cardType ?? r.cardCategory ?? r.cardKind ?? r.entity ?? "").toLowerCase();
+      if (raw.includes("virt") || raw === "1") return "virtual";
+      if (raw.includes("phys") || raw === "2") return "physical";
+      return "";
+    };
+
+    const mapRow = (r: any, type: string, key: string): CardRow => {
+      const last4 = String(r.pan4 ?? "").slice(-4);
+      return {
+        id: String(r.txnId ?? r.orderNo ?? `${type}-${key}`),
+        occurredAt: Number(r.txnCreate ?? r.createTime ?? r.txnTime ?? 0),
+        amount: (type === "SIDE_QUERY_REFUND" ? 1 : -1) * Math.abs(Number(r.basicAmount ?? r.paidAmount ?? r.transactionAmount ?? 0)),
+        currency: String(r.basicCurrency ?? r.paidCurrency ?? r.transactionCurrency ?? "USD"),
+        merchant: String(r.merchName ?? r.merchCategoryDesc ?? "Card Transaction"),
+        status: String(r.status ?? r.tradeStatus ?? "") === "1" ? "Successful" : String(r.status ?? r.tradeStatus ?? "") === "0" ? "Pending" : "Failed",
+        last4,
+        brand: brandOf(r, last4),
+        cardKind: kindOf(r),
+      };
+    };
+
 
     // Bounded requests only: track transactions created after the local
     // monitoring start time and never scan historical pages.
