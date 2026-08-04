@@ -206,17 +206,19 @@ export const getBybitActivity = createServerFn({ method: "POST" })
       ];
 
       const prices = await usdPrices(missing);
-      // لو باي بت مرجّعتش قوة الشراء، نخصم هامش التحويل التقريبي على الكريبتو (~5%).
-      const CRYPTO_HAIRCUT = 0.05;
+      // قوة الشراء في لوحة بطاقة باي بت = الرصيد القابل للصرف بعد هامش تحويل
+      // 1.4% على أي عملة غير الدولار (USD الفعلي يُصرف 1:1 بدون هامش).
+      const CARD_SPREAD = 0.014;
       return raw.map((a) => {
         const coins = a.coins.map((c) =>
           c.usdValue > 0 ? c : { ...c, usdValue: c.balance * (prices.get(c.coin) ?? 0) },
         );
         const totalUsd = coins.reduce((s, c) => s + c.usdValue, 0);
         const estimated = coins.reduce(
-          (s, c) => s + (/^(USD|USDT|USDC|EUR)$/i.test(c.coin) ? c.usdValue : c.usdValue * (1 - CRYPTO_HAIRCUT)),
+          (s, c) => s + (/^USD$/i.test(c.coin) ? c.usdValue : c.usdValue * (1 - CARD_SPREAD)),
           0,
         );
+
         return {
           ...a,
           coins,
