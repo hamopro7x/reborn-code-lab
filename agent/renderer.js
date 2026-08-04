@@ -43,8 +43,12 @@ const dotEl = document.getElementById("dot");
 const deviceEl = document.getElementById("device");
 
 const STORE = "mag-agent-device-v1";
-// رقم الإصدار الحقيقي من الحزمة المثبتة، بدل رقم ثابت قديم داخل الواجهة.
-const AGENT_VERSION = await window.agent.getVersion();
+// رقم الإصدار الحقيقي من الحزمة المثبتة. نستخدم مهلة قصيرة حتى لو IPC تأخر
+// لا تفضل الواجهة فاضية للأبد (كان await بدون مهلة يوقف كل السكربت).
+const AGENT_VERSION = await Promise.race([
+  window.agent?.getVersion?.().catch(() => "0.0.0") ?? Promise.resolve("0.0.0"),
+  new Promise((resolve) => setTimeout(() => resolve("0.0.0"), 3000)),
+]);
 
 const verBadgeEl = document.getElementById("ver-badge");
 if (verBadgeEl) verBadgeEl.textContent = "v" + AGENT_VERSION;
