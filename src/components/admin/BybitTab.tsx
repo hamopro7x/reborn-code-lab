@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, RefreshCw, ArrowDownToLine, ArrowUpFromLine, Wallet, AlertTriangle } from "lucide-react";
 
+type Coin = { coin: string; balance: number; usdValue: number };
+
 const num = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 6 });
 const when = (ms: number) => (ms ? new Date(ms).toLocaleString("ar-EG") : "—");
 
@@ -27,7 +29,7 @@ export function BybitTab() {
     );
   }
 
-  const totalUsd = (data?.balances ?? []).reduce((s, c) => s + c.usdValue, 0);
+  const totalUsd = (data?.balances ?? []).reduce((s: number, c: Coin) => s + c.usdValue, 0);
   const depTotal = (data?.deposits ?? []).length;
   const wdTotal = (data?.withdrawals ?? []).length;
 
@@ -78,7 +80,7 @@ export function BybitTab() {
           <p className="text-sm text-muted-foreground">لا توجد أرصدة.</p>
         ) : (
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {data!.balances.map((c) => (
+            {data!.balances.map((c: Coin) => (
               <div key={c.coin} className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm">
                 <span className="font-semibold">{c.coin}</span>
                 <span>{num(c.balance)}</span>
