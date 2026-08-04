@@ -160,6 +160,9 @@ export function CardTransactionsTab() {
             <div className="rounded-xl border bg-background/60 px-3 py-2">
               <div className="text-[11px] text-muted-foreground">Monthly Spend</div>
               <div className="text-lg font-bold tabular-nums">${money(spendForRate)}</div>
+              <div className="text-[10px] text-muted-foreground">
+                {rows.length === 0 ? "يبدأ العد من أول معاملة جديدة" : "الشهر الحالي · المشتريات"}
+              </div>
             </div>
             <div className="rounded-xl border bg-background/60 px-3 py-2">
               <div className="text-[11px] text-muted-foreground">
@@ -169,9 +172,14 @@ export function CardTransactionsTab() {
                 {cashbackRate == null ? "—" : `${cashbackRate.toFixed(2)}%`}
               </div>
               <div className="text-[10px] text-muted-foreground tabular-nums">
-                {cashbackEarned == null ? "auto · Bybit" : `≈ $${money(cashbackEarned)} cashback`}
+                {cashbackEarned != null
+                  ? `≈ $${money(cashbackEarned)} cashback`
+                  : platformRate == null
+                    ? "باي بت لا تتيح Pay Rewards عبر الـ API"
+                    : "auto · Bybit"}
               </div>
             </div>
+
             <div className="rounded-xl border bg-background/60 px-3 py-2">
               <div className="text-[11px] text-muted-foreground">Transactions</div>
               <div className="text-lg font-bold tabular-nums">{rows.length}</div>
