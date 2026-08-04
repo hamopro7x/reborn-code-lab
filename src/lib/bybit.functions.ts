@@ -156,3 +156,85 @@ export const getBybitActivity = createServerFn({ method: "POST" })
 
     return { configured: true as const, balances, deposits, withdrawals, errors };
   });
+
+// Live Bybit Card transactions (v5). Bybit does not document a single card
+// endpoint publicly, so we probe the known v5 card paths with the same signed
+// request flow and use whichever one the key is allowed to read.
+export const getBybitCardTransactions = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) => rangeSchema.parse(data ?? {}))
+  .handler(async ({ data, context }) => {
+    const { data: roles } = await context.supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", context.userId);
+    if (!(roles ?? []).some((r: { role: string }) => r.role === "admin")) {
+      throw new Error("Forbidden: admin only");
+    }
+
+    const key = process.env["BYBIT_API_KEY"];
+    const secret = process.env["BYBIT_API_SECRET"];
+    if (!key || !secret) {
+      return { configured: false as const, source: "", rows: [], errors: ["missing keys"] };
+    }
+
+    const { createHmac } = await import("node:crypto");
+    const recv = "20000";
+
+    async function call(path: string, params: Record<string, string>) {
+      const qs = new URLSearchParams(params).toString();
+      const ts = Date.now().toString();
+      const sign = createHmac("sha256", secret!).update(ts + key! + recv + qs).digest("hex");
+      const res = await fetch(`https://api.bybit.com${path}${qs ? `?${qs}` : ""}`, {
+        headers: {
+          "X-BAPI-API-KEY": key!,
+          "X-BAPI-TIMESTAMP": ts,
+          "X-BAPI-RECV-WINDOW": recv,
+          "X-BAPI-SIGN": sign,
+        },
+      });
+      const body = (await res.json()) as { retCode?: number; retMsg?: string; result?: Record<string, unknown> };
+      if (!res.ok || body.retCode !== 0) {
+        throw new Error(`${path} [${res.status}] ${body.retMsg ?? "request failed"}`);
+      }
+      return body.result ?? {};
+    }
+
+    const DAY = 24 * 60 * 60 * 1000;
+    const endTime = Date.now();
+    const startTime = endTime - data.days * DAY;
+    const errors: string[] = [];
+
+    const candidates = [
+      "/v5/user/card/transactions",
+      "/v5/user/card/transaction-record",
+      "/v5/asset/card/transaction-record",
+      "/v5/asset/card/query-record",
+    ];
+
+    for (const path of candidates) {
+      try {
+        const res = await call(path, {
+          startTime: String(startTime),
+          endTime: String(endTime),
+          limit: "50",
+        });
+        const raw =
+          ((res["rows"] as any[]) ?? (res["list"] as any[]) ?? (res["records"] as any[]) ?? []) as any[];
+        const rows = raw.map((r, i) => ({
+          id: String(r.id ?? r.orderId ?? r.txId ?? r.transactionId ?? `${path}-${i}`),
+          occurredAt: Number(r.transTime ?? r.createTime ?? r.createdTime ?? r.time ?? 0),
+          amount: Number(r.amount ?? r.transAmount ?? r.value ?? 0),
+          currency: String(r.currency ?? r.coin ?? r.currencyCode ?? ""),
+          merchant: String(r.merchant ?? r.merchantName ?? r.description ?? r.remark ?? ""),
+          status: String(r.status ?? r.orderStatus ?? ""),
+          last4: String(r.cardLast4 ?? r.last4 ?? r.cardNo ?? "").slice(-4),
+        }));
+        return { configured: true as const, source: path, rows, errors };
+      } catch (e) {
+        errors.push(String((e as Error).message));
+      }
+    }
+
+    return { configured: true as const, source: "", rows: [], errors };
+  });
