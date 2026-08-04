@@ -343,7 +343,12 @@ export function CardTransactionsTab() {
                       {refund ? "+" : "-"}
                       {r.currency || "USD"} {money(r.amount)}
                     </td>
-                    <td className="px-4 py-4 text-end font-medium">{r.merchant || "Card Purchase"}</td>
+                    <td className="px-4 py-4">
+                      <div className="flex items-center justify-end gap-2 font-medium">
+                        <span>{r.merchant || "Card Purchase"}</span>
+                        <MerchantIcon name={r.merchant || "Card"} />
+                      </div>
+                    </td>
                   </tr>
                 );
               })}
