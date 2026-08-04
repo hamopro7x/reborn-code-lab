@@ -122,7 +122,7 @@ function ProductPage() {
       <div className="grid md:grid-cols-2 gap-8 animate-slide-up">
         <div className="card-surface rounded-3xl overflow-hidden aspect-square relative">
           {p.main_image ? (
-            <img src={p.main_image} alt={p.name} className="w-full h-full object-cover" />
+            <img src={p.main_image} alt={p.name} className="w-full h-full object-contain" />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-9xl opacity-40">{p.category?.icon ?? "🎁"}</div>
           )}

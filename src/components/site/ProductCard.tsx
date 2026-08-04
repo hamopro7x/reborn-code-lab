@@ -19,7 +19,7 @@ export function ProductCard({ p }: { p: any }) {
     >
       <div className="relative aspect-[4/3] bg-gradient-to-br from-primary/20 via-accent/10 to-background overflow-hidden">
         {p.main_image ? (
-          <img src={p.main_image} alt={p.name} width={640} height={480} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" loading="lazy" />
+          <img src={p.main_image} alt={p.name} width={640} height={480} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-700" loading="lazy" />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-6xl opacity-40">
             {p.category?.icon ?? "🎁"}
