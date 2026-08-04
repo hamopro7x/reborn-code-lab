@@ -565,12 +565,20 @@ async function showPairing(_device, note) {
 async function run(device) {
   if (running) return;
   running = true;
-  try { await window.agent.enableAutoLaunch(); } catch {}
+  // إظهار شاشة "جارٍ الاتصال" فوراً قبل أي await خارجي، حتى لو IPC/شبكة
+  // تأخرت لا تفضل النافذة فاضية (كان هذا سبب ظهور نافذة بيضاء والأدمن يراه غير متصل).
   consentEl.style.display = "none";
   pairingEl.style.display = "none";
   runningEl.style.display = "flex";
   deviceEl.textContent = `${device.employee_name || "موظف"} · ${device.device_id.slice(0, 8)}`;
   setStatus("جارٍ الاتصال بالسيرفر…", false);
+
+  try {
+    await Promise.race([
+      window.agent?.enableAutoLaunch?.() ?? Promise.resolve(),
+      new Promise((resolve) => setTimeout(resolve, 2000)),
+    ]);
+  } catch { /* لا يوقف التشغيل */ }
 
   const first = await heartbeat(device);
   if (first === false) {
