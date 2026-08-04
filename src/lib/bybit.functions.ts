@@ -411,7 +411,7 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
       configured: true as const,
       source: cardPath,
       rows: [],
-      errors: probeErrors.filter((message) => !/rate limit|too many visits/i.test(message)).slice(0, 1),
+      errors: probeErrors.filter((message) => !/rate limit|too many visits|param_illegal/i.test(message)).slice(0, 1),
     };
   });
 
