@@ -1,175 +1,107 @@
 import { useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { getBybitCardTransactions } from "@/lib/bybit.functions";
+import { getBybitActivity, getBybitCardTransactions } from "@/lib/bybit.functions";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, RefreshCw, Trash2, Copy, Globe, Wallet, CalendarDays, Link2 } from "lucide-react";
-import { toast } from "sonner";
+import { Loader2, RefreshCw, CreditCard, AlertTriangle, ChevronLeft } from "lucide-react";
 
-type Tx = {
+type Row = {
   id: string;
-  occurred_at: string;
+  occurredAt: number;
   amount: number;
-  currency_code: string;
+  currency: string;
   merchant: string;
   status: string;
-  source: string;
-  card_last4: string | null;
-  notes: string | null;
+  last4: string;
 };
 
-const monthKey = (iso: string) => iso.slice(0, 7);
-const num = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 2 });
+const money = (n: number) =>
+  Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-function randomToken() {
-  const bytes = new Uint8Array(24);
-  crypto.getRandomValues(bytes);
-  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
-}
+const dateLine = (ms: number) =>
+  ms
+    ? new Date(ms).toLocaleString("en-GB", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      })
+    : "—";
+
+const isRefund = (r: Row) => r.amount > 0 || /refund|reversal|cashback/i.test(r.status + r.merchant);
+
+const statusLabel = (s: string) => {
+  const v = s.toLowerCase();
+  if (!s) return "Successful";
+  if (/success|completed|filled|done/.test(v)) return "Successful";
+  if (/pending|processing/.test(v)) return "Pending";
+  if (/fail|reject|declin/.test(v)) return "Failed";
+  return s;
+};
+
+const initials = (name: string) =>
+  (name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("") || "?").toUpperCase();
 
 export function CardTransactionsTab() {
-  const qc = useQueryClient();
-  const [month, setMonth] = useState("");
-  const [form, setForm] = useState({
-    occurred_at: new Date().toISOString().slice(0, 10),
-    amount: "",
-    currency_code: "USD",
-    merchant: "",
-    status: "completed",
+  const fetchCard = useServerFn(getBybitCardTransactions);
+  const fetchActivity = useServerFn(getBybitActivity);
+  const [tab, setTab] = useState<"all" | "purchase" | "refund">("all");
+
+  const { data: live, isLoading, isFetching, refetch } = useQuery({
+    queryKey: ["bybit-card-live"],
+    queryFn: () => fetchCard({ data: { days: 90 } }),
+    refetchInterval: 30_000,
+    retry: false,
   });
 
-  const { data: txs, isLoading } = useQuery({
+  const { data: activity } = useQuery({
+    queryKey: ["bybit-activity", 30],
+    queryFn: () => fetchActivity({ data: { days: 30 } }),
+    refetchInterval: 30_000,
+    retry: false,
+  });
+
+  const { data: stored } = useQuery({
     queryKey: ["card-transactions"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("card_transactions")
-        .select("id, occurred_at, amount, currency_code, merchant, status, source, card_last4, notes")
+        .select("id, occurred_at, amount, currency_code, merchant, status, card_last4")
         .order("occurred_at", { ascending: false })
-        .limit(1000);
+        .limit(500);
       if (error) throw error;
-      return (data ?? []) as Tx[];
+      return data ?? [];
     },
-    refetchInterval: 15000,
+    refetchInterval: 30_000,
   });
 
-  // Live Bybit Card (v5 API) — no manual upload needed
-  const fetchCard = useServerFn(getBybitCardTransactions);
-  const {
-    data: live,
-    isFetching: liveLoading,
-    refetch: refetchLive,
-  } = useQuery({
-    queryKey: ["bybit-card-live"],
-    queryFn: () => fetchCard({ data: { days: 90 } }),
-    refetchInterval: 60000,
-    retry: false,
-  });
-  const liveRows = live?.rows ?? [];
+  const internal = (activity?.accounts ?? []).find((a) => a.kind === "internal");
+  const spendingPower = internal?.spendingPower ?? 0;
   const liveError = (live?.errors ?? [])[0];
 
+  const rows = useMemo<Row[]>(() => {
+    const a: Row[] = (live?.rows ?? []) as Row[];
+    const b: Row[] = (stored ?? []).map((t: any) => ({
+      id: t.id,
+      occurredAt: new Date(t.occurred_at).getTime(),
+      amount: -Math.abs(Number(t.amount)),
+      currency: t.currency_code,
+      merchant: t.merchant,
+      status: t.status,
+      last4: t.card_last4 ?? "",
+    }));
+    return [...a, ...b].sort((x, y) => y.occurredAt - x.occurredAt);
+  }, [live, stored]);
 
-
-  const { data: ingest } = useQuery({
-    queryKey: ["card-ingest-token"],
-    queryFn: async () => {
-      const { data } = await supabase.from("site_settings").select("value").eq("key", "card_ingest").maybeSingle();
-      return ((data?.value as { token?: string } | null)?.token ?? "") as string;
-    },
-  });
-
-  const saveToken = useMutation({
-    mutationFn: async () => {
-      const token = randomToken();
-      const { error } = await supabase.from("site_settings").upsert({ key: "card_ingest", value: { token } });
-      if (error) throw error;
-      return token;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["card-ingest-token"] });
-      toast.success("تم توليد مفتاح الرفع التلقائي");
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const addTx = useMutation({
-    mutationFn: async () => {
-      const amount = Number(form.amount);
-      if (!form.merchant.trim()) throw new Error("اكتب اسم الموقع / الجهة");
-      if (!Number.isFinite(amount) || amount <= 0) throw new Error("اكتب مبلغ صحيح");
-      const { error } = await supabase.from("card_transactions").insert({
-        occurred_at: new Date(form.occurred_at).toISOString(),
-        amount,
-        currency_code: form.currency_code.toUpperCase(),
-        merchant: form.merchant.trim(),
-        status: form.status,
-        source: "manual",
-      });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      setForm((f) => ({ ...f, amount: "", merchant: "" }));
-      qc.invalidateQueries({ queryKey: ["card-transactions"] });
-      toast.success("تم تسجيل المعاملة");
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const delTx = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("card_transactions").delete().eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["card-transactions"] });
-      toast.success("تم الحذف");
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const months = useMemo(() => {
-    const set = new Set((txs ?? []).map((t) => monthKey(t.occurred_at)));
-    return Array.from(set).sort().reverse();
-  }, [txs]);
-
-  const filtered = useMemo(
-    () => (txs ?? []).filter((t) => !month || monthKey(t.occurred_at) === month),
-    [txs, month],
+  const filtered = rows.filter((r) =>
+    tab === "all" ? true : tab === "refund" ? isRefund(r) : !isRefund(r),
   );
 
-  const monthly = useMemo(() => {
-    const map = new Map<string, Map<string, number>>();
-    for (const t of txs ?? []) {
-      const k = monthKey(t.occurred_at);
-      const inner = map.get(k) ?? new Map<string, number>();
-      inner.set(t.currency_code, (inner.get(t.currency_code) ?? 0) + Number(t.amount));
-      map.set(k, inner);
-    }
-    return Array.from(map.entries()).sort((a, b) => (a[0] < b[0] ? 1 : -1));
-  }, [txs]);
-
-  const byMerchant = useMemo(() => {
-    const map = new Map<string, { merchant: string; count: number; totals: Map<string, number> }>();
-    for (const t of filtered) {
-      const key = t.merchant.toLowerCase();
-      const r = map.get(key) ?? { merchant: t.merchant, count: 0, totals: new Map<string, number>() };
-      r.count += 1;
-      r.totals.set(t.currency_code, (r.totals.get(t.currency_code) ?? 0) + Number(t.amount));
-      map.set(key, r);
-    }
-    return Array.from(map.values()).sort((a, b) => b.count - a.count);
-  }, [filtered]);
-
-  const totals = useMemo(() => {
-    const byCur = new Map<string, number>();
-    for (const t of filtered) byCur.set(t.currency_code, (byCur.get(t.currency_code) ?? 0) + Number(t.amount));
-    return Array.from(byCur.entries());
-  }, [filtered]);
-
-  const ingestUrl = typeof window !== "undefined" ? `${window.location.origin}/api/public/card-transactions` : "";
+  const spent = rows.filter((r) => !isRefund(r)).reduce((s, r) => s + Math.abs(r.amount), 0);
 
   if (isLoading) {
     return (
@@ -180,340 +112,128 @@ export function CardTransactionsTab() {
   }
 
   return (
-    <div className="space-y-4" dir="rtl">
-      {/* Live Bybit Card (v5) */}
-      <div className="card-surface rounded-2xl overflow-hidden">
-        <div className="p-3 flex items-center justify-between border-b border-border/40">
-          <div className="text-sm font-bold flex items-center gap-2">
-            <Wallet className="size-4" /> معاملات بطاقة بايبت (مباشر — API v5)
-          </div>
-          <Button size="sm" variant="outline" onClick={() => refetchLive()} disabled={liveLoading}>
-            {liveLoading ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
-            تحديث
-          </Button>
-        </div>
-        {liveRows.length === 0 ? (
-          <div className="p-4 text-sm text-muted-foreground">
-            {liveLoading
-              ? "جاري الجلب من بايبت..."
-              : liveError
-                ? `تعذر الجلب من بايبت: ${liveError}`
-                : "لا توجد معاملات بطاقة في آخر 90 يوم."}
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-[11px] uppercase tracking-wide text-muted-foreground bg-muted/20 border-b border-border/40">
-                <tr>
-                  <th className="text-start p-3 font-semibold">التاريخ</th>
-                  <th className="text-start p-3 font-semibold">الموقع / التاجر</th>
-                  <th className="text-start p-3 font-semibold">المبلغ</th>
-                  <th className="text-start p-3 font-semibold">الحالة</th>
-                  <th className="text-start p-3 font-semibold">آخر 4</th>
-                </tr>
-              </thead>
-              <tbody>
-                {liveRows.map((r) => (
-                  <tr key={r.id} className="border-b border-border/20">
-                    <td className="p-3 tabular-nums">
-                      {r.occurredAt ? new Date(r.occurredAt).toISOString().slice(0, 10) : "—"}
-                    </td>
-                    <td className="p-3">{r.merchant || "—"}</td>
-                    <td className="p-3 tabular-nums font-bold">
-                      {num(r.amount)} {r.currency}
-                    </td>
-                    <td className="p-3">{r.status || "—"}</td>
-                    <td className="p-3 tabular-nums">{r.last4 || "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {/* summary */}
-      <div className="grid gap-3 sm:grid-cols-3">
-        <div className="card-surface rounded-2xl p-4 border-s-2 border-s-primary/50">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-            <Wallet className="size-4" /> إجمالي المصروف {month ? `(${month})` : "(الكل)"}
-          </div>
-          <div className="flex flex-wrap gap-2 mt-1">
-            {totals.length === 0 && <span className="text-lg font-black text-muted-foreground">—</span>}
-            {totals.map(([c, v]) => (
-              <Badge key={c} variant="secondary" className="text-sm font-bold tabular-nums">
-                {num(v)} {c}
-              </Badge>
-            ))}
-          </div>
-        </div>
-        <div className="card-surface rounded-2xl p-4 border-s-2 border-s-primary/50">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-            <CalendarDays className="size-4" /> عدد المعاملات
-          </div>
-          <div className="text-3xl font-black tabular-nums">{filtered.length}</div>
-        </div>
-        <div className="card-surface rounded-2xl p-4 border-s-2 border-s-primary/50">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-            <Globe className="size-4" /> عدد المواقع
-          </div>
-          <div className="text-3xl font-black tabular-nums">{byMerchant.length}</div>
-        </div>
-      </div>
-
-      {/* month filter */}
-      <div className="card-surface rounded-2xl p-4 flex flex-wrap items-center gap-2">
-        <span className="text-xs text-muted-foreground">الشهر:</span>
-        <Button size="sm" variant={month === "" ? "default" : "outline"} onClick={() => setMonth("")}>
-          الكل
-        </Button>
-        {months.map((m) => (
-          <Button key={m} size="sm" variant={month === m ? "default" : "outline"} onClick={() => setMonth(m)}>
-            {m}
-          </Button>
-        ))}
-      </div>
-
-      {/* monthly totals */}
-      <div className="card-surface rounded-2xl overflow-hidden">
-        <div className="p-3 text-sm font-bold border-b border-border/40">الإجمالي الشهري</div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="text-[11px] uppercase tracking-wide text-muted-foreground bg-muted/20 border-b border-border/40">
-              <tr>
-                <th className="text-start p-3 font-semibold">الشهر</th>
-                <th className="text-start p-3 font-semibold">الإجمالي</th>
-              </tr>
-            </thead>
-            <tbody>
-              {monthly.map(([m, cur]) => (
-                <tr key={m} className="border-b border-border/20 last:border-0">
-                  <td className="p-3 font-semibold">{m}</td>
-                  <td className="p-3">
-                    <div className="flex flex-wrap gap-2">
-                      {Array.from(cur.entries()).map(([c, v]) => (
-                        <Badge key={c} variant="outline" className="tabular-nums">
-                          {num(v)} {c}
-                        </Badge>
-                      ))}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {monthly.length === 0 && (
-                <tr>
-                  <td colSpan={2} className="p-8 text-center text-muted-foreground">
-                    لا توجد معاملات بعد
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* by merchant */}
-      <div className="card-surface rounded-2xl overflow-hidden">
-        <div className="p-3 text-sm font-bold border-b border-border/40">
-          المصروف حسب الموقع {month ? `— ${month}` : ""}
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="text-[11px] uppercase tracking-wide text-muted-foreground bg-muted/20 border-b border-border/40">
-              <tr>
-                <th className="text-start p-3 font-semibold">الموقع / الجهة</th>
-                <th className="text-end p-3 font-semibold">عدد المعاملات</th>
-                <th className="text-start p-3 font-semibold">الإجمالي</th>
-              </tr>
-            </thead>
-            <tbody>
-              {byMerchant.map((r) => (
-                <tr key={r.merchant} className="border-b border-border/20 last:border-0 hover:bg-muted/20">
-                  <td className="p-3 font-semibold">{r.merchant}</td>
-                  <td className="p-3 text-end tabular-nums">{r.count}</td>
-                  <td className="p-3">
-                    <div className="flex flex-wrap gap-2">
-                      {Array.from(r.totals.entries()).map(([c, v]) => (
-                        <Badge key={c} variant="secondary" className="tabular-nums">
-                          {num(v)} {c}
-                        </Badge>
-                      ))}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {byMerchant.length === 0 && (
-                <tr>
-                  <td colSpan={3} className="p-8 text-center text-muted-foreground">
-                    لا توجد بيانات
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* manual add */}
-      <div className="card-surface rounded-2xl p-4 space-y-3">
-        <div className="text-sm font-bold">إضافة معاملة يدوياً</div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          <div className="space-y-1.5">
-            <Label className="text-[11px] text-muted-foreground">التاريخ</Label>
-            <Input
-              type="date"
-              value={form.occurred_at}
-              onChange={(e) => setForm({ ...form, occurred_at: e.target.value })}
-              className="h-10"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-[11px] text-muted-foreground">المبلغ</Label>
-            <Input
-              inputMode="decimal"
-              value={form.amount}
-              onChange={(e) => setForm({ ...form, amount: e.target.value })}
-              className="h-10"
-              placeholder="0.00"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-[11px] text-muted-foreground">العملة</Label>
-            <Input
-              value={form.currency_code}
-              onChange={(e) => setForm({ ...form, currency_code: e.target.value })}
-              className="h-10"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-[11px] text-muted-foreground">الموقع / الجهة</Label>
-            <Input
-              value={form.merchant}
-              onChange={(e) => setForm({ ...form, merchant: e.target.value })}
-              className="h-10"
-              placeholder="مثال: CapCut"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-[11px] text-muted-foreground">الحالة</Label>
-            <select
-              value={form.status}
-              onChange={(e) => setForm({ ...form, status: e.target.value })}
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-            >
-              <option value="completed">مكتملة</option>
-              <option value="pending">معلّقة</option>
-              <option value="failed">مرفوضة</option>
-              <option value="refunded">مستردة</option>
-            </select>
-          </div>
-        </div>
-        <Button onClick={() => addTx.mutate()} disabled={addTx.isPending}>
-          {addTx.isPending ? <Loader2 className="size-4 animate-spin ms-1" /> : <Plus className="size-4 ms-1" />}
-          تسجيل المعاملة
-        </Button>
-      </div>
-
-      {/* auto ingest */}
-      <div className="card-surface rounded-2xl p-4 space-y-3">
-        <div className="flex items-center gap-2 text-sm font-bold">
-          <Link2 className="size-4" /> الرفع التلقائي للمعاملات
-        </div>
-        <p className="text-xs text-muted-foreground leading-relaxed">
-          أي أداة (Zapier / Make / سكربت / إشعارات البريد) تبعت المعاملة على الرابط التالي بترويسة{" "}
-          <code className="text-foreground">x-ingest-token</code> وهي بتتسجل هنا تلقائياً بدون إدخال يدوي.
-        </p>
-        <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
-          <Input readOnly value={ingestUrl} className="h-10 font-mono text-xs" />
-          <Button
-            variant="outline"
-            onClick={() => {
-              navigator.clipboard.writeText(ingestUrl);
-              toast.success("تم نسخ الرابط");
-            }}
-          >
-            <Copy className="size-4 ms-1" /> نسخ الرابط
-          </Button>
-          <Input
-            readOnly
-            value={ingest ? ingest : "لم يتم توليد مفتاح بعد"}
-            className="h-10 font-mono text-xs"
-          />
-          <div className="flex gap-2">
-            {ingest && (
-              <Button
-                variant="outline"
-                onClick={() => {
-                  navigator.clipboard.writeText(ingest);
-                  toast.success("تم نسخ المفتاح");
-                }}
-              >
-                <Copy className="size-4 ms-1" /> نسخ
+    <div className="space-y-4" dir="ltr">
+      {/* Card hero — Bybit Card dashboard style */}
+      <div className="rounded-2xl border bg-card overflow-hidden">
+        <div className="p-5 md:p-6 bg-gradient-to-br from-muted/60 to-transparent">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="text-xs text-muted-foreground">Available Balance</div>
+              <div className="mt-1 text-4xl font-black tracking-tight tabular-nums">
+                ${money(spendingPower)}
+              </div>
+              <div className="mt-1 text-[11px] text-muted-foreground">
+                Spending Power · Bybit Card
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="hidden sm:flex h-12 w-20 items-center justify-center rounded-lg bg-foreground/90 text-background text-xs font-bold">
+                <CreditCard className="size-4 me-1" /> Card
+              </div>
+              <Button size="sm" variant="outline" onClick={() => refetch()} disabled={isFetching}>
+                <RefreshCw className={`size-4 ${isFetching ? "animate-spin" : ""}`} />
               </Button>
-            )}
-            <Button variant="secondary" onClick={() => saveToken.mutate()} disabled={saveToken.isPending}>
-              {saveToken.isPending ? (
-                <Loader2 className="size-4 animate-spin ms-1" />
-              ) : (
-                <RefreshCw className="size-4 ms-1" />
-              )}
-              {ingest ? "تجديد المفتاح" : "توليد مفتاح"}
-            </Button>
+            </div>
+          </div>
+
+          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <div className="rounded-xl border bg-background/60 px-3 py-2">
+              <div className="text-[11px] text-muted-foreground">Total Spent (90d)</div>
+              <div className="text-lg font-bold tabular-nums">${money(spent)}</div>
+            </div>
+            <div className="rounded-xl border bg-background/60 px-3 py-2">
+              <div className="text-[11px] text-muted-foreground">Transactions</div>
+              <div className="text-lg font-bold tabular-nums">{rows.length}</div>
+            </div>
+            <div className="rounded-xl border bg-background/60 px-3 py-2">
+              <div className="text-[11px] text-muted-foreground">Currency</div>
+              <div className="text-lg font-bold">USD</div>
+            </div>
           </div>
         </div>
-        <pre className="text-[11px] bg-muted/30 rounded-xl p-3 overflow-x-auto text-muted-foreground" dir="ltr">
-{`POST ${ingestUrl || "/api/public/card-transactions"}
-x-ingest-token: <TOKEN>
-content-type: application/json
-
-{"external_id":"bybit-123","occurred_at":"2026-08-04T10:00:00Z",
- "amount":12.99,"currency_code":"USD","merchant":"CapCut","status":"completed"}`}
-        </pre>
       </div>
 
-      {/* list */}
-      <div className="card-surface rounded-2xl overflow-hidden">
-        <div className="p-3 text-sm font-bold border-b border-border/40">كل المعاملات</div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="text-[11px] uppercase tracking-wide text-muted-foreground bg-muted/20 border-b border-border/40">
-              <tr>
-                <th className="text-start p-3 font-semibold">التاريخ</th>
-                <th className="text-start p-3 font-semibold">الموقع / الجهة</th>
-                <th className="text-end p-3 font-semibold">المبلغ</th>
-                <th className="text-start p-3 font-semibold">الحالة</th>
-                <th className="text-start p-3 font-semibold">المصدر</th>
-                <th className="p-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((t) => (
-                <tr key={t.id} className="border-b border-border/20 last:border-0 hover:bg-muted/20">
-                  <td className="p-3 whitespace-nowrap">{new Date(t.occurred_at).toLocaleDateString("ar-EG")}</td>
-                  <td className="p-3 font-semibold">{t.merchant}</td>
-                  <td className="p-3 text-end tabular-nums text-primary font-semibold">
-                    {num(Number(t.amount))} {t.currency_code}
-                  </td>
-                  <td className="p-3">
-                    <Badge variant={t.status === "completed" ? "secondary" : "outline"}>{t.status}</Badge>
-                  </td>
-                  <td className="p-3 text-muted-foreground text-xs">{t.source === "auto" ? "تلقائي" : "يدوي"}</td>
-                  <td className="p-3 text-end">
-                    <Button size="icon" variant="ghost" onClick={() => delTx.mutate(t.id)}>
-                      <Trash2 className="size-4 text-destructive" />
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-              {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="p-10 text-center text-muted-foreground">
-                    لا توجد معاملات
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+      {liveError && (
+        <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-xs flex items-start gap-2">
+          <AlertTriangle className="size-4 mt-0.5" />
+          <span className="text-muted-foreground">{liveError}</span>
+        </div>
+      )}
+
+      {/* Recent Transactions — Bybit list layout */}
+      <div className="rounded-2xl border bg-card overflow-hidden">
+        <div className="flex items-center justify-between p-4 pb-2">
+          <h3 className="text-base font-bold">Recent Transactions</h3>
+          <span className="flex items-center text-xs text-muted-foreground">
+            All <ChevronLeft className="size-3 rotate-180" />
+          </span>
+        </div>
+
+        <div className="flex gap-1 px-4 pb-3">
+          {(
+            [
+              ["all", "All"],
+              ["purchase", "Purchases"],
+              ["refund", "Refunds"],
+            ] as const
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setTab(key)}
+              className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                tab === key
+                  ? "bg-foreground text-background"
+                  : "bg-muted/40 text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div className="divide-y divide-border/40">
+          {filtered.length === 0 && (
+            <div className="p-10 text-center text-sm text-muted-foreground">No transactions</div>
+          )}
+          {filtered.map((r) => {
+            const refund = isRefund(r);
+            const st = statusLabel(r.status);
+            return (
+              <div key={r.id} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/20">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold">
+                  {initials(r.merchant || "TX")}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-semibold">{r.merchant || "Card Purchase"}</div>
+                  <div className="text-[11px] text-muted-foreground tabular-nums">
+                    {dateLine(r.occurredAt)}
+                    {r.last4 ? ` · •••• ${r.last4}` : ""}
+                  </div>
+                </div>
+                <div className="text-end">
+                  <div
+                    className={`text-sm font-bold tabular-nums ${
+                      refund ? "text-emerald-500" : "text-foreground"
+                    }`}
+                  >
+                    {refund ? "+" : "-"}
+                    {money(r.amount)} {r.currency || "USD"}
+                  </div>
+                  <div
+                    className={`text-[11px] ${
+                      st === "Failed"
+                        ? "text-destructive"
+                        : st === "Pending"
+                          ? "text-amber-500"
+                          : "text-muted-foreground"
+                    }`}
+                  >
+                    {st}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
