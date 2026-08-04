@@ -118,9 +118,15 @@ export function CardTransactionsTab() {
     .filter((r) => !isRefund(r) && r.occurredAt >= monthStart)
     .reduce((s, r) => s + Math.abs(r.amount), 0);
 
-  // نسبة الاستراداد النقدي (Pay Rewards) — قابلة للتعديل
-  const cashbackRate = Number(cashback) || 0;
-  const cashbackEarned = (monthlySpend * cashbackRate) / 100;
+  // نسبة الاستراداد النقدي — تلقائي من المنصة، وإن لم تتوفر تُحسب من المعاملات
+  const platformRate = rewards?.rate ?? null;
+  const refunded = rows
+    .filter((r) => isRefund(r) && r.occurredAt >= monthStart)
+    .reduce((s, r) => s + Math.abs(r.amount), 0);
+  const derivedRate = monthlySpend > 0 ? (refunded / monthlySpend) * 100 : null;
+  const cashbackRate = platformRate ?? derivedRate;
+  const spendForRate = rewards?.monthlySpend ?? monthlySpend;
+  const cashbackEarned = cashbackRate == null ? null : (spendForRate * cashbackRate) / 100;
 
 
 
