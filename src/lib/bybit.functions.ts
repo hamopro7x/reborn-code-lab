@@ -168,28 +168,8 @@ export const getBybitActivity = createServerFn({ method: "POST" })
     // بطاقة Bybit تصرف من حساب التمويل (FUND) — فرصيده هو "الرصيد الداخلي"
     // الظاهر في لوحة البطاقة كـ Spending Power. UNIFIED = الرصيد الخارجي.
 
-    // نحاول جلب قوة الشراء الحقيقية من باي بت نفسها بدل تقديرها بهامش ثابت.
-    async function realSpendingPower(): Promise<number | null> {
-      const paths = [
-        "/v5/card/query-balance",
-        "/v5/card/account/balance",
-        "/v5/card/query-card-info",
-        "/v5/card/spending-power",
-      ];
-      for (const p of paths) {
-        try {
-          const r: any = await call(p, {});
-          const node = r?.data ?? r ?? {};
-          const raw =
-            node.spendingPower ?? node.availableBalance ?? node.available ?? node.balance ?? node.totalAmount;
-          const n = Number(raw);
-          if (Number.isFinite(n) && n > 0) return n;
-        } catch {
-          /* نجرب المسار التالي */
-        }
-      }
-      return null;
-    }
+    // باي بت لا توفّر endpoint لقوة شراء البطاقة (كل مسارات /v5/card/*balance
+    // ترجع 404)، فنحسبها من الرصيد القابل للصرف بعد هامش التحويل.
 
     async function accountsBalances() {
       const defs = [
@@ -197,10 +177,10 @@ export const getBybitActivity = createServerFn({ method: "POST" })
         { type: "UNIFIED", label: "الرصيد الخارجي (الحساب الموحّد)", kind: "external" as const },
       ];
 
-      const [raw, live] = await Promise.all([
-        Promise.all(defs.map(async (d) => ({ ...d, coins: (await coinsOf(d.type)).filter((c) => c.balance > 0) }))),
-        realSpendingPower(),
-      ]);
+      const raw = await Promise.all(
+        defs.map(async (d) => ({ ...d, coins: (await coinsOf(d.type)).filter((c) => c.balance > 0) })),
+      );
+
       const missing: string[] = [
         ...new Set(raw.flatMap((a) => a.coins.filter((c) => c.usdValue <= 0).map((c) => c.coin))),
       ];
