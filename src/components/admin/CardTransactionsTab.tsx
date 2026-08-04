@@ -101,7 +101,6 @@ export function CardTransactionsTab() {
     tab === "all" ? true : tab === "refund" ? isRefund(r) : !isRefund(r),
   );
 
-  const spent = rows.filter((r) => !isRefund(r)).reduce((s, r) => s + Math.abs(r.amount), 0);
 
   return (
     <div className="space-y-4" dir="ltr">
@@ -128,11 +127,7 @@ export function CardTransactionsTab() {
             </div>
           </div>
 
-          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <div className="rounded-xl border bg-background/60 px-3 py-2">
-              <div className="text-[11px] text-muted-foreground">Total Spent</div>
-              <div className="text-lg font-bold tabular-nums">${money(spent)}</div>
-            </div>
+          <div className="mt-5 grid grid-cols-2 gap-3">
             <div className="rounded-xl border bg-background/60 px-3 py-2">
               <div className="text-[11px] text-muted-foreground">Transactions</div>
               <div className="text-lg font-bold tabular-nums">{rows.length}</div>
