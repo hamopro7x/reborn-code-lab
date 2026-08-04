@@ -194,15 +194,22 @@ export const getBybitActivity = createServerFn({ method: "POST" })
           c.usdValue > 0 ? c : { ...c, usdValue: c.balance * (prices.get(c.coin) ?? 0) },
         );
         const totalUsd = coins.reduce((s, c) => s + c.usdValue, 0);
-        const estimated = coins.reduce(
-          (s, c) => s + (/^USD$/i.test(c.coin) ? c.usdValue : c.usdValue * (1 - CARD_SPREAD)),
-          0,
-        );
+        const isFiat = (coin: string) => /^USD$/i.test(coin);
+        // تفصيل قوة الشراء كما تعرضه لوحة بطاقة باي بت: Fiat + Crypto
+        const fiatUsd = coins
+          .filter((c) => isFiat(c.coin))
+          .reduce((s, c) => s + c.usdValue, 0);
+        const cryptoUsd = coins
+          .filter((c) => !isFiat(c.coin))
+          .reduce((s, c) => s + c.usdValue * (1 - CARD_SPREAD), 0);
+        const estimated = fiatUsd + cryptoUsd;
 
         return {
           ...a,
           coins,
           totalUsd,
+          fiatUsd: a.kind === "internal" ? fiatUsd : 0,
+          cryptoUsd: a.kind === "internal" ? cryptoUsd : totalUsd,
           spendingPower: a.kind === "internal" ? estimated : totalUsd,
         };
       });
