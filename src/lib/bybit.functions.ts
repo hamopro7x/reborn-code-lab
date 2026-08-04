@@ -410,11 +410,11 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
     };
 
 
-    const kindOf = (r: any): string => {
+    const kindOf = (r: any, last4 = ""): string => {
       const raw = String(r.cardType ?? r.cardCategory ?? r.cardKind ?? r.entity ?? "").toLowerCase();
       if (raw.includes("virt") || raw === "1") return "virtual";
       if (raw.includes("phys") || raw === "2") return "physical";
-      return "";
+      return cardKindByLast4.get(last4) ?? "";
     };
 
     const mapRow = (r: any, type: string, key: string): CardRow => {
