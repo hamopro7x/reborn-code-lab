@@ -373,7 +373,7 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
     try {
       for (const p of ["/v5/card/query-card-list", "/v5/card/query-card-info"]) {
         try {
-          const r: any = await call(p, {});
+          const r: any = await post(p, {});
           const list: any[] = r?.list ?? r?.rows ?? r?.cards ?? r?.data ?? (Array.isArray(r) ? r : []);
           for (const c of list ?? []) {
             const l4 = String(c.pan4 ?? c.last4 ?? c.cardNo ?? c.maskPan ?? "").slice(-4);
