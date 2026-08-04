@@ -61,7 +61,7 @@ export const Route = createFileRoute("/api/public/card-transactions")({
           source: "auto",
           card_last4: t.card_last4 ?? null,
           notes: t.notes ?? null,
-          raw: t as unknown as Record<string, unknown>,
+          raw: JSON.parse(JSON.stringify(t)),
         }));
 
         const withId = rows.filter((r) => r.external_id);
