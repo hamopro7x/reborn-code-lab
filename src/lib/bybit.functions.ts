@@ -400,3 +400,88 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
       errors: probeErrors.filter((message) => !/rate limit|too many visits/i.test(message)).slice(0, 1),
     };
   });
+
+/**
+ * Pay Rewards (Bybit Card cashback) — read the tier/rate straight from the
+ * platform. Bybit exposes this under a few different card reward paths
+ * depending on account region, so we probe them and return the first hit.
+ */
+export const getBybitCardRewards = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: roles } = await context.supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", context.userId);
+    if (!(roles ?? []).some((r: { role: string }) => r.role === "admin")) {
+      throw new Error("Forbidden: admin only");
+    }
+
+    const apiKey = process.env["BYBIT_API_KEY"];
+    const apiSecret = process.env["BYBIT_API_SECRET"];
+    if (!apiKey || !apiSecret) {
+      return { configured: false as const, rate: null, tier: null, monthlySpend: null, maxCashback: null, errors: ["missing keys"] };
+    }
+
+    const { createHmac } = await import("node:crypto");
+    const recv = "20000";
+
+    async function call(path: string, method: "GET" | "POST") {
+      const ts = Date.now().toString();
+      const payload = method === "POST" ? "{}" : "";
+      const sign = createHmac("sha256", apiSecret!).update(ts + apiKey! + recv + payload).digest("hex");
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10_000);
+      try {
+        const res = await fetch(`https://api.bybit.com${path}`, {
+          method,
+          headers: {
+            Accept: "application/json",
+            ...(method === "POST" ? { "Content-Type": "application/json" } : {}),
+            "X-BAPI-API-KEY": apiKey!,
+            "X-BAPI-TIMESTAMP": ts,
+            "X-BAPI-RECV-WINDOW": recv,
+            "X-BAPI-SIGN": sign,
+          },
+          ...(method === "POST" ? { body: payload } : {}),
+          signal: controller.signal,
+        });
+        const text = await res.text();
+        if (!text.trim()) throw new Error(`${path} empty response`);
+        const body = JSON.parse(text) as { retCode?: number; retMsg?: string; result?: Record<string, any> };
+        if (!res.ok || body.retCode !== 0) throw new Error(`${path} ${body.retMsg ?? "failed"}`);
+        return body.result ?? {};
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+
+    const candidates: [string, "GET" | "POST"][] = [
+      ["/v5/card/reward/query-cashback-info", "POST"],
+      ["/v5/card/rewards/query-info", "POST"],
+      ["/v5/card/reward/info", "GET"],
+    ];
+
+    const errors: string[] = [];
+    for (const [path, method] of candidates) {
+      try {
+        const r: any = await call(path, method);
+        const node = r?.data ?? r ?? {};
+        const rateRaw = node.cashbackRate ?? node.rate ?? node.currentRate;
+        const rate = rateRaw == null ? null : Number(rateRaw) <= 1 ? Number(rateRaw) * 100 : Number(rateRaw);
+        const monthlySpend = node.monthlySpend ?? node.spendAmount ?? node.currentSpend;
+        return {
+          configured: true as const,
+          rate: Number.isFinite(rate as number) ? (rate as number) : null,
+          tier: node.level ?? node.tier ?? node.tierName ?? null,
+          monthlySpend: monthlySpend == null ? null : Number(monthlySpend),
+          maxCashback: node.maxCashback == null ? null : Number(node.maxCashback),
+          errors: [],
+        };
+      } catch (error) {
+        errors.push(String((error as Error).message));
+      }
+    }
+
+    return { configured: true as const, rate: null, tier: null, monthlySpend: null, maxCashback: null, errors: errors.slice(0, 1) };
+  });

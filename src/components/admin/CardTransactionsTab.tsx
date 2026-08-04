@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { getBybitActivity, getBybitCardTransactions } from "@/lib/bybit.functions";
+import { getBybitActivity, getBybitCardRewards, getBybitCardTransactions } from "@/lib/bybit.functions";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, CreditCard, AlertTriangle, ChevronLeft } from "lucide-react";
 
@@ -49,15 +49,15 @@ const initials = (name: string) =>
 export function CardTransactionsTab() {
   const fetchCard = useServerFn(getBybitCardTransactions);
   const fetchActivity = useServerFn(getBybitActivity);
+  const fetchRewards = useServerFn(getBybitCardRewards);
   const [tab, setTab] = useState<"all" | "purchase" | "refund">("all");
-  const [cashback, setCashback] = useState<string>(() => {
-    if (typeof window === "undefined") return "6";
-    return window.localStorage.getItem("bybit_cashback_percent") ?? "6";
+
+  const { data: rewards } = useQuery({
+    queryKey: ["bybit-card-rewards"],
+    queryFn: () => fetchRewards(),
+    refetchInterval: 60_000,
+    retry: false,
   });
-  const saveCashback = (v: string) => {
-    setCashback(v);
-    if (typeof window !== "undefined") window.localStorage.setItem("bybit_cashback_percent", v);
-  };
 
   const { data: live, isLoading, isFetching, refetch } = useQuery({
     queryKey: ["bybit-card-live"],
@@ -118,9 +118,15 @@ export function CardTransactionsTab() {
     .filter((r) => !isRefund(r) && r.occurredAt >= monthStart)
     .reduce((s, r) => s + Math.abs(r.amount), 0);
 
-  // نسبة الاستراداد النقدي (Pay Rewards) — قابلة للتعديل
-  const cashbackRate = Number(cashback) || 0;
-  const cashbackEarned = (monthlySpend * cashbackRate) / 100;
+  // نسبة الاستراداد النقدي — تلقائي من المنصة، وإن لم تتوفر تُحسب من المعاملات
+  const platformRate = rewards?.rate ?? null;
+  const refunded = rows
+    .filter((r) => isRefund(r) && r.occurredAt >= monthStart)
+    .reduce((s, r) => s + Math.abs(r.amount), 0);
+  const derivedRate = monthlySpend > 0 ? (refunded / monthlySpend) * 100 : null;
+  const cashbackRate = platformRate ?? derivedRate;
+  const spendForRate = rewards?.monthlySpend ?? monthlySpend;
+  const cashbackEarned = cashbackRate == null ? null : (spendForRate * cashbackRate) / 100;
 
 
 
@@ -153,21 +159,17 @@ export function CardTransactionsTab() {
           <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div className="rounded-xl border bg-background/60 px-3 py-2">
               <div className="text-[11px] text-muted-foreground">Monthly Spend</div>
-              <div className="text-lg font-bold tabular-nums">${money(monthlySpend)}</div>
+              <div className="text-lg font-bold tabular-nums">${money(spendForRate)}</div>
             </div>
             <div className="rounded-xl border bg-background/60 px-3 py-2">
-              <div className="text-[11px] text-muted-foreground">Cashback Rate</div>
-              <div className="flex items-baseline gap-1">
-                <input
-                  value={cashback}
-                  onChange={(e) => saveCashback(e.target.value.replace(/[^\d.]/g, ""))}
-                  inputMode="decimal"
-                  className="w-12 bg-transparent text-lg font-bold tabular-nums outline-none focus:underline"
-                />
-                <span className="text-lg font-bold">%</span>
+              <div className="text-[11px] text-muted-foreground">
+                Cashback Rate{rewards?.tier ? ` · ${rewards.tier}` : ""}
+              </div>
+              <div className="text-lg font-bold tabular-nums">
+                {cashbackRate == null ? "—" : `${cashbackRate.toFixed(2)}%`}
               </div>
               <div className="text-[10px] text-muted-foreground tabular-nums">
-                ≈ ${money(cashbackEarned)} earned
+                {cashbackEarned == null ? "auto · Bybit" : `≈ $${money(cashbackEarned)} cashback`}
               </div>
             </div>
             <div className="rounded-xl border bg-background/60 px-3 py-2">
