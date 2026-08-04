@@ -122,9 +122,9 @@ function MerchantIcon({ name }: { name: string }) {
 }
 
 /** أيقونة نوعية البطاقة (بطاقة باي بت = ماستركارد) */
-function CardBrandIcon({ last4 }: { last4?: string }) {
-  // بطاقة Bybit الافتراضية فيزا؛ نعرض ماستركارد فقط لو الرقم يبدأ بـ 5 أو 2
-  const mastercard = !!last4 && /^[52]/.test(last4);
+function CardBrandIcon({ last4, brand }: { last4?: string; brand?: string }) {
+  // نستخدم علامة البطاقة القادمة من باي بت؛ ولو غير متاحة نستنتجها من الأرقام
+  const mastercard = brand ? brand === "mastercard" : !!last4 && /^[52]/.test(last4);
   if (!mastercard) {
 
     return (
@@ -150,6 +150,10 @@ function CardBrandIcon({ last4 }: { last4?: string }) {
     </svg>
   );
 }
+
+const cardKindLabel = (kind?: string) =>
+  kind === "virtual" ? "افتراضية" : kind === "physical" ? "فعلية" : "";
+
 
 
 
