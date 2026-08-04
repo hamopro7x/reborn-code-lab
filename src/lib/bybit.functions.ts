@@ -264,18 +264,31 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
       const payload = JSON.stringify(params);
       const ts = Date.now().toString();
       const sign = createHmac("sha256", apiSecret).update(ts + apiKey + recv + payload).digest("hex");
-      const res = await fetch(`https://api.bybit.com${path}`, {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          "X-BAPI-API-KEY": apiKey,
-          "X-BAPI-TIMESTAMP": ts,
-          "X-BAPI-RECV-WINDOW": recv,
-          "X-BAPI-SIGN": sign,
-        },
-        body: payload,
-      });
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 12_000);
+      let res: Response;
+      try {
+        res = await fetch(`https://api.bybit.com${path}`, {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            "X-BAPI-API-KEY": apiKey,
+            "X-BAPI-TIMESTAMP": ts,
+            "X-BAPI-RECV-WINDOW": recv,
+            "X-BAPI-SIGN": sign,
+          },
+          body: payload,
+          signal: controller.signal,
+        });
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") {
+          throw new Error("انتهت مهلة الاتصال بباي بت، حاول التحديث مرة أخرى");
+        }
+        throw error;
+      } finally {
+        clearTimeout(timeout);
+      }
       const text = await res.text();
       let body: { retCode?: number; retMsg?: string; result?: Record<string, unknown> } = {};
       if (text.trim()) {
@@ -339,17 +352,18 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
       return fetched;
     };
 
-    for (const type of cardQueryTypes) {
-      let gotAll = false;
+    await Promise.all(cardQueryTypes.map(async (type) => {
       try {
         await drain(type, {}, "all");
-        gotAll = true;
+        return;
       } catch (e) {
         probeErrors.push(String((e as Error).message));
       }
-      if (gotAll) continue;
-      // Fallback: month-by-month over the requested history range.
-      for (let winEnd = endTime; winEnd > startTime; winEnd -= 30 * DAY) {
+
+      // Fallback: month-by-month over the requested history range. Stop once
+      // the request budget is reached so a provider outage never blocks UI.
+      const deadline = Date.now() + 20_000;
+      for (let winEnd = endTime; winEnd > startTime && Date.now() < deadline; winEnd -= 30 * DAY) {
         const winStart = Math.max(startTime, winEnd - 30 * DAY);
         try {
           await drain(type, { createBeginTime: winStart, createEndTime: winEnd }, String(winStart));
@@ -357,7 +371,7 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
           probeErrors.push(String((e as Error).message));
         }
       }
-    }
+    }));
 
     if (cardRows.length > 0) {
       const unique = [...new Map(cardRows.map((row) => [row.id, row])).values()];
