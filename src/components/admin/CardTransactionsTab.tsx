@@ -56,6 +56,23 @@ export function CardTransactionsTab() {
     refetchInterval: 15000,
   });
 
+  // Live Bybit Card (v5 API) — no manual upload needed
+  const fetchCard = useServerFn(getBybitCardTransactions);
+  const {
+    data: live,
+    isFetching: liveLoading,
+    refetch: refetchLive,
+  } = useQuery({
+    queryKey: ["bybit-card-live"],
+    queryFn: () => fetchCard({ data: { days: 90 } }),
+    refetchInterval: 60000,
+    retry: false,
+  });
+  const liveRows = live?.rows ?? [];
+  const liveError = (live?.errors ?? [])[0];
+
+
+
   const { data: ingest } = useQuery({
     queryKey: ["card-ingest-token"],
     queryFn: async () => {
