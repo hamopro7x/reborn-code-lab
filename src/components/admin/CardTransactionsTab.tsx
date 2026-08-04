@@ -6,17 +6,6 @@ import { getBybitActivity, getBybitCardTransactions } from "@/lib/bybit.function
 import { Button } from "@/components/ui/button";
 import { RefreshCw, CreditCard, AlertTriangle, ChevronLeft } from "lucide-react";
 
-const CARD_TRACKING_START_KEY = "mag-pro-card-tracking-start";
-
-const getTrackingStart = () => {
-  if (typeof window === "undefined") return Date.now();
-  const saved = Number(window.localStorage.getItem(CARD_TRACKING_START_KEY));
-  if (Number.isFinite(saved) && saved > 0) return saved;
-  const started = Date.now();
-  window.localStorage.setItem(CARD_TRACKING_START_KEY, String(started));
-  return started;
-};
-
 type Row = {
   id: string;
   occurredAt: number;
@@ -61,11 +50,10 @@ export function CardTransactionsTab() {
   const fetchCard = useServerFn(getBybitCardTransactions);
   const fetchActivity = useServerFn(getBybitActivity);
   const [tab, setTab] = useState<"all" | "purchase" | "refund">("all");
-  const [trackingStart] = useState(getTrackingStart);
 
   const { data: live, isLoading, isFetching, refetch } = useQuery({
-    queryKey: ["bybit-card-live", trackingStart],
-    queryFn: () => fetchCard({ data: { since: trackingStart } }),
+    queryKey: ["bybit-card-live"],
+    queryFn: () => fetchCard(),
     refetchInterval: 60_000,
     retry: false,
   });
@@ -97,7 +85,7 @@ export function CardTransactionsTab() {
 
   const rows = useMemo<Row[]>(() => {
     const a: Row[] = (live?.rows ?? []) as Row[];
-    const b: Row[] = (stored ?? []).filter((t: any) => new Date(t.occurred_at).getTime() >= trackingStart).map((t: any) => ({
+    const b: Row[] = (stored ?? []).map((t: any) => ({
       id: t.id,
       occurredAt: new Date(t.occurred_at).getTime(),
       amount: -Math.abs(Number(t.amount)),
@@ -107,7 +95,7 @@ export function CardTransactionsTab() {
       last4: t.card_last4 ?? "",
     }));
     return [...a, ...b].sort((x, y) => y.occurredAt - x.occurredAt);
-  }, [live, stored, trackingStart]);
+  }, [live, stored]);
 
   const filtered = rows.filter((r) =>
     tab === "all" ? true : tab === "refund" ? isRefund(r) : !isRefund(r),
