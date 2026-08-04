@@ -128,9 +128,11 @@ export const getBybitActivity = createServerFn({ method: "POST" })
       } else {
         try {
           const r2 = await call("/v5/asset/transfer/query-account-coins-balance", { accountType });
+          // بطاقة باي بت تصرف من الرصيد القابل للتحويل (transferBalance) وليس
+          // رصيد المحفظة الكامل، فهو الأساس لحساب قوة الشراء.
           const rows = ((r2["balance"] as any[]) ?? []).map((c) => ({
             coin: String(c.coin),
-            balance: Number(c.walletBalance ?? c.transferBalance ?? 0),
+            balance: Number(c.transferBalance ?? c.walletBalance ?? 0),
             usdValue: 0,
           }));
           out.push(...rows);
@@ -138,6 +140,7 @@ export const getBybitActivity = createServerFn({ method: "POST" })
           errors.push(String((e as Error).message));
         }
       }
+
       return out;
     }
 
