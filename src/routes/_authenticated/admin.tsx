@@ -32,6 +32,7 @@ import { Progress } from "@/components/ui/progress";
 import { ReportsTab } from "@/components/admin/ReportsTab";
 import { CardTransactionsTab } from "@/components/admin/CardTransactionsTab";
 import { BybitTab } from "@/components/admin/BybitTab";
+import { ApiKeysTab } from "@/components/admin/ApiKeysTab";
 import { FileBarChart, MonitorPlay, Image as ImageIcon, ChevronUp, ChevronDown, WalletCards, ArrowDownUp } from "lucide-react";
 import { LessonUploader } from "@/components/admin/LessonUploader";
 import { DeviceMonitorGrid } from "@/components/admin/DeviceMonitorGrid";
