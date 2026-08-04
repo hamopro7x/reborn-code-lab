@@ -43,6 +43,75 @@ const statusLabel = (s: string) => {
   return s;
 };
 
+const merchantDomains: Record<string, string> = {
+  tiktok: "tiktok.com",
+  "tik tok": "tiktok.com",
+  gpay: "pay.google.com",
+  "google pay": "pay.google.com",
+  google: "google.com",
+  apple: "apple.com",
+  "apple pay": "apple.com",
+  paypal: "paypal.com",
+  facebook: "facebook.com",
+  meta: "meta.com",
+  instagram: "instagram.com",
+  netflix: "netflix.com",
+  spotify: "spotify.com",
+  youtube: "youtube.com",
+  amazon: "amazon.com",
+  aliexpress: "aliexpress.com",
+  openai: "openai.com",
+  chatgpt: "openai.com",
+  microsoft: "microsoft.com",
+  canva: "canva.com",
+  adobe: "adobe.com",
+  steam: "steampowered.com",
+  telegram: "telegram.org",
+  snapchat: "snapchat.com",
+  x: "x.com",
+  twitter: "x.com",
+  binance: "binance.com",
+  bybit: "bybit.com",
+  uber: "uber.com",
+  booking: "booking.com",
+  shein: "shein.com",
+  noon: "noon.com",
+  vodafone: "vodafone.com.eg",
+};
+
+const merchantDomain = (name: string) => {
+  const key = name.trim().toLowerCase();
+  if (!key) return null;
+  const hit = Object.keys(merchantDomains).find((k) => key.includes(k));
+  if (hit) return merchantDomains[hit];
+  const slug = key.replace(/[^a-z0-9]/g, "");
+  return slug.length > 2 ? `${slug}.com` : null;
+};
+
+const initials = (name: string) =>
+  (name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("") || "?").toUpperCase();
+
+function MerchantIcon({ name }: { name: string }) {
+  const domain = merchantDomain(name);
+  const [failed, setFailed] = useState(false);
+  if (!domain || failed) {
+    return (
+      <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold">
+        {initials(name)}
+      </span>
+    );
+  }
+  return (
+    <img
+      src={`https://www.google.com/s2/favicons?domain=${domain}&sz=64`}
+      alt={`${name} logo`}
+      loading="lazy"
+      onError={() => setFailed(true)}
+      className="size-7 shrink-0 rounded-full bg-background object-contain ring-1 ring-border"
+    />
+  );
+}
+
 
 export function CardTransactionsTab() {
   const fetchCard = useServerFn(getBybitCardTransactions);
