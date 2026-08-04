@@ -169,7 +169,7 @@ export const getBybitActivity = createServerFn({ method: "POST" })
         : [];
     if (wdRes.status === "rejected") errors.push(String(wdRes.reason?.message ?? wdRes.reason));
 
-    return { configured: true as const, balances, deposits, withdrawals, errors };
+    return { configured: true as const, accounts, balances, deposits, withdrawals, errors };
   });
 
 // Live Bybit Card transactions (v5). Bybit does not document a single card
