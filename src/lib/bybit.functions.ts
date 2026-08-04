@@ -21,7 +21,7 @@ export const getBybitActivity = createServerFn({ method: "POST" })
     const key = process.env["BYBIT_API_KEY"];
     const secret = process.env["BYBIT_API_SECRET"];
     if (!key || !secret) {
-      return { configured: false as const, balances: [], deposits: [], withdrawals: [], errors: ["missing keys"] };
+      return { configured: false as const, accounts: [] as { type: string; label: string; kind: "internal" | "external"; coins: { coin: string; balance: number; usdValue: number }[]; totalUsd: number }[], balances: [], deposits: [], withdrawals: [], errors: ["missing keys"] };
     }
 
     const { createHmac } = await import("node:crypto");
@@ -80,52 +80,67 @@ export const getBybitActivity = createServerFn({ method: "POST" })
     // Balance: the "Wallet" account endpoint needs the Wallet permission which
     // read-only keys often lack, so fall back to the Assets endpoint across
     // account types. Only report an error if every attempt fails.
-    async function balancesAny() {
-      const attempts: string[] = [];
-      try {
-        const r = await call("/v5/account/wallet-balance", { accountType: "UNIFIED" });
-        const coins = (((r["list"] as any[]) ?? [])[0]?.coin ?? []) as any[];
-        if (coins.length) {
-          return coins.map((c) => ({
-            coin: String(c.coin),
-            balance: Number(c.walletBalance ?? 0),
-            usdValue: Number(c.usdValue ?? 0),
-          }));
-        }
-      } catch (e) {
-        attempts.push(String((e as Error).message));
-      }
-
-      for (const accountType of ["UNIFIED", "FUND", "SPOT"]) {
+    async function coinsOf(accountType: string) {
+      const out: { coin: string; balance: number; usdValue: number }[] = [];
+      if (accountType === "UNIFIED") {
         try {
-          const r2 = await call("/v5/asset/transfer/query-account-coins-balance", { accountType });
-          const rows = ((r2["balance"] as any[]) ?? []).map((c) => ({
-            coin: String(c.coin),
-            balance: Number(c.walletBalance ?? c.transferBalance ?? 0),
-            usdValue: 0,
-          }));
-          if (rows.some((c) => c.balance > 0)) return rows;
+          const r = await call("/v5/account/wallet-balance", { accountType: "UNIFIED" });
+          const coins = (((r["list"] as any[]) ?? [])[0]?.coin ?? []) as any[];
+          for (const c of coins) {
+            out.push({
+              coin: String(c.coin),
+              balance: Number(c.walletBalance ?? 0),
+              usdValue: Number(c.usdValue ?? 0),
+            });
+          }
+          if (out.some((c) => c.balance > 0)) return out;
         } catch (e) {
-          attempts.push(String((e as Error).message));
+          errors.push(String((e as Error).message));
         }
       }
-
-      if (attempts.length) errors.push(attempts[attempts.length - 1]!);
-      return [] as { coin: string; balance: number; usdValue: number }[];
+      try {
+        const r2 = await call("/v5/asset/transfer/query-account-coins-balance", { accountType });
+        return ((r2["balance"] as any[]) ?? []).map((c) => ({
+          coin: String(c.coin),
+          balance: Number(c.walletBalance ?? c.transferBalance ?? 0),
+          usdValue: 0,
+        }));
+      } catch (e) {
+        errors.push(String((e as Error).message));
+      }
+      return out;
     }
 
+    // "الرصيد الداخلي" = حساب التمويل (Funding) الداخلي على بايبت
+    // "الرصيد الخارجي" = الحساب الموحّد/التداول المرتبط بقوة الشراء للبطاقة
+    async function accountsBalances() {
+      const defs = [
+        { type: "FUND", label: "الرصيد الداخلي (Funding)", kind: "internal" as const },
+        { type: "UNIFIED", label: "الرصيد الخارجي (Unified)", kind: "external" as const },
+      ];
+      const results = await Promise.all(
+        defs.map(async (d) => {
+          const coins = (await coinsOf(d.type)).filter((c) => c.balance > 0);
+          return {
+            ...d,
+            coins,
+            totalUsd: coins.reduce((s, c) => s + c.usdValue, 0),
+          };
+        }),
+      );
+      return results;
+    }
 
     const [balRes, depRes, wdRes] = await Promise.allSettled([
-      balancesAny(),
+      accountsBalances(),
       history("/v5/asset/deposit/query-record"),
       history("/v5/asset/withdraw/query-record"),
     ]);
 
-    const balances =
-      balRes.status === "fulfilled"
-        ? ((balRes.value as any[]) ?? []).filter((c: { balance: number }) => c.balance > 0)
-        : [];
+    const accounts = balRes.status === "fulfilled" ? balRes.value : [];
+    const balances = accounts.flatMap((a) => a.coins);
     if (balRes.status === "rejected") errors.push(String(balRes.reason?.message ?? balRes.reason));
+
 
     const deposits =
       depRes.status === "fulfilled"
@@ -154,7 +169,7 @@ export const getBybitActivity = createServerFn({ method: "POST" })
         : [];
     if (wdRes.status === "rejected") errors.push(String(wdRes.reason?.message ?? wdRes.reason));
 
-    return { configured: true as const, balances, deposits, withdrawals, errors };
+    return { configured: true as const, accounts, balances, deposits, withdrawals, errors };
   });
 
 // Live Bybit Card transactions (v5). Bybit does not document a single card
