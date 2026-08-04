@@ -53,7 +53,7 @@ export function CardTransactionsTab() {
 
   const { data: live, isLoading, isFetching, refetch } = useQuery({
     queryKey: ["bybit-card-live"],
-    queryFn: () => fetchCard({ data: { days: 90 } }),
+    queryFn: () => fetchCard({ data: { days: 1095 } }),
     refetchInterval: 30_000,
     retry: false,
   });
@@ -138,7 +138,7 @@ export function CardTransactionsTab() {
 
           <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
             <div className="rounded-xl border bg-background/60 px-3 py-2">
-              <div className="text-[11px] text-muted-foreground">Total Spent (90d)</div>
+              <div className="text-[11px] text-muted-foreground">Total Spent</div>
               <div className="text-lg font-bold tabular-nums">${money(spent)}</div>
             </div>
             <div className="rounded-xl border bg-background/60 px-3 py-2">

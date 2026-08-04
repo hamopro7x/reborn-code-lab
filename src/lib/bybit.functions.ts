@@ -295,6 +295,30 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
     const startTime = endTime - data.days * DAY;
     const probeErrors: string[] = [];
 
+    async function history(path: string, fixedParams: Record<string, string> = {}) {
+      const rows: any[] = [];
+      let windowEnd = endTime;
+      while (windowEnd > startTime && rows.length < 5000) {
+        const windowStart = Math.max(startTime, windowEnd - 29 * DAY);
+        let cursor = "";
+        for (let page = 0; page < 20; page++) {
+          const result = await call(path, {
+            ...fixedParams,
+            startTime: String(windowStart),
+            endTime: String(windowEnd),
+            limit: "50",
+            ...(cursor ? { cursor } : {}),
+          });
+          const batch = ((result["rows"] as any[]) ?? (result["list"] as any[]) ?? (result["records"] as any[]) ?? []) as any[];
+          rows.push(...batch);
+          cursor = String(result["nextPageCursor"] ?? result["nextCursor"] ?? "");
+          if (!cursor || batch.length === 0) break;
+        }
+        windowEnd = windowStart - 1;
+      }
+      return rows;
+    }
+
     const candidates = [
       "/v5/user/card/transactions",
       "/v5/user/card/transaction-record",
@@ -304,13 +328,7 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
 
     for (const path of candidates) {
       try {
-        const res = await call(path, {
-          startTime: String(startTime),
-          endTime: String(endTime),
-          limit: "50",
-        });
-        const raw =
-          ((res["rows"] as any[]) ?? (res["list"] as any[]) ?? (res["records"] as any[]) ?? []) as any[];
+        const raw = await history(path);
         const rows = raw.map((r, i) => ({
           id: String(r.id ?? r.orderId ?? r.txId ?? r.transactionId ?? `${path}-${i}`),
           occurredAt: Number(r.transTime ?? r.createTime ?? r.createdTime ?? r.time ?? 0),
@@ -330,17 +348,11 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
     // فبنقرأ سجل الحركات ونعرض القيود السالبة كمعاملات بطاقة.
     const logPaths: { path: string; params: Record<string, string> }[] = [
       { path: "/v5/account/transaction-log", params: { accountType: "UNIFIED" } },
-      { path: "/v5/asset/transfer/query-inter-transfer-list", params: {} },
+      { path: "/v5/asset/transfer/query-inter-transfer-list", params: { accountType: "FUND" } },
     ];
     for (const { path, params } of logPaths) {
       try {
-        const res = await call(path, {
-          ...params,
-          startTime: String(startTime),
-          endTime: String(endTime),
-          limit: "50",
-        });
-        const raw = ((res["list"] as any[]) ?? (res["rows"] as any[]) ?? []) as any[];
+        const raw = await history(path, params);
         const rows = raw
           .map((r, i) => ({
             id: String(r.id ?? r.transferId ?? r.tradeId ?? `${path}-${i}`),
