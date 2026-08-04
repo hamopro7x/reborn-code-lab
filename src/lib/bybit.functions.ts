@@ -85,7 +85,7 @@ export const getBybitActivity = createServerFn({ method: "POST" })
 
     const balances =
       balRes.status === "fulfilled"
-        ? (((balRes.value["list"] as any[]) ?? [])[0]?.coin ?? [])
+        ? ((((balRes.value as any)["list"] as any[]) ?? [])[0]?.coin ?? [])
             .map((c: any) => ({
               coin: String(c.coin),
               balance: Number(c.walletBalance ?? 0),
@@ -97,7 +97,7 @@ export const getBybitActivity = createServerFn({ method: "POST" })
 
     const deposits =
       depRes.status === "fulfilled"
-        ? (depRes.value ?? []).map((r) => ({
+        ? ((depRes.value as any[]) ?? []).map((r) => ({
             id: String(r.txID ?? r.txId ?? `${r.coin}-${r.successAt}`),
             coin: String(r.coin),
             amount: Number(r.amount ?? 0),
@@ -110,7 +110,7 @@ export const getBybitActivity = createServerFn({ method: "POST" })
 
     const withdrawals =
       wdRes.status === "fulfilled"
-        ? (wdRes.value ?? []).map((r) => ({
+        ? ((wdRes.value as any[]) ?? []).map((r) => ({
             id: String(r.withdrawId ?? r.txID ?? Math.random()),
             coin: String(r.coin),
             amount: Number(r.amount ?? 0),
