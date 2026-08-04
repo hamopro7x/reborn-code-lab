@@ -236,9 +236,7 @@ export const getBybitActivity = createServerFn({ method: "POST" })
     return { configured: true as const, accounts, balances, deposits, withdrawals, errors };
   });
 
-// Live Bybit Card transactions (v5). Bybit does not document a single card
-// endpoint publicly, so we probe the known v5 card paths with the same signed
-// request flow and use whichever one the key is allowed to read.
+// Live Bybit Card transactions from the official V5 card asset-record endpoint.
 export const getBybitCardTransactions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data) => z.object({ days: z.number().int().min(1).max(1095).default(30) }).parse(data ?? {}))
@@ -262,18 +260,21 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
     const { createHmac } = await import("node:crypto");
     const recv = "20000";
 
-    async function call(path: string, params: Record<string, string>) {
-      const qs = new URLSearchParams(params).toString();
+    async function post(path: string, params: Record<string, string | number>) {
+      const payload = JSON.stringify(params);
       const ts = Date.now().toString();
-      const sign = createHmac("sha256", apiSecret).update(ts + apiKey + recv + qs).digest("hex");
-      const res = await fetch(`https://api.bybit.com${path}${qs ? `?${qs}` : ""}`, {
+      const sign = createHmac("sha256", apiSecret).update(ts + apiKey + recv + payload).digest("hex");
+      const res = await fetch(`https://api.bybit.com${path}`, {
+        method: "POST",
         headers: {
           Accept: "application/json",
+          "Content-Type": "application/json",
           "X-BAPI-API-KEY": apiKey,
           "X-BAPI-TIMESTAMP": ts,
           "X-BAPI-RECV-WINDOW": recv,
           "X-BAPI-SIGN": sign,
         },
+        body: payload,
       });
       const text = await res.text();
       let body: { retCode?: number; retMsg?: string; result?: Record<string, unknown> } = {};
@@ -295,65 +296,10 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
     const startTime = endTime - data.days * DAY;
     const probeErrors: string[] = [];
 
-    async function history(path: string, fixedParams: Record<string, string> = {}) {
-      const rows: any[] = [];
-      let windowEnd = endTime;
-      while (windowEnd > startTime && rows.length < 5000) {
-        const windowStart = Math.max(startTime, windowEnd - 29 * DAY);
-        let cursor = "";
-        for (let page = 0; page < 20; page++) {
-          const result = await call(path, {
-            ...fixedParams,
-            startTime: String(windowStart),
-            endTime: String(windowEnd),
-            limit: "50",
-            ...(cursor ? { cursor } : {}),
-          });
-          const batch = ((result["rows"] as any[]) ?? (result["list"] as any[]) ?? (result["records"] as any[]) ?? []) as any[];
-          rows.push(...batch);
-          cursor = String(result["nextPageCursor"] ?? result["nextCursor"] ?? "");
-          if (!cursor || batch.length === 0) break;
-        }
-        windowEnd = windowStart - 1;
-      }
-      return rows;
-    }
-
-    const candidates = [
-      "/v5/user/card/transactions",
-      "/v5/user/card/transaction-record",
-      "/v5/asset/card/transaction-record",
-      "/v5/asset/card/query-record",
-    ];
-
-    for (const path of candidates) {
-      try {
-        const raw = await history(path);
-        const rows = raw.map((r, i) => ({
-          id: String(r.id ?? r.orderId ?? r.txId ?? r.transactionId ?? `${path}-${i}`),
-          occurredAt: Number(r.transTime ?? r.createTime ?? r.createdTime ?? r.time ?? 0),
-          amount: Number(r.amount ?? r.transAmount ?? r.value ?? 0),
-          currency: String(r.currency ?? r.coin ?? r.currencyCode ?? ""),
-          merchant: String(r.merchant ?? r.merchantName ?? r.description ?? r.remark ?? ""),
-          status: String(r.status ?? r.orderStatus ?? ""),
-          last4: String(r.cardLast4 ?? r.last4 ?? r.cardNo ?? "").slice(-4),
-        }));
-        if (rows.length > 0) return { configured: true as const, source: path, rows, errors: [] };
-      } catch (e) {
-        probeErrors.push(String((e as Error).message));
-      }
-    }
-
-    // Official V5 fallback: card purchases, refunds and rewards are Funding
-    // account asset movements. Bybit retains this history for up to two years.
-    const cardTypes = [
-      "CARD_CONSUMPTION",
-      "CARD_ATM_DRAWAL",
-      "CARD_REFUND",
-      "CARD_REVERSION",
-      "CARD_CB_REWARD",
-    ];
-    const fundingRows: {
+    // Official Bybit Card V5 endpoint. It is a POST endpoint and uses numeric
+    // pages (not the cursor pagination used by account/asset endpoints).
+    const cardPath = "/v5/card/transaction/query-asset-records";
+    const cardRows: {
       id: string;
       occurredAt: number;
       amount: number;
@@ -362,32 +308,48 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
       status: string;
       last4: string;
     }[] = [];
-    for (const type of cardTypes) {
+    const cardQueryTypes = ["SIDE_QUERY_AUTH", "SIDE_QUERY_FINANCIAL", "SIDE_QUERY_REFUND"];
+    for (const type of cardQueryTypes) {
       try {
-        const path = "/v5/asset/transaction-log";
-        const raw = await history(path, { accountType: "FUND", type });
-        const rows = raw
-          .map((r, i) => ({
-            id: String(r.id ?? r.transactionId ?? r.txId ?? `${type}-${i}`),
-            occurredAt: Number(r.transactionTime ?? r.timestamp ?? r.createTime ?? r.createdTime ?? 0),
-            amount: Number(r.cashFlow ?? r.change ?? r.amount ?? 0),
-            currency: String(r.currency ?? r.coin ?? ""),
-            merchant: String(r.remark ?? r.description ?? type),
-            status: String(r.status ?? "Successful"),
-            last4: "",
-          }))
-          .filter((r) => r.amount !== 0);
-        fundingRows.push(...rows);
+        let fetchedForType = 0;
+        for (let page = 1; page <= 100; page++) {
+          const result = await post(cardPath, {
+            type,
+            limit: 500,
+            page,
+            createBeginTime: startTime,
+            createEndTime: endTime,
+          });
+          const batch = (result["data"] as any[]) ?? [];
+          fetchedForType += batch.length;
+          cardRows.push(...batch.map((r, i) => ({
+            id: String(r.txnId ?? r.orderNo ?? `${type}-${page}-${i}`),
+            occurredAt: Number(r.txnCreate ?? 0),
+            amount: (type === "SIDE_QUERY_REFUND" ? 1 : -1) * Math.abs(Number(r.basicAmount ?? r.paidAmount ?? r.transactionAmount ?? 0)),
+            currency: String(r.basicCurrency ?? r.paidCurrency ?? r.transactionCurrency ?? "USD"),
+            merchant: String(r.merchName ?? r.merchCategoryDesc ?? "Card Transaction"),
+            status: String(r.status ?? r.tradeStatus ?? "") === "1" ? "Successful" : String(r.status ?? r.tradeStatus ?? "") === "0" ? "Pending" : "Failed",
+            last4: String(r.pan4 ?? "").slice(-4),
+          })));
+          const total = Number(result["totalCount"] ?? 0);
+          if (batch.length === 0 || fetchedForType >= total || batch.length < 500) break;
+        }
       } catch (e) {
         probeErrors.push(String((e as Error).message));
       }
     }
 
-    if (fundingRows.length > 0) {
-      fundingRows.sort((a, b) => b.occurredAt - a.occurredAt);
-      return { configured: true as const, source: "/v5/asset/transaction-log", rows: fundingRows, errors: [] };
+    if (cardRows.length > 0) {
+      const unique = [...new Map(cardRows.map((row) => [row.id, row])).values()];
+      unique.sort((a, b) => b.occurredAt - a.occurredAt);
+      return { configured: true as const, source: cardPath, rows: unique, errors: [] };
     }
 
     console.warn("Bybit card transaction endpoints unavailable", probeErrors);
-    return { configured: true as const, source: "", rows: [], errors: [] };
+    return {
+      configured: true as const,
+      source: cardPath,
+      rows: [],
+      errors: probeErrors.length > 0 ? [probeErrors[0]] : [],
+    };
   });
