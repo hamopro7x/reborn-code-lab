@@ -327,9 +327,10 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
       last4: string;
     };
     const cardRows: CardRow[] = [];
-    // Only settled financial records are needed. Authorizations duplicate
-    // purchases and querying every type quickly exhausts Bybit's rate limit.
+    // Authorizations are captured too so a transaction is recorded the moment
+    // it is detected (before it settles); settled records overwrite them.
     const cardQueryType = "SIDE_QUERY_FINANCIAL";
+    const cardQueryTypes = ["SIDE_QUERY_AUTHORIZATION", cardQueryType];
 
     const mapRow = (r: any, type: string, key: string): CardRow => ({
       id: String(r.txnId ?? r.orderNo ?? `${type}-${key}`),
@@ -341,25 +342,28 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
       last4: String(r.pan4 ?? "").slice(-4),
     });
 
-    // One bounded request only: track transactions created after the local
+    // Bounded requests only: track transactions created after the local
     // monitoring start time and never scan historical pages.
-    try {
-      const result = await post(cardPath, {
-        type: cardQueryType,
-        limit: 100,
-        page: 1,
-        createBeginTime: trackingStart,
-        createEndTime: endTime,
-      });
-      const batch = (result["data"] as any[]) ?? [];
-      cardRows.push(
-        ...batch
-          .map((row, index) => mapRow(row, cardQueryType, `current-1-${index}`))
-          .filter((row) => row.occurredAt >= trackingStart),
-      );
-    } catch (error) {
-      probeErrors.push(String((error as Error).message));
+    for (const type of cardQueryTypes) {
+      try {
+        const result = await post(cardPath, {
+          type,
+          limit: 100,
+          page: 1,
+          createBeginTime: trackingStart,
+          createEndTime: endTime,
+        });
+        const batch = (result["data"] as any[]) ?? [];
+        cardRows.push(
+          ...batch
+            .map((row, index) => mapRow(row, type, `${type}-1-${index}`))
+            .filter((row) => row.occurredAt >= trackingStart),
+        );
+      } catch (error) {
+        probeErrors.push(String((error as Error).message));
+      }
     }
+
 
     if (cardRows.length > 0) {
       const unique = [...new Map(cardRows.map((row) => [row.id, row])).values()];

@@ -54,14 +54,14 @@ export function CardTransactionsTab() {
   const { data: live, isLoading, isFetching, refetch } = useQuery({
     queryKey: ["bybit-card-live"],
     queryFn: () => fetchCard(),
-    refetchInterval: 60_000,
+    refetchInterval: 10_000,
     retry: false,
   });
 
   const { data: activity } = useQuery({
     queryKey: ["bybit-activity", 30],
     queryFn: () => fetchActivity({ data: { days: 30 } }),
-    refetchInterval: 60_000,
+    refetchInterval: 10_000,
     retry: false,
   });
 
@@ -76,7 +76,7 @@ export function CardTransactionsTab() {
       if (error) throw error;
       return data ?? [];
     },
-    refetchInterval: 30_000,
+    refetchInterval: 5_000,
   });
 
   const internal = (activity?.accounts ?? []).find((a) => a.kind === "internal");
