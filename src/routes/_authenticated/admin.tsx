@@ -133,6 +133,7 @@ function Admin() {
         { key: "remote", label: "الوصول عن بُعد", icon: MonitorPlay, adminOnly: true },
         { key: "payments", label: "طرق الدفع", icon: CreditCard, adminOnly: true },
         { key: "currencies", label: "العملات", icon: Coins, adminOnly: true },
+        { key: "apikeys", label: "مفاتيح API", icon: KeyRound, adminOnly: true },
         { key: "settings", label: "الإعدادات", icon: Settings2, adminOnly: true },
       ],
     },
