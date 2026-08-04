@@ -2,13 +2,9 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-const rangeSchema = z.object({
-  days: z.number().int().min(1).max(1095).default(30),
-});
-
 export const getBybitActivity = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data) => rangeSchema.parse(data ?? {}))
+  .inputValidator((data) => z.object({ days: z.number().int().min(1).max(1095).default(30) }).parse(data ?? {}))
   .handler(async ({ data, context }) => {
     const { data: roles } = await context.supabase
       .from("user_roles")
@@ -234,7 +230,7 @@ export const getBybitActivity = createServerFn({ method: "POST" })
 // request flow and use whichever one the key is allowed to read.
 export const getBybitCardTransactions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data) => rangeSchema.parse(data ?? {}))
+  .inputValidator((data) => z.object({ days: z.number().int().min(1).max(1095).default(30) }).parse(data ?? {}))
   .handler(async ({ data, context }) => {
     const { data: roles } = await context.supabase
       .from("user_roles")
