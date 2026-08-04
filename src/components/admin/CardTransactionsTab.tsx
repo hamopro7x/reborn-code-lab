@@ -181,6 +181,57 @@ export function CardTransactionsTab() {
 
   return (
     <div className="space-y-4" dir="rtl">
+      {/* Live Bybit Card (v5) */}
+      <div className="card-surface rounded-2xl overflow-hidden">
+        <div className="p-3 flex items-center justify-between border-b border-border/40">
+          <div className="text-sm font-bold flex items-center gap-2">
+            <Wallet className="size-4" /> معاملات بطاقة بايبت (مباشر — API v5)
+          </div>
+          <Button size="sm" variant="outline" onClick={() => refetchLive()} disabled={liveLoading}>
+            {liveLoading ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+            تحديث
+          </Button>
+        </div>
+        {liveRows.length === 0 ? (
+          <div className="p-4 text-sm text-muted-foreground">
+            {liveLoading
+              ? "جاري الجلب من بايبت..."
+              : liveError
+                ? `تعذر الجلب من بايبت: ${liveError}`
+                : "لا توجد معاملات بطاقة في آخر 90 يوم."}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="text-[11px] uppercase tracking-wide text-muted-foreground bg-muted/20 border-b border-border/40">
+                <tr>
+                  <th className="text-start p-3 font-semibold">التاريخ</th>
+                  <th className="text-start p-3 font-semibold">الموقع / التاجر</th>
+                  <th className="text-start p-3 font-semibold">المبلغ</th>
+                  <th className="text-start p-3 font-semibold">الحالة</th>
+                  <th className="text-start p-3 font-semibold">آخر 4</th>
+                </tr>
+              </thead>
+              <tbody>
+                {liveRows.map((r) => (
+                  <tr key={r.id} className="border-b border-border/20">
+                    <td className="p-3 tabular-nums">
+                      {r.occurredAt ? new Date(r.occurredAt).toISOString().slice(0, 10) : "—"}
+                    </td>
+                    <td className="p-3">{r.merchant || "—"}</td>
+                    <td className="p-3 tabular-nums font-bold">
+                      {num(r.amount)} {r.currency}
+                    </td>
+                    <td className="p-3">{r.status || "—"}</td>
+                    <td className="p-3 tabular-nums">{r.last4 || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       {/* summary */}
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="card-surface rounded-2xl p-4 border-s-2 border-s-primary/50">
