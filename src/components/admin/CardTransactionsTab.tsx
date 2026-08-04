@@ -101,6 +101,21 @@ export function CardTransactionsTab() {
     tab === "all" ? true : tab === "refund" ? isRefund(r) : !isRefund(r),
   );
 
+  // الإنفاق الشهري (الشهر الحالي، المشتريات فقط)
+  const monthStart = useMemo(() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+  }, []);
+  const monthlySpend = rows
+    .filter((r) => !isRefund(r) && r.occurredAt >= monthStart)
+    .reduce((s, r) => s + Math.abs(r.amount), 0);
+
+  // نسبة الاستراداد النقدي (Pay Rewards) — قابلة للتعديل
+  const cashbackRate = Number(cashback) || 0;
+  const cashbackEarned = (monthlySpend * cashbackRate) / 100;
+
+
+
 
   return (
     <div className="space-y-4" dir="ltr">
