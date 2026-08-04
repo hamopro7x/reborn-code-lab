@@ -211,6 +211,8 @@ function Admin() {
             {panel === "customers" && !isEmployee && <CustomersTab />}
             {panel === "reviews" && !isEmployee && <ReviewsTab />}
             {panel === "reports" && adminOnly && <ReportsTab />}
+            {panel === "cardtx" && adminOnly && <CardTransactionsTab />}
+
             {panel === "products" && !isEmployee && <ProductsTab />}
             {panel === "categories" && adminOnly && <CategoriesTab />}
             {panel === "timers" && !isEmployee && <TimersTab />}
