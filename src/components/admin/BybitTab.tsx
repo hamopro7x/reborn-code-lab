@@ -18,7 +18,8 @@ export function BybitTab() {
   const { data, isLoading, isFetching, refetch, error } = useQuery({
     queryKey: ["bybit-activity", days],
     queryFn: () => fetchActivity({ data: { days } }),
-    refetchInterval: 60_000,
+    refetchInterval: 1_000,
+    refetchIntervalInBackground: true,
   });
 
   if (isLoading) {
