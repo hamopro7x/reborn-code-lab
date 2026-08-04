@@ -641,12 +641,26 @@ approveBtn.addEventListener("click", async () => {
 
 const existing = loadDevice();
 if (existing) {
-  void run(existing);
+  void run(existing).catch((err) => {
+    console.error("[run] failed:", err);
+    // فشل مفاجئ في الإقلاع لا يترك الواجهة فاضية — نرجع لشاشة التسجيل
+    consentEl.style.display = "flex";
+    runningEl.style.display = "none";
+    pairingEl.style.display = "none";
+  });
 } else {
   consentEl.style.display = "flex";
   runningEl.style.display = "none";
   pairingEl.style.display = "none";
 }
+
+// حماية إضافية: لو بعد 4 ثوانٍ ما تظهر أي شاشة لأي سبب، نُظهر شاشة التسجيل
+setTimeout(() => {
+  const anyVisible = [consentEl, runningEl, pairingEl].some(
+    (el) => el && getComputedStyle(el).display !== "none",
+  );
+  if (!anyVisible) consentEl.style.display = "flex";
+}, 4000);
 
 // التحديث تديره عملية الخلفية حصراً. عدم تشغيل فاحص ثانٍ هنا يمنع تنزيل
 // نفس الإصدار مجدداً عند التركيز على النافذة أو إعادة اتصال البرنامج.
