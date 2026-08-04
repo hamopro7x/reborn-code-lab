@@ -19,6 +19,8 @@ export const getBybitActivity = createServerFn({ method: "POST" })
     if (!key || !secret) {
       return { configured: false as const, accounts: [] as { type: string; label: string; kind: "internal" | "external"; coins: { coin: string; balance: number; usdValue: number }[]; totalUsd: number; spendingPower: number }[], balances: [], deposits: [], withdrawals: [], errors: ["missing keys"] };
     }
+    const apiKey = key;
+    const apiSecret = secret;
 
     const { createHmac } = await import("node:crypto");
     const recv = "20000";
@@ -26,18 +28,27 @@ export const getBybitActivity = createServerFn({ method: "POST" })
     async function call(path: string, params: Record<string, string>) {
       const qs = new URLSearchParams(params).toString();
       const ts = Date.now().toString();
-      const sign = createHmac("sha256", secret!).update(ts + key! + recv + qs).digest("hex");
+      const sign = createHmac("sha256", apiSecret).update(ts + apiKey + recv + qs).digest("hex");
       const res = await fetch(`https://api.bybit.com${path}${qs ? `?${qs}` : ""}`, {
         headers: {
-          "X-BAPI-API-KEY": key!,
+          Accept: "application/json",
+          "X-BAPI-API-KEY": apiKey,
           "X-BAPI-TIMESTAMP": ts,
           "X-BAPI-RECV-WINDOW": recv,
           "X-BAPI-SIGN": sign,
         },
       });
-      const body = (await res.json()) as { retCode?: number; retMsg?: string; result?: Record<string, unknown> };
+      const text = await res.text();
+      let body: { retCode?: number; retMsg?: string; result?: Record<string, unknown> } = {};
+      if (text.trim()) {
+        try {
+          body = JSON.parse(text) as typeof body;
+        } catch {
+          throw new Error(`${path} [${res.status}] invalid response`);
+        }
+      }
       if (!res.ok || body.retCode !== 0) {
-        throw new Error(`${path} [${res.status}] ${body.retMsg ?? "request failed"}`);
+        throw new Error(`${path} [${res.status}] ${body.retMsg ?? (text.trim() ? "request failed" : "empty response")}`);
       }
       return body.result ?? {};
     }
@@ -245,6 +256,8 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
     if (!key || !secret) {
       return { configured: false as const, source: "", rows: [], errors: ["missing keys"] };
     }
+    const apiKey = key;
+    const apiSecret = secret;
 
     const { createHmac } = await import("node:crypto");
     const recv = "20000";
@@ -252,18 +265,27 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
     async function call(path: string, params: Record<string, string>) {
       const qs = new URLSearchParams(params).toString();
       const ts = Date.now().toString();
-      const sign = createHmac("sha256", secret!).update(ts + key! + recv + qs).digest("hex");
+      const sign = createHmac("sha256", apiSecret).update(ts + apiKey + recv + qs).digest("hex");
       const res = await fetch(`https://api.bybit.com${path}${qs ? `?${qs}` : ""}`, {
         headers: {
-          "X-BAPI-API-KEY": key!,
+          Accept: "application/json",
+          "X-BAPI-API-KEY": apiKey,
           "X-BAPI-TIMESTAMP": ts,
           "X-BAPI-RECV-WINDOW": recv,
           "X-BAPI-SIGN": sign,
         },
       });
-      const body = (await res.json()) as { retCode?: number; retMsg?: string; result?: Record<string, unknown> };
+      const text = await res.text();
+      let body: { retCode?: number; retMsg?: string; result?: Record<string, unknown> } = {};
+      if (text.trim()) {
+        try {
+          body = JSON.parse(text) as typeof body;
+        } catch {
+          throw new Error(`${path} [${res.status}] invalid response`);
+        }
+      }
       if (!res.ok || body.retCode !== 0) {
-        throw new Error(`${path} [${res.status}] ${body.retMsg ?? "request failed"}`);
+        throw new Error(`${path} [${res.status}] ${body.retMsg ?? (text.trim() ? "request failed" : "empty response")}`);
       }
       return body.result ?? {};
     }
@@ -271,7 +293,7 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
     const DAY = 24 * 60 * 60 * 1000;
     const endTime = Date.now();
     const startTime = endTime - data.days * DAY;
-    const errors: string[] = [];
+    const probeErrors: string[] = [];
 
     const candidates = [
       "/v5/user/card/transactions",
@@ -298,9 +320,9 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
           status: String(r.status ?? r.orderStatus ?? ""),
           last4: String(r.cardLast4 ?? r.last4 ?? r.cardNo ?? "").slice(-4),
         }));
-        return { configured: true as const, source: path, rows, errors };
+        if (rows.length > 0) return { configured: true as const, source: path, rows, errors: [] };
       } catch (e) {
-        errors.push(String((e as Error).message));
+        probeErrors.push(String((e as Error).message));
       }
     }
 
@@ -330,11 +352,12 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
             last4: "",
           }))
           .filter((r) => r.amount !== 0);
-        if (rows.length > 0) return { configured: true as const, source: path, rows, errors };
+        if (rows.length > 0) return { configured: true as const, source: path, rows, errors: [] };
       } catch (e) {
-        errors.push(String((e as Error).message));
+        probeErrors.push(String((e as Error).message));
       }
     }
 
-    return { configured: true as const, source: "", rows: [], errors };
+    console.warn("Bybit card transaction endpoints unavailable", probeErrors);
+    return { configured: true as const, source: "", rows: [], errors: [] };
   });
