@@ -155,7 +155,7 @@ export function CardTransactionsTab() {
   const fetchCard = useServerFn(getBybitCardTransactions);
   const fetchActivity = useServerFn(getBybitActivity);
   const fetchRewards = useServerFn(getBybitCardRewards);
-  const [tab, setTab] = useState<"all" | "purchase" | "refund">("all");
+  const [tab, setTab] = useState<"all" | "purchase_ok" | "purchase_failed" | "refund">("all");
 
   const { data: rewards } = useQuery({
     queryKey: ["bybit-card-rewards"],
@@ -210,9 +210,13 @@ export function CardTransactionsTab() {
     return [...a, ...b].sort((x, y) => y.occurredAt - x.occurredAt);
   }, [live, stored]);
 
-  const filtered = rows.filter((r) =>
-    tab === "all" ? true : tab === "refund" ? isRefund(r) : !isRefund(r),
-  );
+  const filtered = rows.filter((r) => {
+    if (tab === "all") return true;
+    if (tab === "refund") return isRefund(r);
+    const failed = statusLabel(r.status) === "\u0641\u0627\u0634\u0644\u0629";
+    if (tab === "purchase_failed") return !isRefund(r) && failed;
+    return !isRefund(r) && !failed;
+  });
 
   // الإنفاق الشهري (الشهر الحالي، المشتريات فقط)
   const monthStart = useMemo(() => {
@@ -312,8 +316,9 @@ export function CardTransactionsTab() {
             {(
               [
                 ["all", "الكل"],
-                ["purchase", "المشتريات"],
-                ["refund", "المستردات"],
+                ["purchase_ok", "المشتريات الناجحة"],
+                ["purchase_failed", "المشتريات الفاشلة"],
+                ["refund", "المبلغ المسترد"],
               ] as const
             ).map(([key, label]) => (
               <button
