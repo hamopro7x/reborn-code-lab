@@ -111,12 +111,12 @@ export const getBybitActivity = createServerFn({ method: "POST" })
       return out;
     }
 
-    // "الرصيد الداخلي" = حساب التمويل (Funding) الداخلي على بايبت
-    // "الرصيد الخارجي" = الحساب الموحّد/التداول المرتبط بقوة الشراء للبطاقة
+    // "الرصيد الداخلي" = الرصيد المتاح على بطاقة Bybit (حساب التمويل / Funding)
+    // "الرصيد الخارجي" = إجمالي الأصول في الحساب الموحّد (Unified)
     async function accountsBalances() {
       const defs = [
-        { type: "FUND", label: "الرصيد الداخلي (Funding)", kind: "internal" as const },
-        { type: "UNIFIED", label: "الرصيد الخارجي (Unified)", kind: "external" as const },
+        { type: "FUND", label: "الرصيد الداخلي (بطاقة Bybit)", kind: "internal" as const },
+        { type: "UNIFIED", label: "الرصيد الخارجي (إجمالي الأصول)", kind: "external" as const },
       ];
       const results = await Promise.all(
         defs.map(async (d) => {
