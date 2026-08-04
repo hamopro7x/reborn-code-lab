@@ -137,13 +137,14 @@ export const getBybitActivity = createServerFn({ method: "POST" })
       return map;
     }
 
-    // FUND = رصيد الحساب الرئيسي (التمويل) الظاهر في الصفحة الرئيسية لباي بت
-    // UNIFIED = رصيد الحساب الموحّد (التداول)
+    // بطاقة Bybit تصرف من حساب التمويل (FUND) — فرصيده هو "الرصيد الداخلي"
+    // الظاهر في لوحة البطاقة كـ Spending Power. UNIFIED = الرصيد الخارجي.
     async function accountsBalances() {
       const defs = [
-        { type: "FUND", label: "الرصيد الرئيسي (حساب التمويل)", kind: "internal" as const },
-        { type: "UNIFIED", label: "الحساب الموحّد (التداول)", kind: "external" as const },
+        { type: "FUND", label: "الرصيد الداخلي للبطاقة (قوة الشراء)", kind: "internal" as const },
+        { type: "UNIFIED", label: "الرصيد الخارجي (الحساب الموحّد)", kind: "external" as const },
       ];
+
       const raw = await Promise.all(
         defs.map(async (d) => ({ ...d, coins: (await coinsOf(d.type)).filter((c) => c.balance > 0) })),
       );
