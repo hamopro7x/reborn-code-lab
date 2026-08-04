@@ -50,6 +50,14 @@ export function CardTransactionsTab() {
   const fetchCard = useServerFn(getBybitCardTransactions);
   const fetchActivity = useServerFn(getBybitActivity);
   const [tab, setTab] = useState<"all" | "purchase" | "refund">("all");
+  const [cashback, setCashback] = useState<string>(() => {
+    if (typeof window === "undefined") return "6";
+    return window.localStorage.getItem("bybit_cashback_percent") ?? "6";
+  });
+  const saveCashback = (v: string) => {
+    setCashback(v);
+    if (typeof window !== "undefined") window.localStorage.setItem("bybit_cashback_percent", v);
+  };
 
   const { data: live, isLoading, isFetching, refetch } = useQuery({
     queryKey: ["bybit-card-live"],
