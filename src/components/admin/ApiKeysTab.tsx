@@ -37,7 +37,7 @@ export function ApiKeysTab() {
 
   const { data, isLoading } = useQuery<KeyRow[]>({
     queryKey: ["api-keys"],
-    queryFn: () => fetchKeys({ data: {} }) as Promise<KeyRow[]>,
+    queryFn: () => fetchKeys() as Promise<KeyRow[]>,
   });
 
   const createMut = useMutation({
