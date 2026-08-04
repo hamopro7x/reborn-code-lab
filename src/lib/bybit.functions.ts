@@ -260,34 +260,6 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
     const { createHmac } = await import("node:crypto");
     const recv = "20000";
 
-    async function call(path: string, params: Record<string, string>) {
-      const qs = new URLSearchParams(params).toString();
-      const ts = Date.now().toString();
-      const sign = createHmac("sha256", apiSecret).update(ts + apiKey + recv + qs).digest("hex");
-      const res = await fetch(`https://api.bybit.com${path}${qs ? `?${qs}` : ""}`, {
-        headers: {
-          Accept: "application/json",
-          "X-BAPI-API-KEY": apiKey,
-          "X-BAPI-TIMESTAMP": ts,
-          "X-BAPI-RECV-WINDOW": recv,
-          "X-BAPI-SIGN": sign,
-        },
-      });
-      const text = await res.text();
-      let body: { retCode?: number; retMsg?: string; result?: Record<string, unknown> } = {};
-      if (text.trim()) {
-        try {
-          body = JSON.parse(text) as typeof body;
-        } catch {
-          throw new Error(`${path} [${res.status}] invalid response`);
-        }
-      }
-      if (!res.ok || body.retCode !== 0) {
-        throw new Error(`${path} [${res.status}] ${body.retMsg ?? (text.trim() ? "request failed" : "empty response")}`);
-      }
-      return body.result ?? {};
-    }
-
     async function post(path: string, params: Record<string, string | number>) {
       const payload = JSON.stringify(params);
       const ts = Date.now().toString();
@@ -323,30 +295,6 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
     const endTime = Date.now();
     const startTime = endTime - data.days * DAY;
     const probeErrors: string[] = [];
-
-    async function history(path: string, fixedParams: Record<string, string> = {}) {
-      const rows: any[] = [];
-      let windowEnd = endTime;
-      while (windowEnd > startTime && rows.length < 5000) {
-        const windowStart = Math.max(startTime, windowEnd - 29 * DAY);
-        let cursor = "";
-        for (let page = 0; page < 20; page++) {
-          const result = await call(path, {
-            ...fixedParams,
-            startTime: String(windowStart),
-            endTime: String(windowEnd),
-            limit: "50",
-            ...(cursor ? { cursor } : {}),
-          });
-          const batch = ((result["rows"] as any[]) ?? (result["list"] as any[]) ?? (result["records"] as any[]) ?? []) as any[];
-          rows.push(...batch);
-          cursor = String(result["nextPageCursor"] ?? result["nextCursor"] ?? "");
-          if (!cursor || batch.length === 0) break;
-        }
-        windowEnd = windowStart - 1;
-      }
-      return rows;
-    }
 
     // Official Bybit Card V5 endpoint. It is a POST endpoint and uses numeric
     // pages (not the cursor pagination used by account/asset endpoints).
