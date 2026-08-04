@@ -428,7 +428,7 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
         status: String(r.status ?? r.tradeStatus ?? "") === "1" ? "Successful" : String(r.status ?? r.tradeStatus ?? "") === "0" ? "Pending" : "Failed",
         last4,
         brand: brandOf(r, last4),
-        cardKind: kindOf(r),
+        cardKind: kindOf(r, last4),
       };
     };
 
