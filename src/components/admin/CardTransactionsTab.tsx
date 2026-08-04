@@ -356,7 +356,12 @@ export function CardTransactionsTab() {
                     <td className="px-4 py-4">
                       <button className="font-medium text-amber-500 hover:underline">التفاصيل</button>
                     </td>
-                    <td className="px-4 py-4 font-bold tabular-nums">{r.last4 || "••••"}</td>
+                    <td className="px-4 py-4">
+                      <div className="flex items-center gap-2">
+                        <CardBrandIcon last4={r.last4} />
+                        <span className="font-bold tabular-nums">{r.last4 || "••••"}</span>
+                      </div>
+                    </td>
                     <td className="px-4 py-4 text-muted-foreground tabular-nums">{dateLine(r.occurredAt)}</td>
                     <td
                       className={`px-4 py-4 ${
