@@ -344,22 +344,26 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
       }
     }
 
-    // Fallback: سجل حركات الحساب — مصاريف البطاقة بتخرج من حساب التمويل،
-    // فبنقرأ سجل الحركات ونعرض القيود السالبة كمعاملات بطاقة.
-    const logPaths: { path: string; params: Record<string, string> }[] = [
-      { path: "/v5/account/transaction-log", params: { accountType: "UNIFIED" } },
-      { path: "/v5/asset/transfer/query-inter-transfer-list", params: { accountType: "FUND" } },
+    // Official V5 fallback: card purchases, refunds and rewards are Funding
+    // account asset movements. Bybit retains this history for up to two years.
+    const cardTypes = [
+      "CARD_CONSUMPTION",
+      "CARD_ATM_DRAWAL",
+      "CARD_REFUND",
+      "CARD_REVERSION",
+      "CARD_CB_REWARD",
     ];
-    for (const { path, params } of logPaths) {
+    for (const type of cardTypes) {
       try {
-        const raw = await history(path, params);
+        const path = "/v5/asset/transaction-log";
+        const raw = await history(path, { accountType: "FUND", type });
         const rows = raw
           .map((r, i) => ({
-            id: String(r.id ?? r.transferId ?? r.tradeId ?? `${path}-${i}`),
-            occurredAt: Number(r.transactionTime ?? r.timestamp ?? r.createTime ?? 0),
+            id: String(r.id ?? r.transactionId ?? r.txId ?? `${type}-${i}`),
+            occurredAt: Number(r.transactionTime ?? r.timestamp ?? r.createTime ?? r.createdTime ?? 0),
             amount: Number(r.cashFlow ?? r.change ?? r.amount ?? 0),
             currency: String(r.currency ?? r.coin ?? ""),
-            merchant: String(r.type ?? r.status ?? "حركة حساب"),
+            merchant: String(r.remark ?? r.description ?? type),
             status: String(r.status ?? "Successful"),
             last4: "",
           }))
