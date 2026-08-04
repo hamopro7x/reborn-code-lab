@@ -253,12 +253,12 @@ export function CardTransactionsTab() {
         <div className="p-5 md:p-6 bg-gradient-to-br from-muted/60 to-transparent">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <div className="text-xs text-muted-foreground">الرصيد المتاح</div>
+              <div className="text-xs text-muted-foreground">Spending Power · قوة الشراء</div>
               <div className="mt-1 text-4xl font-black tracking-tight tabular-nums">
-                ${money(spendingPower)}
+                USD {money(spendingPower)}
               </div>
-              <div className="mt-1 text-[11px] text-muted-foreground">
-                قوة الشراء · بطاقة باي بت
+              <div className="mt-2 inline-flex rounded-lg bg-muted/70 px-3 py-1 text-[11px] text-muted-foreground tabular-nums">
+                Fiat: USD {money(internal?.fiatUsd ?? 0)} + Crypto: USD {money(internal?.cryptoUsd ?? 0)}
               </div>
             </div>
             <div className="flex items-center gap-2">
