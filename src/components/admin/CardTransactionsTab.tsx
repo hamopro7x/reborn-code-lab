@@ -331,7 +331,7 @@ export function CardTransactionsTab() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[820px] text-sm">
+          <table className="w-full min-w-[820px] border-collapse text-sm [&_th]:border [&_th]:border-border/60 [&_td]:border [&_td]:border-border/40">
             <thead>
               <tr className="border-y bg-muted/30 text-[11px] uppercase tracking-wide text-muted-foreground">
                 <th className="px-4 py-3 text-start font-semibold">الإجراء</th>
