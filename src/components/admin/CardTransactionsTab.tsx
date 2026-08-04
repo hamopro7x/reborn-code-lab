@@ -19,9 +19,12 @@ type Row = {
 const money = (n: number) =>
   Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+const weekdayAr = (ms: number) =>
+  new Date(ms).toLocaleDateString("ar-EG", { weekday: "long" });
+
 const dateLine = (ms: number) =>
   ms
-    ? new Date(ms).toLocaleString("en-GB", {
+    ? `${weekdayAr(ms)} · ${new Date(ms).toLocaleString("en-GB", {
         year: "numeric",
         month: "2-digit",
         day: "2-digit",
@@ -29,7 +32,7 @@ const dateLine = (ms: number) =>
         minute: "2-digit",
         second: "2-digit",
         hour12: false,
-      })
+      })}`
     : "—";
 
 const isRefund = (r: Row) => r.amount > 0 || /refund|reversal|cashback/i.test(r.status + r.merchant);
