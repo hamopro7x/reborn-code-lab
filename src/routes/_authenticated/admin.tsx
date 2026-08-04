@@ -16,7 +16,7 @@ import {
   SidebarHeader, SidebarFooter,
 } from "@/components/ui/sidebar";
 import {
-  LayoutDashboard, Package, Layers, ShoppingCart, CreditCard, Coins, Clock, Settings2,
+  LayoutDashboard, Package, Layers, ShoppingCart, CreditCard, Coins, Clock, Settings2, KeyRound,
   Plus, Trash2, Edit, ExternalLink, Check, X, TrendingUp, DollarSign, Users, Bell, Loader2,
   Star, UserCog, LogOut, Repeat, ArrowUpRight, GraduationCap, MonitorSmartphone, Upload, PlayCircle,
   Lock, Camera, Download,
