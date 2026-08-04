@@ -30,6 +30,7 @@ import { Route as ApiPublicAgentDownloadRouteImport } from './routes/api/public/
 import { Route as ApiPublicAgentDownloadDotexeRouteImport } from './routes/api/public/agent-download[.]exe'
 import { Route as ApiPublicAgentVersionRouteImport } from './routes/api/public/agent-version'
 import { Route as ApiPublicBuildVersionRouteImport } from './routes/api/public/build-version'
+import { Route as ApiPublicCardTransactionsRouteImport } from './routes/api/public/card-transactions'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -139,6 +140,12 @@ const ApiPublicBuildVersionRoute = ApiPublicBuildVersionRouteImport.update({
   path: '/api/public/build-version',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCardTransactionsRoute =
+  ApiPublicCardTransactionsRouteImport.update({
+    id: '/api/public/card-transactions',
+    path: '/api/public/card-transactions',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -161,6 +168,7 @@ export interface FileRoutesByFullPath {
   '/api/public/agent-download.exe': typeof ApiPublicAgentDownloadDotexeRoute
   '/api/public/agent-version': typeof ApiPublicAgentVersionRoute
   '/api/public/build-version': typeof ApiPublicBuildVersionRoute
+  '/api/public/card-transactions': typeof ApiPublicCardTransactionsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -183,6 +191,7 @@ export interface FileRoutesByTo {
   '/api/public/agent-download.exe': typeof ApiPublicAgentDownloadDotexeRoute
   '/api/public/agent-version': typeof ApiPublicAgentVersionRoute
   '/api/public/build-version': typeof ApiPublicBuildVersionRoute
+  '/api/public/card-transactions': typeof ApiPublicCardTransactionsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -207,6 +216,7 @@ export interface FileRoutesById {
   '/api/public/agent-download.exe': typeof ApiPublicAgentDownloadDotexeRoute
   '/api/public/agent-version': typeof ApiPublicAgentVersionRoute
   '/api/public/build-version': typeof ApiPublicBuildVersionRoute
+  '/api/public/card-transactions': typeof ApiPublicCardTransactionsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -231,6 +241,7 @@ export interface FileRouteTypes {
     | '/api/public/agent-download.exe'
     | '/api/public/agent-version'
     | '/api/public/build-version'
+    | '/api/public/card-transactions'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -253,6 +264,7 @@ export interface FileRouteTypes {
     | '/api/public/agent-download.exe'
     | '/api/public/agent-version'
     | '/api/public/build-version'
+    | '/api/public/card-transactions'
   id:
     | '__root__'
     | '/'
@@ -276,6 +288,7 @@ export interface FileRouteTypes {
     | '/api/public/agent-download.exe'
     | '/api/public/agent-version'
     | '/api/public/build-version'
+    | '/api/public/card-transactions'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -298,6 +311,7 @@ export interface RootRouteChildren {
   ApiPublicAgentDownloadDotexeRoute: typeof ApiPublicAgentDownloadDotexeRoute
   ApiPublicAgentVersionRoute: typeof ApiPublicAgentVersionRoute
   ApiPublicBuildVersionRoute: typeof ApiPublicBuildVersionRoute
+  ApiPublicCardTransactionsRoute: typeof ApiPublicCardTransactionsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -449,6 +463,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicBuildVersionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/card-transactions': {
+      id: '/api/public/card-transactions'
+      path: '/api/public/card-transactions'
+      fullPath: '/api/public/card-transactions'
+      preLoaderRoute: typeof ApiPublicCardTransactionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -486,6 +507,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicAgentDownloadDotexeRoute: ApiPublicAgentDownloadDotexeRoute,
   ApiPublicAgentVersionRoute: ApiPublicAgentVersionRoute,
   ApiPublicBuildVersionRoute: ApiPublicBuildVersionRoute,
+  ApiPublicCardTransactionsRoute: ApiPublicCardTransactionsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
