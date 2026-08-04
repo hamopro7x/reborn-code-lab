@@ -22,18 +22,19 @@ const money = (n: number) =>
 const weekdayAr = (ms: number) =>
   new Date(ms).toLocaleDateString("ar-EG", { weekday: "long" });
 
-const dateLine = (ms: number) =>
-  ms
-    ? `${weekdayAr(ms)} · ${new Date(ms).toLocaleString("en-GB", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: false,
-      })}`
-    : "—";
+const dateLine = (ms: number) => {
+  if (!ms) return "\u2014";
+  const d = new Date(ms);
+  const day = weekdayAr(ms);
+  const date = d.toLocaleDateString("en-GB", { year: "numeric", month: "2-digit", day: "2-digit" });
+  const time = d.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  });
+  return `[ ${day} - ${date} - ${time} ]`;
+};
 
 const isRefund = (r: Row) => r.amount > 0 || /refund|reversal|cashback/i.test(r.status + r.merchant);
 
