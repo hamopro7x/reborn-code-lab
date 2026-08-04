@@ -53,6 +53,37 @@ export const getBybitActivity = createServerFn({ method: "POST" })
       return body.result ?? {};
     }
 
+    async function post(path: string, params: Record<string, string | number>) {
+      const payload = JSON.stringify(params);
+      const ts = Date.now().toString();
+      const sign = createHmac("sha256", apiSecret).update(ts + apiKey + recv + payload).digest("hex");
+      const res = await fetch(`https://api.bybit.com${path}`, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          "X-BAPI-API-KEY": apiKey,
+          "X-BAPI-TIMESTAMP": ts,
+          "X-BAPI-RECV-WINDOW": recv,
+          "X-BAPI-SIGN": sign,
+        },
+        body: payload,
+      });
+      const text = await res.text();
+      let body: { retCode?: number; retMsg?: string; result?: Record<string, unknown> } = {};
+      if (text.trim()) {
+        try {
+          body = JSON.parse(text) as typeof body;
+        } catch {
+          throw new Error(`${path} [${res.status}] invalid response`);
+        }
+      }
+      if (!res.ok || body.retCode !== 0) {
+        throw new Error(`${path} [${res.status}] ${body.retMsg ?? (text.trim() ? "request failed" : "empty response")}`);
+      }
+      return body.result ?? {};
+    }
+
     const DAY = 24 * 60 * 60 * 1000;
     const CHUNK = 29 * DAY; // Bybit allows max 30 days per request
     const endTime = Date.now();
@@ -319,29 +350,51 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
       return rows;
     }
 
-    const candidates = [
-      "/v5/user/card/transactions",
-      "/v5/user/card/transaction-record",
-      "/v5/asset/card/transaction-record",
-      "/v5/asset/card/query-record",
-    ];
-
-    for (const path of candidates) {
+    // Official Bybit Card V5 endpoint. It is a POST endpoint and uses numeric
+    // pages (not the cursor pagination used by account/asset endpoints).
+    const cardPath = "/v5/card/transaction/query-asset-records";
+    const cardRows: {
+      id: string;
+      occurredAt: number;
+      amount: number;
+      currency: string;
+      merchant: string;
+      status: string;
+      last4: string;
+    }[] = [];
+    const cardQueryTypes = ["SIDE_QUERY_AUTH", "SIDE_QUERY_FINANCIAL", "SIDE_QUERY_REFUND"];
+    for (const type of cardQueryTypes) {
       try {
-        const raw = await history(path);
-        const rows = raw.map((r, i) => ({
-          id: String(r.id ?? r.orderId ?? r.txId ?? r.transactionId ?? `${path}-${i}`),
-          occurredAt: Number(r.transTime ?? r.createTime ?? r.createdTime ?? r.time ?? 0),
-          amount: Number(r.amount ?? r.transAmount ?? r.value ?? 0),
-          currency: String(r.currency ?? r.coin ?? r.currencyCode ?? ""),
-          merchant: String(r.merchant ?? r.merchantName ?? r.description ?? r.remark ?? ""),
-          status: String(r.status ?? r.orderStatus ?? ""),
-          last4: String(r.cardLast4 ?? r.last4 ?? r.cardNo ?? "").slice(-4),
-        }));
-        if (rows.length > 0) return { configured: true as const, source: path, rows, errors: [] };
+        for (let page = 1; page <= 100; page++) {
+          const result = await post(cardPath, {
+            type,
+            limit: 500,
+            page,
+            createBeginTime: startTime,
+            createEndTime: endTime,
+          });
+          const batch = (result["data"] as any[]) ?? [];
+          cardRows.push(...batch.map((r, i) => ({
+            id: String(r.txnId ?? r.orderNo ?? `${type}-${page}-${i}`),
+            occurredAt: Number(r.txnCreate ?? 0),
+            amount: Number(r.basicAmount ?? r.paidAmount ?? r.transactionAmount ?? 0),
+            currency: String(r.basicCurrency ?? r.paidCurrency ?? r.transactionCurrency ?? "USD"),
+            merchant: String(r.merchName ?? r.merchCategoryDesc ?? "Card Transaction"),
+            status: String(r.status ?? r.tradeStatus ?? ""),
+            last4: String(r.pan4 ?? "").slice(-4),
+          })));
+          const total = Number(result["totalCount"] ?? 0);
+          if (batch.length === 0 || cardRows.length >= total || batch.length < 500) break;
+        }
       } catch (e) {
         probeErrors.push(String((e as Error).message));
       }
+    }
+
+    if (cardRows.length > 0) {
+      const unique = [...new Map(cardRows.map((row) => [row.id, row])).values()];
+      unique.sort((a, b) => b.occurredAt - a.occurredAt);
+      return { configured: true as const, source: cardPath, rows: unique, errors: [] };
     }
 
     // Official V5 fallback: card purchases, refunds and rewards are Funding
@@ -364,7 +417,7 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
     }[] = [];
     for (const type of cardTypes) {
       try {
-        const path = "/v5/asset/transaction-log";
+        const path = "/v5/account/transaction-log";
         const raw = await history(path, { accountType: "FUND", type });
         const rows = raw
           .map((r, i) => ({
@@ -385,7 +438,7 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
 
     if (fundingRows.length > 0) {
       fundingRows.sort((a, b) => b.occurredAt - a.occurredAt);
-      return { configured: true as const, source: "/v5/asset/transaction-log", rows: fundingRows, errors: [] };
+      return { configured: true as const, source: "/v5/account/transaction-log", rows: fundingRows, errors: [] };
     }
 
     console.warn("Bybit card transaction endpoints unavailable", probeErrors);
