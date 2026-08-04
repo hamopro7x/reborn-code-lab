@@ -50,6 +50,14 @@ export function CardTransactionsTab() {
   const fetchCard = useServerFn(getBybitCardTransactions);
   const fetchActivity = useServerFn(getBybitActivity);
   const [tab, setTab] = useState<"all" | "purchase" | "refund">("all");
+  const [cashback, setCashback] = useState<string>(() => {
+    if (typeof window === "undefined") return "6";
+    return window.localStorage.getItem("bybit_cashback_percent") ?? "6";
+  });
+  const saveCashback = (v: string) => {
+    setCashback(v);
+    if (typeof window !== "undefined") window.localStorage.setItem("bybit_cashback_percent", v);
+  };
 
   const { data: live, isLoading, isFetching, refetch } = useQuery({
     queryKey: ["bybit-card-live"],
@@ -101,6 +109,21 @@ export function CardTransactionsTab() {
     tab === "all" ? true : tab === "refund" ? isRefund(r) : !isRefund(r),
   );
 
+  // الإنفاق الشهري (الشهر الحالي، المشتريات فقط)
+  const monthStart = useMemo(() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+  }, []);
+  const monthlySpend = rows
+    .filter((r) => !isRefund(r) && r.occurredAt >= monthStart)
+    .reduce((s, r) => s + Math.abs(r.amount), 0);
+
+  // نسبة الاستراداد النقدي (Pay Rewards) — قابلة للتعديل
+  const cashbackRate = Number(cashback) || 0;
+  const cashbackEarned = (monthlySpend * cashbackRate) / 100;
+
+
+
 
   return (
     <div className="space-y-4" dir="ltr">
@@ -127,7 +150,26 @@ export function CardTransactionsTab() {
             </div>
           </div>
 
-          <div className="mt-5 grid grid-cols-2 gap-3">
+          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="rounded-xl border bg-background/60 px-3 py-2">
+              <div className="text-[11px] text-muted-foreground">Monthly Spend</div>
+              <div className="text-lg font-bold tabular-nums">${money(monthlySpend)}</div>
+            </div>
+            <div className="rounded-xl border bg-background/60 px-3 py-2">
+              <div className="text-[11px] text-muted-foreground">Cashback Rate</div>
+              <div className="flex items-baseline gap-1">
+                <input
+                  value={cashback}
+                  onChange={(e) => saveCashback(e.target.value.replace(/[^\d.]/g, ""))}
+                  inputMode="decimal"
+                  className="w-12 bg-transparent text-lg font-bold tabular-nums outline-none focus:underline"
+                />
+                <span className="text-lg font-bold">%</span>
+              </div>
+              <div className="text-[10px] text-muted-foreground tabular-nums">
+                ≈ ${money(cashbackEarned)} earned
+              </div>
+            </div>
             <div className="rounded-xl border bg-background/60 px-3 py-2">
               <div className="text-[11px] text-muted-foreground">Transactions</div>
               <div className="text-lg font-bold tabular-nums">{rows.length}</div>
