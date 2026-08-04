@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { getBybitActivity, getBybitCardRewards, getBybitCardTransactions } from "@/lib/bybit.functions";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, CreditCard, AlertTriangle, ChevronLeft } from "lucide-react";
+import { RefreshCw, CreditCard, AlertTriangle } from "lucide-react";
 
 type Row = {
   id: string;
@@ -43,8 +43,6 @@ const statusLabel = (s: string) => {
   return s;
 };
 
-const initials = (name: string) =>
-  (name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("") || "?").toUpperCase();
 
 export function CardTransactionsTab() {
   const fetchCard = useServerFn(getBybitCardTransactions);
