@@ -290,5 +290,37 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
       }
     }
 
+    // Fallback: سجل حركات الحساب — مصاريف البطاقة بتخرج من حساب التمويل،
+    // فبنقرأ سجل الحركات ونعرض القيود السالبة كمعاملات بطاقة.
+    const logPaths: { path: string; params: Record<string, string> }[] = [
+      { path: "/v5/account/transaction-log", params: { accountType: "UNIFIED" } },
+      { path: "/v5/asset/transfer/query-inter-transfer-list", params: {} },
+    ];
+    for (const { path, params } of logPaths) {
+      try {
+        const res = await call(path, {
+          ...params,
+          startTime: String(startTime),
+          endTime: String(endTime),
+          limit: "50",
+        });
+        const raw = ((res["list"] as any[]) ?? (res["rows"] as any[]) ?? []) as any[];
+        const rows = raw
+          .map((r, i) => ({
+            id: String(r.id ?? r.transferId ?? r.tradeId ?? `${path}-${i}`),
+            occurredAt: Number(r.transactionTime ?? r.timestamp ?? r.createTime ?? 0),
+            amount: Number(r.cashFlow ?? r.change ?? r.amount ?? 0),
+            currency: String(r.currency ?? r.coin ?? ""),
+            merchant: String(r.type ?? r.status ?? "حركة حساب"),
+            status: String(r.status ?? "Successful"),
+            last4: "",
+          }))
+          .filter((r) => r.amount !== 0);
+        if (rows.length > 0) return { configured: true as const, source: path, rows, errors };
+      } catch (e) {
+        errors.push(String((e as Error).message));
+      }
+    }
+
     return { configured: true as const, source: "", rows: [], errors };
   });
