@@ -75,22 +75,30 @@ export function BybitTab() {
         </div>
       </div>
 
-      <section className="rounded-xl border bg-card p-4">
-        <h3 className="mb-3 font-semibold">الأرصدة</h3>
-        {(data?.balances ?? []).length === 0 ? (
-          <p className="text-sm text-muted-foreground">لا توجد أرصدة.</p>
-        ) : (
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {data!.balances.map((c: Coin) => (
-              <div key={c.coin} className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm">
-                <span className="font-semibold">{c.coin}</span>
-                <span>{num(c.balance)}</span>
-                <span className="text-muted-foreground">${num(c.usdValue)}</span>
+      <div className="grid gap-3 lg:grid-cols-2">
+        {(data?.accounts ?? []).map((acc) => (
+          <section key={acc.type} className="rounded-xl border bg-card p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="font-semibold">{acc.label}</h3>
+              <span className="text-sm text-muted-foreground">${num(acc.totalUsd)}</span>
+            </div>
+            {acc.coins.length === 0 ? (
+              <p className="text-sm text-muted-foreground">لا توجد أرصدة في هذا الحساب.</p>
+            ) : (
+              <div className="space-y-2">
+                {acc.coins.map((c: Coin) => (
+                  <div key={c.coin} className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm">
+                    <span className="font-semibold">{c.coin}</span>
+                    <span>{num(c.balance)}</span>
+                    <span className="text-muted-foreground">${num(c.usdValue)}</span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        )}
-      </section>
+            )}
+          </section>
+        ))}
+      </div>
+
 
       <section className="rounded-xl border bg-card p-4">
         <h3 className="mb-3 flex items-center gap-2 font-semibold"><ArrowDownToLine className="h-4 w-4" /> الإيداعات</h3>
