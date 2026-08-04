@@ -117,6 +117,35 @@ function MerchantIcon({ name }: { name: string }) {
   );
 }
 
+/** أيقونة نوعية البطاقة (بطاقة باي بت = ماستركارد) */
+function CardBrandIcon({ last4 }: { last4?: string }) {
+  const visa = !!last4 && /^4/.test(last4);
+  if (visa) {
+    return (
+      <svg viewBox="0 0 48 32" className="h-5 w-8 shrink-0" role="img" aria-label="Visa">
+        <rect width="48" height="32" rx="4" fill="#1434CB" />
+        <path
+          d="M20.6 22h-3l2-12h3l-2 12Zm10.8-11.7c-.6-.2-1.5-.5-2.7-.5-2.9 0-5 1.5-5 3.7 0 1.6 1.5 2.5 2.7 3 1.2.6 1.6.9 1.6 1.4 0 .8-.9 1.1-1.8 1.1-1.2 0-1.9-.2-2.9-.6l-.4-.2-.4 2.5c.7.3 2 .6 3.4.6 3.2 0 5.3-1.5 5.3-3.9 0-1.3-.8-2.3-2.6-3.1-1.1-.5-1.8-.9-1.8-1.4 0-.5.5-1 1.8-1 1 0 1.8.2 2.4.4l.3.1.4-2.4ZM39 10h-2.3c-.7 0-1.3.2-1.6 1L30.7 22h3.2l.7-1.8h3.9l.4 1.8H41L39 10Zm-3.5 7.8 1.2-3.3.7 3.3h-1.9ZM17.9 10l-3 8.2-.3-1.6c-.6-1.9-2.4-4-4.4-5l3 10.4h3.3L21.2 10h-3.3Z"
+          fill="#fff"
+        />
+        <path d="M11.9 10H7l-.1.5c3.8.9 6.4 3.2 7.4 5.9l-1.1-5.2c-.2-.8-.7-1.2-1.3-1.2Z" fill="#F7B600" />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 48 32" className="h-5 w-8 shrink-0" role="img" aria-label="Mastercard">
+      <rect width="48" height="32" rx="4" fill="#16181C" />
+      <circle cx="20" cy="16" r="8" fill="#EB001B" />
+      <circle cx="28" cy="16" r="8" fill="#F79E1B" />
+      <path
+        d="M24 9.6a8 8 0 0 0 0 12.8 8 8 0 0 0 0-12.8Z"
+        fill="#FF5F00"
+      />
+    </svg>
+  );
+}
+
+
 
 export function CardTransactionsTab() {
   const fetchCard = useServerFn(getBybitCardTransactions);
