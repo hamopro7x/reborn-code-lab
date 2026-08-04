@@ -57,13 +57,16 @@ const storagePath = `releases/${setupName}`;
 const url = process.env.SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!url || !key) throw new Error("مفاتيح المخزن غير متاحة");
+const headers = {
+  apikey: key,
+  "content-type": "application/octet-stream",
+  "x-upsert": "true",
+};
+// المفاتيح الجديدة (sb_secret_...) ليست JWT فلا تُرسل في Authorization
+if (key.split(".").length === 3) headers.authorization = `Bearer ${key}`;
 const res = await fetch(`${url}/storage/v1/object/site-assets/${storagePath}`, {
   method: "POST",
-  headers: {
-    authorization: `Bearer ${key}`,
-    "content-type": "application/octet-stream",
-    "x-upsert": "true",
-  },
+  headers,
   body: buf,
 });
 if (!res.ok) throw new Error(`فشل الرفع [${res.status}]: ${await res.text()}`);
