@@ -77,21 +77,32 @@ export const getBybitActivity = createServerFn({ method: "POST" })
       return rows;
     }
 
+    // Balance: try UNIFIED, then fall back to Funding account coins balance.
+    async function balancesAny() {
+      try {
+        const r = await call("/v5/account/wallet-balance", { accountType: "UNIFIED" });
+        const coins = (((r["list"] as any[]) ?? [])[0]?.coin ?? []) as any[];
+        if (coins.length) return coins.map((c) => ({ coin: String(c.coin), balance: Number(c.walletBalance ?? 0), usdValue: Number(c.usdValue ?? 0) }));
+      } catch (e) {
+        errors.push(String((e as Error).message));
+      }
+      const r2 = await call("/v5/asset/transfer/query-account-coins-balance", { accountType: "FUND" });
+      return (((r2["balance"] as any[]) ?? []) as any[]).map((c) => ({
+        coin: String(c.coin),
+        balance: Number(c.walletBalance ?? c.transferBalance ?? 0),
+        usdValue: 0,
+      }));
+    }
+
     const [balRes, depRes, wdRes] = await Promise.allSettled([
-      call("/v5/account/wallet-balance", { accountType: "UNIFIED" }),
+      balancesAny(),
       history("/v5/asset/deposit/query-record"),
       history("/v5/asset/withdraw/query-record"),
     ]);
 
     const balances =
       balRes.status === "fulfilled"
-        ? ((((balRes.value as any)["list"] as any[]) ?? [])[0]?.coin ?? [])
-            .map((c: any) => ({
-              coin: String(c.coin),
-              balance: Number(c.walletBalance ?? 0),
-              usdValue: Number(c.usdValue ?? 0),
-            }))
-            .filter((c: { balance: number }) => c.balance > 0)
+        ? ((balRes.value as any[]) ?? []).filter((c: { balance: number }) => c.balance > 0)
         : [];
     if (balRes.status === "rejected") errors.push(String(balRes.reason?.message ?? balRes.reason));
 
