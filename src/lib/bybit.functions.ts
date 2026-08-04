@@ -359,25 +359,62 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
     // captured without looking further back than the local tracking start.
     const cardQueryTypes = ["SIDE_QUERY_AUTH", cardQueryType, "SIDE_QUERY_REFUND"];
 
+    // Real brand per card, taken from Bybit's own card list (last4 -> brand).
+    // Guessing from the last 4 digits is wrong (the network is decided by the
+    // BIN, i.e. the FIRST digit), which is why cards showed as Visa by mistake.
+    const cardBrandByLast4 = new Map<string, string>();
+    const cardKindByLast4 = new Map<string, string>();
+    const brandFromRaw = (raw: string): string => {
+      const v = raw.toLowerCase();
+      if (v.includes("master") || v.includes("mc")) return "mastercard";
+      if (v.includes("visa")) return "visa";
+      return "";
+    };
+    try {
+      for (const p of ["/v5/card/query-card-list", "/v5/card/query-card-info"]) {
+        try {
+          const r: any = await post(p, {});
+          const list: any[] = r?.list ?? r?.rows ?? r?.cards ?? r?.data ?? (Array.isArray(r) ? r : []);
+          for (const c of list ?? []) {
+            const l4 = String(c.pan4 ?? c.last4 ?? c.cardNo ?? c.maskPan ?? "").slice(-4);
+            if (!l4) continue;
+            const brand =
+              brandFromRaw(String(c.cardBrand ?? c.brand ?? c.cardOrg ?? c.cardScheme ?? c.cardNetwork ?? "")) ||
+              (/^5|^2/.test(String(c.cardBin ?? c.bin ?? "")) ? "mastercard" : /^4/.test(String(c.cardBin ?? c.bin ?? "")) ? "visa" : "");
+            if (brand) cardBrandByLast4.set(l4, brand);
+            const kind = String(c.cardType ?? c.cardCategory ?? c.cardKind ?? "").toLowerCase();
+            if (kind.includes("virt")) cardKindByLast4.set(l4, "virtual");
+            else if (kind.includes("phys")) cardKindByLast4.set(l4, "physical");
+          }
+          if (cardBrandByLast4.size > 0) break;
+        } catch {
+          // try the next card endpoint
+        }
+      }
+    } catch {
+      // card list unavailable — fall back to per-transaction fields
+    }
+
     const brandOf = (r: any, last4: string): string => {
-      const raw = String(
-        r.cardBrand ?? r.brand ?? r.cardOrg ?? r.cardScheme ?? r.cardNetwork ?? "",
-      ).toLowerCase();
-      if (raw.includes("master")) return "mastercard";
-      if (raw.includes("visa")) return "visa";
+      const raw = brandFromRaw(
+        String(r.cardBrand ?? r.brand ?? r.cardOrg ?? r.cardScheme ?? r.cardNetwork ?? ""),
+      );
+      if (raw) return raw;
+      const mapped = cardBrandByLast4.get(last4);
+      if (mapped) return mapped;
       const bin = String(r.cardBin ?? r.bin ?? "");
-      if (/^[52]/.test(bin)) return "mastercard";
+      if (/^5|^2/.test(bin)) return "mastercard";
       if (/^4/.test(bin)) return "visa";
-      // Fall back to the card's own digits so different cards render differently
-      if (/^[52]/.test(last4)) return "mastercard";
-      return "visa";
+      // Unknown network — let the UI render a neutral badge instead of a wrong logo.
+      return "";
     };
 
-    const kindOf = (r: any): string => {
+
+    const kindOf = (r: any, last4 = ""): string => {
       const raw = String(r.cardType ?? r.cardCategory ?? r.cardKind ?? r.entity ?? "").toLowerCase();
       if (raw.includes("virt") || raw === "1") return "virtual";
       if (raw.includes("phys") || raw === "2") return "physical";
-      return "";
+      return cardKindByLast4.get(last4) ?? "";
     };
 
     const mapRow = (r: any, type: string, key: string): CardRow => {
@@ -391,7 +428,7 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
         status: String(r.status ?? r.tradeStatus ?? "") === "1" ? "Successful" : String(r.status ?? r.tradeStatus ?? "") === "0" ? "Pending" : "Failed",
         last4,
         brand: brandOf(r, last4),
-        cardKind: kindOf(r),
+        cardKind: kindOf(r, last4),
       };
     };
 

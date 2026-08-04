@@ -121,11 +121,23 @@ function MerchantIcon({ name }: { name: string }) {
   );
 }
 
-/** أيقونة نوعية البطاقة (بطاقة باي بت = ماستركارد) */
+/** أيقونة شبكة البطاقة كما تعرضها باي بت (فيزا / ماستركارد) */
 function CardBrandIcon({ last4, brand }: { last4?: string; brand?: string }) {
-  // نستخدم علامة البطاقة القادمة من باي بت؛ ولو غير متاحة نستنتجها من الأرقام
-  const mastercard = brand ? brand === "mastercard" : !!last4 && /^[52]/.test(last4);
+  // العلامة تأتي من بيانات البطاقة في باي بت فقط — لا نخمّنها من آخر 4 أرقام.
+  const net = (brand ?? "").toLowerCase();
+  if (!net) {
+    return (
+      <span
+        className="inline-flex h-5 w-8 shrink-0 items-center justify-center rounded bg-muted text-[9px] font-bold text-muted-foreground"
+        aria-label="بطاقة"
+      >
+        {last4 ? "CARD" : "••••"}
+      </span>
+    );
+  }
+  const mastercard = net === "mastercard";
   if (!mastercard) {
+
 
     return (
       <svg viewBox="0 0 48 32" className="h-5 w-8 shrink-0" role="img" aria-label="Visa">
