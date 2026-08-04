@@ -22,7 +22,29 @@ export const Route = createFileRoute("/_authenticated")({
     return { user: data.user };
   },
   component: DeviceGate,
+  errorComponent: StaffError,
 });
+
+// شاشة خطأ داخل لوحة الأدمن/الموظف بنفس الألوان الرمادية + رسالة الخطأ الحقيقية.
+function StaffError({ error, reset }: { error: Error; reset: () => void }) {
+  useAdminTheme();
+  return (
+    <div className="admin-theme min-h-dvh flex items-center justify-center p-6" dir="rtl">
+      <div className="card-surface rounded-2xl p-8 max-w-md w-full text-center space-y-3">
+        <ShieldAlert className="size-10 mx-auto text-muted-foreground" />
+        <h1 className="text-lg font-semibold">تعذّر تحميل هذا القسم</h1>
+        {error?.message ? (
+          <p className="text-xs text-muted-foreground font-mono break-words bg-muted/40 rounded-lg p-2">{error.message}</p>
+        ) : null}
+        <div className="flex justify-center gap-2 pt-2">
+          <Button onClick={() => reset()}>إعادة المحاولة</Button>
+          <Button variant="outline" onClick={() => window.location.reload()}>تحديث الصفحة</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 function DeviceGate() {
   useAdminTheme();

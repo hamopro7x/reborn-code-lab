@@ -29,19 +29,26 @@ function NotFoundComponent() {
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
   useEffect(() => { reportLovableError(error, { boundary: "root" }); }, [error]);
+  // لوحة الأدمن/الموظف لها سمة رمادية — نطبّقها هنا أيضاً حتى لا تظهر
+  // شاشة الخطأ بالألوان البنفسجية الخاصة بالمتجر.
+  const staffArea = typeof window !== "undefined" && /^\/(admin|courses|share)/.test(window.location.pathname);
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
-      <div className="max-w-md text-center card-surface rounded-2xl p-8">
+    <div className={`${staffArea ? "admin-theme " : ""}flex min-h-dvh items-center justify-center px-4`} dir="rtl">
+      <div className="max-w-md w-full text-center card-surface rounded-2xl p-8">
         <h1 className="text-xl font-semibold">حدث خطأ ما</h1>
         <p className="mt-2 text-sm text-muted-foreground">جرّب تحديث الصفحة أو العودة للرئيسية.</p>
+        {error?.message ? (
+          <p className="mt-3 text-xs text-muted-foreground break-words bg-muted/40 rounded-lg p-2 font-mono">{error.message}</p>
+        ) : null}
         <div className="mt-6 flex justify-center gap-2">
-          <button onClick={() => { router.invalidate(); reset(); }} className="rounded-lg gradient-primary px-4 py-2 text-sm font-medium text-white">إعادة المحاولة</button>
+          <button onClick={() => { router.invalidate(); reset(); }} className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">إعادة المحاولة</button>
           <a href="/" className="rounded-lg border border-border px-4 py-2 text-sm">الرئيسية</a>
         </div>
       </div>
     </div>
   );
 }
+
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
