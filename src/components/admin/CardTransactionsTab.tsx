@@ -36,10 +36,10 @@ const isRefund = (r: Row) => r.amount > 0 || /refund|reversal|cashback/i.test(r.
 
 const statusLabel = (s: string) => {
   const v = s.toLowerCase();
-  if (!s) return "Successful";
-  if (/success|completed|filled|done/.test(v)) return "Successful";
-  if (/pending|processing/.test(v)) return "Pending";
-  if (/fail|reject|declin/.test(v)) return "Failed";
+  if (!s) return "ناجحة";
+  if (/success|completed|filled|done/.test(v)) return "ناجحة";
+  if (/pending|processing/.test(v)) return "قيد المعالجة";
+  if (/fail|reject|declin/.test(v)) return "فاشلة";
   return s;
 };
 
@@ -210,17 +210,17 @@ export function CardTransactionsTab() {
         <div className="p-5 md:p-6 bg-gradient-to-br from-muted/60 to-transparent">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <div className="text-xs text-muted-foreground">Available Balance</div>
+              <div className="text-xs text-muted-foreground">الرصيد المتاح</div>
               <div className="mt-1 text-4xl font-black tracking-tight tabular-nums">
                 ${money(spendingPower)}
               </div>
               <div className="mt-1 text-[11px] text-muted-foreground">
-                Spending Power · Bybit Card
+                قوة الشراء · بطاقة باي بت
               </div>
             </div>
             <div className="flex items-center gap-2">
               <div className="hidden sm:flex h-12 w-20 items-center justify-center rounded-lg bg-foreground/90 text-background text-xs font-bold">
-                <CreditCard className="size-4 me-1" /> Card
+                <CreditCard className="size-4 me-1" /> بطاقة
               </div>
               <Button size="sm" variant="outline" onClick={() => refetch()} disabled={isFetching}>
                 <RefreshCw className={`size-4 ${isFetching ? "animate-spin" : ""}`} />
@@ -230,7 +230,7 @@ export function CardTransactionsTab() {
 
           <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div className="rounded-xl border bg-background/60 px-3 py-2">
-              <div className="text-[11px] text-muted-foreground">Monthly Spend</div>
+              <div className="text-[11px] text-muted-foreground">الإنفاق الشهري</div>
               <div className="text-lg font-bold tabular-nums">${money(spendForRate)}</div>
               <div className="text-[10px] text-muted-foreground">
                 {rows.length === 0 ? "يبدأ العد من أول معاملة جديدة" : "الشهر الحالي · المشتريات"}
@@ -238,26 +238,26 @@ export function CardTransactionsTab() {
             </div>
             <div className="rounded-xl border bg-background/60 px-3 py-2">
               <div className="text-[11px] text-muted-foreground">
-                Cashback Rate{rewards?.tier ? ` · ${rewards.tier}` : ""}
+                نسبة الاسترداد{rewards?.tier ? ` · ${rewards.tier}` : ""}
               </div>
               <div className="text-lg font-bold tabular-nums">
                 {cashbackRate == null ? "—" : `${cashbackRate.toFixed(2)}%`}
               </div>
               <div className="text-[10px] text-muted-foreground tabular-nums">
                 {cashbackEarned != null
-                  ? `≈ $${money(cashbackEarned)} cashback`
+                  ? `≈ $${money(cashbackEarned)} استرداد`
                   : platformRate == null
                     ? "باي بت لا تتيح Pay Rewards عبر الـ API"
-                    : "auto · Bybit"}
+                    : "تلقائي · باي بت"}
               </div>
             </div>
 
             <div className="rounded-xl border bg-background/60 px-3 py-2">
-              <div className="text-[11px] text-muted-foreground">Transactions</div>
+              <div className="text-[11px] text-muted-foreground">المعاملات</div>
               <div className="text-lg font-bold tabular-nums">{rows.length}</div>
             </div>
             <div className="rounded-xl border bg-background/60 px-3 py-2">
-              <div className="text-[11px] text-muted-foreground">Currency</div>
+              <div className="text-[11px] text-muted-foreground">العملة</div>
               <div className="text-lg font-bold">USD</div>
             </div>
           </div>
@@ -274,13 +274,13 @@ export function CardTransactionsTab() {
       {/* Transactions — Bybit table layout */}
       <div className="rounded-2xl border bg-card overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-2 p-4 pb-3">
-          <h3 className="text-base font-bold">Transactions</h3>
+          <h3 className="text-base font-bold">المعاملات</h3>
           <div className="flex gap-1">
             {(
               [
-                ["all", "All"],
-                ["purchase", "Purchases"],
-                ["refund", "Refunds"],
+                ["all", "الكل"],
+                ["purchase", "المشتريات"],
+                ["refund", "المستردات"],
               ] as const
             ).map(([key, label]) => (
               <button
@@ -302,30 +302,30 @@ export function CardTransactionsTab() {
           <table className="w-full min-w-[820px] text-sm">
             <thead>
               <tr className="border-y bg-muted/30 text-[11px] uppercase tracking-wide text-muted-foreground">
-                <th className="px-4 py-3 text-start font-semibold">Action</th>
-                <th className="px-4 py-3 text-start font-semibold">Card's Last 4 Digits</th>
-                <th className="px-4 py-3 text-start font-semibold">Transaction Date &amp; Time</th>
-                <th className="px-4 py-3 text-start font-semibold">Status</th>
-                <th className="px-4 py-3 text-end font-semibold">Total Authorization Amount</th>
-                <th className="px-4 py-3 text-end font-semibold">Merchant Name</th>
+                <th className="px-4 py-3 text-start font-semibold">الإجراء</th>
+                <th className="px-4 py-3 text-start font-semibold">آخر 4 أرقام للبطاقة</th>
+                <th className="px-4 py-3 text-start font-semibold">تاريخ ووقت المعاملة</th>
+                <th className="px-4 py-3 text-start font-semibold">الحالة</th>
+                <th className="px-4 py-3 text-end font-semibold">إجمالي المبلغ المصرّح</th>
+                <th className="px-4 py-3 text-end font-semibold">اسم التاجر</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 && (
                 <tr>
                   <td colSpan={6} className="p-10 text-center text-sm text-muted-foreground">
-                    {isLoading ? "جاري جلب المعاملات من باي بت…" : "No transactions"}
+                    {isLoading ? "جاري جلب المعاملات من باي بت…" : "لا توجد معاملات"}
                   </td>
                 </tr>
               )}
               {filtered.map((r) => {
                 const refund = isRefund(r);
                 const st = statusLabel(r.status);
-                const failed = st === "Failed";
+                const failed = st === "فاشلة";
                 return (
                   <tr key={r.id} className="border-b border-border/40 hover:bg-muted/20">
                     <td className="px-4 py-4">
-                      <button className="font-medium text-amber-500 hover:underline">Details</button>
+                      <button className="font-medium text-amber-500 hover:underline">التفاصيل</button>
                     </td>
                     <td className="px-4 py-4 font-bold tabular-nums">{r.last4 || "••••"}</td>
                     <td className="px-4 py-4 text-muted-foreground tabular-nums">{dateLine(r.occurredAt)}</td>
@@ -333,7 +333,7 @@ export function CardTransactionsTab() {
                       className={`px-4 py-4 ${
                         failed
                           ? "text-muted-foreground"
-                          : st === "Pending"
+                          : st === "قيد المعالجة"
                             ? "text-amber-500"
                             : "text-foreground"
                       }`}
@@ -350,7 +350,7 @@ export function CardTransactionsTab() {
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex items-center justify-end gap-2 font-medium">
-                        <span>{r.merchant || "Card Purchase"}</span>
+                        <span>{r.merchant || "شراء بالبطاقة"}</span>
                         <MerchantIcon name={r.merchant || "Card"} />
                       </div>
                     </td>
