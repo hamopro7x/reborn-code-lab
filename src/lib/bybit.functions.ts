@@ -128,9 +128,11 @@ export const getBybitActivity = createServerFn({ method: "POST" })
       } else {
         try {
           const r2 = await call("/v5/asset/transfer/query-account-coins-balance", { accountType });
+          // بطاقة باي بت تصرف من الرصيد القابل للتحويل (transferBalance) وليس
+          // رصيد المحفظة الكامل، فهو الأساس لحساب قوة الشراء.
           const rows = ((r2["balance"] as any[]) ?? []).map((c) => ({
             coin: String(c.coin),
-            balance: Number(c.walletBalance ?? c.transferBalance ?? 0),
+            balance: Number(c.transferBalance ?? c.walletBalance ?? 0),
             usdValue: 0,
           }));
           out.push(...rows);
@@ -138,6 +140,7 @@ export const getBybitActivity = createServerFn({ method: "POST" })
           errors.push(String((e as Error).message));
         }
       }
+
       return out;
     }
 
@@ -165,28 +168,8 @@ export const getBybitActivity = createServerFn({ method: "POST" })
     // بطاقة Bybit تصرف من حساب التمويل (FUND) — فرصيده هو "الرصيد الداخلي"
     // الظاهر في لوحة البطاقة كـ Spending Power. UNIFIED = الرصيد الخارجي.
 
-    // نحاول جلب قوة الشراء الحقيقية من باي بت نفسها بدل تقديرها بهامش ثابت.
-    async function realSpendingPower(): Promise<number | null> {
-      const paths = [
-        "/v5/card/query-balance",
-        "/v5/card/account/balance",
-        "/v5/card/query-card-info",
-        "/v5/card/spending-power",
-      ];
-      for (const p of paths) {
-        try {
-          const r: any = await call(p, {});
-          const node = r?.data ?? r ?? {};
-          const raw =
-            node.spendingPower ?? node.availableBalance ?? node.available ?? node.balance ?? node.totalAmount;
-          const n = Number(raw);
-          if (Number.isFinite(n) && n > 0) return n;
-        } catch {
-          /* نجرب المسار التالي */
-        }
-      }
-      return null;
-    }
+    // باي بت لا توفّر endpoint لقوة شراء البطاقة (كل مسارات /v5/card/*balance
+    // ترجع 404)، فنحسبها من الرصيد القابل للصرف بعد هامش التحويل.
 
     async function accountsBalances() {
       const defs = [
@@ -194,31 +177,33 @@ export const getBybitActivity = createServerFn({ method: "POST" })
         { type: "UNIFIED", label: "الرصيد الخارجي (الحساب الموحّد)", kind: "external" as const },
       ];
 
-      const [raw, live] = await Promise.all([
-        Promise.all(defs.map(async (d) => ({ ...d, coins: (await coinsOf(d.type)).filter((c) => c.balance > 0) }))),
-        realSpendingPower(),
-      ]);
+      const raw = await Promise.all(
+        defs.map(async (d) => ({ ...d, coins: (await coinsOf(d.type)).filter((c) => c.balance > 0) })),
+      );
+
       const missing: string[] = [
         ...new Set(raw.flatMap((a) => a.coins.filter((c) => c.usdValue <= 0).map((c) => c.coin))),
       ];
 
       const prices = await usdPrices(missing);
-      // لو باي بت مرجّعتش قوة الشراء، نخصم هامش التحويل التقريبي على الكريبتو (~5%).
-      const CRYPTO_HAIRCUT = 0.05;
+      // قوة الشراء في لوحة بطاقة باي بت = الرصيد القابل للصرف بعد هامش تحويل
+      // 1.4% على أي عملة غير الدولار (USD الفعلي يُصرف 1:1 بدون هامش).
+      const CARD_SPREAD = 0.014;
       return raw.map((a) => {
         const coins = a.coins.map((c) =>
           c.usdValue > 0 ? c : { ...c, usdValue: c.balance * (prices.get(c.coin) ?? 0) },
         );
         const totalUsd = coins.reduce((s, c) => s + c.usdValue, 0);
         const estimated = coins.reduce(
-          (s, c) => s + (/^(USD|USDT|USDC|EUR)$/i.test(c.coin) ? c.usdValue : c.usdValue * (1 - CRYPTO_HAIRCUT)),
+          (s, c) => s + (/^USD$/i.test(c.coin) ? c.usdValue : c.usdValue * (1 - CARD_SPREAD)),
           0,
         );
+
         return {
           ...a,
           coins,
           totalUsd,
-          spendingPower: a.kind === "internal" ? (live ?? estimated) : totalUsd,
+          spendingPower: a.kind === "internal" ? estimated : totalUsd,
         };
       });
     }
