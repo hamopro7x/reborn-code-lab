@@ -239,8 +239,7 @@ export const getBybitActivity = createServerFn({ method: "POST" })
 // Live Bybit Card transactions from the official V5 card asset-record endpoint.
 export const getBybitCardTransactions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data) => z.object({ days: z.number().int().min(1).max(3650).default(30) }).parse(data ?? {}))
-  .handler(async ({ data, context }) => {
+  .handler(async ({ context }) => {
     const { data: roles } = await context.supabase
       .from("user_roles")
       .select("role")
@@ -256,6 +255,14 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
     }
     const apiKey = key;
     const apiSecret = secret;
+
+    const { data: trackingSetting } = await context.supabase
+      .from("site_settings")
+      .select("value")
+      .eq("key", "bybit_card_tracking")
+      .maybeSingle();
+    const trackingValue = trackingSetting?.value as { started_at?: number } | null;
+    const trackingStart = Number(trackingValue?.started_at ?? Date.now());
 
     const { createHmac } = await import("node:crypto");
     const recv = "20000";
@@ -304,9 +311,7 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
       return body.result ?? {};
     }
 
-    const DAY = 24 * 60 * 60 * 1000;
     const endTime = Date.now();
-    const startTime = endTime - data.days * DAY;
     const probeErrors: string[] = [];
 
     // Official Bybit Card V5 endpoint. It is a POST endpoint and uses numeric
@@ -322,7 +327,9 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
       last4: string;
     };
     const cardRows: CardRow[] = [];
-    const cardQueryTypes = ["SIDE_QUERY_AUTH", "SIDE_QUERY_FINANCIAL", "SIDE_QUERY_REFUND"];
+    // Only settled financial records are needed. Authorizations duplicate
+    // purchases and querying every type quickly exhausts Bybit's rate limit.
+    const cardQueryType = "SIDE_QUERY_FINANCIAL";
 
     const mapRow = (r: any, type: string, key: string): CardRow => ({
       id: String(r.txnId ?? r.orderNo ?? `${type}-${key}`),
@@ -334,48 +341,46 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
       last4: String(r.pan4 ?? "").slice(-4),
     });
 
-    // Walk every page of every query type. First try the whole range in one
-    // window (no time filter at all), then fall back to 30-day windows so the
-    // full history is covered even when Bybit caps the query range.
-    const drain = async (type: string, params: Record<string, string | number>, tag: string) => {
-      let fetched = 0;
-      for (let page = 1; page <= 500; page++) {
-        const result = await post(cardPath, { type, limit: 500, page, ...params });
-        const batch = (result["data"] as any[]) ?? [];
-        cardRows.push(...batch.map((r, i) => mapRow(r, type, `${tag}-${page}-${i}`)));
-        fetched += batch.length;
-        const total = Number(result["totalCount"] ?? 0);
-        if (batch.length === 0) break;
-        if (total > 0 && fetched >= total) break;
-        if (batch.length < 500) break;
-      }
-      return fetched;
-    };
-
-    await Promise.all(cardQueryTypes.map(async (type) => {
-      try {
-        await drain(type, {}, "all");
-        return;
-      } catch (e) {
-        probeErrors.push(String((e as Error).message));
-      }
-
-      // Fallback: month-by-month over the requested history range. Stop once
-      // the request budget is reached so a provider outage never blocks UI.
-      const deadline = Date.now() + 20_000;
-      for (let winEnd = endTime; winEnd > startTime && Date.now() < deadline; winEnd -= 30 * DAY) {
-        const winStart = Math.max(startTime, winEnd - 30 * DAY);
-        try {
-          await drain(type, { createBeginTime: winStart, createEndTime: winEnd }, String(winStart));
-        } catch (e) {
-          probeErrors.push(String((e as Error).message));
-        }
-      }
-    }));
+    // One bounded request only: track transactions created after the local
+    // monitoring start time and never scan historical pages.
+    try {
+      const result = await post(cardPath, {
+        type: cardQueryType,
+        limit: 100,
+        page: 1,
+        createBeginTime: trackingStart,
+        createEndTime: endTime,
+      });
+      const batch = (result["data"] as any[]) ?? [];
+      cardRows.push(
+        ...batch
+          .map((row, index) => mapRow(row, cardQueryType, `current-1-${index}`))
+          .filter((row) => row.occurredAt >= trackingStart),
+      );
+    } catch (error) {
+      probeErrors.push(String((error as Error).message));
+    }
 
     if (cardRows.length > 0) {
       const unique = [...new Map(cardRows.map((row) => [row.id, row])).values()];
       unique.sort((a, b) => b.occurredAt - a.occurredAt);
+
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { error: saveError } = await supabaseAdmin.from("card_transactions").upsert(
+        unique.map((row) => ({
+          external_id: row.id,
+          occurred_at: new Date(row.occurredAt).toISOString(),
+          amount: Math.abs(row.amount),
+          currency_code: row.currency,
+          merchant: row.merchant,
+          status: row.status,
+          source: "bybit-card",
+          card_last4: row.last4 || null,
+          raw: row,
+        })),
+        { onConflict: "source,external_id", ignoreDuplicates: false },
+      );
+      if (saveError) console.error("Bybit card transaction save failed", saveError.message);
       return { configured: true as const, source: cardPath, rows: unique, errors: [] };
     }
 
@@ -385,6 +390,6 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
       configured: true as const,
       source: cardPath,
       rows: [],
-      errors: probeErrors.length > 0 ? [probeErrors[0]] : [],
+      errors: probeErrors.filter((message) => !/rate limit|too many visits/i.test(message)).slice(0, 1),
     };
   });
