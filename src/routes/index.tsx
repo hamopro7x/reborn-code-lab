@@ -161,7 +161,7 @@ function Home() {
                         width={480}
                         height={320}
                         loading="lazy"
-                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        className="absolute inset-0 w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
                       />
                     ) : (
                       <div className="text-6xl transition-transform duration-500 group-hover:scale-110">{c.icon ?? "🎁"}</div>
