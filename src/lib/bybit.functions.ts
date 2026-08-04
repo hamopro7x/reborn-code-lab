@@ -295,6 +295,30 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
     const startTime = endTime - data.days * DAY;
     const probeErrors: string[] = [];
 
+    async function history(path: string, fixedParams: Record<string, string> = {}) {
+      const rows: any[] = [];
+      let windowEnd = endTime;
+      while (windowEnd > startTime && rows.length < 5000) {
+        const windowStart = Math.max(startTime, windowEnd - 29 * DAY);
+        let cursor = "";
+        for (let page = 0; page < 20; page++) {
+          const result = await call(path, {
+            ...fixedParams,
+            startTime: String(windowStart),
+            endTime: String(windowEnd),
+            limit: "50",
+            ...(cursor ? { cursor } : {}),
+          });
+          const batch = ((result["rows"] as any[]) ?? (result["list"] as any[]) ?? (result["records"] as any[]) ?? []) as any[];
+          rows.push(...batch);
+          cursor = String(result["nextPageCursor"] ?? result["nextCursor"] ?? "");
+          if (!cursor || batch.length === 0) break;
+        }
+        windowEnd = windowStart - 1;
+      }
+      return rows;
+    }
+
     const candidates = [
       "/v5/user/card/transactions",
       "/v5/user/card/transaction-record",
@@ -304,13 +328,7 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
 
     for (const path of candidates) {
       try {
-        const res = await call(path, {
-          startTime: String(startTime),
-          endTime: String(endTime),
-          limit: "50",
-        });
-        const raw =
-          ((res["rows"] as any[]) ?? (res["list"] as any[]) ?? (res["records"] as any[]) ?? []) as any[];
+        const raw = await history(path);
         const rows = raw.map((r, i) => ({
           id: String(r.id ?? r.orderId ?? r.txId ?? r.transactionId ?? `${path}-${i}`),
           occurredAt: Number(r.transTime ?? r.createTime ?? r.createdTime ?? r.time ?? 0),
@@ -326,36 +344,48 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
       }
     }
 
-    // Fallback: سجل حركات الحساب — مصاريف البطاقة بتخرج من حساب التمويل،
-    // فبنقرأ سجل الحركات ونعرض القيود السالبة كمعاملات بطاقة.
-    const logPaths: { path: string; params: Record<string, string> }[] = [
-      { path: "/v5/account/transaction-log", params: { accountType: "UNIFIED" } },
-      { path: "/v5/asset/transfer/query-inter-transfer-list", params: {} },
+    // Official V5 fallback: card purchases, refunds and rewards are Funding
+    // account asset movements. Bybit retains this history for up to two years.
+    const cardTypes = [
+      "CARD_CONSUMPTION",
+      "CARD_ATM_DRAWAL",
+      "CARD_REFUND",
+      "CARD_REVERSION",
+      "CARD_CB_REWARD",
     ];
-    for (const { path, params } of logPaths) {
+    const fundingRows: {
+      id: string;
+      occurredAt: number;
+      amount: number;
+      currency: string;
+      merchant: string;
+      status: string;
+      last4: string;
+    }[] = [];
+    for (const type of cardTypes) {
       try {
-        const res = await call(path, {
-          ...params,
-          startTime: String(startTime),
-          endTime: String(endTime),
-          limit: "50",
-        });
-        const raw = ((res["list"] as any[]) ?? (res["rows"] as any[]) ?? []) as any[];
+        const path = "/v5/asset/transaction-log";
+        const raw = await history(path, { accountType: "FUND", type });
         const rows = raw
           .map((r, i) => ({
-            id: String(r.id ?? r.transferId ?? r.tradeId ?? `${path}-${i}`),
-            occurredAt: Number(r.transactionTime ?? r.timestamp ?? r.createTime ?? 0),
+            id: String(r.id ?? r.transactionId ?? r.txId ?? `${type}-${i}`),
+            occurredAt: Number(r.transactionTime ?? r.timestamp ?? r.createTime ?? r.createdTime ?? 0),
             amount: Number(r.cashFlow ?? r.change ?? r.amount ?? 0),
             currency: String(r.currency ?? r.coin ?? ""),
-            merchant: String(r.type ?? r.status ?? "حركة حساب"),
+            merchant: String(r.remark ?? r.description ?? type),
             status: String(r.status ?? "Successful"),
             last4: "",
           }))
           .filter((r) => r.amount !== 0);
-        if (rows.length > 0) return { configured: true as const, source: path, rows, errors: [] };
+        fundingRows.push(...rows);
       } catch (e) {
         probeErrors.push(String((e as Error).message));
       }
+    }
+
+    if (fundingRows.length > 0) {
+      fundingRows.sort((a, b) => b.occurredAt - a.occurredAt);
+      return { configured: true as const, source: "/v5/asset/transaction-log", rows: fundingRows, errors: [] };
     }
 
     console.warn("Bybit card transaction endpoints unavailable", probeErrors);
