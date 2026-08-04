@@ -226,6 +226,7 @@ function Admin() {
             {panel === "remote" && adminOnly && <DeviceMonitorGrid screensOnly />}
             {panel === "payments" && adminOnly && <PaymentsTab />}
             {panel === "currencies" && adminOnly && <CurrenciesTab />}
+            {panel === "apikeys" && adminOnly && <ApiKeysTab />}
             {panel === "settings" && adminOnly && <SettingsTab />}
           </main>
         </div>
