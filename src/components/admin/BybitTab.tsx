@@ -82,6 +82,14 @@ export function BybitTab() {
               <h3 className="font-semibold">{acc.label}</h3>
               <span className="text-sm text-muted-foreground">${num(acc.totalUsd)}</span>
             </div>
+            {acc.kind === "internal" && (
+              <div className="mb-3 rounded-lg border bg-muted/40 px-3 py-2">
+                <div className="text-xs text-muted-foreground">قوة الشراء بعد الهامش</div>
+                <div className="text-xl font-bold">
+                  ${acc.spendingPower.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+              </div>
+            )}
             {acc.coins.length === 0 ? (
               <p className="text-sm text-muted-foreground">لا توجد أرصدة في هذا الحساب.</p>
             ) : (

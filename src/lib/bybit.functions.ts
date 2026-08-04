@@ -153,11 +153,19 @@ export const getBybitActivity = createServerFn({ method: "POST" })
       ];
 
       const prices = await usdPrices(missing);
+      // باي بت بيخصم هامش تحويل ~1.4% على رصيد البطاقة، فقوة الشراء الفعلية أقل من الرصيد.
+      const CARD_MARGIN = 0.014;
       return raw.map((a) => {
         const coins = a.coins.map((c) =>
           c.usdValue > 0 ? c : { ...c, usdValue: c.balance * (prices.get(c.coin) ?? 0) },
         );
-        return { ...a, coins, totalUsd: coins.reduce((s, c) => s + c.usdValue, 0) };
+        const totalUsd = coins.reduce((s, c) => s + c.usdValue, 0);
+        return {
+          ...a,
+          coins,
+          totalUsd,
+          spendingPower: a.kind === "internal" ? totalUsd * (1 - CARD_MARGIN) : totalUsd,
+        };
       });
     }
 
