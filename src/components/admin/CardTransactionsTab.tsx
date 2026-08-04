@@ -159,21 +159,17 @@ export function CardTransactionsTab() {
           <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div className="rounded-xl border bg-background/60 px-3 py-2">
               <div className="text-[11px] text-muted-foreground">Monthly Spend</div>
-              <div className="text-lg font-bold tabular-nums">${money(monthlySpend)}</div>
+              <div className="text-lg font-bold tabular-nums">${money(spendForRate)}</div>
             </div>
             <div className="rounded-xl border bg-background/60 px-3 py-2">
-              <div className="text-[11px] text-muted-foreground">Cashback Rate</div>
-              <div className="flex items-baseline gap-1">
-                <input
-                  value={cashback}
-                  onChange={(e) => saveCashback(e.target.value.replace(/[^\d.]/g, ""))}
-                  inputMode="decimal"
-                  className="w-12 bg-transparent text-lg font-bold tabular-nums outline-none focus:underline"
-                />
-                <span className="text-lg font-bold">%</span>
+              <div className="text-[11px] text-muted-foreground">
+                Cashback Rate{rewards?.tier ? ` · ${rewards.tier}` : ""}
+              </div>
+              <div className="text-lg font-bold tabular-nums">
+                {cashbackRate == null ? "—" : `${cashbackRate.toFixed(2)}%`}
               </div>
               <div className="text-[10px] text-muted-foreground tabular-nums">
-                ≈ ${money(cashbackEarned)} earned
+                {cashbackEarned == null ? "auto · Bybit" : `≈ $${money(cashbackEarned)} cashback`}
               </div>
             </div>
             <div className="rounded-xl border bg-background/60 px-3 py-2">
