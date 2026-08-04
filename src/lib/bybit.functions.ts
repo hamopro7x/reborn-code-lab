@@ -53,37 +53,6 @@ export const getBybitActivity = createServerFn({ method: "POST" })
       return body.result ?? {};
     }
 
-    async function post(path: string, params: Record<string, string | number>) {
-      const payload = JSON.stringify(params);
-      const ts = Date.now().toString();
-      const sign = createHmac("sha256", apiSecret).update(ts + apiKey + recv + payload).digest("hex");
-      const res = await fetch(`https://api.bybit.com${path}`, {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          "X-BAPI-API-KEY": apiKey,
-          "X-BAPI-TIMESTAMP": ts,
-          "X-BAPI-RECV-WINDOW": recv,
-          "X-BAPI-SIGN": sign,
-        },
-        body: payload,
-      });
-      const text = await res.text();
-      let body: { retCode?: number; retMsg?: string; result?: Record<string, unknown> } = {};
-      if (text.trim()) {
-        try {
-          body = JSON.parse(text) as typeof body;
-        } catch {
-          throw new Error(`${path} [${res.status}] invalid response`);
-        }
-      }
-      if (!res.ok || body.retCode !== 0) {
-        throw new Error(`${path} [${res.status}] ${body.retMsg ?? (text.trim() ? "request failed" : "empty response")}`);
-      }
-      return body.result ?? {};
-    }
-
     const DAY = 24 * 60 * 60 * 1000;
     const CHUNK = 29 * DAY; // Bybit allows max 30 days per request
     const endTime = Date.now();
@@ -321,6 +290,37 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
       return body.result ?? {};
     }
 
+    async function post(path: string, params: Record<string, string | number>) {
+      const payload = JSON.stringify(params);
+      const ts = Date.now().toString();
+      const sign = createHmac("sha256", apiSecret).update(ts + apiKey + recv + payload).digest("hex");
+      const res = await fetch(`https://api.bybit.com${path}`, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          "X-BAPI-API-KEY": apiKey,
+          "X-BAPI-TIMESTAMP": ts,
+          "X-BAPI-RECV-WINDOW": recv,
+          "X-BAPI-SIGN": sign,
+        },
+        body: payload,
+      });
+      const text = await res.text();
+      let body: { retCode?: number; retMsg?: string; result?: Record<string, unknown> } = {};
+      if (text.trim()) {
+        try {
+          body = JSON.parse(text) as typeof body;
+        } catch {
+          throw new Error(`${path} [${res.status}] invalid response`);
+        }
+      }
+      if (!res.ok || body.retCode !== 0) {
+        throw new Error(`${path} [${res.status}] ${body.retMsg ?? (text.trim() ? "request failed" : "empty response")}`);
+      }
+      return body.result ?? {};
+    }
+
     const DAY = 24 * 60 * 60 * 1000;
     const endTime = Date.now();
     const startTime = endTime - data.days * DAY;
@@ -365,6 +365,7 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
     const cardQueryTypes = ["SIDE_QUERY_AUTH", "SIDE_QUERY_FINANCIAL", "SIDE_QUERY_REFUND"];
     for (const type of cardQueryTypes) {
       try {
+        let fetchedForType = 0;
         for (let page = 1; page <= 100; page++) {
           const result = await post(cardPath, {
             type,
@@ -374,17 +375,18 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
             createEndTime: endTime,
           });
           const batch = (result["data"] as any[]) ?? [];
+          fetchedForType += batch.length;
           cardRows.push(...batch.map((r, i) => ({
             id: String(r.txnId ?? r.orderNo ?? `${type}-${page}-${i}`),
             occurredAt: Number(r.txnCreate ?? 0),
-            amount: Number(r.basicAmount ?? r.paidAmount ?? r.transactionAmount ?? 0),
+            amount: (type === "SIDE_QUERY_REFUND" ? 1 : -1) * Math.abs(Number(r.basicAmount ?? r.paidAmount ?? r.transactionAmount ?? 0)),
             currency: String(r.basicCurrency ?? r.paidCurrency ?? r.transactionCurrency ?? "USD"),
             merchant: String(r.merchName ?? r.merchCategoryDesc ?? "Card Transaction"),
-            status: String(r.status ?? r.tradeStatus ?? ""),
+            status: String(r.status ?? r.tradeStatus ?? "") === "1" ? "Successful" : String(r.status ?? r.tradeStatus ?? "") === "0" ? "Pending" : "Failed",
             last4: String(r.pan4 ?? "").slice(-4),
           })));
           const total = Number(result["totalCount"] ?? 0);
-          if (batch.length === 0 || cardRows.length >= total || batch.length < 500) break;
+          if (batch.length === 0 || fetchedForType >= total || batch.length < 500) break;
         }
       } catch (e) {
         probeErrors.push(String((e as Error).message));
