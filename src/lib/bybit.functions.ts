@@ -21,7 +21,7 @@ export const getBybitActivity = createServerFn({ method: "POST" })
     const key = process.env["BYBIT_API_KEY"];
     const secret = process.env["BYBIT_API_SECRET"];
     if (!key || !secret) {
-      return { configured: false as const, balances: [], deposits: [], withdrawals: [], errors: ["missing keys"] };
+      return { configured: false as const, accounts: [] as { type: string; label: string; kind: "internal" | "external"; coins: { coin: string; balance: number; usdValue: number }[]; totalUsd: number }[], balances: [], deposits: [], withdrawals: [], errors: ["missing keys"] };
     }
 
     const { createHmac } = await import("node:crypto");
