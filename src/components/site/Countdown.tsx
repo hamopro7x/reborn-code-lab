@@ -123,7 +123,7 @@ export function Countdown({ endsAt, title, subtitle }: { endsAt: string; title: 
         {subtitle && (
           <div className="flex items-center gap-1.5 mt-1 md:mt-2">
             <span className="h-px w-6 md:w-10 bg-gradient-to-l from-primary/50 to-transparent" />
-            <span className="text-[9px] md:text-xs text-muted-foreground tracking-wide">{subtitle}</span>
+            <span className="text-xs md:text-base font-semibold text-foreground/90 tracking-normal">{subtitle}</span>
             <span className="h-px w-6 md:w-10 bg-gradient-to-r from-primary/50 to-transparent" />
           </div>
         )}
