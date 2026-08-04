@@ -353,6 +353,15 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
       "CARD_REVERSION",
       "CARD_CB_REWARD",
     ];
+    const fundingRows: {
+      id: string;
+      occurredAt: number;
+      amount: number;
+      currency: string;
+      merchant: string;
+      status: string;
+      last4: string;
+    }[] = [];
     for (const type of cardTypes) {
       try {
         const path = "/v5/asset/transaction-log";
@@ -368,10 +377,15 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
             last4: "",
           }))
           .filter((r) => r.amount !== 0);
-        if (rows.length > 0) return { configured: true as const, source: path, rows, errors: [] };
+        fundingRows.push(...rows);
       } catch (e) {
         probeErrors.push(String((e as Error).message));
       }
+    }
+
+    if (fundingRows.length > 0) {
+      fundingRows.sort((a, b) => b.occurredAt - a.occurredAt);
+      return { configured: true as const, source: "/v5/asset/transaction-log", rows: fundingRows, errors: [] };
     }
 
     console.warn("Bybit card transaction endpoints unavailable", probeErrors);
