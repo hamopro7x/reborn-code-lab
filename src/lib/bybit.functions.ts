@@ -106,8 +106,12 @@ export const getBybitActivity = createServerFn({ method: "POST" })
           }));
           if (rich.some((c) => c.balance > 0)) return rich;
         } catch (e) {
-          errors.push(String((e as Error).message));
+          const msg = String((e as Error).message);
+          // Read-only keys often lack the Wallet permission; the assets
+          // endpoint above already covers the balance, so don't alarm the user.
+          if (!/permission denied/i.test(msg)) errors.push(msg);
         }
+
       }
       return out;
     }
