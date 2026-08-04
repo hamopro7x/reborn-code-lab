@@ -122,9 +122,9 @@ function MerchantIcon({ name }: { name: string }) {
 }
 
 /** أيقونة نوعية البطاقة (بطاقة باي بت = ماستركارد) */
-function CardBrandIcon({ last4 }: { last4?: string }) {
-  // بطاقة Bybit الافتراضية فيزا؛ نعرض ماستركارد فقط لو الرقم يبدأ بـ 5 أو 2
-  const mastercard = !!last4 && /^[52]/.test(last4);
+function CardBrandIcon({ last4, brand }: { last4?: string; brand?: string }) {
+  // نستخدم علامة البطاقة القادمة من باي بت؛ ولو غير متاحة نستنتجها من الأرقام
+  const mastercard = brand ? brand === "mastercard" : !!last4 && /^[52]/.test(last4);
   if (!mastercard) {
 
     return (
@@ -150,6 +150,10 @@ function CardBrandIcon({ last4 }: { last4?: string }) {
     </svg>
   );
 }
+
+const cardKindLabel = (kind?: string) =>
+  kind === "virtual" ? "افتراضية" : kind === "physical" ? "فعلية" : "";
+
 
 
 
@@ -369,10 +373,16 @@ export function CardTransactionsTab() {
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-2">
-                        <CardBrandIcon last4={r.last4} />
+                        <CardBrandIcon last4={r.last4} brand={(r as { brand?: string }).brand} />
                         <span className="font-bold tabular-nums">{r.last4 || "••••"}</span>
+                        {cardKindLabel((r as { cardKind?: string }).cardKind) && (
+                          <span className="rounded border border-border/60 px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                            {cardKindLabel((r as { cardKind?: string }).cardKind)}
+                          </span>
+                        )}
                       </div>
                     </td>
+
                     <td className="px-4 py-4 text-muted-foreground tabular-nums">{dateLine(r.occurredAt)}</td>
                     <td
                       className={`px-4 py-4 ${
