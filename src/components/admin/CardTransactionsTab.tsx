@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { getBybitActivity, getBybitCardRewards, getBybitCardTransactions } from "@/lib/bybit.functions";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, CreditCard, AlertTriangle, ChevronLeft } from "lucide-react";
+import { RefreshCw, CreditCard, AlertTriangle } from "lucide-react";
 
 type Row = {
   id: string;
@@ -43,8 +43,6 @@ const statusLabel = (s: string) => {
   return s;
 };
 
-const initials = (name: string) =>
-  (name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("") || "?").toUpperCase();
 
 export function CardTransactionsTab() {
   const fetchCard = useServerFn(getBybitCardTransactions);
@@ -199,82 +197,89 @@ export function CardTransactionsTab() {
         </div>
       )}
 
-      {/* Recent Transactions — Bybit list layout */}
+      {/* Transactions — Bybit table layout */}
       <div className="rounded-2xl border bg-card overflow-hidden">
-        <div className="flex items-center justify-between p-4 pb-2">
-          <h3 className="text-base font-bold">Recent Transactions</h3>
-          <span className="flex items-center text-xs text-muted-foreground">
-            All <ChevronLeft className="size-3 rotate-180" />
-          </span>
+        <div className="flex flex-wrap items-center justify-between gap-2 p-4 pb-3">
+          <h3 className="text-base font-bold">Transactions</h3>
+          <div className="flex gap-1">
+            {(
+              [
+                ["all", "All"],
+                ["purchase", "Purchases"],
+                ["refund", "Refunds"],
+              ] as const
+            ).map(([key, label]) => (
+              <button
+                key={key}
+                onClick={() => setTab(key)}
+                className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                  tab === key
+                    ? "bg-foreground text-background"
+                    : "bg-muted/40 text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div className="flex gap-1 px-4 pb-3">
-          {(
-            [
-              ["all", "All"],
-              ["purchase", "Purchases"],
-              ["refund", "Refunds"],
-            ] as const
-          ).map(([key, label]) => (
-            <button
-              key={key}
-              onClick={() => setTab(key)}
-              className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
-                tab === key
-                  ? "bg-foreground text-background"
-                  : "bg-muted/40 text-muted-foreground hover:bg-muted"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        <div className="divide-y divide-border/40">
-          {filtered.length === 0 && (
-            <div className="p-10 text-center text-sm text-muted-foreground">
-              {isLoading ? "جاري جلب المعاملات من باي بت…" : "No transactions"}
-            </div>
-          )}
-          {filtered.map((r) => {
-            const refund = isRefund(r);
-            const st = statusLabel(r.status);
-            return (
-              <div key={r.id} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/20">
-                <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold">
-                  {initials(r.merchant || "TX")}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-semibold">{r.merchant || "Card Purchase"}</div>
-                  <div className="text-[11px] text-muted-foreground tabular-nums">
-                    {dateLine(r.occurredAt)}
-                    {r.last4 ? ` · •••• ${r.last4}` : ""}
-                  </div>
-                </div>
-                <div className="text-end">
-                  <div
-                    className={`text-sm font-bold tabular-nums ${
-                      refund ? "text-emerald-500" : "text-foreground"
-                    }`}
-                  >
-                    {refund ? "+" : "-"}
-                    {money(r.amount)} {r.currency || "USD"}
-                  </div>
-                  <div
-                    className={`text-[11px] ${
-                      st === "Failed"
-                        ? "text-destructive"
-                        : st === "Pending"
-                          ? "text-amber-500"
-                          : "text-muted-foreground"
-                    }`}
-                  >
-                    {st}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[820px] text-sm">
+            <thead>
+              <tr className="border-y bg-muted/30 text-[11px] uppercase tracking-wide text-muted-foreground">
+                <th className="px-4 py-3 text-start font-semibold">Action</th>
+                <th className="px-4 py-3 text-start font-semibold">Card's Last 4 Digits</th>
+                <th className="px-4 py-3 text-start font-semibold">Transaction Date &amp; Time</th>
+                <th className="px-4 py-3 text-start font-semibold">Status</th>
+                <th className="px-4 py-3 text-end font-semibold">Total Authorization Amount</th>
+                <th className="px-4 py-3 text-end font-semibold">Merchant Name</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="p-10 text-center text-sm text-muted-foreground">
+                    {isLoading ? "جاري جلب المعاملات من باي بت…" : "No transactions"}
+                  </td>
+                </tr>
+              )}
+              {filtered.map((r) => {
+                const refund = isRefund(r);
+                const st = statusLabel(r.status);
+                const failed = st === "Failed";
+                return (
+                  <tr key={r.id} className="border-b border-border/40 hover:bg-muted/20">
+                    <td className="px-4 py-4">
+                      <button className="font-medium text-amber-500 hover:underline">Details</button>
+                    </td>
+                    <td className="px-4 py-4 font-bold tabular-nums">{r.last4 || "••••"}</td>
+                    <td className="px-4 py-4 text-muted-foreground tabular-nums">{dateLine(r.occurredAt)}</td>
+                    <td
+                      className={`px-4 py-4 ${
+                        failed
+                          ? "text-muted-foreground"
+                          : st === "Pending"
+                            ? "text-amber-500"
+                            : "text-foreground"
+                      }`}
+                    >
+                      {st}
+                    </td>
+                    <td
+                      className={`px-4 py-4 text-end font-semibold tabular-nums ${
+                        failed ? "text-muted-foreground" : refund ? "text-emerald-500" : "text-destructive"
+                      }`}
+                    >
+                      {refund ? "+" : "-"}
+                      {r.currency || "USD"} {money(r.amount)}
+                    </td>
+                    <td className="px-4 py-4 text-end font-medium">{r.merchant || "Card Purchase"}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
