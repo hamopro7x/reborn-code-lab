@@ -16,7 +16,7 @@ import {
   SidebarHeader, SidebarFooter,
 } from "@/components/ui/sidebar";
 import {
-  LayoutDashboard, Package, Layers, ShoppingCart, CreditCard, Coins, Clock, Settings2,
+  LayoutDashboard, Package, Layers, ShoppingCart, CreditCard, Coins, Clock, Settings2, KeyRound,
   Plus, Trash2, Edit, ExternalLink, Check, X, TrendingUp, DollarSign, Users, Bell, Loader2,
   Star, UserCog, LogOut, Repeat, ArrowUpRight, GraduationCap, MonitorSmartphone, Upload, PlayCircle,
   Lock, Camera, Download,
@@ -32,6 +32,7 @@ import { Progress } from "@/components/ui/progress";
 import { ReportsTab } from "@/components/admin/ReportsTab";
 import { CardTransactionsTab } from "@/components/admin/CardTransactionsTab";
 import { BybitTab } from "@/components/admin/BybitTab";
+import { ApiKeysTab } from "@/components/admin/ApiKeysTab";
 import { FileBarChart, MonitorPlay, Image as ImageIcon, ChevronUp, ChevronDown, WalletCards, ArrowDownUp } from "lucide-react";
 import { LessonUploader } from "@/components/admin/LessonUploader";
 import { DeviceMonitorGrid } from "@/components/admin/DeviceMonitorGrid";
@@ -40,11 +41,11 @@ import { EmployeeDevices } from "@/components/admin/DeviceMonitorGrid";
 
 type PanelKey =
   | "overview" | "orders" | "products" | "categories" | "customers" | "employees"
-  | "reviews" | "payments" | "currencies" | "timers" | "settings" | "courses" | "devices" | "reports" | "remote" | "cardtx" | "bybit";
+  | "reviews" | "payments" | "currencies" | "timers" | "settings" | "courses" | "devices" | "reports" | "remote" | "cardtx" | "bybit" | "apikeys";
 
 const panelKeys: PanelKey[] = [
   "overview", "orders", "products", "categories", "customers", "employees",
-  "reviews", "payments", "currencies", "timers", "settings", "courses", "devices", "reports", "remote", "cardtx", "bybit",
+  "reviews", "payments", "currencies", "timers", "settings", "courses", "devices", "reports", "remote", "cardtx", "bybit", "apikeys",
 ];
 
 
@@ -133,6 +134,7 @@ function Admin() {
         { key: "remote", label: "الوصول عن بُعد", icon: MonitorPlay, adminOnly: true },
         { key: "payments", label: "طرق الدفع", icon: CreditCard, adminOnly: true },
         { key: "currencies", label: "العملات", icon: Coins, adminOnly: true },
+        { key: "apikeys", label: "مفاتيح API", icon: KeyRound, adminOnly: true },
         { key: "settings", label: "الإعدادات", icon: Settings2, adminOnly: true },
       ],
     },
@@ -225,6 +227,7 @@ function Admin() {
             {panel === "remote" && adminOnly && <DeviceMonitorGrid screensOnly />}
             {panel === "payments" && adminOnly && <PaymentsTab />}
             {panel === "currencies" && adminOnly && <CurrenciesTab />}
+            {panel === "apikeys" && adminOnly && <ApiKeysTab />}
             {panel === "settings" && adminOnly && <SettingsTab />}
           </main>
         </div>

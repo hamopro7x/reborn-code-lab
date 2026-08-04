@@ -31,6 +31,7 @@ import { Route as ApiPublicAgentDownloadDotexeRouteImport } from './routes/api/p
 import { Route as ApiPublicAgentVersionRouteImport } from './routes/api/public/agent-version'
 import { Route as ApiPublicBuildVersionRouteImport } from './routes/api/public/build-version'
 import { Route as ApiPublicCardTransactionsRouteImport } from './routes/api/public/card-transactions'
+import { Route as ApiPublicV1ProductsRouteImport } from './routes/api/public/v1.products'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -146,6 +147,11 @@ const ApiPublicCardTransactionsRoute =
     path: '/api/public/card-transactions',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicV1ProductsRoute = ApiPublicV1ProductsRouteImport.update({
+  id: '/api/public/v1/products',
+  path: '/api/public/v1/products',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -169,6 +175,7 @@ export interface FileRoutesByFullPath {
   '/api/public/agent-version': typeof ApiPublicAgentVersionRoute
   '/api/public/build-version': typeof ApiPublicBuildVersionRoute
   '/api/public/card-transactions': typeof ApiPublicCardTransactionsRoute
+  '/api/public/v1/products': typeof ApiPublicV1ProductsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -192,6 +199,7 @@ export interface FileRoutesByTo {
   '/api/public/agent-version': typeof ApiPublicAgentVersionRoute
   '/api/public/build-version': typeof ApiPublicBuildVersionRoute
   '/api/public/card-transactions': typeof ApiPublicCardTransactionsRoute
+  '/api/public/v1/products': typeof ApiPublicV1ProductsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -217,6 +225,7 @@ export interface FileRoutesById {
   '/api/public/agent-version': typeof ApiPublicAgentVersionRoute
   '/api/public/build-version': typeof ApiPublicBuildVersionRoute
   '/api/public/card-transactions': typeof ApiPublicCardTransactionsRoute
+  '/api/public/v1/products': typeof ApiPublicV1ProductsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -242,6 +251,7 @@ export interface FileRouteTypes {
     | '/api/public/agent-version'
     | '/api/public/build-version'
     | '/api/public/card-transactions'
+    | '/api/public/v1/products'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -265,6 +275,7 @@ export interface FileRouteTypes {
     | '/api/public/agent-version'
     | '/api/public/build-version'
     | '/api/public/card-transactions'
+    | '/api/public/v1/products'
   id:
     | '__root__'
     | '/'
@@ -289,6 +300,7 @@ export interface FileRouteTypes {
     | '/api/public/agent-version'
     | '/api/public/build-version'
     | '/api/public/card-transactions'
+    | '/api/public/v1/products'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -312,6 +324,7 @@ export interface RootRouteChildren {
   ApiPublicAgentVersionRoute: typeof ApiPublicAgentVersionRoute
   ApiPublicBuildVersionRoute: typeof ApiPublicBuildVersionRoute
   ApiPublicCardTransactionsRoute: typeof ApiPublicCardTransactionsRoute
+  ApiPublicV1ProductsRoute: typeof ApiPublicV1ProductsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -470,6 +483,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCardTransactionsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/v1/products': {
+      id: '/api/public/v1/products'
+      path: '/api/public/v1/products'
+      fullPath: '/api/public/v1/products'
+      preLoaderRoute: typeof ApiPublicV1ProductsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -508,6 +528,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicAgentVersionRoute: ApiPublicAgentVersionRoute,
   ApiPublicBuildVersionRoute: ApiPublicBuildVersionRoute,
   ApiPublicCardTransactionsRoute: ApiPublicCardTransactionsRoute,
+  ApiPublicV1ProductsRoute: ApiPublicV1ProductsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
