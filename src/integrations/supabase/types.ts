@@ -152,6 +152,54 @@ export type Database = {
         }
         Relationships: []
       }
+      card_transactions: {
+        Row: {
+          amount: number
+          card_last4: string | null
+          created_at: string
+          currency_code: string
+          external_id: string | null
+          id: string
+          merchant: string
+          notes: string | null
+          occurred_at: string
+          raw: Json
+          source: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          card_last4?: string | null
+          created_at?: string
+          currency_code?: string
+          external_id?: string | null
+          id?: string
+          merchant: string
+          notes?: string | null
+          occurred_at?: string
+          raw?: Json
+          source?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          card_last4?: string | null
+          created_at?: string
+          currency_code?: string
+          external_id?: string | null
+          id?: string
+          merchant?: string
+          notes?: string | null
+          occurred_at?: string
+          raw?: Json
+          source?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           active: boolean

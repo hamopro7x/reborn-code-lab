@@ -30,7 +30,8 @@ import { getDeviceFingerprint } from "@/lib/device";
 import { ShieldAlert } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { ReportsTab } from "@/components/admin/ReportsTab";
-import { FileBarChart, MonitorPlay, Image as ImageIcon, ChevronUp, ChevronDown } from "lucide-react";
+import { CardTransactionsTab } from "@/components/admin/CardTransactionsTab";
+import { FileBarChart, MonitorPlay, Image as ImageIcon, ChevronUp, ChevronDown, WalletCards } from "lucide-react";
 import { LessonUploader } from "@/components/admin/LessonUploader";
 import { DeviceMonitorGrid } from "@/components/admin/DeviceMonitorGrid";
 import { EmployeeDevices } from "@/components/admin/DeviceMonitorGrid";
@@ -38,12 +39,13 @@ import { EmployeeDevices } from "@/components/admin/DeviceMonitorGrid";
 
 type PanelKey =
   | "overview" | "orders" | "products" | "categories" | "customers" | "employees"
-  | "reviews" | "payments" | "currencies" | "timers" | "settings" | "courses" | "devices" | "reports" | "remote";
+  | "reviews" | "payments" | "currencies" | "timers" | "settings" | "courses" | "devices" | "reports" | "remote" | "cardtx";
 
 const panelKeys: PanelKey[] = [
   "overview", "orders", "products", "categories", "customers", "employees",
-  "reviews", "payments", "currencies", "timers", "settings", "courses", "devices", "reports", "remote",
+  "reviews", "payments", "currencies", "timers", "settings", "courses", "devices", "reports", "remote", "cardtx",
 ];
+
 
 export const Route = createFileRoute("/_authenticated/admin")({
   validateSearch: (search: Record<string, unknown>): { panel?: PanelKey } =>
@@ -108,6 +110,8 @@ function Admin() {
         { key: "customers", label: "العملاء", icon: Users },
         { key: "reviews", label: "المراجعات", icon: Star },
         { key: "reports", label: "التقارير", icon: FileBarChart, adminOnly: true },
+        { key: "cardtx", label: "معاملات الفيزا", icon: WalletCards, adminOnly: true },
+
       ],
     },
     {
@@ -207,6 +211,8 @@ function Admin() {
             {panel === "customers" && !isEmployee && <CustomersTab />}
             {panel === "reviews" && !isEmployee && <ReviewsTab />}
             {panel === "reports" && adminOnly && <ReportsTab />}
+            {panel === "cardtx" && adminOnly && <CardTransactionsTab />}
+
             {panel === "products" && !isEmployee && <ProductsTab />}
             {panel === "categories" && adminOnly && <CategoriesTab />}
             {panel === "timers" && !isEmployee && <TimersTab />}
