@@ -1140,17 +1140,32 @@ function CategoriesTab() {
             <div className="space-y-3">
               <div><Label>الاسم</Label><Input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} /></div>
               <div><Label>الرابط</Label><Input value={editing.slug} onChange={(e) => setEditing({ ...editing, slug: e.target.value })} /></div>
-              <div><Label>الأيقونة (Emoji)</Label><Input value={editing.icon ?? ""} onChange={(e) => setEditing({ ...editing, icon: e.target.value })} /></div>
               <div>
-                <Label>صورة بانر القسم (اختياري — تظهر بدل الأيقونة)</Label>
+                <Label>صورة القسم</Label>
                 {editing.banner_image && (
                   <div className="flex items-center gap-2 my-2">
                     <img src={editing.banner_image} alt="" className="size-20 rounded-lg object-cover" />
                     <Button size="sm" variant="outline" onClick={() => setEditing({ ...editing, banner_image: null })}>حذف الصورة</Button>
                   </div>
                 )}
-                <input type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && uploadCategoryBanner(e.target.files[0])} />
+                <input
+                  id="cat-banner-input"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => e.target.files?.[0] && uploadCategoryBanner(e.target.files[0])}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="mt-2 gap-2 w-full"
+                  onClick={() => document.getElementById("cat-banner-input")?.click()}
+                >
+                  <Plus className="size-4" />
+                  {editing.banner_image ? "تغيير الصورة" : "تحميل صورة"}
+                </Button>
               </div>
+
               <div><Label>الترتيب</Label><Input type="number" value={editing.sort_order} onChange={(e) => setEditing({ ...editing, sort_order: Number(e.target.value) })} /></div>
               <label className="flex items-center gap-2"><Switch checked={editing.active} onCheckedChange={(v) => setEditing({ ...editing, active: v })} /> نشط</label>
             </div>
