@@ -43,8 +43,12 @@ const dotEl = document.getElementById("dot");
 const deviceEl = document.getElementById("device");
 
 const STORE = "mag-agent-device-v1";
-// رقم الإصدار الحقيقي من الحزمة المثبتة، بدل رقم ثابت قديم داخل الواجهة.
-const AGENT_VERSION = await window.agent.getVersion();
+// رقم الإصدار الحقيقي من الحزمة المثبتة. نستخدم مهلة قصيرة حتى لو IPC تأخر
+// لا تفضل الواجهة فاضية للأبد (كان await بدون مهلة يوقف كل السكربت).
+const AGENT_VERSION = await Promise.race([
+  window.agent?.getVersion?.().catch(() => "0.0.0") ?? Promise.resolve("0.0.0"),
+  new Promise((resolve) => setTimeout(() => resolve("0.0.0"), 3000)),
+]);
 
 const verBadgeEl = document.getElementById("ver-badge");
 if (verBadgeEl) verBadgeEl.textContent = "v" + AGENT_VERSION;
@@ -561,12 +565,20 @@ async function showPairing(_device, note) {
 async function run(device) {
   if (running) return;
   running = true;
-  try { await window.agent.enableAutoLaunch(); } catch {}
+  // إظهار شاشة "جارٍ الاتصال" فوراً قبل أي await خارجي، حتى لو IPC/شبكة
+  // تأخرت لا تفضل النافذة فاضية (كان هذا سبب ظهور نافذة بيضاء والأدمن يراه غير متصل).
   consentEl.style.display = "none";
   pairingEl.style.display = "none";
   runningEl.style.display = "flex";
   deviceEl.textContent = `${device.employee_name || "موظف"} · ${device.device_id.slice(0, 8)}`;
   setStatus("جارٍ الاتصال بالسيرفر…", false);
+
+  try {
+    await Promise.race([
+      window.agent?.enableAutoLaunch?.() ?? Promise.resolve(),
+      new Promise((resolve) => setTimeout(resolve, 2000)),
+    ]);
+  } catch { /* لا يوقف التشغيل */ }
 
   const first = await heartbeat(device);
   if (first === false) {
@@ -629,12 +641,26 @@ approveBtn.addEventListener("click", async () => {
 
 const existing = loadDevice();
 if (existing) {
-  void run(existing);
+  void run(existing).catch((err) => {
+    console.error("[run] failed:", err);
+    // فشل مفاجئ في الإقلاع لا يترك الواجهة فاضية — نرجع لشاشة التسجيل
+    consentEl.style.display = "flex";
+    runningEl.style.display = "none";
+    pairingEl.style.display = "none";
+  });
 } else {
   consentEl.style.display = "flex";
   runningEl.style.display = "none";
   pairingEl.style.display = "none";
 }
+
+// حماية إضافية: لو بعد 4 ثوانٍ ما تظهر أي شاشة لأي سبب، نُظهر شاشة التسجيل
+setTimeout(() => {
+  const anyVisible = [consentEl, runningEl, pairingEl].some(
+    (el) => el && getComputedStyle(el).display !== "none",
+  );
+  if (!anyVisible) consentEl.style.display = "flex";
+}, 4000);
 
 // التحديث تديره عملية الخلفية حصراً. عدم تشغيل فاحص ثانٍ هنا يمنع تنزيل
 // نفس الإصدار مجدداً عند التركيز على النافذة أو إعادة اتصال البرنامج.
