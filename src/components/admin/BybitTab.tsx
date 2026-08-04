@@ -18,7 +18,7 @@ export function BybitTab() {
   const { data, isLoading, isFetching, refetch, error } = useQuery({
     queryKey: ["bybit-activity", days],
     queryFn: () => fetchActivity({ data: { days } }),
-    refetchInterval: 1_000,
+    refetchInterval: days <= 30 ? 1_000 : 30_000,
     refetchIntervalInBackground: true,
   });
 
@@ -37,7 +37,7 @@ export function BybitTab() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-2">
-        {[7, 30, 90].map((d) => (
+        {[7, 30, 90, 180, 365].map((d) => (
           <Button key={d} size="sm" variant={days === d ? "default" : "outline"} onClick={() => setDays(d)}>
             آخر {d} يوم
           </Button>
