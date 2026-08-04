@@ -17,7 +17,7 @@ export const getBybitActivity = createServerFn({ method: "POST" })
     const key = process.env["BYBIT_API_KEY"];
     const secret = process.env["BYBIT_API_SECRET"];
     if (!key || !secret) {
-      return { configured: false as const, accounts: [] as { type: string; label: string; kind: "internal" | "external"; coins: { coin: string; balance: number; usdValue: number }[]; totalUsd: number; spendingPower: number }[], balances: [], deposits: [], withdrawals: [], errors: ["missing keys"] };
+      return { configured: false as const, accounts: [] as { type: string; label: string; kind: "internal" | "external"; coins: { coin: string; balance: number; usdValue: number }[]; totalUsd: number; fiatUsd: number; cryptoUsd: number; spendingPower: number }[], balances: [], deposits: [], withdrawals: [], errors: ["missing keys"] };
     }
     const apiKey = key;
     const apiSecret = secret;
