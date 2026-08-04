@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const rangeSchema = z.object({
-  days: z.number().int().min(1).max(90).default(30),
+  days: z.number().int().min(1).max(1095).default(30),
 });
 
 export const getBybitActivity = createServerFn({ method: "POST" })
@@ -46,15 +46,41 @@ export const getBybitActivity = createServerFn({ method: "POST" })
       return body.result ?? {};
     }
 
+    const DAY = 24 * 60 * 60 * 1000;
+    const CHUNK = 29 * DAY; // Bybit allows max 30 days per request
     const endTime = Date.now();
-    const startTime = endTime - data.days * 24 * 60 * 60 * 1000;
-    const window = { startTime: String(startTime), endTime: String(endTime), limit: "50" };
+    const startTime = endTime - data.days * DAY;
     const errors: string[] = [];
+
+    // Walk backwards in <=30 day windows so older records are included too.
+    async function history(path: string) {
+      const rows: any[] = [];
+      let winEnd = endTime;
+      while (winEnd > startTime && rows.length < 2000) {
+        const winStart = Math.max(startTime, winEnd - CHUNK);
+        let cursor = "";
+        for (let page = 0; page < 20; page++) {
+          const params: Record<string, string> = {
+            startTime: String(winStart),
+            endTime: String(winEnd),
+            limit: "50",
+          };
+          if (cursor) params["cursor"] = cursor;
+          const res = await call(path, params);
+          const batch = (res["rows"] as any[]) ?? [];
+          rows.push(...batch);
+          cursor = String(res["nextPageCursor"] ?? "");
+          if (!cursor || batch.length === 0) break;
+        }
+        winEnd = winStart - 1;
+      }
+      return rows;
+    }
 
     const [balRes, depRes, wdRes] = await Promise.allSettled([
       call("/v5/account/wallet-balance", { accountType: "UNIFIED" }),
-      call("/v5/asset/deposit/query-record", window),
-      call("/v5/asset/withdraw/query-record", window),
+      history("/v5/asset/deposit/query-record"),
+      history("/v5/asset/withdraw/query-record"),
     ]);
 
     const balances =
@@ -71,7 +97,7 @@ export const getBybitActivity = createServerFn({ method: "POST" })
 
     const deposits =
       depRes.status === "fulfilled"
-        ? ((depRes.value["rows"] as any[]) ?? []).map((r) => ({
+        ? (depRes.value ?? []).map((r) => ({
             id: String(r.txID ?? r.txId ?? `${r.coin}-${r.successAt}`),
             coin: String(r.coin),
             amount: Number(r.amount ?? 0),
@@ -84,7 +110,7 @@ export const getBybitActivity = createServerFn({ method: "POST" })
 
     const withdrawals =
       wdRes.status === "fulfilled"
-        ? ((wdRes.value["rows"] as any[]) ?? []).map((r) => ({
+        ? (wdRes.value ?? []).map((r) => ({
             id: String(r.withdrawId ?? r.txID ?? Math.random()),
             coin: String(r.coin),
             amount: Number(r.amount ?? 0),
