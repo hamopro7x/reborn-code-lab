@@ -88,25 +88,30 @@ const merchantDomain = (name: string) => {
   return slug.length > 2 ? `${slug}.com` : null;
 };
 
-const initials = (name: string) =>
-  (name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("") || "?").toUpperCase();
-
 function MerchantIcon({ name }: { name: string }) {
   const domain = merchantDomain(name);
-  const [failed, setFailed] = useState(false);
-  if (!domain || failed) {
+  const sources = domain
+    ? [
+        `https://icons.duckduckgo.com/ip3/${domain}.ico`,
+        `https://www.google.com/s2/favicons?domain=${domain}&sz=128`,
+        `https://logo.clearbit.com/${domain}`,
+      ]
+    : [];
+  const [idx, setIdx] = useState(0);
+
+  if (idx >= sources.length) {
     return (
-      <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold">
-        {initials(name)}
+      <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+        <CreditCard className="size-3.5" />
       </span>
     );
   }
   return (
     <img
-      src={`https://www.google.com/s2/favicons?domain=${domain}&sz=64`}
+      src={sources[idx]}
       alt={`${name} logo`}
       loading="lazy"
-      onError={() => setFailed(true)}
+      onError={() => setIdx((i) => i + 1)}
       className="size-7 shrink-0 rounded-full bg-background object-contain ring-1 ring-border"
     />
   );
