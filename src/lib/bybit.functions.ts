@@ -330,7 +330,10 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
     // Authorizations are captured too so a transaction is recorded the moment
     // it is detected (before it settles); settled records overwrite them.
     const cardQueryType = "SIDE_QUERY_FINANCIAL";
-    const cardQueryTypes = ["SIDE_QUERY_AUTHORIZATION", cardQueryType];
+    // Bybit's exact authorization enum is SIDE_QUERY_AUTH (not
+    // SIDE_QUERY_AUTHORIZATION). Include refunds so every new card event is
+    // captured without looking further back than the local tracking start.
+    const cardQueryTypes = ["SIDE_QUERY_AUTH", cardQueryType, "SIDE_QUERY_REFUND"];
 
     const mapRow = (r: any, type: string, key: string): CardRow => ({
       id: String(r.txnId ?? r.orderNo ?? `${type}-${key}`),
