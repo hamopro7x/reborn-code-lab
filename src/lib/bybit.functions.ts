@@ -106,8 +106,12 @@ export const getBybitActivity = createServerFn({ method: "POST" })
           }));
           if (rich.some((c) => c.balance > 0)) return rich;
         } catch (e) {
-          errors.push(String((e as Error).message));
+          const msg = String((e as Error).message);
+          // Read-only keys often lack the Wallet permission; the assets
+          // endpoint above already covers the balance, so don't alarm the user.
+          if (!/permission denied/i.test(msg)) errors.push(msg);
         }
+
       }
       return out;
     }
@@ -133,19 +137,20 @@ export const getBybitActivity = createServerFn({ method: "POST" })
       return map;
     }
 
-    // "الرصيد الداخلي" = الرصيد المتاح على بطاقة Bybit (حساب التمويل / Funding)
-    // "الرصيد الخارجي" = إجمالي الأصول في الحساب الموحّد (Unified)
+    // FUND = رصيد الحساب الرئيسي (التمويل) الظاهر في الصفحة الرئيسية لباي بت
+    // UNIFIED = رصيد الحساب الموحّد (التداول)
     async function accountsBalances() {
       const defs = [
-        { type: "FUND", label: "الرصيد الداخلي (بطاقة Bybit)", kind: "internal" as const },
-        { type: "UNIFIED", label: "الرصيد الخارجي (إجمالي الأصول)", kind: "external" as const },
+        { type: "FUND", label: "الرصيد الرئيسي (حساب التمويل)", kind: "internal" as const },
+        { type: "UNIFIED", label: "الحساب الموحّد (التداول)", kind: "external" as const },
       ];
       const raw = await Promise.all(
         defs.map(async (d) => ({ ...d, coins: (await coinsOf(d.type)).filter((c) => c.balance > 0) })),
       );
-      const missing = [
+      const missing: string[] = [
         ...new Set(raw.flatMap((a) => a.coins.filter((c) => c.usdValue <= 0).map((c) => c.coin))),
       ];
+
       const prices = await usdPrices(missing);
       return raw.map((a) => {
         const coins = a.coins.map((c) =>
