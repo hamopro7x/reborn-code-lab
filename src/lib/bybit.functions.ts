@@ -77,22 +77,43 @@ export const getBybitActivity = createServerFn({ method: "POST" })
       return rows;
     }
 
-    // Balance: try UNIFIED, then fall back to Funding account coins balance.
+    // Balance: the "Wallet" account endpoint needs the Wallet permission which
+    // read-only keys often lack, so fall back to the Assets endpoint across
+    // account types. Only report an error if every attempt fails.
     async function balancesAny() {
+      const attempts: string[] = [];
       try {
         const r = await call("/v5/account/wallet-balance", { accountType: "UNIFIED" });
         const coins = (((r["list"] as any[]) ?? [])[0]?.coin ?? []) as any[];
-        if (coins.length) return coins.map((c) => ({ coin: String(c.coin), balance: Number(c.walletBalance ?? 0), usdValue: Number(c.usdValue ?? 0) }));
+        if (coins.length) {
+          return coins.map((c) => ({
+            coin: String(c.coin),
+            balance: Number(c.walletBalance ?? 0),
+            usdValue: Number(c.usdValue ?? 0),
+          }));
+        }
       } catch (e) {
-        errors.push(String((e as Error).message));
+        attempts.push(String((e as Error).message));
       }
-      const r2 = await call("/v5/asset/transfer/query-account-coins-balance", { accountType: "FUND" });
-      return (((r2["balance"] as any[]) ?? []) as any[]).map((c) => ({
-        coin: String(c.coin),
-        balance: Number(c.walletBalance ?? c.transferBalance ?? 0),
-        usdValue: 0,
-      }));
+
+      for (const accountType of ["UNIFIED", "FUND", "SPOT"]) {
+        try {
+          const r2 = await call("/v5/asset/transfer/query-account-coins-balance", { accountType });
+          const rows = ((r2["balance"] as any[]) ?? []).map((c) => ({
+            coin: String(c.coin),
+            balance: Number(c.walletBalance ?? c.transferBalance ?? 0),
+            usdValue: 0,
+          }));
+          if (rows.some((c) => c.balance > 0)) return rows;
+        } catch (e) {
+          attempts.push(String((e as Error).message));
+        }
+      }
+
+      if (attempts.length) errors.push(attempts[attempts.length - 1]!);
+      return [] as { coin: string; balance: number; usdValue: number }[];
     }
+
 
     const [balRes, depRes, wdRes] = await Promise.allSettled([
       balancesAny(),
