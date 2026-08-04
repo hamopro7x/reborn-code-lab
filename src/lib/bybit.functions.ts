@@ -239,7 +239,7 @@ export const getBybitActivity = createServerFn({ method: "POST" })
 // Live Bybit Card transactions from the official V5 card asset-record endpoint.
 export const getBybitCardTransactions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data) => z.object({ days: z.number().int().min(1).max(1095).default(30) }).parse(data ?? {}))
+  .inputValidator((data) => z.object({ days: z.number().int().min(1).max(3650).default(30) }).parse(data ?? {}))
   .handler(async ({ data, context }) => {
     const { data: roles } = await context.supabase
       .from("user_roles")
@@ -299,7 +299,7 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
     // Official Bybit Card V5 endpoint. It is a POST endpoint and uses numeric
     // pages (not the cursor pagination used by account/asset endpoints).
     const cardPath = "/v5/card/transaction/query-asset-records";
-    const cardRows: {
+    type CardRow = {
       id: string;
       occurredAt: number;
       amount: number;
@@ -307,35 +307,55 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
       merchant: string;
       status: string;
       last4: string;
-    }[] = [];
+    };
+    const cardRows: CardRow[] = [];
     const cardQueryTypes = ["SIDE_QUERY_AUTH", "SIDE_QUERY_FINANCIAL", "SIDE_QUERY_REFUND"];
+
+    const mapRow = (r: any, type: string, key: string): CardRow => ({
+      id: String(r.txnId ?? r.orderNo ?? `${type}-${key}`),
+      occurredAt: Number(r.txnCreate ?? r.createTime ?? r.txnTime ?? 0),
+      amount: (type === "SIDE_QUERY_REFUND" ? 1 : -1) * Math.abs(Number(r.basicAmount ?? r.paidAmount ?? r.transactionAmount ?? 0)),
+      currency: String(r.basicCurrency ?? r.paidCurrency ?? r.transactionCurrency ?? "USD"),
+      merchant: String(r.merchName ?? r.merchCategoryDesc ?? "Card Transaction"),
+      status: String(r.status ?? r.tradeStatus ?? "") === "1" ? "Successful" : String(r.status ?? r.tradeStatus ?? "") === "0" ? "Pending" : "Failed",
+      last4: String(r.pan4 ?? "").slice(-4),
+    });
+
+    // Walk every page of every query type. First try the whole range in one
+    // window (no time filter at all), then fall back to 30-day windows so the
+    // full history is covered even when Bybit caps the query range.
+    const drain = async (type: string, params: Record<string, string | number>, tag: string) => {
+      let fetched = 0;
+      for (let page = 1; page <= 500; page++) {
+        const result = await post(cardPath, { type, limit: 500, page, ...params });
+        const batch = (result["data"] as any[]) ?? [];
+        cardRows.push(...batch.map((r, i) => mapRow(r, type, `${tag}-${page}-${i}`)));
+        fetched += batch.length;
+        const total = Number(result["totalCount"] ?? 0);
+        if (batch.length === 0) break;
+        if (total > 0 && fetched >= total) break;
+        if (batch.length < 500) break;
+      }
+      return fetched;
+    };
+
     for (const type of cardQueryTypes) {
+      let gotAll = false;
       try {
-        let fetchedForType = 0;
-        for (let page = 1; page <= 100; page++) {
-          const result = await post(cardPath, {
-            type,
-            limit: 500,
-            page,
-            createBeginTime: startTime,
-            createEndTime: endTime,
-          });
-          const batch = (result["data"] as any[]) ?? [];
-          fetchedForType += batch.length;
-          cardRows.push(...batch.map((r, i) => ({
-            id: String(r.txnId ?? r.orderNo ?? `${type}-${page}-${i}`),
-            occurredAt: Number(r.txnCreate ?? 0),
-            amount: (type === "SIDE_QUERY_REFUND" ? 1 : -1) * Math.abs(Number(r.basicAmount ?? r.paidAmount ?? r.transactionAmount ?? 0)),
-            currency: String(r.basicCurrency ?? r.paidCurrency ?? r.transactionCurrency ?? "USD"),
-            merchant: String(r.merchName ?? r.merchCategoryDesc ?? "Card Transaction"),
-            status: String(r.status ?? r.tradeStatus ?? "") === "1" ? "Successful" : String(r.status ?? r.tradeStatus ?? "") === "0" ? "Pending" : "Failed",
-            last4: String(r.pan4 ?? "").slice(-4),
-          })));
-          const total = Number(result["totalCount"] ?? 0);
-          if (batch.length === 0 || fetchedForType >= total || batch.length < 500) break;
-        }
+        await drain(type, {}, "all");
+        gotAll = true;
       } catch (e) {
         probeErrors.push(String((e as Error).message));
+      }
+      if (gotAll) continue;
+      // Fallback: month-by-month over the requested history range.
+      for (let winEnd = endTime; winEnd > startTime; winEnd -= 30 * DAY) {
+        const winStart = Math.max(startTime, winEnd - 30 * DAY);
+        try {
+          await drain(type, { createBeginTime: winStart, createEndTime: winEnd }, String(winStart));
+        } catch (e) {
+          probeErrors.push(String((e as Error).message));
+        }
       }
     }
 
@@ -344,6 +364,7 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
       unique.sort((a, b) => b.occurredAt - a.occurredAt);
       return { configured: true as const, source: cardPath, rows: unique, errors: [] };
     }
+
 
     console.warn("Bybit card transaction endpoints unavailable", probeErrors);
     return {

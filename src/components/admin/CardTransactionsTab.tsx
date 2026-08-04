@@ -53,7 +53,7 @@ export function CardTransactionsTab() {
 
   const { data: live, isLoading, isFetching, refetch } = useQuery({
     queryKey: ["bybit-card-live"],
-    queryFn: () => fetchCard({ data: { days: 730 } }),
+    queryFn: () => fetchCard({ data: { days: 3650 } }),
     refetchInterval: 30_000,
     retry: false,
   });
