@@ -82,33 +82,55 @@ export const getBybitActivity = createServerFn({ method: "POST" })
     // account types. Only report an error if every attempt fails.
     async function coinsOf(accountType: string) {
       const out: { coin: string; balance: number; usdValue: number }[] = [];
-      if (accountType === "UNIFIED") {
-        try {
-          const r = await call("/v5/account/wallet-balance", { accountType: "UNIFIED" });
-          const coins = (((r["list"] as any[]) ?? [])[0]?.coin ?? []) as any[];
-          for (const c of coins) {
-            out.push({
-              coin: String(c.coin),
-              balance: Number(c.walletBalance ?? 0),
-              usdValue: Number(c.usdValue ?? 0),
-            });
-          }
-          if (out.some((c) => c.balance > 0)) return out;
-        } catch (e) {
-          errors.push(String((e as Error).message));
-        }
-      }
+      // Assets endpoint works for both FUND and UNIFIED with read-only keys.
       try {
         const r2 = await call("/v5/asset/transfer/query-account-coins-balance", { accountType });
-        return ((r2["balance"] as any[]) ?? []).map((c) => ({
+        const rows = ((r2["balance"] as any[]) ?? []).map((c) => ({
           coin: String(c.coin),
           balance: Number(c.walletBalance ?? c.transferBalance ?? 0),
           usdValue: 0,
         }));
+        out.push(...rows);
       } catch (e) {
         errors.push(String((e as Error).message));
       }
+      // Unified wallet endpoint gives real usdValue when the key has Wallet perms.
+      if (accountType === "UNIFIED") {
+        try {
+          const r = await call("/v5/account/wallet-balance", { accountType: "UNIFIED" });
+          const coins = (((r["list"] as any[]) ?? [])[0]?.coin ?? []) as any[];
+          const rich = coins.map((c) => ({
+            coin: String(c.coin),
+            balance: Number(c.walletBalance ?? 0),
+            usdValue: Number(c.usdValue ?? 0),
+          }));
+          if (rich.some((c) => c.balance > 0)) return rich;
+        } catch (e) {
+          errors.push(String((e as Error).message));
+        }
+      }
       return out;
+    }
+
+    // Public spot prices so الرصيد الداخلي (Funding) also shows a USD value.
+    async function usdPrices(coins: string[]) {
+      const map = new Map<string, number>();
+      const stable = ["USDT", "USDC", "USD", "DAI", "FDUSD"];
+      for (const c of coins) {
+        if (stable.includes(c)) {
+          map.set(c, 1);
+          continue;
+        }
+        try {
+          const res = await fetch(`https://api.bybit.com/v5/market/tickers?category=spot&symbol=${c}USDT`);
+          const body = (await res.json()) as any;
+          const price = Number(body?.result?.list?.[0]?.lastPrice ?? 0);
+          if (price > 0) map.set(c, price);
+        } catch {
+          // ignore price lookup failures
+        }
+      }
+      return map;
     }
 
     // "الرصيد الداخلي" = الرصيد المتاح على بطاقة Bybit (حساب التمويل / Funding)
@@ -118,18 +140,21 @@ export const getBybitActivity = createServerFn({ method: "POST" })
         { type: "FUND", label: "الرصيد الداخلي (بطاقة Bybit)", kind: "internal" as const },
         { type: "UNIFIED", label: "الرصيد الخارجي (إجمالي الأصول)", kind: "external" as const },
       ];
-      const results = await Promise.all(
-        defs.map(async (d) => {
-          const coins = (await coinsOf(d.type)).filter((c) => c.balance > 0);
-          return {
-            ...d,
-            coins,
-            totalUsd: coins.reduce((s, c) => s + c.usdValue, 0),
-          };
-        }),
+      const raw = await Promise.all(
+        defs.map(async (d) => ({ ...d, coins: (await coinsOf(d.type)).filter((c) => c.balance > 0) })),
       );
-      return results;
+      const missing = [
+        ...new Set(raw.flatMap((a) => a.coins.filter((c) => c.usdValue <= 0).map((c) => c.coin))),
+      ];
+      const prices = await usdPrices(missing);
+      return raw.map((a) => {
+        const coins = a.coins.map((c) =>
+          c.usdValue > 0 ? c : { ...c, usdValue: c.balance * (prices.get(c.coin) ?? 0) },
+        );
+        return { ...a, coins, totalUsd: coins.reduce((s, c) => s + c.usdValue, 0) };
+      });
     }
+
 
     const [balRes, depRes, wdRes] = await Promise.allSettled([
       accountsBalances(),
