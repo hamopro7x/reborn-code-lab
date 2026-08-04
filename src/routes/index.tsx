@@ -152,16 +152,16 @@ function Home() {
                 className="group relative rounded-2xl p-[1px] bg-gradient-to-br from-white/10 via-transparent to-transparent hover:from-primary/60 hover:to-primary/10 transition-all duration-300 animate-slide-up"
                 style={{ animationDelay: `${i * 80}ms` }}
               >
-                <div className="relative overflow-hidden card-surface rounded-[15px] h-[16rem] flex flex-col transition-transform duration-300 group-hover:-translate-y-1">
-                  <div className="relative flex-1 overflow-hidden bg-muted/20 flex items-center justify-center">
+                <div className="relative overflow-hidden card-surface rounded-[15px] flex flex-col transition-transform duration-300 group-hover:-translate-y-1">
+                  <div className="relative w-full aspect-square overflow-hidden bg-muted/20 flex items-center justify-center">
                     {c.banner_image ? (
                       <img
                         src={c.banner_image}
                         alt={c.name}
                         width={480}
-                        height={320}
+                        height={480}
                         loading="lazy"
-                        className="absolute inset-0 w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
+                        className="absolute inset-0 w-full h-full object-fill transition-transform duration-500 group-hover:scale-105"
                       />
                     ) : (
                       <div className="text-6xl transition-transform duration-500 group-hover:scale-110">{c.icon ?? "🎁"}</div>
