@@ -108,6 +108,13 @@ export function ReportsTab() {
     toast.success("تم تصدير التقرير");
   }
 
+  const grand = useMemo(() => {
+    return rows.reduce(
+      (a, r) => ({ orders: a.orders + r.orders, paid: a.paid + r.paid, sales: a.sales + r.sales, net: a.net + r.net, discount: a.discount + r.discount }),
+      { orders: 0, paid: 0, sales: 0, net: 0, discount: 0 },
+    );
+  }, [rows]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-16 text-muted-foreground">
@@ -116,12 +123,6 @@ export function ReportsTab() {
     );
   }
 
-  const grand = useMemo(() => {
-    return rows.reduce(
-      (a, r) => ({ orders: a.orders + r.orders, paid: a.paid + r.paid, sales: a.sales + r.sales, net: a.net + r.net, discount: a.discount + r.discount }),
-      { orders: 0, paid: 0, sales: 0, net: 0, discount: 0 },
-    );
-  }, [rows]);
 
   function applyPreset(days: number) {
     const end = new Date();
