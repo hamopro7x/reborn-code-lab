@@ -239,7 +239,7 @@ export const getBybitActivity = createServerFn({ method: "POST" })
 // Live Bybit Card transactions from the official V5 card asset-record endpoint.
 export const getBybitCardTransactions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data) => z.object({ days: z.number().int().min(1).max(1095).default(30) }).parse(data ?? {}))
+  .inputValidator((data) => z.object({ days: z.number().int().min(1).max(3650).default(30) }).parse(data ?? {}))
   .handler(async ({ data, context }) => {
     const { data: roles } = await context.supabase
       .from("user_roles")
