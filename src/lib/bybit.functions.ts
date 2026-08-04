@@ -164,35 +164,65 @@ export const getBybitActivity = createServerFn({ method: "POST" })
 
     // بطاقة Bybit تصرف من حساب التمويل (FUND) — فرصيده هو "الرصيد الداخلي"
     // الظاهر في لوحة البطاقة كـ Spending Power. UNIFIED = الرصيد الخارجي.
+
+    // نحاول جلب قوة الشراء الحقيقية من باي بت نفسها بدل تقديرها بهامش ثابت.
+    async function realSpendingPower(): Promise<number | null> {
+      const paths = [
+        "/v5/card/query-balance",
+        "/v5/card/account/balance",
+        "/v5/card/query-card-info",
+        "/v5/card/spending-power",
+      ];
+      for (const p of paths) {
+        try {
+          const r: any = await call(p, {});
+          const node = r?.data ?? r ?? {};
+          const raw =
+            node.spendingPower ?? node.availableBalance ?? node.available ?? node.balance ?? node.totalAmount;
+          const n = Number(raw);
+          if (Number.isFinite(n) && n > 0) return n;
+        } catch {
+          /* نجرب المسار التالي */
+        }
+      }
+      return null;
+    }
+
     async function accountsBalances() {
       const defs = [
         { type: "FUND", label: "الرصيد الداخلي للبطاقة (قوة الشراء)", kind: "internal" as const },
         { type: "UNIFIED", label: "الرصيد الخارجي (الحساب الموحّد)", kind: "external" as const },
       ];
 
-      const raw = await Promise.all(
-        defs.map(async (d) => ({ ...d, coins: (await coinsOf(d.type)).filter((c) => c.balance > 0) })),
-      );
+      const [raw, live] = await Promise.all([
+        Promise.all(defs.map(async (d) => ({ ...d, coins: (await coinsOf(d.type)).filter((c) => c.balance > 0) }))),
+        realSpendingPower(),
+      ]);
       const missing: string[] = [
         ...new Set(raw.flatMap((a) => a.coins.filter((c) => c.usdValue <= 0).map((c) => c.coin))),
       ];
 
       const prices = await usdPrices(missing);
-      // باي بت بيخصم هامش تحويل ~1.4% على رصيد البطاقة، فقوة الشراء الفعلية أقل من الرصيد.
-      const CARD_MARGIN = 0.014;
+      // لو باي بت مرجّعتش قوة الشراء، نخصم هامش التحويل التقريبي على الكريبتو (~5%).
+      const CRYPTO_HAIRCUT = 0.05;
       return raw.map((a) => {
         const coins = a.coins.map((c) =>
           c.usdValue > 0 ? c : { ...c, usdValue: c.balance * (prices.get(c.coin) ?? 0) },
         );
         const totalUsd = coins.reduce((s, c) => s + c.usdValue, 0);
+        const estimated = coins.reduce(
+          (s, c) => s + (/^(USD|USDT|USDC|EUR)$/i.test(c.coin) ? c.usdValue : c.usdValue * (1 - CRYPTO_HAIRCUT)),
+          0,
+        );
         return {
           ...a,
           coins,
           totalUsd,
-          spendingPower: a.kind === "internal" ? totalUsd * (1 - CARD_MARGIN) : totalUsd,
+          spendingPower: a.kind === "internal" ? (live ?? estimated) : totalUsd,
         };
       });
     }
+
 
 
     const [balRes, depRes, wdRes] = await Promise.allSettled([
