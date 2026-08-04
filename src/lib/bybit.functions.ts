@@ -236,9 +236,7 @@ export const getBybitActivity = createServerFn({ method: "POST" })
     return { configured: true as const, accounts, balances, deposits, withdrawals, errors };
   });
 
-// Live Bybit Card transactions (v5). Bybit does not document a single card
-// endpoint publicly, so we probe the known v5 card paths with the same signed
-// request flow and use whichever one the key is allowed to read.
+// Live Bybit Card transactions from the official V5 card asset-record endpoint.
 export const getBybitCardTransactions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data) => z.object({ days: z.number().int().min(1).max(1095).default(30) }).parse(data ?? {}))
@@ -399,50 +397,11 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
       return { configured: true as const, source: cardPath, rows: unique, errors: [] };
     }
 
-    // Official V5 fallback: card purchases, refunds and rewards are Funding
-    // account asset movements. Bybit retains this history for up to two years.
-    const cardTypes = [
-      "CARD_CONSUMPTION",
-      "CARD_ATM_DRAWAL",
-      "CARD_REFUND",
-      "CARD_REVERSION",
-      "CARD_CB_REWARD",
-    ];
-    const fundingRows: {
-      id: string;
-      occurredAt: number;
-      amount: number;
-      currency: string;
-      merchant: string;
-      status: string;
-      last4: string;
-    }[] = [];
-    for (const type of cardTypes) {
-      try {
-        const path = "/v5/account/transaction-log";
-        const raw = await history(path, { accountType: "FUND", type });
-        const rows = raw
-          .map((r, i) => ({
-            id: String(r.id ?? r.transactionId ?? r.txId ?? `${type}-${i}`),
-            occurredAt: Number(r.transactionTime ?? r.timestamp ?? r.createTime ?? r.createdTime ?? 0),
-            amount: Number(r.cashFlow ?? r.change ?? r.amount ?? 0),
-            currency: String(r.currency ?? r.coin ?? ""),
-            merchant: String(r.remark ?? r.description ?? type),
-            status: String(r.status ?? "Successful"),
-            last4: "",
-          }))
-          .filter((r) => r.amount !== 0);
-        fundingRows.push(...rows);
-      } catch (e) {
-        probeErrors.push(String((e as Error).message));
-      }
-    }
-
-    if (fundingRows.length > 0) {
-      fundingRows.sort((a, b) => b.occurredAt - a.occurredAt);
-      return { configured: true as const, source: "/v5/account/transaction-log", rows: fundingRows, errors: [] };
-    }
-
     console.warn("Bybit card transaction endpoints unavailable", probeErrors);
-    return { configured: true as const, source: "", rows: [], errors: [] };
+    return {
+      configured: true as const,
+      source: cardPath,
+      rows: [],
+      errors: probeErrors.length > 0 ? [probeErrors[0]] : [],
+    };
   });
