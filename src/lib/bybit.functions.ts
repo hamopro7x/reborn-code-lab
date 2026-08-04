@@ -82,19 +82,8 @@ export const getBybitActivity = createServerFn({ method: "POST" })
     // account types. Only report an error if every attempt fails.
     async function coinsOf(accountType: string) {
       const out: { coin: string; balance: number; usdValue: number }[] = [];
-      // Assets endpoint works for both FUND and UNIFIED with read-only keys.
-      try {
-        const r2 = await call("/v5/asset/transfer/query-account-coins-balance", { accountType });
-        const rows = ((r2["balance"] as any[]) ?? []).map((c) => ({
-          coin: String(c.coin),
-          balance: Number(c.walletBalance ?? c.transferBalance ?? 0),
-          usdValue: 0,
-        }));
-        out.push(...rows);
-      } catch (e) {
-        errors.push(String((e as Error).message));
-      }
-      // Unified wallet endpoint gives real usdValue when the key has Wallet perms.
+
+      // Unified wallet endpoint gives real usdValue and لا يحتاج تحديد العملات.
       if (accountType === "UNIFIED") {
         try {
           const r = await call("/v5/account/wallet-balance", { accountType: "UNIFIED" });
@@ -104,14 +93,28 @@ export const getBybitActivity = createServerFn({ method: "POST" })
             balance: Number(c.walletBalance ?? 0),
             usdValue: Number(c.usdValue ?? 0),
           }));
-          if (rich.some((c) => c.balance > 0)) return rich;
+          if (rich.length > 0) return rich;
         } catch (e) {
           const msg = String((e as Error).message);
-          // Read-only keys often lack the Wallet permission; the assets
-          // endpoint above already covers the balance, so don't alarm the user.
           if (!/permission denied/i.test(msg)) errors.push(msg);
         }
+      }
 
+      // Assets endpoint: UNIFIED requires an explicit coin list (max 10 coins).
+      try {
+        const params: Record<string, string> = { accountType };
+        if (accountType === "UNIFIED") {
+          params["coin"] = "USDT,USDC,BTC,ETH,BNB,SOL,XRP,DOGE,TON,MNT";
+        }
+        const r2 = await call("/v5/asset/transfer/query-account-coins-balance", params);
+        const rows = ((r2["balance"] as any[]) ?? []).map((c) => ({
+          coin: String(c.coin),
+          balance: Number(c.walletBalance ?? c.transferBalance ?? 0),
+          usdValue: 0,
+        }));
+        out.push(...rows);
+      } catch (e) {
+        errors.push(String((e as Error).message));
       }
       return out;
     }
