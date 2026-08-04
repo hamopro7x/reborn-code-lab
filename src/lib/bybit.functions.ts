@@ -472,9 +472,13 @@ export const getBybitCardRewards = createServerFn({ method: "POST" })
 
     const candidates: [string, "GET" | "POST"][] = [
       ["/v5/card/reward/query-cashback-info", "POST"],
+      ["/v5/card/reward/query-cashback-info", "GET"],
       ["/v5/card/rewards/query-info", "POST"],
       ["/v5/card/reward/info", "GET"],
+      ["/v5/card/reward/query-user-tier", "POST"],
+      ["/v5/card/query-card-info", "GET"],
     ];
+
 
     const errors: string[] = [];
     for (const [path, method] of candidates) {
