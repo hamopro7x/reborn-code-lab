@@ -266,7 +266,11 @@ async function exchangeSignals(device) {
       p_outgoing: batch,
     }, 5000);
     for (const row of Array.isArray(incoming) ? incoming : []) {
-      await handleViewerSignal(row.payload);
+      try {
+        await handleViewerSignal(row.payload);
+      } catch (err) {
+        console.error("[signal] ignored invalid signal:", err);
+      }
     }
   } catch {
     outgoingSignals.unshift(...batch);
@@ -371,6 +375,7 @@ function closePeer(viewerId) {
   if (!entry) return;
   if (entry.statsTimer) clearInterval(entry.statsTimer);
   if (entry.recoverTimer) clearTimeout(entry.recoverTimer);
+  if (entry.connectTimer) clearTimeout(entry.connectTimer);
   try { entry.pc.close(); } catch {}
   // نوقف نسخة المسار الخاصة بهذا المشاهد فقط — المصدر يبقى للباقين
   try { entry.track?.stop(); } catch {}
@@ -397,7 +402,7 @@ async function startPeer(viewerId) {
     closePeer(viewerId); // أي اتصال قديم لنفس المشاهد يُستبدل
     const s = await getStream();
     const pc = new RTCPeerConnection(RTC_CONFIG);
-    const entry = { pc, statsTimer: null, pendingIce: [], recoverTimer: null, offer: null };
+    const entry = { pc, statsTimer: null, pendingIce: [], recoverTimer: null, connectTimer: null, offer: null };
     peers.set(viewerId, entry);
     window.agent.setViewerCount?.(peers.size);
 
@@ -443,6 +448,7 @@ async function startPeer(viewerId) {
     };
     pc.onconnectionstatechange = () => {
       if (pc.connectionState === "connected") {
+        if (entry.connectTimer) { clearTimeout(entry.connectTimer); entry.connectTimer = null; }
         if (entry.recoverTimer) { clearTimeout(entry.recoverTimer); entry.recoverTimer = null; }
         setStatus(`متصل · ${peers.size} مشاهد`, true);
         // اطلب keyframe فور اكتمال ICE لتظهر الصورة بدون انتظار دورة المشفّر.
@@ -468,6 +474,10 @@ async function startPeer(viewerId) {
     await pc.setLocalDescription(offer);
     entry.offer = { type: offer.type, sdp: offer.sdp };
     await send({ type: "offer", to: viewerId, sdp: entry.offer });
+    entry.connectTimer = setTimeout(() => {
+      entry.connectTimer = null;
+      if (pc.connectionState !== "connected") closePeer(viewerId);
+    }, 15000);
     if (videoSender) startAdaptive(entry, videoSender);
   } finally {
     startingViewers.delete(viewerId);
@@ -691,5 +701,16 @@ document.getElementById("refresh")?.addEventListener("click", async (e) => {
 // إعادة الاتصال تلقائياً لما الشبكة ترجع (بعد قفل اللابتوب/فقد النت)
 window.addEventListener("online", () => {
   setTimeout(() => void softReconnect(), 1500);
+});
+
+window.agent.onPowerResume?.(() => {
+  setStatus("جارٍ استعادة الاتصال…", false);
+  setTimeout(() => void softReconnect(), 2500);
+});
+
+window.addEventListener("unhandledrejection", (event) => {
+  console.error("[renderer] unhandled rejection:", event.reason);
+  const d = loadDevice();
+  if (d) setTimeout(() => void softReconnect(), 1500);
 });
 

@@ -895,7 +895,9 @@ app.whenReady().then(() => {
     const { powerMonitor } = require("electron");
     const reconnect = () => {
       enableAutoLaunch();
-      if (win && !win.isDestroyed()) win.webContents.reload();
+      // لا نعيد تحميل صفحة البرنامج عند الاستيقاظ؛ الشبكة تكون غالباً لم
+      // تستعد بعد، وإعادة التحميل كانت تهدم البث وتترك الواجهة معلقة.
+      if (win && !win.isDestroyed()) win.webContents.send("power-resume");
       // بعد الاستئناف نفحص التحديث فوراً بدل انتظار الدورة القادمة
       setTimeout(() => void runBootUpdate(), 5000);
     };

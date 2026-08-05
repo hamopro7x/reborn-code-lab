@@ -12,4 +12,7 @@ contextBridge.exposeInMainWorld("agent", {
   onUpdateProgress: (cb) => {
     ipcRenderer.on("update-progress", (_e, data) => cb(data));
   },
+  onPowerResume: (cb) => {
+    ipcRenderer.on("power-resume", () => cb());
+  },
 });
