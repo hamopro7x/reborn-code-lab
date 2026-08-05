@@ -14,6 +14,8 @@ type Row = {
   merchant: string;
   status: string;
   last4: string;
+  brand?: string;
+  cardKind?: string;
 };
 
 const money = (n: number) =>
@@ -125,7 +127,9 @@ function MerchantIcon({ name }: { name: string }) {
 function CardBrandIcon({ last4, brand }: { last4?: string; brand?: string }) {
   // العلامة تأتي من بيانات البطاقة في باي بت فقط — لا نخمّنها من آخر 4 أرقام.
   const net = (brand ?? "").toLowerCase();
-  if (!net) {
+  const mastercard = /master\s*card|master|\bmc\b/.test(net);
+  const visa = /visa/.test(net);
+  if (!mastercard && !visa) {
     return (
       <span
         className="inline-flex h-5 w-8 shrink-0 items-center justify-center rounded bg-muted text-[9px] font-bold text-muted-foreground"
@@ -135,10 +139,7 @@ function CardBrandIcon({ last4, brand }: { last4?: string; brand?: string }) {
       </span>
     );
   }
-  const mastercard = net === "mastercard";
-  if (!mastercard) {
-
-
+  if (visa) {
     return (
       <svg viewBox="0 0 48 32" className="h-5 w-8 shrink-0" role="img" aria-label="Visa">
         <rect width="48" height="32" rx="4" fill="#1434CB" />
@@ -201,7 +202,7 @@ export function CardTransactionsTab() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("card_transactions")
-        .select("id, occurred_at, amount, currency_code, merchant, status, card_last4")
+        .select("id, occurred_at, amount, currency_code, merchant, status, card_last4, raw")
         .order("occurred_at", { ascending: false })
         .limit(500);
       if (error) throw error;
@@ -216,16 +217,25 @@ export function CardTransactionsTab() {
 
   const rows = useMemo<Row[]>(() => {
     const a: Row[] = (live?.rows ?? []) as Row[];
-    const b: Row[] = (stored ?? []).map((t: any) => ({
-      id: t.id,
-      occurredAt: new Date(t.occurred_at).getTime(),
-      amount: -Math.abs(Number(t.amount)),
-      currency: t.currency_code,
-      merchant: t.merchant,
-      status: t.status,
-      last4: t.card_last4 ?? "",
-    }));
-    return [...a, ...b].sort((x, y) => y.occurredAt - x.occurredAt);
+    const b: Row[] = (stored ?? []).map((t: any) => {
+      const raw = t.raw && typeof t.raw === "object" ? t.raw : {};
+      return {
+        id: t.id,
+        occurredAt: new Date(t.occurred_at).getTime(),
+        amount: -Math.abs(Number(t.amount)),
+        currency: t.currency_code,
+        merchant: t.merchant,
+        status: t.status,
+        last4: t.card_last4 ?? "",
+        brand: String(raw.brand ?? raw.cardBrand ?? raw.cardNetwork ?? ""),
+        cardKind: String(raw.cardKind ?? raw.cardType ?? ""),
+      };
+    });
+    // The live row contains Bybit's latest card metadata; keep it when the
+    // same transaction is also present in local storage.
+    return [...new Map([...b, ...a].map((row) => [row.id, row])).values()].sort(
+      (x, y) => y.occurredAt - x.occurredAt,
+    );
   }, [live, stored]);
 
   const filtered = rows.filter((r) => {
@@ -385,11 +395,11 @@ export function CardTransactionsTab() {
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-2">
-                        <CardBrandIcon last4={r.last4} brand={(r as { brand?: string }).brand} />
+                        <CardBrandIcon last4={r.last4} brand={r.brand} />
                         <span className="font-bold tabular-nums">{r.last4 || "••••"}</span>
-                        {cardKindLabel((r as { cardKind?: string }).cardKind) && (
+                        {cardKindLabel(r.cardKind) && (
                           <span className="rounded border border-border/60 px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                            {cardKindLabel((r as { cardKind?: string }).cardKind)}
+                            {cardKindLabel(r.cardKind)}
                           </span>
                         )}
                       </div>

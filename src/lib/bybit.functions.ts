@@ -365,21 +365,33 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
     const cardBrandByLast4 = new Map<string, string>();
     const cardKindByLast4 = new Map<string, string>();
     const brandFromRaw = (raw: string): string => {
-      const v = raw.toLowerCase();
-      if (v.includes("master") || v.includes("mc")) return "mastercard";
+      const v = raw.trim().toLowerCase();
+      if (/master\s*card|master|\bmc\b/.test(v)) return "mastercard";
       if (v.includes("visa")) return "visa";
       return "";
+    };
+    const cardListFrom = (value: unknown): any[] => {
+      if (Array.isArray(value)) return value;
+      if (!value || typeof value !== "object") return [];
+      const node = value as Record<string, unknown>;
+      for (const key of ["list", "rows", "cards", "data", "cardList", "cardInfoList"]) {
+        const found = cardListFrom(node[key]);
+        if (found.length > 0) return found;
+      }
+      return [];
     };
     try {
       for (const p of ["/v5/card/query-card-list", "/v5/card/query-card-info"]) {
         try {
           const r: any = await post(p, {});
-          const list: any[] = r?.list ?? r?.rows ?? r?.cards ?? r?.data ?? (Array.isArray(r) ? r : []);
+           const list = cardListFrom(r);
           for (const c of list ?? []) {
-            const l4 = String(c.pan4 ?? c.last4 ?? c.cardNo ?? c.maskPan ?? "").slice(-4);
+             const l4 = String(c.pan4 ?? c.last4 ?? c.cardLast4 ?? c.cardNo ?? c.maskPan ?? c.maskedPan ?? "")
+               .replace(/\D/g, "")
+               .slice(-4);
             if (!l4) continue;
             const brand =
-              brandFromRaw(String(c.cardBrand ?? c.brand ?? c.cardOrg ?? c.cardScheme ?? c.cardNetwork ?? "")) ||
+               brandFromRaw(String(c.cardBrand ?? c.brand ?? c.cardOrg ?? c.cardScheme ?? c.cardNetwork ?? c.organization ?? "")) ||
               (/^5|^2/.test(String(c.cardBin ?? c.bin ?? "")) ? "mastercard" : /^4/.test(String(c.cardBin ?? c.bin ?? "")) ? "visa" : "");
             if (brand) cardBrandByLast4.set(l4, brand);
             const kind = String(c.cardType ?? c.cardCategory ?? c.cardKind ?? "").toLowerCase();
@@ -418,7 +430,9 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
     };
 
     const mapRow = (r: any, type: string, key: string): CardRow => {
-      const last4 = String(r.pan4 ?? "").slice(-4);
+       const last4 = String(r.pan4 ?? r.last4 ?? r.cardLast4 ?? r.cardNo ?? r.maskPan ?? "")
+         .replace(/\D/g, "")
+         .slice(-4);
       return {
         id: String(r.txnId ?? r.orderNo ?? `${type}-${key}`),
         occurredAt: Number(r.txnCreate ?? r.createTime ?? r.txnTime ?? 0),
