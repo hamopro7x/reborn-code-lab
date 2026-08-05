@@ -4,6 +4,8 @@ const { execFile } = require("child_process");
 
 let win = null;
 let tray = null;
+let rendererRecoveryAttempts = 0;
+let rendererRecoveryTimer = null;
 
 // تشغيل ويندوز يحمل --hidden فيبقى بالخلفية، أما فتح الموظف للاختصار فيُظهر النافذة.
 const startedHidden = process.argv.includes("--hidden");
@@ -201,6 +203,27 @@ function createWindow() {
   });
   win.setMenuBarVisibility(false);
   win.loadFile(path.join(__dirname, "renderer.html"));
+  const recoverRenderer = (reason) => {
+    if (!win || win.isDestroyed() || app.isQuiting || installing) return;
+    if (rendererRecoveryTimer) return;
+    rendererRecoveryAttempts += 1;
+    console.error(`[renderer] recovery ${rendererRecoveryAttempts}: ${reason}`);
+    const delay = Math.min(1000 * rendererRecoveryAttempts, 10000);
+    rendererRecoveryTimer = setTimeout(() => {
+      rendererRecoveryTimer = null;
+      if (win && !win.isDestroyed()) win.webContents.reloadIgnoringCache();
+    }, delay);
+  };
+  win.webContents.on("did-finish-load", () => {
+    rendererRecoveryAttempts = 0;
+  });
+  win.webContents.on("did-fail-load", (_event, code, description) => {
+    recoverRenderer(`load failed ${code}: ${description}`);
+  });
+  win.webContents.on("render-process-gone", (_event, details) => {
+    recoverRenderer(`process gone: ${details.reason}`);
+  });
+  win.on("unresponsive", () => recoverRenderer("window unresponsive"));
   win.once("ready-to-show", () => {
     if (startedHidden) {
       win.hide();
@@ -872,7 +895,9 @@ app.whenReady().then(() => {
     const { powerMonitor } = require("electron");
     const reconnect = () => {
       enableAutoLaunch();
-      if (win && !win.isDestroyed()) win.webContents.reload();
+      // لا نعيد تحميل صفحة البرنامج عند الاستيقاظ؛ الشبكة تكون غالباً لم
+      // تستعد بعد، وإعادة التحميل كانت تهدم البث وتترك الواجهة معلقة.
+      if (win && !win.isDestroyed()) win.webContents.send("power-resume");
       // بعد الاستئناف نفحص التحديث فوراً بدل انتظار الدورة القادمة
       setTimeout(() => void runBootUpdate(), 5000);
     };
