@@ -1,5 +1,3 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
 const SUPABASE_URL = "https://shrrrgvcrevujivuyvzv.supabase.co";
 const SUPABASE_KEY = "sb_publishable_nJ6QLZiRdWnK9_qtFKPZjQ_hDkY5zrz";
 
@@ -24,10 +22,6 @@ const RTC_CONFIG = {
   iceCandidatePoolSize: 4,
 };
 
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: { persistSession: false, autoRefreshToken: false },
-});
 
 const consentEl = document.getElementById("consent");
 const runningEl = document.getElementById("running");
@@ -506,7 +500,6 @@ function stopSession() {
   if (signalTimer) clearInterval(signalTimer);
   signalTimer = null;
   for (const id of Array.from(peers.keys())) closePeer(id);
-  try { if (channel) supabase.removeChannel(channel); } catch {}
   channel = null;
 }
 
@@ -675,7 +668,7 @@ async function softReconnect() {
   reconnecting = true;
   try {
     if (hbTimer) { clearInterval(hbTimer); hbTimer = null; }
-    if (channel) { try { await supabase.removeChannel(channel); } catch {} channel = null; }
+    channel = null;
     running = false; // ملاحظة: لا نلمس pc/stream إطلاقاً حتى لا ينقطع البث
     await run(d);
   } finally {

@@ -123,9 +123,9 @@
     </div>
 
 
-    <div class="screen" id="running">
+    <div class="screen" id="running" style="display:flex">
       <h1>مدير — Mag Pro</h1>
-      <div class="status"><span class="dot" id="dot"></span><span id="status">جاهز</span></div>
+      <div class="status"><span class="dot" id="dot"></span><span id="status">جارٍ تشغيل البرنامج…</span></div>
       <div class="device" id="device"></div>
       <div class="update" id="update">
         <div class="t">🔔 يتوفر تحديث جديد <span id="upd-ver"></span></div>
@@ -138,5 +138,23 @@
     </div>
 
     <script type="module" src="./renderer.js"></script>
+    <script>
+      // حارس مستقل عن ملف الواجهة: لو حدث خطأ JavaScript مبكر فلن تبقى
+      // النافذة فارغة، ويعيد تشغيل الواجهة مرة واحدة ثم يترك رسالة واضحة.
+      window.__magProReady = false;
+      window.addEventListener("error", function () {
+        var status = document.getElementById("status");
+        if (status) status.textContent = "جارٍ استعادة الاتصال…";
+      });
+      setTimeout(function () {
+        var visible = Array.from(document.querySelectorAll(".screen")).some(function (el) {
+          return getComputedStyle(el).display !== "none";
+        });
+        if (!visible) {
+          var running = document.getElementById("running");
+          if (running) running.style.display = "flex";
+        }
+      }, 3000);
+    </script>
   </body>
 </html>
