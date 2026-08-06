@@ -317,8 +317,10 @@ function startAdaptive(entry, sender) {
   const MAX = 40_000_000;  // سقف عالي جداً لأعلى كفاءة وضوح
   let target = 14_000_000;
   let lastLost = 0;
+  let lastPackets = 0;
   let lastFramesEncoded = -1;
   let frozenTicks = 0;
+
 
   entry.statsTimer = setInterval(async () => {
     if (!entry.pc || entry.pc.connectionState !== "connected") return;
