@@ -229,27 +229,39 @@ function Admin() {
           <header className="h-14 flex items-center gap-3 border-b border-border/40 backdrop-blur-xl bg-background/80 sticky top-0 z-30 px-4">
             <SidebarTrigger />
             <h1 className="font-bold">{visibleNavGroups.flatMap((g) => g.items).find((i) => i.key === panel)?.label}</h1>
+            {adminOnly && !basePanels.includes(panel) && (
+              <label className="ms-auto flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                <span>إظهار للموظف (قراءة فقط)</span>
+                <Switch checked={shared.includes(panel)} onCheckedChange={(v) => void toggleShare(panel, v)} />
+              </label>
+            )}
+            {readOnly && (
+              <Badge variant="outline" className="ms-auto gap-1"><Lock className="size-3" />عرض فقط</Badge>
+            )}
           </header>
           <main className="flex-1 p-4 md:p-6 overflow-x-hidden">
-            {panel === "overview" && !isEmployee && <OverviewTab />}
+            <ReadOnlyGuard active={readOnly}>
+            {panel === "overview" && canView("overview") && <OverviewTab />}
             {panel === "orders" && <OrdersTab isAdmin={adminOnly} />}
-            {panel === "customers" && !isEmployee && <CustomersTab />}
-            {panel === "reviews" && !isEmployee && <ReviewsTab />}
-            {panel === "reports" && adminOnly && <ReportsTab />}
-            {panel === "cardtx" && adminOnly && <CardTransactionsTab />}
-            {panel === "bybit" && adminOnly && <BybitTab />}
+            {panel === "customers" && canView("customers") && <CustomersTab />}
+            {panel === "reviews" && canView("reviews") && <ReviewsTab />}
+            {panel === "reports" && canView("reports") && <ReportsTab />}
+            {panel === "cardtx" && canView("cardtx") && <CardTransactionsTab />}
+            {panel === "bybit" && canView("bybit") && <BybitTab />}
 
-            {panel === "products" && !isEmployee && <ProductsTab />}
-            {panel === "categories" && adminOnly && <CategoriesTab />}
-            {panel === "timers" && !isEmployee && <TimersTab />}
-            {panel === "employees" && adminOnly && <EmployeesTab />}
+            {panel === "products" && canView("products") && <ProductsTab />}
+            {panel === "categories" && canView("categories") && <CategoriesTab />}
+            {panel === "timers" && canView("timers") && <TimersTab />}
+            {panel === "employees" && canView("employees") && <EmployeesTab />}
             {panel === "courses" && <CoursesTab isAdmin={adminOnly} />}
-            
-            {panel === "remote" && adminOnly && <DeviceMonitorGrid screensOnly />}
-            {panel === "payments" && adminOnly && <PaymentsTab />}
-            {panel === "currencies" && adminOnly && <CurrenciesTab />}
-            {panel === "settings" && adminOnly && <SettingsTab />}
+
+            {panel === "remote" && canView("remote") && <DeviceMonitorGrid screensOnly />}
+            {panel === "payments" && canView("payments") && <PaymentsTab />}
+            {panel === "currencies" && canView("currencies") && <CurrenciesTab />}
+            {panel === "settings" && canView("settings") && <SettingsTab />}
+            </ReadOnlyGuard>
           </main>
+
         </div>
       </div>
     </SidebarProvider>
