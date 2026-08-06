@@ -585,7 +585,8 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
       if (lastError) probeErrors.push(lastError);
     }
 
-
+    // نفس النداء يرجع الرصيد المتاح في البطاقة أيضًا
+    const balance = await cardBalance().catch(() => ({ usd: 0, fiatUsd: 0, cryptoUsd: 0, source: "" }));
 
     if (cardRows.length > 0) {
       const unique = [...new Map(cardRows.map((row) => [row.id, row])).values()];
@@ -607,7 +608,7 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
         { onConflict: "source,external_id", ignoreDuplicates: false },
       );
       if (saveError) console.error("Bybit card transaction save failed", saveError.message);
-      return { configured: true as const, source: cardPath, rows: unique, errors: [] };
+      return { configured: true as const, source: cardPath, rows: unique, balance, errors: [] };
     }
 
 
@@ -616,8 +617,10 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
       configured: true as const,
       source: cardPath,
       rows: [],
+      balance,
       errors: probeErrors.filter((message) => !/rate limit|too many visits|param_illegal/i.test(message)).slice(0, 1),
     };
+
   });
 
 /**
