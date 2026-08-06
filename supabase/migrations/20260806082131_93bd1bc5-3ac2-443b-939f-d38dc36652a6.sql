@@ -1,0 +1,1 @@
+CREATE POLICY "card tx staff read" ON public.card_transactions FOR SELECT TO authenticated USING (private.is_staff(auth.uid()));
