@@ -186,23 +186,26 @@ export const getBybitActivity = createServerFn({ method: "POST" })
       ];
 
       const prices = await usdPrices(missing);
-      // قوة الشراء في لوحة بطاقة باي بت = الرصيد القابل للصرف بعد هامش تحويل
-      // 1.4% على أي عملة غير الدولار (USD الفعلي يُصرف 1:1 بدون هامش).
-      const CARD_SPREAD = 0.014;
+      // باي بت لا توفّر أي endpoint لرصيد البطاقة (كل مسارات /v5/card/*balance
+      // ترجع 404)، لذا نحسب "الرصيد المتاح" من الرصيد القابل للصرف في حساب
+      // التمويل بنفس سعر تحويل البطاقة الفعلي المعاير من شاشة البطاقة نفسها
+      // (USD 389.42 مقابل USDT 393.97 = 0.987258 لكل دولار).
+      const CARD_RATE = 0.987258;
       return raw.map((a) => {
         const coins = a.coins.map((c) =>
           c.usdValue > 0 ? c : { ...c, usdValue: c.balance * (prices.get(c.coin) ?? 0) },
         );
         const totalUsd = coins.reduce((s, c) => s + c.usdValue, 0);
         const isFiat = (coin: string) => /^USD$/i.test(coin);
-        // تفصيل قوة الشراء كما تعرضه لوحة بطاقة باي بت: Fiat + Crypto
+        // تفصيل الرصيد المتاح كما تعرضه شاشة بطاقة باي بت: Fiat + Crypto
         const fiatUsd = coins
           .filter((c) => isFiat(c.coin))
           .reduce((s, c) => s + c.usdValue, 0);
         const cryptoUsd = coins
           .filter((c) => !isFiat(c.coin))
-          .reduce((s, c) => s + c.usdValue * (1 - CARD_SPREAD), 0);
+          .reduce((s, c) => s + c.usdValue * CARD_RATE, 0);
         const estimated = fiatUsd + cryptoUsd;
+
 
         return {
           ...a,
