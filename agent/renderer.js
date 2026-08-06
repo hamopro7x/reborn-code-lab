@@ -434,15 +434,14 @@ async function startPeer(viewerId) {
     peers.set(viewerId, entry);
     window.agent.setViewerCount?.(peers.size);
 
-    // كل مشاهد يحصل على نسخة مستقلة من مسار الشاشة (clone) => مشفّر منفصل
-    // ومعدّل بت-ريت منفصل. مشاركة نفس المسار بين اتصالين كانت تجعل
-    // التكيّف (scaleResolutionDownBy/framerate) يتصارع فيتوقف البث الثاني.
-    const base = s.getVideoTracks()[0];
-    if (!base) throw new Error("لا يوجد مسار فيديو");
-    const track = base.clone();
+    // نستخدم مسار الشاشة الأصلي نفسه لكل مشاهد. كل اتصال (PeerConnection)
+    // له مشفّر مستقل أصلاً، أما نسخ المسار (clone) في Electron كان يتوقف عن
+    // إنتاج إطارات بعد فترة فتتجمّد الصورة عند الأدمن بينما الحالة "متصل".
+    const track = s.getVideoTracks()[0];
+    if (!track) throw new Error("لا يوجد مسار فيديو");
     track.contentHint = "detail";
-    entry.track = track;
-    pc.addTrack(track, new MediaStream([track]));
+    pc.addTrack(track, s);
+
 
     let videoSender = null;
     for (const sender of pc.getSenders()) {
