@@ -312,11 +312,16 @@ async function getStream() {
 function startAdaptive(entry, sender) {
   if (entry.statsTimer) clearInterval(entry.statsTimer);
 
-  const MIN = 6_000_000;   // أرضية عالية: لا تقل الجودة عند الحركة
+  // أرضية منخفضة: عند ضيق الشبكة نُنزل الـ bitrate بدل تجمّد الصورة تماماً
+  const MIN = 1_200_000;
   const MAX = 40_000_000;  // سقف عالي جداً لأعلى كفاءة وضوح
   let target = 14_000_000;
   let lastLost = 0;
   let lastPackets = 0;
+  let lastFramesEncoded = -1;
+  let frozenTicks = 0;
+
+
   entry.statsTimer = setInterval(async () => {
     if (!entry.pc || entry.pc.connectionState !== "connected") return;
     try {
@@ -325,10 +330,15 @@ function startAdaptive(entry, sender) {
       let lost = 0;
       let packets = 0;
       let avail = 0;
+      let framesEncoded = -1;
       stats.forEach((r) => {
         if (r.type === "remote-inbound-rtp") {
           if (typeof r.roundTripTime === "number") rtt = r.roundTripTime;
           if (typeof r.packetsLost === "number") lost = r.packetsLost;
+        }
+        if (r.type === "outbound-rtp" && r.kind === "video") {
+          if (typeof r.packetsSent === "number") packets = r.packetsSent;
+          if (typeof r.framesEncoded === "number") framesEncoded = r.framesEncoded;
         }
         if (r.type === "candidate-pair" && r.state === "succeeded") {
           if (typeof r.availableOutgoingBitrate === "number") avail = r.availableOutgoingBitrate;
@@ -341,6 +351,23 @@ function startAdaptive(entry, sender) {
       lastPackets = packets;
       const lossRate = dLost / dPackets;
 
+      // الصورة متجمّدة عند المشاهد؟ المشفّر واقف => نطلب إطاراً مفتاحياً
+      // ونهبط بالـ bitrate خطوة حتى يستأنف البث فوراً بدل ما يفضل واقف.
+      if (framesEncoded >= 0) {
+        if (framesEncoded === lastFramesEncoded) {
+          frozenTicks += 1;
+          if (frozenTicks >= 2) {
+            frozenTicks = 0;
+            target = Math.max(MIN, Math.round(target * 0.6));
+            try { sender.generateKeyFrame?.(); } catch {}
+            try { entry.pc.restartIce?.(); } catch {}
+          }
+        } else {
+          frozenTicks = 0;
+        }
+        lastFramesEncoded = framesEncoded;
+      }
+
       const severe = rtt > 0.5 || lossRate > 0.12;
       if (avail > 0) {
         const safe = Math.round(avail * 0.95);
@@ -352,6 +379,7 @@ function startAdaptive(entry, sender) {
         target = Math.round(target * 1.2 + 1_000_000);
       }
       target = Math.max(MIN, Math.min(MAX, target));
+
 
       const params = sender.getParameters();
       if (params.encodings?.[0]) {
@@ -377,8 +405,8 @@ function closePeer(viewerId) {
   if (entry.recoverTimer) clearTimeout(entry.recoverTimer);
   if (entry.connectTimer) clearTimeout(entry.connectTimer);
   try { entry.pc.close(); } catch {}
-  // نوقف نسخة المسار الخاصة بهذا المشاهد فقط — المصدر يبقى للباقين
-  try { entry.track?.stop(); } catch {}
+  // مسار الشاشة مشترك بين كل المشاهدين — لا نوقفه هنا
+
   peers.delete(viewerId);
   window.agent.setViewerCount?.(peers.size);
   setStatus(peers.size > 0 ? `متصل · ${peers.size} مشاهد` : "متصل", true);
@@ -406,15 +434,14 @@ async function startPeer(viewerId) {
     peers.set(viewerId, entry);
     window.agent.setViewerCount?.(peers.size);
 
-    // كل مشاهد يحصل على نسخة مستقلة من مسار الشاشة (clone) => مشفّر منفصل
-    // ومعدّل بت-ريت منفصل. مشاركة نفس المسار بين اتصالين كانت تجعل
-    // التكيّف (scaleResolutionDownBy/framerate) يتصارع فيتوقف البث الثاني.
-    const base = s.getVideoTracks()[0];
-    if (!base) throw new Error("لا يوجد مسار فيديو");
-    const track = base.clone();
+    // نستخدم مسار الشاشة الأصلي نفسه لكل مشاهد. كل اتصال (PeerConnection)
+    // له مشفّر مستقل أصلاً، أما نسخ المسار (clone) في Electron كان يتوقف عن
+    // إنتاج إطارات بعد فترة فتتجمّد الصورة عند الأدمن بينما الحالة "متصل".
+    const track = s.getVideoTracks()[0];
+    if (!track) throw new Error("لا يوجد مسار فيديو");
     track.contentHint = "detail";
-    entry.track = track;
-    pc.addTrack(track, new MediaStream([track]));
+    pc.addTrack(track, s);
+
 
     let videoSender = null;
     for (const sender of pc.getSenders()) {
@@ -451,8 +478,15 @@ async function startPeer(viewerId) {
         if (entry.connectTimer) { clearTimeout(entry.connectTimer); entry.connectTimer = null; }
         if (entry.recoverTimer) { clearTimeout(entry.recoverTimer); entry.recoverTimer = null; }
         setStatus(`متصل · ${peers.size} مشاهد`, true);
-        // اطلب keyframe فور اكتمال ICE لتظهر الصورة بدون انتظار دورة المشفّر.
+        // رشقة إطارات مفتاحية في أول ثوانٍ: تظهر الصورة فوراً ولا تبقى
+        // متجمّدة لو ضاع أول keyframe في الشبكة.
+        let kf = 0;
+        const kfTimer = setInterval(() => {
+          if (++kf > 6 || pc.connectionState !== "connected") return clearInterval(kfTimer);
+          try { videoSender?.generateKeyFrame?.(); } catch {}
+        }, 700);
         try { videoSender?.generateKeyFrame?.(); } catch {}
+
       }
       // انقطاع مؤقت للشبكة: نحاول إصلاح مسار ICE بدل قطع البث فوراً
       if (pc.connectionState === "disconnected") {
