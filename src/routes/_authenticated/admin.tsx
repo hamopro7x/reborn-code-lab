@@ -79,16 +79,39 @@ function Admin() {
   };
   const isEmployee = role === "employee";
   const adminOnly = role === "admin";
+  const qc = useQueryClient();
+  const sharedQ = useQuery({
+    queryKey: ["employee-panels"],
+    queryFn: async () => {
+      const { data } = await supabase.from("site_settings").select("value").eq("key", "employee_panels").maybeSingle();
+      const v = (data?.value ?? {}) as any;
+      return Array.isArray(v.panels) ? (v.panels as PanelKey[]) : [];
+    },
+    refetchInterval: 5000,
+  });
+  const shared = sharedQ.data ?? [];
+  const basePanels: PanelKey[] = ["orders", "courses"];
+  const employeeAllowed = (key: PanelKey) => basePanels.includes(key) || shared.includes(key);
+  const canView = (key: PanelKey) => adminOnly || employeeAllowed(key);
+  const readOnly = isEmployee && !basePanels.includes(panel);
+  async function toggleShare(key: PanelKey, on: boolean) {
+    const next = on ? Array.from(new Set([...shared, key])) : shared.filter((k) => k !== key);
+    const { error } = await supabase.from("site_settings").upsert({ key: "employee_panels", value: { panels: next } as any }, { onConflict: "key" });
+    if (error) { toast.error("فشل الحفظ"); return; }
+    toast.success(on ? "تم إظهار القسم للموظف" : "تم إخفاء القسم عن الموظف");
+    qc.invalidateQueries({ queryKey: ["employee-panels"] });
+  }
   const identityFn = useServerFn(getViewerIdentity);
   const [me, setMe] = useState<{ email: string; full_name: string; avatar_url: string } | null>(null);
   useEffect(() => {
     if (role !== "admin" && role !== "employee") return;
     identityFn().then((v: any) => setMe(v)).catch(() => {});
   }, [role, identityFn]);
-  // Employees only see the Orders section
+  // Employees only see the sections the admin shared with them
   useEffect(() => {
-    if (isEmployee && panel !== "orders" && panel !== "courses") setPanel("orders");
-  }, [isEmployee, panel]);
+    if (isEmployee && !employeeAllowed(panel)) setPanel("orders");
+  }, [isEmployee, panel, shared.join(",")]);
+
   if (role === null) return <div className="p-8 text-center">جاري التحقق...</div>;
   if (role !== "admin" && role !== "employee") {
     return (
@@ -138,11 +161,11 @@ function Admin() {
     },
   ];
   const visibleNavGroups = isEmployee
-    ? [{ label: "العمليات", items: [
-        { key: "orders" as PanelKey, label: "الطلبات", icon: ShoppingCart },
-        { key: "courses" as PanelKey, label: "كورسات التدريب", icon: GraduationCap },
-      ] }]
+    ? navGroups
+        .map((g) => ({ ...g, items: g.items.filter((i) => employeeAllowed(i.key)) }))
+        .filter((g) => g.items.length > 0)
     : navGroups;
+
 
   return (
     <SidebarProvider>
@@ -171,7 +194,7 @@ function Admin() {
                 <SidebarGroupLabel>{g.label}</SidebarGroupLabel>
                 <SidebarGroupContent>
                   <SidebarMenu>
-                    {g.items.filter((i) => !i.adminOnly || adminOnly).map((i) => (
+                    {g.items.filter((i) => adminOnly || employeeAllowed(i.key)).map((i) => (
                       <SidebarMenuItem key={i.key}>
                         <SidebarMenuButton isActive={panel === i.key} onClick={() => setPanel(i.key)}>
                           <i.icon className="size-4" />
@@ -206,34 +229,61 @@ function Admin() {
           <header className="h-14 flex items-center gap-3 border-b border-border/40 backdrop-blur-xl bg-background/80 sticky top-0 z-30 px-4">
             <SidebarTrigger />
             <h1 className="font-bold">{visibleNavGroups.flatMap((g) => g.items).find((i) => i.key === panel)?.label}</h1>
+            {adminOnly && !basePanels.includes(panel) && (
+              <label className="ms-auto flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                <span>إظهار للموظف (قراءة فقط)</span>
+                <Switch checked={shared.includes(panel)} onCheckedChange={(v) => void toggleShare(panel, v)} />
+              </label>
+            )}
+            {readOnly && (
+              <Badge variant="outline" className="ms-auto gap-1"><Lock className="size-3" />عرض فقط</Badge>
+            )}
           </header>
           <main className="flex-1 p-4 md:p-6 overflow-x-hidden">
-            {panel === "overview" && !isEmployee && <OverviewTab />}
+            <ReadOnlyGuard active={readOnly}>
+            {panel === "overview" && canView("overview") && <OverviewTab />}
             {panel === "orders" && <OrdersTab isAdmin={adminOnly} />}
-            {panel === "customers" && !isEmployee && <CustomersTab />}
-            {panel === "reviews" && !isEmployee && <ReviewsTab />}
-            {panel === "reports" && adminOnly && <ReportsTab />}
-            {panel === "cardtx" && adminOnly && <CardTransactionsTab />}
-            {panel === "bybit" && adminOnly && <BybitTab />}
+            {panel === "customers" && canView("customers") && <CustomersTab />}
+            {panel === "reviews" && canView("reviews") && <ReviewsTab />}
+            {panel === "reports" && canView("reports") && <ReportsTab />}
+            {panel === "cardtx" && canView("cardtx") && <CardTransactionsTab />}
+            {panel === "bybit" && canView("bybit") && <BybitTab />}
 
-            {panel === "products" && !isEmployee && <ProductsTab />}
-            {panel === "categories" && adminOnly && <CategoriesTab />}
-            {panel === "timers" && !isEmployee && <TimersTab />}
-            {panel === "employees" && adminOnly && <EmployeesTab />}
+            {panel === "products" && canView("products") && <ProductsTab />}
+            {panel === "categories" && canView("categories") && <CategoriesTab />}
+            {panel === "timers" && canView("timers") && <TimersTab />}
+            {panel === "employees" && canView("employees") && <EmployeesTab />}
             {panel === "courses" && <CoursesTab isAdmin={adminOnly} />}
-            
-            {panel === "remote" && adminOnly && <DeviceMonitorGrid screensOnly />}
-            {panel === "payments" && adminOnly && <PaymentsTab />}
-            {panel === "currencies" && adminOnly && <CurrenciesTab />}
-            {panel === "settings" && adminOnly && <SettingsTab />}
+
+            {panel === "remote" && canView("remote") && <DeviceMonitorGrid screensOnly />}
+            {panel === "payments" && canView("payments") && <PaymentsTab />}
+            {panel === "currencies" && canView("currencies") && <CurrenciesTab />}
+            {panel === "settings" && canView("settings") && <SettingsTab />}
+            </ReadOnlyGuard>
           </main>
+
         </div>
       </div>
     </SidebarProvider>
   );
 }
 
+// ============ READ ONLY WRAPPER ============
+function ReadOnlyGuard({ active, children }: { active: boolean; children: React.ReactNode }) {
+  if (!active) return <>{children}</>;
+  return (
+    <fieldset
+      disabled
+      className="min-w-0 [&_button:not([role=tab])]:pointer-events-none [&_[role=switch]]:pointer-events-none [&_input]:pointer-events-none [&_select]:pointer-events-none [&_textarea]:pointer-events-none"
+    >
+
+      {children}
+    </fieldset>
+  );
+}
+
 // ============ OVERVIEW ============
+
 function OverviewTab() {
   const qc = useQueryClient();
   const stats = useQuery({
