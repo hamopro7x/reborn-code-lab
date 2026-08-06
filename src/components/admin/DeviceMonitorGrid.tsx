@@ -211,34 +211,48 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
         scheduleReconnect(8000);
       });
 
-    // مراقب توقّف الصورة: نحاول إصلاح الشبكة أولاً قبل إعادة بناء الاتصال
-    let lastTime = -1;
+    // مراقب توقّف الصورة: نعتمد على عدد الإطارات المفكوكة فعلاً (framesDecoded)
+    // لأن الشاشة قد تتجمّد بينما currentTime يتقدّم، فتظهر "بث مباشر" بلا صورة.
+    let lastFrames = -1;
     let stalled = 0;
     const watchdog = setInterval(() => {
       const v = videoRef.current;
       if (closed || !v || !v.srcObject) return;
-      if (v.currentTime === lastTime) {
-        stalled += 1;
-        if (stalled === 2) {
-          // تجميد ~4 ثوانٍ: إصلاح مسار ICE بدون قطع البث
-          setLive(false);
-          try {
-            pc.restartIce();
-          } catch {
-            /* غير مدعوم */
+      void pc
+        .getStats()
+        .then((stats) => {
+          if (closed) return;
+          let frames = -1;
+          stats.forEach((r: any) => {
+            if (r.type === "inbound-rtp" && r.kind === "video" && typeof r.framesDecoded === "number") {
+              frames = r.framesDecoded;
+            }
+          });
+          if (frames < 0) return;
+          if (frames === lastFrames) {
+            stalled += 1;
+            setLive(false);
+            if (stalled === 2) {
+              // تجميد ~3 ثوانٍ: إصلاح مسار ICE بدون قطع البث
+              try {
+                pc.restartIce();
+              } catch {
+                /* غير مدعوم */
+              }
+              void v.play().catch(() => {});
+            } else if (stalled >= 4) {
+              stalled = 0;
+              scheduleReconnect(400);
+            }
+          } else {
+            stalled = 0;
+            lastFrames = frames;
+            setLive(true);
           }
-          void v.play().catch(() => {});
-        } else if (stalled >= 5) {
-          stalled = 0;
-          setLive(false);
-          scheduleReconnect(500);
-        }
-      } else {
-        stalled = 0;
-        lastTime = v.currentTime;
-        setLive(true);
-      }
+        })
+        .catch(() => {});
     }, 1500);
+
 
 
     return () => {
