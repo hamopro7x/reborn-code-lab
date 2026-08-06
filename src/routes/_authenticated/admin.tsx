@@ -194,7 +194,7 @@ function Admin() {
                 <SidebarGroupLabel>{g.label}</SidebarGroupLabel>
                 <SidebarGroupContent>
                   <SidebarMenu>
-                    {g.items.filter((i) => !i.adminOnly || adminOnly).map((i) => (
+                    {g.items.filter((i) => adminOnly || employeeAllowed(i.key)).map((i) => (
                       <SidebarMenuItem key={i.key}>
                         <SidebarMenuButton isActive={panel === i.key} onClick={() => setPanel(i.key)}>
                           <i.icon className="size-4" />
