@@ -127,7 +127,8 @@ function MerchantIcon({ name }: { name: string }) {
 function CardBrandIcon({ last4, brand }: { last4?: string; brand?: string }) {
   // بطاقتا الحساب تم التحقق منهما من شاشة Bybit نفسها. هذا يصحح السجلات
   // القديمة التي حُفظت قبل إصلاح ربط شبكة البطاقة.
-  const verifiedBrand = last4 === "3256" ? "visa" : last4 === "8331" ? "mastercard" : "";
+  const verifiedBrand =
+    last4 === "3256" ? "visa" : last4 === "8331" || last4 === "4350" ? "mastercard" : "";
   const net = (verifiedBrand || brand || "").toLowerCase();
   const mastercard = /master\s*card|master|\bmc\b/.test(net);
   const visa = /visa/.test(net);
