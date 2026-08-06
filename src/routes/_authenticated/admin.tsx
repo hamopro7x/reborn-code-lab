@@ -1978,6 +1978,8 @@ function DevicesTab() {
   const [newFp, setNewFp] = useState<string>("");
   const [newLabel, setNewLabel] = useState<string>("");
   const [saving, setSaving] = useState(false);
+  const [filterUser, setFilterUser] = useState<string>("");
+
   async function addDevice() {
     if (!newUserId || newFp.trim().length < 6) { toast.error("اختر موظف وأدخل معرّف الجهاز"); return; }
     setSaving(true);
@@ -1995,6 +1997,8 @@ function DevicesTab() {
     if (!grouped.has(d.user_id)) grouped.set(d.user_id, []);
     grouped.get(d.user_id)!.push(d);
   }
+  const entries = Array.from(grouped.entries()).filter(([uid]) => !filterUser || uid === filterUser);
+
 
   return (
     <div className="space-y-4">
@@ -2026,10 +2030,21 @@ function DevicesTab() {
         </Button>
       </div>
 
-      {devices.isLoading ? <Loader2 className="animate-spin mx-auto" /> :
-        !grouped.size ? <div className="card-surface p-8 text-center text-muted-foreground rounded-2xl">لا توجد أجهزة مسجّلة بعد</div> :
-        <div className="space-y-3">
+      <div className="card-surface rounded-2xl p-4 space-y-2">
+        <Label className="text-xs">عرض أجهزة موظف محدد</Label>
+        <select value={filterUser} onChange={(e) => setFilterUser(e.target.value)} className="w-full h-10 rounded-xl border border-border/60 bg-background px-3 text-sm">
+          <option value="">— كل الموظفين —</option>
           {Array.from(grouped.entries()).map(([uid, list]) => (
+            <option key={uid} value={uid}>{list[0].full_name || list[0].email} ({list.length})</option>
+          ))}
+        </select>
+      </div>
+
+      {devices.isLoading ? <Loader2 className="animate-spin mx-auto" /> :
+        !entries.length ? <div className="card-surface p-8 text-center text-muted-foreground rounded-2xl">لا توجد أجهزة مسجّلة بعد</div> :
+        <div className="space-y-3">
+          {entries.map(([uid, list]) => (
+
             <div key={uid} className="card-surface rounded-2xl p-4">
               <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
                 <div>
