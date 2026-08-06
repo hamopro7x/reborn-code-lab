@@ -281,7 +281,7 @@ export function CardTransactionsTab() {
         <div className="p-5 md:p-6 bg-gradient-to-br from-muted/60 to-transparent">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <div className="text-xs text-muted-foreground">Spending Power · قوة الشراء</div>
+              <div className="text-xs text-muted-foreground">الرصيد المتاح في البطاقة</div>
               <div className="mt-1 text-4xl font-black tracking-tight tabular-nums">
                 USD {money(spendingPower)}
               </div>
