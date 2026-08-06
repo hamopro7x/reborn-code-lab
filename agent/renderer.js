@@ -315,6 +315,25 @@ async function getStream() {
   return stream;
 }
 
+function waitForIceGathering(pc, timeoutMs = 1800) {
+  if (pc.iceGatheringState === "complete") return Promise.resolve();
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      pc.removeEventListener("icegatheringstatechange", onChange);
+      resolve();
+    };
+    const onChange = () => {
+      if (pc.iceGatheringState === "complete") finish();
+    };
+    const timer = setTimeout(finish, timeoutMs);
+    pc.addEventListener("icegatheringstatechange", onChange);
+  });
+}
+
 // متحكّم quality-first: الدقة ثابتة دائماً (بدون تصغير) والجودة عالية جداً.
 // أثناء الحركة لا نخفض الوضوح — نتحكّم فقط في الـ bitrate ضمن سقف عالٍ.
 function startAdaptive(entry, sender) {
@@ -522,7 +541,13 @@ async function startPeer(viewerId) {
 
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
-    entry.offer = { type: offer.type, sdp: offer.sdp };
+    // ننتظر تجميع المرشحين ونضمّنهم داخل SDP نفسه. هذا يمنع ضياع مرشحي ICE
+    // المنفصلين عند فتح أربع شاشات في وقت واحد، خصوصاً على شبكات الموظفين
+    // المختلفة أو المقيدة.
+    await waitForIceGathering(pc);
+    const completeOffer = pc.localDescription;
+    if (!completeOffer) throw new Error("تعذّر إنشاء عرض الاتصال");
+    entry.offer = { type: completeOffer.type, sdp: completeOffer.sdp };
     await send({ type: "offer", to: viewerId, sdp: entry.offer });
     entry.connectTimer = setTimeout(() => {
       entry.connectTimer = null;

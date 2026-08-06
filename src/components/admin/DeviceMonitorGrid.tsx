@@ -169,7 +169,28 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
             }
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
-            await sig.send({ type: "answer", sdp: answer, viewer: viewerId });
+            // ننتظر قليلاً حتى تدخل مرشحات ICE في الإجابة نفسها؛ الرسائل
+            // المنفصلة تظل مساراً سريعاً، لكن الاتصال لم يعد يعتمد عليها.
+            if (pc.iceGatheringState !== "complete") {
+              await new Promise<void>((resolve) => {
+                let settled = false;
+                const finish = () => {
+                  if (settled) return;
+                  settled = true;
+                  clearTimeout(timeout);
+                  pc.removeEventListener("icegatheringstatechange", onChange);
+                  resolve();
+                };
+                const onChange = () => {
+                  if (pc.iceGatheringState === "complete") finish();
+                };
+                const timeout = setTimeout(finish, 1800);
+                pc.addEventListener("icegatheringstatechange", onChange);
+              });
+            }
+            const completeAnswer = pc.localDescription;
+            if (!completeAnswer) throw new Error("تعذّر إنشاء إجابة الاتصال");
+            await sig.send({ type: "answer", sdp: completeAnswer, viewer: viewerId });
           } catch {
             acceptedOfferSdp = undefined;
             scheduleReconnect(400);
