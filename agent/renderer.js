@@ -478,8 +478,15 @@ async function startPeer(viewerId) {
         if (entry.connectTimer) { clearTimeout(entry.connectTimer); entry.connectTimer = null; }
         if (entry.recoverTimer) { clearTimeout(entry.recoverTimer); entry.recoverTimer = null; }
         setStatus(`متصل · ${peers.size} مشاهد`, true);
-        // اطلب keyframe فور اكتمال ICE لتظهر الصورة بدون انتظار دورة المشفّر.
+        // رشقة إطارات مفتاحية في أول ثوانٍ: تظهر الصورة فوراً ولا تبقى
+        // متجمّدة لو ضاع أول keyframe في الشبكة.
+        let kf = 0;
+        const kfTimer = setInterval(() => {
+          if (++kf > 6 || pc.connectionState !== "connected") return clearInterval(kfTimer);
+          try { videoSender?.generateKeyFrame?.(); } catch {}
+        }, 700);
         try { videoSender?.generateKeyFrame?.(); } catch {}
+
       }
       // انقطاع مؤقت للشبكة: نحاول إصلاح مسار ICE بدل قطع البث فوراً
       if (pc.connectionState === "disconnected") {
