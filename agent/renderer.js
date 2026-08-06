@@ -315,15 +315,37 @@ async function getStream() {
   return stream;
 }
 
+function waitForIceGathering(pc, timeoutMs = 1800) {
+  if (pc.iceGatheringState === "complete") return Promise.resolve();
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      pc.removeEventListener("icegatheringstatechange", onChange);
+      resolve();
+    };
+    const onChange = () => {
+      if (pc.iceGatheringState === "complete") finish();
+    };
+    const timer = setTimeout(finish, timeoutMs);
+    pc.addEventListener("icegatheringstatechange", onChange);
+  });
+}
+
 // متحكّم quality-first: الدقة ثابتة دائماً (بدون تصغير) والجودة عالية جداً.
 // أثناء الحركة لا نخفض الوضوح — نتحكّم فقط في الـ bitrate ضمن سقف عالٍ.
 function startAdaptive(entry, sender) {
   if (entry.statsTimer) clearInterval(entry.statsTimer);
 
   // أرضية منخفضة: عند ضيق الشبكة نُنزل الـ bitrate بدل تجمّد الصورة تماماً
-  const MIN = 1_200_000;
-  const MAX = 40_000_000;  // سقف عالي جداً لأعلى كفاءة وضوح
-  let target = 14_000_000;
+  const MIN = 800_000;
+  const MAX = 12_000_000;
+  // البداية المتوسطة مهمة عند عرض عدة أجهزة معاً: بدء كل شاشة على 14Mbps
+  // كان يملأ اتصال الأدمن فوراً فتنجح أول شاشة فقط وتسقط بقية اتصالات ICE.
+  // نحافظ على الدقة الأصلية ونزيد السرعة تدريجياً حسب السعة الحقيقية.
+  let target = 3_500_000;
   let lastLost = 0;
   let lastPackets = 0;
   let lastFramesEncoded = -1;
@@ -378,13 +400,15 @@ function startAdaptive(entry, sender) {
 
       const severe = rtt > 0.5 || lossRate > 0.12;
       if (avail > 0) {
-        const safe = Math.round(avail * 0.95);
+        const safe = Math.max(MIN, Math.round(avail * 0.82));
         if (severe) target = Math.max(MIN, Math.min(Math.round(target * 0.85), safe));
-        else target = Math.min(MAX, Math.max(safe, Math.round(target * 1.2 + 1_000_000)));
+        // لا نتجاوز السعة المتاحة. Math.max هنا سابقاً كان يختار رقماً أعلى
+        // من السعة نفسها، فينشأ طابور فيديو ويصبح باقي الأجهزة "جاري الاتصال".
+        else target = Math.min(MAX, safe, Math.round(target * 1.12 + 250_000));
       } else if (severe) {
-        target = Math.round(target * 0.85);
+        target = Math.round(target * 0.75);
       } else {
-        target = Math.round(target * 1.2 + 1_000_000);
+        target = Math.round(target * 1.08 + 150_000);
       }
       target = Math.max(MIN, Math.min(MAX, target));
 
@@ -465,8 +489,8 @@ async function startPeer(viewerId) {
         params.encodings = [
           {
             ...(params.encodings?.[0] ?? {}),
-            // جودة عالية ثابتة من أول إطار — لا تنخفض مع الحركة
-            maxBitrate: 14_000_000,
+            // بداية متوازنة تسمح بتشغيل كل الشاشات معاً؛ الدقة لا تُصغّر.
+            maxBitrate: 3_500_000,
             maxFramerate: 30,
             scaleResolutionDownBy: 1,
             networkPriority: "high",
@@ -517,7 +541,13 @@ async function startPeer(viewerId) {
 
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
-    entry.offer = { type: offer.type, sdp: offer.sdp };
+    // ننتظر تجميع المرشحين ونضمّنهم داخل SDP نفسه. هذا يمنع ضياع مرشحي ICE
+    // المنفصلين عند فتح أربع شاشات في وقت واحد، خصوصاً على شبكات الموظفين
+    // المختلفة أو المقيدة.
+    await waitForIceGathering(pc);
+    const completeOffer = pc.localDescription;
+    if (!completeOffer) throw new Error("تعذّر إنشاء عرض الاتصال");
+    entry.offer = { type: completeOffer.type, sdp: completeOffer.sdp };
     await send({ type: "offer", to: viewerId, sdp: entry.offer });
     entry.connectTimer = setTimeout(() => {
       entry.connectTimer = null;
@@ -646,9 +676,10 @@ async function run(device) {
   // قناة الإشارات القديمة المفتوحة أُزيلت. البرنامج يسحب فقط الطلبات
   // التي مرّت بسياسة الأدمن، مستخدماً مفتاح الجهاز السري.
   await exchangeSignals(device);
-  // الطلب الطويل المتداخل كان يكوّن طابوراً من محاولات السحب. 180ms كافية
-  // لاتصال سريع وتترك الشبكة والمشفّر للبث نفسه.
-  signalTimer = setInterval(() => void exchangeSignals(device), 180);
+  // كل جهاز كان يرسل أكثر من 5 طلبات في الثانية؛ مع عدة موظفين يزدحم مسار
+  // الإشارات وتفوز شاشة واحدة فقط. 650ms سريعة للمشاهدة وتقلل الحمل بشدة،
+  // مع فرق عشوائي صغير حتى لا تطلب كل الأجهزة في اللحظة نفسها.
+  signalTimer = setInterval(() => void exchangeSignals(device), 600 + Math.floor(Math.random() * 150));
   setStatus("متصل", true);
 }
 
