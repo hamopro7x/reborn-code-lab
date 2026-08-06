@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { getBybitActivity, getBybitCardRewards, getBybitCardTransactions } from "@/lib/bybit.functions";
+import { getBybitCardRewards, getBybitCardTransactions } from "@/lib/bybit.functions";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, CreditCard, AlertTriangle } from "lucide-react";
 
@@ -175,7 +175,6 @@ const cardKindLabel = (kind?: string) =>
 
 export function CardTransactionsTab() {
   const fetchCard = useServerFn(getBybitCardTransactions);
-  const fetchActivity = useServerFn(getBybitActivity);
   const fetchRewards = useServerFn(getBybitCardRewards);
   const [tab, setTab] = useState<"all" | "purchase_ok" | "purchase_failed" | "refund">("all");
 
@@ -189,13 +188,6 @@ export function CardTransactionsTab() {
   const { data: live, isLoading, isFetching, refetch } = useQuery({
     queryKey: ["bybit-card-live"],
     queryFn: () => fetchCard(),
-    refetchInterval: 10_000,
-    retry: false,
-  });
-
-  const { data: activity } = useQuery({
-    queryKey: ["bybit-activity", 30],
-    queryFn: () => fetchActivity({ data: { days: 30 } }),
     refetchInterval: 10_000,
     retry: false,
   });
@@ -214,8 +206,10 @@ export function CardTransactionsTab() {
     refetchInterval: 5_000,
   });
 
-  const internal = (activity?.accounts ?? []).find((a) => a.kind === "internal");
-  const spendingPower = internal?.spendingPower ?? 0;
+  // الرصيد يأتي من نفس نداء المعاملات (نفس المصدر)
+  const balance = live?.balance;
+  const spendingPower = balance?.usd ?? 0;
+
   const liveError = (live?.errors ?? [])[0];
 
   const rows = useMemo<Row[]>(() => {
@@ -286,7 +280,7 @@ export function CardTransactionsTab() {
                 USD {money(spendingPower)}
               </div>
               <div className="mt-2 inline-flex rounded-lg bg-muted/70 px-3 py-1 text-[11px] text-muted-foreground tabular-nums">
-                Fiat: USD {money(internal?.fiatUsd ?? 0)} + Crypto: USD {money(internal?.cryptoUsd ?? 0)}
+                Fiat: USD {money(balance?.fiatUsd ?? 0)} + Crypto: USD {money(balance?.cryptoUsd ?? 0)}
               </div>
             </div>
             <div className="flex items-center gap-2">
