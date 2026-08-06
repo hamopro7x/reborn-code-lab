@@ -328,10 +328,15 @@ function startAdaptive(entry, sender) {
       let lost = 0;
       let packets = 0;
       let avail = 0;
+      let framesEncoded = -1;
       stats.forEach((r) => {
         if (r.type === "remote-inbound-rtp") {
           if (typeof r.roundTripTime === "number") rtt = r.roundTripTime;
           if (typeof r.packetsLost === "number") lost = r.packetsLost;
+        }
+        if (r.type === "outbound-rtp" && r.kind === "video") {
+          if (typeof r.packetsSent === "number") packets = r.packetsSent;
+          if (typeof r.framesEncoded === "number") framesEncoded = r.framesEncoded;
         }
         if (r.type === "candidate-pair" && r.state === "succeeded") {
           if (typeof r.availableOutgoingBitrate === "number") avail = r.availableOutgoingBitrate;
@@ -344,6 +349,23 @@ function startAdaptive(entry, sender) {
       lastPackets = packets;
       const lossRate = dLost / dPackets;
 
+      // الصورة متجمّدة عند المشاهد؟ المشفّر واقف => نطلب إطاراً مفتاحياً
+      // ونهبط بالـ bitrate خطوة حتى يستأنف البث فوراً بدل ما يفضل واقف.
+      if (framesEncoded >= 0) {
+        if (framesEncoded === lastFramesEncoded) {
+          frozenTicks += 1;
+          if (frozenTicks >= 2) {
+            frozenTicks = 0;
+            target = Math.max(MIN, Math.round(target * 0.6));
+            try { sender.generateKeyFrame?.(); } catch {}
+            try { entry.pc.restartIce?.(); } catch {}
+          }
+        } else {
+          frozenTicks = 0;
+        }
+        lastFramesEncoded = framesEncoded;
+      }
+
       const severe = rtt > 0.5 || lossRate > 0.12;
       if (avail > 0) {
         const safe = Math.round(avail * 0.95);
@@ -355,6 +377,7 @@ function startAdaptive(entry, sender) {
         target = Math.round(target * 1.2 + 1_000_000);
       }
       target = Math.max(MIN, Math.min(MAX, target));
+
 
       const params = sender.getParameters();
       if (params.encodings?.[0]) {
