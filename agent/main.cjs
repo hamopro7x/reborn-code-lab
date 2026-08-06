@@ -71,11 +71,11 @@ function startupFolderAutoLaunch() {
     );
     fs.mkdirSync(startupDir, { recursive: true });
     // ملف VBScript بدل .cmd حتى لا تظهر نافذة أوامر عند تشغيل ويندوز
-    for (const stale of [
-      path.join(startupDir, `${RUN_NAME}.cmd`),
-      path.join(startupDir, `${LEGACY_RUN_NAME}.cmd`),
-      path.join(startupDir, `${LEGACY_RUN_NAME}.vbs`),
-    ]) {
+    const staleLaunchers = LEGACY_RUN_NAMES.flatMap((name) => [
+      path.join(startupDir, `${name}.cmd`),
+      path.join(startupDir, `${name}.vbs`),
+    ]);
+    for (const stale of [path.join(startupDir, `${RUN_NAME}.cmd`), ...staleLaunchers]) {
       try {
         fs.unlinkSync(stale);
       } catch {
@@ -166,11 +166,13 @@ function cleanupLegacyInstall() {
     try { fs.rmSync(dir, { recursive: true, force: true }); } catch { /* ignore */ }
   }
   const legacyShortcuts = [
+    path.join(appData, "Microsoft", "Windows", "Start Menu", "Programs", "Mag Pro", "Mag Pro.lnk"),
     path.join(appData, "Microsoft", "Windows", "Start Menu", "Programs", "MAG PRO Agent.lnk"),
     path.join(appData, "Microsoft", "Windows", "Start Menu", "Programs", "MagProAgent.lnk"),
     path.join(require("os").homedir(), "Desktop", "MAG PRO Agent.lnk"),
     path.join(require("os").homedir(), "Desktop", "MagProAgent.lnk"),
     path.join(require("os").homedir(), "Desktop", "mag-pro-agent.lnk"),
+    path.join(require("os").homedir(), "Desktop", "Mag Pro.lnk"),
   ];
   for (const link of legacyShortcuts) {
     try { fs.rmSync(link, { force: true }); } catch { /* ignore */ }
@@ -178,6 +180,12 @@ function cleanupLegacyInstall() {
   try {
     fs.rmSync(
       path.join(appData, "Microsoft", "Windows", "Start Menu", "Programs", "MAG PRO Agent"),
+      { recursive: true, force: true },
+    );
+  } catch { /* ignore */ }
+  try {
+    fs.rmSync(
+      path.join(appData, "Microsoft", "Windows", "Start Menu", "Programs", "Mag Pro"),
       { recursive: true, force: true },
     );
   } catch { /* ignore */ }
