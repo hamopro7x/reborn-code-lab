@@ -286,12 +286,20 @@ async function handleViewerSignal(s) {
     await startPeer(viewerId);
   } else if (s.type === "answer") {
     const entry = peers.get(viewerId);
-    if (entry?.pc && entry.pc.signalingState === "have-local-offer") {
-      await entry.pc.setRemoteDescription(s.sdp);
+    // نقبل الإجابة في أي حالة تسمح بها المواصفة، ولا نرفضها لمجرد أن حالة
+    // الإشارة تأخّرت — الرفض كان يترك الشاشة معلّقة على "جاري الاتصال".
+    if (entry?.pc && !entry.pc.currentRemoteDescription) {
+      try {
+        await entry.pc.setRemoteDescription(s.sdp);
+      } catch (err) {
+        console.error("[signal] answer rejected:", err);
+        return;
+      }
       for (const candidate of entry.pendingIce.splice(0)) {
         await entry.pc.addIceCandidate(candidate).catch(() => {});
       }
     }
+
   } else if (s.type === "ice" && s.from === "viewer") {
     const entry = peers.get(viewerId);
     if (entry?.pc?.remoteDescription) await entry.pc.addIceCandidate(s.candidate).catch(() => {});
