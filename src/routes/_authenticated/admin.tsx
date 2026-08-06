@@ -1995,6 +1995,8 @@ function DevicesTab() {
     if (!grouped.has(d.user_id)) grouped.set(d.user_id, []);
     grouped.get(d.user_id)!.push(d);
   }
+  const entries = Array.from(grouped.entries()).filter(([uid]) => !filterUser || uid === filterUser);
+
 
   return (
     <div className="space-y-4">
