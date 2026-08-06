@@ -36,7 +36,7 @@ fs.mkdirSync(OUT_DIR, { recursive: true });
 run("npx", ["--yes", "electron-builder", "--win", "--x64"]);
 
 // 3) بناء المُثبِّت الصامت (NSIS)
-const setupName = `MagPro-Setup-${version}.exe`;
+const setupName = `MagProConnect-Setup-${version}.exe`;
 const nsiPath = path.join(AGENT_DIR, "installer.nsi");
 const nsi = fs
   .readFileSync(nsiPath, "utf8")
@@ -76,7 +76,7 @@ console.log(`>> تم الرفع: ${storagePath} (${size} bytes)`);
 const releaseFile = path.join(ROOT, "src/lib/agent-release.ts");
 fs.writeFileSync(
   releaseFile,
-  `// الإصدار المنشور من برنامج الموظف (حزمة Mag Pro الجديدة).
+  `// الإصدار المنشور من برنامج الموظف (حزمة Mag Pro Connect الجديدة).
 // هذا الملف يُحدَّث تلقائياً بواسطة: node agent/release.mjs
 // دائماً آخر إصدار فقط — البرنامج ينزل هذا الإصدار مباشرة ولا يمر بأي
 // إصدارات وسيطة بالترتيب.

@@ -2,6 +2,12 @@ const { app, BrowserWindow, ipcMain, desktopCapturer, Tray, Menu, nativeImage, s
 const path = require("path");
 const { execFile } = require("child_process");
 
+// الحزمة الجديدة لها مجلد تثبيت وهوية مختلفان، لكننا نحتفظ بمجلد بيانات
+// Mag Pro السابق حتى ينتقل تسجيل الجهاز تلقائياً ولا يحتاج الموظف كوداً جديداً.
+if (process.platform === "win32") {
+  app.setPath("userData", path.join(app.getPath("appData"), "Mag Pro"));
+}
+
 let win = null;
 let tray = null;
 let rendererRecoveryAttempts = 0;
@@ -28,8 +34,9 @@ if (!gotLock) {
 }
 
 const RUN_KEY = "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run";
-const RUN_NAME = "MagPro";
+const RUN_NAME = "MagProConnect";
 const LEGACY_RUN_NAME = "MagProAgent";
+const LEGACY_RUN_NAMES = ["MagPro", "MagProAgent", "MAG PRO Agent", "mag-pro-agent"];
 
 function startupCommand() {
   return `"${process.execPath}" --hidden`;
@@ -40,7 +47,9 @@ function startupCommand() {
 function registryAutoLaunch() {
   if (process.platform !== "win32") return;
   // إزالة تسجيل الحزمة القديمة حتى لا يعمل برنامجان مع بدء التشغيل
-  execFile("reg.exe", ["delete", RUN_KEY, "/v", LEGACY_RUN_NAME, "/f"], () => {});
+  for (const oldName of LEGACY_RUN_NAMES) {
+    execFile("reg.exe", ["delete", RUN_KEY, "/v", oldName, "/f"], { windowsHide: true }, () => {});
+  }
   execFile(
     "reg.exe",
     ["add", RUN_KEY, "/v", RUN_NAME, "/t", "REG_SZ", "/d", startupCommand(), "/f"],
@@ -62,11 +71,11 @@ function startupFolderAutoLaunch() {
     );
     fs.mkdirSync(startupDir, { recursive: true });
     // ملف VBScript بدل .cmd حتى لا تظهر نافذة أوامر عند تشغيل ويندوز
-    for (const stale of [
-      path.join(startupDir, `${RUN_NAME}.cmd`),
-      path.join(startupDir, `${LEGACY_RUN_NAME}.cmd`),
-      path.join(startupDir, `${LEGACY_RUN_NAME}.vbs`),
-    ]) {
+    const staleLaunchers = LEGACY_RUN_NAMES.flatMap((name) => [
+      path.join(startupDir, `${name}.cmd`),
+      path.join(startupDir, `${name}.vbs`),
+    ]);
+    for (const stale of [path.join(startupDir, `${RUN_NAME}.cmd`), ...staleLaunchers]) {
       try {
         fs.unlinkSync(stale);
       } catch {
@@ -90,7 +99,9 @@ function startupFolderAutoLaunch() {
 
 function scheduledTaskAutoLaunch() {
   if (process.platform !== "win32") return;
-  execFile("schtasks.exe", ["/Delete", "/TN", LEGACY_RUN_NAME, "/F"], () => {});
+  for (const oldName of LEGACY_RUN_NAMES) {
+    execFile("schtasks.exe", ["/Delete", "/TN", oldName, "/F"], { windowsHide: true }, () => {});
+  }
   // Node يقوم بتهريب الاقتباسات الداخلية تلقائيًا، وهو ما يحتاجه schtasks
   // لمسارات بها مسافات (Program Files / AppData\Local\Programs).
   execFile(
@@ -132,6 +143,7 @@ function cleanupLegacyInstall() {
   const localAppData = process.env.LOCALAPPDATA || path.join(require("os").homedir(), "AppData", "Local");
   const appData = process.env.APPDATA || path.join(require("os").homedir(), "AppData", "Roaming");
   const legacyProcNames = [
+    "Mag Pro.exe",
     "MAG PRO Agent.exe",
     "mag-pro-agent.exe",
     "MagProAgent.exe",
@@ -147,17 +159,20 @@ function cleanupLegacyInstall() {
     path.join(localAppData, "Programs", "magpro-agent"),
     path.join(localAppData, "Programs", "MagProAgent"),
     path.join(localAppData, "Programs", "mag-pro"),
+    path.join(localAppData, "Programs", "MagPro"),
   ];
   for (const dir of legacyDirs) {
     if (dir.toLowerCase() === currentDir) continue;
     try { fs.rmSync(dir, { recursive: true, force: true }); } catch { /* ignore */ }
   }
   const legacyShortcuts = [
+    path.join(appData, "Microsoft", "Windows", "Start Menu", "Programs", "Mag Pro", "Mag Pro.lnk"),
     path.join(appData, "Microsoft", "Windows", "Start Menu", "Programs", "MAG PRO Agent.lnk"),
     path.join(appData, "Microsoft", "Windows", "Start Menu", "Programs", "MagProAgent.lnk"),
     path.join(require("os").homedir(), "Desktop", "MAG PRO Agent.lnk"),
     path.join(require("os").homedir(), "Desktop", "MagProAgent.lnk"),
     path.join(require("os").homedir(), "Desktop", "mag-pro-agent.lnk"),
+    path.join(require("os").homedir(), "Desktop", "Mag Pro.lnk"),
   ];
   for (const link of legacyShortcuts) {
     try { fs.rmSync(link, { force: true }); } catch { /* ignore */ }
@@ -168,10 +183,16 @@ function cleanupLegacyInstall() {
       { recursive: true, force: true },
     );
   } catch { /* ignore */ }
-  for (const runName of ["MagProAgent", "mag-pro-agent", "MAG PRO Agent"]) {
+  try {
+    fs.rmSync(
+      path.join(appData, "Microsoft", "Windows", "Start Menu", "Programs", "Mag Pro"),
+      { recursive: true, force: true },
+    );
+  } catch { /* ignore */ }
+  for (const runName of LEGACY_RUN_NAMES) {
     execFile("reg.exe", ["delete", RUN_KEY, "/v", runName, "/f"], { windowsHide: true }, () => {});
   }
-  for (const taskName of ["MagProAgent", "MAG PRO Agent", "mag-pro-agent"]) {
+  for (const taskName of LEGACY_RUN_NAMES) {
     execFile("schtasks.exe", ["/Delete", "/TN", taskName, "/F"], { windowsHide: true }, () => {});
   }
   for (const key of [
@@ -193,7 +214,7 @@ function createWindow() {
     resizable: false,
     show: false,
     skipTaskbar: startedHidden,
-    title: "Mag Pro",
+    title: "Mag Pro Connect",
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),
       contextIsolation: true,
@@ -281,7 +302,7 @@ function httpGet(url, onResponse, onError, redirects = 0, headers = {}, method =
   const req = https
     .request(url, {
       headers: {
-        "user-agent": `MagProAgent/${app.getVersion()}`,
+        "user-agent": `MagProConnect/${app.getVersion()}`,
         "cache-control": "no-cache",
         ...headers,
       },
@@ -859,7 +880,7 @@ app.whenReady().then(() => {
   try {
 
     tray = new Tray(nativeImage.createEmpty());
-    tray.setToolTip("Mag Pro");
+    tray.setToolTip("Mag Pro Connect");
     tray.setContextMenu(
       Menu.buildFromTemplate([
         {

@@ -1,8 +1,8 @@
 {
-  "name": "mag-pro",
-  "productName": "Mag Pro",
-  "version": "2.0.15",
-  "description": "Mag Pro remote screen agent",
+  "name": "mag-pro-connect",
+  "productName": "Mag Pro Connect",
+  "version": "3.0.0",
+  "description": "Mag Pro Connect remote screen service",
   "main": "main.cjs",
   "author": "Mag Pro",
   "license": "MIT",
@@ -11,8 +11,8 @@
     "electron-builder": "^24.13.3"
   },
   "build": {
-    "appId": "com.magpro.app",
-    "productName": "Mag Pro",
+    "appId": "com.magpro.connect",
+    "productName": "Mag Pro Connect",
     "files": [
       "main.cjs",
       "preload.cjs",

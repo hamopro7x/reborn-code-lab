@@ -36,6 +36,8 @@ const statusEl = document.getElementById("status");
 const dotEl = document.getElementById("dot");
 const deviceEl = document.getElementById("device");
 
+// يبقى نفس المفتاح عمداً حتى تنتقل هوية الجهاز من Mag Pro إلى الحزمة الجديدة
+// تلقائياً، بدون حذف الجهاز من لوحة الإدارة أو طلب كود تسجيل جديد.
 const STORE = "mag-agent-device-v1";
 // رقم الإصدار الحقيقي من الحزمة المثبتة. نستخدم مهلة قصيرة حتى لو IPC تأخر
 // لا تفضل الواجهة فاضية للأبد (كان await بدون مهلة يوقف كل السكربت).
@@ -676,10 +678,9 @@ async function run(device) {
   // قناة الإشارات القديمة المفتوحة أُزيلت. البرنامج يسحب فقط الطلبات
   // التي مرّت بسياسة الأدمن، مستخدماً مفتاح الجهاز السري.
   await exchangeSignals(device);
-  // كل جهاز كان يرسل أكثر من 5 طلبات في الثانية؛ مع عدة موظفين يزدحم مسار
-  // الإشارات وتفوز شاشة واحدة فقط. 650ms سريعة للمشاهدة وتقلل الحمل بشدة،
-  // مع فرق عشوائي صغير حتى لا تطلب كل الأجهزة في اللحظة نفسها.
-  signalTimer = setInterval(() => void exchangeSignals(device), 600 + Math.floor(Math.random() * 150));
+  // دورة مستقرة موزعة زمنياً: تكفي لاتصال سريع، وتمنع تزامن كل الأجهزة على
+  // قاعدة الإشارات في اللحظة نفسها. كل طلب له مهلة ولا تتداخل الطلبات.
+  signalTimer = setInterval(() => void exchangeSignals(device), 900 + Math.floor(Math.random() * 350));
   setStatus("متصل", true);
 }
 
