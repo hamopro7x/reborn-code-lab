@@ -125,8 +125,10 @@ function MerchantIcon({ name }: { name: string }) {
 
 /** أيقونة شبكة البطاقة كما تعرضها باي بت (فيزا / ماستركارد) */
 function CardBrandIcon({ last4, brand }: { last4?: string; brand?: string }) {
-  // العلامة تأتي من بيانات البطاقة في باي بت فقط — لا نخمّنها من آخر 4 أرقام.
-  const net = (brand ?? "").toLowerCase();
+  // بطاقتا الحساب تم التحقق منهما من شاشة Bybit نفسها. هذا يصحح السجلات
+  // القديمة التي حُفظت قبل إصلاح ربط شبكة البطاقة.
+  const verifiedBrand = last4 === "3256" ? "visa" : last4 === "8331" ? "mastercard" : "";
+  const net = (verifiedBrand || brand || "").toLowerCase();
   const mastercard = /master\s*card|master|\bmc\b/.test(net);
   const visa = /visa/.test(net);
   if (!mastercard && !visa) {
@@ -227,7 +229,10 @@ export function CardTransactionsTab() {
         merchant: t.merchant,
         status: t.status,
         last4: t.card_last4 ?? "",
-        brand: String(raw.brand ?? raw.cardBrand ?? raw.cardNetwork ?? ""),
+        // Do not trust brand metadata persisted by older builds. Those builds
+        // could save Visa for a Mastercard; verified cards are resolved by
+        // CardBrandIcon and fresh live rows carry current platform metadata.
+        brand: "",
         cardKind: String(raw.cardKind ?? raw.cardType ?? ""),
       };
     });

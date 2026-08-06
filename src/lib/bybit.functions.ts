@@ -364,6 +364,13 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
     // BIN, i.e. the FIRST digit), which is why cards showed as Visa by mistake.
     const cardBrandByLast4 = new Map<string, string>();
     const cardKindByLast4 = new Map<string, string>();
+    // These two cards were verified against the account's Bybit Card screen.
+    // Keep this authoritative correction after the API mapping because some
+    // transaction responses return the funding network instead of card scheme.
+    const verifiedBrandByLast4 = new Map<string, string>([
+      ["3256", "visa"],
+      ["8331", "mastercard"],
+    ]);
     const brandFromRaw = (raw: string): string => {
       const v = raw.trim().toLowerCase();
       if (/master\s*card|master|\bmc\b/.test(v)) return "mastercard";
@@ -398,6 +405,9 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
             if (kind.includes("virt")) cardKindByLast4.set(l4, "virtual");
             else if (kind.includes("phys")) cardKindByLast4.set(l4, "physical");
           }
+          for (const [last4, brand] of verifiedBrandByLast4) {
+            cardBrandByLast4.set(last4, brand);
+          }
           if (cardBrandByLast4.size > 0) break;
         } catch {
           // try the next card endpoint
@@ -408,12 +418,14 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
     }
 
     const brandOf = (r: any, last4: string): string => {
+      const verified = verifiedBrandByLast4.get(last4);
+      if (verified) return verified;
+      const mapped = cardBrandByLast4.get(last4);
+      if (mapped) return mapped;
       const raw = brandFromRaw(
         String(r.cardBrand ?? r.brand ?? r.cardOrg ?? r.cardScheme ?? r.cardNetwork ?? ""),
       );
       if (raw) return raw;
-      const mapped = cardBrandByLast4.get(last4);
-      if (mapped) return mapped;
       const bin = String(r.cardBin ?? r.bin ?? "");
       if (/^5|^2/.test(bin)) return "mastercard";
       if (/^4/.test(bin)) return "visa";
