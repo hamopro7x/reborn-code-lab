@@ -193,13 +193,6 @@ export function CardTransactionsTab() {
     retry: false,
   });
 
-  const { data: activity } = useQuery({
-    queryKey: ["bybit-activity", 30],
-    queryFn: () => fetchActivity({ data: { days: 30 } }),
-    refetchInterval: 10_000,
-    retry: false,
-  });
-
   const { data: stored } = useQuery({
     queryKey: ["card-transactions"],
     queryFn: async () => {
@@ -214,8 +207,10 @@ export function CardTransactionsTab() {
     refetchInterval: 5_000,
   });
 
-  const internal = (activity?.accounts ?? []).find((a) => a.kind === "internal");
-  const spendingPower = internal?.spendingPower ?? 0;
+  // الرصيد يأتي من نفس نداء المعاملات (نفس المصدر)
+  const balance = live?.balance;
+  const spendingPower = balance?.usd ?? 0;
+
   const liveError = (live?.errors ?? [])[0];
 
   const rows = useMemo<Row[]>(() => {
