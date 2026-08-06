@@ -276,7 +276,7 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
     const key = process.env["BYBIT_API_KEY"];
     const secret = process.env["BYBIT_API_SECRET"];
     if (!key || !secret) {
-      return { configured: false as const, source: "", rows: [], errors: ["missing keys"] };
+      return { configured: false as const, source: "", rows: [], balance: { usd: 0, fiatUsd: 0, cryptoUsd: 0, source: "" }, errors: ["missing keys"] };
     }
     const apiKey = key;
     const apiSecret = secret;
