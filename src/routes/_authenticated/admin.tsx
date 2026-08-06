@@ -161,11 +161,11 @@ function Admin() {
     },
   ];
   const visibleNavGroups = isEmployee
-    ? [{ label: "العمليات", items: [
-        { key: "orders" as PanelKey, label: "الطلبات", icon: ShoppingCart },
-        { key: "courses" as PanelKey, label: "كورسات التدريب", icon: GraduationCap },
-      ] }]
+    ? navGroups
+        .map((g) => ({ ...g, items: g.items.filter((i) => employeeAllowed(i.key)) }))
+        .filter((g) => g.items.length > 0)
     : navGroups;
+
 
   return (
     <SidebarProvider>
