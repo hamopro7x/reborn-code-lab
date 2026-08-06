@@ -154,6 +154,7 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
         const to = (s as { to?: string }).to;
         if (to && to !== viewerId) return;
         if (s.type === "offer") {
+          if (pc.remoteDescription?.sdp === s.sdp.sdp) return;
           if (pc.signalingState !== "stable" && pc.signalingState !== "have-remote-offer") return;
           await pc.setRemoteDescription(s.sdp);
           for (const candidate of pendingIce.splice(0)) {
@@ -167,8 +168,9 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
           else pendingIce.push(s.candidate);
         }
       },
-      { raw: true },
+      { raw: true, viewerId },
     );
+
 
     pc.onicecandidate = (e) => {
       if (e.candidate)
