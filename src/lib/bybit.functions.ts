@@ -10,8 +10,8 @@ export const getBybitActivity = createServerFn({ method: "POST" })
       .from("user_roles")
       .select("role")
       .eq("user_id", context.userId);
-    if (!(roles ?? []).some((r: { role: string }) => r.role === "admin")) {
-      throw new Error("Forbidden: admin only");
+    if (!(roles ?? []).some((r: { role: string }) => r.role === "admin" || r.role === "employee")) {
+      throw new Error("Forbidden: staff only");
     }
 
     const key = process.env["BYBIT_API_KEY"];
@@ -269,8 +269,8 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
       .from("user_roles")
       .select("role")
       .eq("user_id", context.userId);
-    if (!(roles ?? []).some((r: { role: string }) => r.role === "admin")) {
-      throw new Error("Forbidden: admin only");
+    if (!(roles ?? []).some((r: { role: string }) => r.role === "admin" || r.role === "employee")) {
+      throw new Error("Forbidden: staff only");
     }
 
     const key = process.env["BYBIT_API_KEY"];
@@ -635,8 +635,8 @@ export const getBybitCardRewards = createServerFn({ method: "POST" })
       .from("user_roles")
       .select("role")
       .eq("user_id", context.userId);
-    if (!(roles ?? []).some((r: { role: string }) => r.role === "admin")) {
-      throw new Error("Forbidden: admin only");
+    if (!(roles ?? []).some((r: { role: string }) => r.role === "admin" || r.role === "employee")) {
+      throw new Error("Forbidden: staff only");
     }
 
     const apiKey = process.env["BYBIT_API_KEY"];
