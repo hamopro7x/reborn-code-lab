@@ -274,9 +274,9 @@ function ReadOnlyGuard({ active, children }: { active: boolean; children: React.
   return (
     <fieldset
       disabled
-      className="min-w-0 [&_button]:pointer-events-none [&_a]:pointer-events-none [&_[role=switch]]:pointer-events-none [&_input]:pointer-events-none [&_select]:pointer-events-none [&_textarea]:pointer-events-none"
-      onClickCapture={(e) => { e.preventDefault(); e.stopPropagation(); }}
+      className="min-w-0 [&_button:not([role=tab])]:pointer-events-none [&_[role=switch]]:pointer-events-none [&_input]:pointer-events-none [&_select]:pointer-events-none [&_textarea]:pointer-events-none"
     >
+
       {children}
     </fieldset>
   );
