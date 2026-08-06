@@ -426,19 +426,22 @@ async function startPeer(viewerId) {
   if (startingViewers.has(viewerId)) return; // منع بدء اتصالين لنفس المشاهد
   const current = peers.get(viewerId);
   if (current?.pc && ["new", "connecting", "connected"].includes(current.pc.connectionState)) {
-    // طلب JOIN المتكرر يعني غالباً أن أول OFFER لم يصل للمشاهد. نعيد نفس العرض
-    // فوراً بدل ترك الشاشة معلقة حتى انتهاء مهلة إعادة الاتصال.
-    if (current.offer && current.pc.connectionState !== "connected") {
-      await send({ type: "offer", to: viewerId, sdp: current.offer });
+    if (current.pc.connectionState === "connected") return;
+    const age = Date.now() - (current.startedAt ?? 0);
+    // لو الاتصال عالق أكثر من 6 ثوانٍ نبنيه من جديد بدل إعادة نفس العرض
+    // القديم للأبد (كان يترك الشاشة على "جاري الاتصال" بلا نهاية).
+    if (age < 6000) {
+      if (current.offer) await send({ type: "offer", to: viewerId, sdp: current.offer });
+      return;
     }
-    return;
   }
   startingViewers.add(viewerId);
   try {
     closePeer(viewerId); // أي اتصال قديم لنفس المشاهد يُستبدل
     const s = await getStream();
     const pc = new RTCPeerConnection(RTC_CONFIG);
-    const entry = { pc, statsTimer: null, pendingIce: [], recoverTimer: null, connectTimer: null, offer: null };
+    const entry = { pc, statsTimer: null, pendingIce: [], recoverTimer: null, connectTimer: null, offer: null, startedAt: Date.now() };
+
     peers.set(viewerId, entry);
     window.agent.setViewerCount?.(peers.size);
 
