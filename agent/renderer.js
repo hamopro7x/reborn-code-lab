@@ -321,9 +321,12 @@ function startAdaptive(entry, sender) {
   if (entry.statsTimer) clearInterval(entry.statsTimer);
 
   // أرضية منخفضة: عند ضيق الشبكة نُنزل الـ bitrate بدل تجمّد الصورة تماماً
-  const MIN = 1_200_000;
-  const MAX = 40_000_000;  // سقف عالي جداً لأعلى كفاءة وضوح
-  let target = 14_000_000;
+  const MIN = 800_000;
+  const MAX = 12_000_000;
+  // البداية المتوسطة مهمة عند عرض عدة أجهزة معاً: بدء كل شاشة على 14Mbps
+  // كان يملأ اتصال الأدمن فوراً فتنجح أول شاشة فقط وتسقط بقية اتصالات ICE.
+  // نحافظ على الدقة الأصلية ونزيد السرعة تدريجياً حسب السعة الحقيقية.
+  let target = 3_500_000;
   let lastLost = 0;
   let lastPackets = 0;
   let lastFramesEncoded = -1;
@@ -378,13 +381,15 @@ function startAdaptive(entry, sender) {
 
       const severe = rtt > 0.5 || lossRate > 0.12;
       if (avail > 0) {
-        const safe = Math.round(avail * 0.95);
+        const safe = Math.max(MIN, Math.round(avail * 0.82));
         if (severe) target = Math.max(MIN, Math.min(Math.round(target * 0.85), safe));
-        else target = Math.min(MAX, Math.max(safe, Math.round(target * 1.2 + 1_000_000)));
+        // لا نتجاوز السعة المتاحة. Math.max هنا سابقاً كان يختار رقماً أعلى
+        // من السعة نفسها، فينشأ طابور فيديو ويصبح باقي الأجهزة "جاري الاتصال".
+        else target = Math.min(MAX, safe, Math.round(target * 1.12 + 250_000));
       } else if (severe) {
-        target = Math.round(target * 0.85);
+        target = Math.round(target * 0.75);
       } else {
-        target = Math.round(target * 1.2 + 1_000_000);
+        target = Math.round(target * 1.08 + 150_000);
       }
       target = Math.max(MIN, Math.min(MAX, target));
 
@@ -465,8 +470,8 @@ async function startPeer(viewerId) {
         params.encodings = [
           {
             ...(params.encodings?.[0] ?? {}),
-            // جودة عالية ثابتة من أول إطار — لا تنخفض مع الحركة
-            maxBitrate: 14_000_000,
+            // بداية متوازنة تسمح بتشغيل كل الشاشات معاً؛ الدقة لا تُصغّر.
+            maxBitrate: 3_500_000,
             maxFramerate: 30,
             scaleResolutionDownBy: 1,
             networkPriority: "high",
