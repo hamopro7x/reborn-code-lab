@@ -1978,6 +1978,8 @@ function DevicesTab() {
   const [newFp, setNewFp] = useState<string>("");
   const [newLabel, setNewLabel] = useState<string>("");
   const [saving, setSaving] = useState(false);
+  const [filterUser, setFilterUser] = useState<string>("");
+
   async function addDevice() {
     if (!newUserId || newFp.trim().length < 6) { toast.error("اختر موظف وأدخل معرّف الجهاز"); return; }
     setSaving(true);
