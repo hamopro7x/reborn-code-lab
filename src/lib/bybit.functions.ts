@@ -336,8 +336,96 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
       return body.result ?? {};
     }
 
+    async function get(path: string, params: Record<string, string | number>) {
+      const query = new URLSearchParams(
+        Object.entries(params).map(([k, v]) => [k, String(v)]),
+      ).toString();
+      const ts = Date.now().toString();
+      const sign = createHmac("sha256", apiSecret).update(ts + apiKey + recv + query).digest("hex");
+      const res = await fetch(`https://api.bybit.com${path}${query ? `?${query}` : ""}`, {
+        headers: {
+          Accept: "application/json",
+          "X-BAPI-API-KEY": apiKey,
+          "X-BAPI-TIMESTAMP": ts,
+          "X-BAPI-RECV-WINDOW": recv,
+          "X-BAPI-SIGN": sign,
+        },
+      });
+      const text = await res.text();
+      let body: { retCode?: number; retMsg?: string; result?: Record<string, unknown> } = {};
+      if (text.trim()) {
+        try {
+          body = JSON.parse(text) as typeof body;
+        } catch {
+          throw new Error(`${path} [${res.status}] invalid response`);
+        }
+      }
+      if (!res.ok || body.retCode !== 0) {
+        throw new Error(`${path} [${res.status}] ${body.retMsg ?? "request failed"}`);
+      }
+      return body.result ?? {};
+    }
+
+    /**
+     * رصيد البطاقة يُقرأ من نفس نداء المعاملات (نفس المصدر/نفس الصفحة).
+     * أولاً نجرّب مسارات رصيد البطاقة الرسمية، وإن لم تتوفر نحسب الرصيد
+     * المتاح من حساب التمويل (الذي تصرف منه البطاقة) بسعر تحويل البطاقة.
+     */
+    async function cardBalance() {
+      const CARD_RATE = 0.987258;
+      const pick = (node: any, keys: string[]): number => {
+        for (const k of keys) {
+          const v = Number(node?.[k]);
+          if (Number.isFinite(v) && v !== 0) return v;
+        }
+        return 0;
+      };
+      for (const p of [
+        "/v5/card/query-account-balance",
+        "/v5/card/spending/query-balance",
+        "/v5/card/query-card-balance",
+      ]) {
+        try {
+          const r: any = await post(p, {});
+          const node = r?.["balance"] ?? r?.["data"] ?? r;
+          const usd = pick(node, ["availableBalance", "spendingPower", "available", "balance", "totalAvailable"]);
+          if (usd > 0) {
+            const fiatUsd = pick(node, ["fiatBalance", "fiatAvailable", "fiatAmount"]);
+            const cryptoUsd = pick(node, ["cryptoBalance", "cryptoAvailable", "cryptoAmount"]) || Math.max(usd - fiatUsd, 0);
+            return { usd, fiatUsd, cryptoUsd, source: p };
+          }
+        } catch {
+          // try next card balance path
+        }
+      }
+
+      // fallback: FUND (الحساب الذي تصرف منه البطاقة)
+      let fiatUsd = 0;
+      let cryptoUsd = 0;
+      for (const coin of ["USD", "USDT", "USDC", "BTC", "ETH"]) {
+        try {
+          const r: any = await get("/v5/asset/transfer/query-account-coins-balance", {
+            accountType: "FUND",
+            coin,
+            withBonus: 0,
+          });
+          for (const c of (r?.balance ?? []) as any[]) {
+            const amount = Number(c.transferBalance ?? c.walletBalance ?? 0);
+            if (!(amount > 0)) continue;
+            if (/^USD$/i.test(String(c.coin))) fiatUsd += amount;
+            else if (/^USD[TC]$/i.test(String(c.coin))) cryptoUsd += amount * CARD_RATE;
+            else cryptoUsd += 0;
+          }
+        } catch {
+          // ignore this coin
+        }
+      }
+      return { usd: fiatUsd + cryptoUsd, fiatUsd, cryptoUsd, source: "FUND" };
+    }
+
     const endTime = Date.now();
     const probeErrors: string[] = [];
+
 
     // Official Bybit Card V5 endpoint. It is a POST endpoint and uses numeric
     // pages (not the cursor pagination used by account/asset endpoints).
