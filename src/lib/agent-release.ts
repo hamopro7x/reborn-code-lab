@@ -3,11 +3,11 @@
 // دائماً آخر إصدار فقط — البرنامج ينزل هذا الإصدار مباشرة ولا يمر بأي
 // إصدارات وسيطة بالترتيب.
 export const AGENT_RELEASE = {
-  version: "2.0.12",
-  notes: "إصلاح عدم بدء البث: قبول إجابة المشاهد في كل الحالات، إعادة بناء الاتصال العالق، ورشقة إطارات مفتاحية عند الاتصال.",
+  version: "2.0.13",
+  notes: "إصلاح تشغيل كل شاشات الموظفين: الإشارات تعمل حتى عند تأخر الاتصال اللحظي، منع تعارض العرض المكرر، وإعادة اتصال مستقلة لكل جهاز.",
   url: "https://mag-pro1.com/api/public/agent-download.exe",
   storageBucket: "site-assets",
-  storagePath: "releases/MagPro-Setup-2.0.12.exe",
-  size: 110515067,
-  sha256: "11b3b22026f7dc8b91c28fcef4136181f75d220bbb36758ccd953102a96dc388",
+  storagePath: "releases/MagPro-Setup-2.0.13.exe",
+  size: 110515079,
+  sha256: "8c6f764d1f196a4f6b0ed488eaf83ec9f24032270bf27b87e42e2d07f04cd75e",
 } as const;

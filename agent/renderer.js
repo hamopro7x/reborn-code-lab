@@ -723,6 +723,7 @@ async function softReconnect() {
   reconnecting = true;
   try {
     if (hbTimer) { clearInterval(hbTimer); hbTimer = null; }
+    if (signalTimer) { clearInterval(signalTimer); signalTimer = null; }
     channel = null;
     running = false; // ملاحظة: لا نلمس pc/stream إطلاقاً حتى لا ينقطع البث
     await run(d);

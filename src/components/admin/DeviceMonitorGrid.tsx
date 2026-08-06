@@ -92,6 +92,7 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
       }
     };
     const pendingIce: RTCIceCandidateInit[] = [];
+    let acceptedOfferSdp: string | undefined;
 
     // مستقبل فيديو واحد بالإعدادات الافتراضية للمتصفح.
     // (ترتيب الكودك يدوياً كان يسبب سقوط أول keyframe = شاشة سوداء)
@@ -154,15 +155,25 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
         const to = (s as { to?: string }).to;
         if (to && to !== viewerId) return;
         if (s.type === "offer") {
-          if (pc.remoteDescription?.sdp === s.sdp.sdp) return;
-          if (pc.signalingState !== "stable" && pc.signalingState !== "have-remote-offer") return;
-          await pc.setRemoteDescription(s.sdp);
-          for (const candidate of pendingIce.splice(0)) {
-            await pc.addIceCandidate(candidate).catch(() => {});
+          const offerSdp = s.sdp.sdp;
+          // Polling وRealtime قد يسلّمان نفس العرض في نفس اللحظة. نحجزه قبل
+          // أول await حتى لا ينفذ setRemoteDescription مرتين بالتوازي ويعلق
+          // جهاز واحد بينما تعمل الأجهزة الأخرى.
+          if (!offerSdp || acceptedOfferSdp === offerSdp || pc.remoteDescription?.sdp === offerSdp) return;
+          if (pc.signalingState !== "stable") return;
+          acceptedOfferSdp = offerSdp;
+          try {
+            await pc.setRemoteDescription(s.sdp);
+            for (const candidate of pendingIce.splice(0)) {
+              await pc.addIceCandidate(candidate).catch(() => {});
+            }
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            await sig.send({ type: "answer", sdp: answer, viewer: viewerId });
+          } catch {
+            acceptedOfferSdp = undefined;
+            scheduleReconnect(400);
           }
-          const answer = await pc.createAnswer();
-          await pc.setLocalDescription(answer);
-          await sig.send({ type: "answer", sdp: answer, viewer: viewerId });
         } else if (s.type === "ice" && s.from === "host") {
           if (pc.remoteDescription) await pc.addIceCandidate(s.candidate).catch(() => {});
           else pendingIce.push(s.candidate);

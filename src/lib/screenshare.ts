@@ -74,16 +74,23 @@ export function openSignaling(
         emit(record.id, record.payload);
       },
     );
-  const ready = new Promise<void>((resolve, reject) => {
+  // Realtime مجرد مسار سريع، وليس شرطاً لبدء الاتصال. عند فتح شاشات كثيرة
+  // قد يتأخر اشتراك بعض القنوات أو يصل TIMED_OUT، بينما إدخال/قراءة الإشارات
+  // من الجدول يظل يعمل. ربط send() بالاشتراك كان يجعل بعض الأجهزة فقط تظل
+  // على «جاري الاتصال» إلى الأبد بدون أن يصلها join أصلاً.
+  const ready = new Promise<void>((resolve) => {
+    const fallback = setTimeout(resolve, 1200);
     channel.subscribe((status) => {
-      if (status === "SUBSCRIBED") resolve();
+      if (status === "SUBSCRIBED") {
+        clearTimeout(fallback);
+        resolve();
+      }
       else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
-        reject(new Error(`signaling ${status}`));
+        clearTimeout(fallback);
+        resolve();
       }
     });
   });
-  // لا نترك الوعد بدون معالج (يمنع unhandled rejection في المتصفح)
-  ready.catch(() => {});
 
   // احتياطي: استعلام دوري مباشر — لا نعتمد فقط على الزمن الحقيقي.
   // مع وجود عدة أجهزة موظفين قد تتأخر رسائل الزمن الحقيقي فتبقى بعض
@@ -117,7 +124,6 @@ export function openSignaling(
   return {
     ready,
     send: async (s: Signal) => {
-      await ready;
       const viewerId = "viewer" in s ? s.viewer : "to" in s ? s.to : undefined;
       if (!viewerId) throw new Error("Missing viewer identity");
       const { error } = await supabase.from("screenshare_signals").insert({
