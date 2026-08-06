@@ -43,9 +43,20 @@ export function makeViewerId(): string {
 export function openSignaling(
   code: string,
   onSignal: (s: Signal) => void,
-  opts?: { raw?: boolean },
+  opts?: { raw?: boolean; viewerId?: string },
 ) {
   const deviceId = opts?.raw ? code : code.trim().toUpperCase();
+  const seen = new Set<string>();
+  const emit = (id: string | undefined, payload: Signal | undefined) => {
+    if (!payload) return;
+    if (id) {
+      if (seen.has(id)) return;
+      seen.add(id);
+      if (seen.size > 400) seen.clear();
+    }
+    onSignal(payload);
+  };
+
   const channel = supabase
     .channel(`admin-screenshare-${makeViewerId()}`)
     .on(
@@ -57,8 +68,10 @@ export function openSignaling(
         filter: `device_id=eq.${deviceId}`,
       },
       ({ new: row }) => {
-        const record = row as { sender?: string; payload?: Signal };
-        if (record.sender === "host" && record.payload) onSignal(record.payload);
+        const record = row as { id?: string; sender?: string; viewer_id?: string; payload?: Signal };
+        if (record.sender !== "host") return;
+        if (opts?.viewerId && record.viewer_id && record.viewer_id !== opts.viewerId) return;
+        emit(record.id, record.payload);
       },
     );
   const ready = new Promise<void>((resolve, reject) => {
@@ -71,6 +84,35 @@ export function openSignaling(
   });
   // لا نترك الوعد بدون معالج (يمنع unhandled rejection في المتصفح)
   ready.catch(() => {});
+
+  // احتياطي: استعلام دوري مباشر — لا نعتمد فقط على الزمن الحقيقي.
+  // مع وجود عدة أجهزة موظفين قد تتأخر رسائل الزمن الحقيقي فتبقى بعض
+  // الشاشات في «جاري الاتصال…» بلا سبب. هذا الاستعلام يضمن وصول العرض.
+  let polling = false;
+  const poll = async () => {
+    if (polling) return;
+    polling = true;
+    try {
+      let q = supabase
+        .from("screenshare_signals")
+        .select("id,viewer_id,payload")
+        .eq("device_id", deviceId)
+        .eq("sender", "host")
+        .order("created_at", { ascending: true })
+        .limit(30);
+      if (opts?.viewerId) q = q.eq("viewer_id", opts.viewerId);
+      const { data } = await q;
+      for (const row of data ?? []) {
+        emit((row as any).id as string, (row as any).payload as Signal);
+      }
+    } catch {
+      /* تجاهل */
+    } finally {
+      polling = false;
+    }
+  };
+  const pollTimer = setInterval(() => void poll(), 400);
+  void poll();
 
   return {
     ready,
@@ -87,7 +129,9 @@ export function openSignaling(
       if (error) throw error;
     },
     close: () => {
+      clearInterval(pollTimer);
       supabase.removeChannel(channel);
     },
   };
 }
+
