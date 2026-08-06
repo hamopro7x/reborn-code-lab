@@ -286,12 +286,20 @@ async function handleViewerSignal(s) {
     await startPeer(viewerId);
   } else if (s.type === "answer") {
     const entry = peers.get(viewerId);
-    if (entry?.pc && entry.pc.signalingState === "have-local-offer") {
-      await entry.pc.setRemoteDescription(s.sdp);
+    // نقبل الإجابة في أي حالة تسمح بها المواصفة، ولا نرفضها لمجرد أن حالة
+    // الإشارة تأخّرت — الرفض كان يترك الشاشة معلّقة على "جاري الاتصال".
+    if (entry?.pc && !entry.pc.currentRemoteDescription) {
+      try {
+        await entry.pc.setRemoteDescription(s.sdp);
+      } catch (err) {
+        console.error("[signal] answer rejected:", err);
+        return;
+      }
       for (const candidate of entry.pendingIce.splice(0)) {
         await entry.pc.addIceCandidate(candidate).catch(() => {});
       }
     }
+
   } else if (s.type === "ice" && s.from === "viewer") {
     const entry = peers.get(viewerId);
     if (entry?.pc?.remoteDescription) await entry.pc.addIceCandidate(s.candidate).catch(() => {});
@@ -418,19 +426,22 @@ async function startPeer(viewerId) {
   if (startingViewers.has(viewerId)) return; // منع بدء اتصالين لنفس المشاهد
   const current = peers.get(viewerId);
   if (current?.pc && ["new", "connecting", "connected"].includes(current.pc.connectionState)) {
-    // طلب JOIN المتكرر يعني غالباً أن أول OFFER لم يصل للمشاهد. نعيد نفس العرض
-    // فوراً بدل ترك الشاشة معلقة حتى انتهاء مهلة إعادة الاتصال.
-    if (current.offer && current.pc.connectionState !== "connected") {
-      await send({ type: "offer", to: viewerId, sdp: current.offer });
+    if (current.pc.connectionState === "connected") return;
+    const age = Date.now() - (current.startedAt ?? 0);
+    // لو الاتصال عالق أكثر من 6 ثوانٍ نبنيه من جديد بدل إعادة نفس العرض
+    // القديم للأبد (كان يترك الشاشة على "جاري الاتصال" بلا نهاية).
+    if (age < 6000) {
+      if (current.offer) await send({ type: "offer", to: viewerId, sdp: current.offer });
+      return;
     }
-    return;
   }
   startingViewers.add(viewerId);
   try {
     closePeer(viewerId); // أي اتصال قديم لنفس المشاهد يُستبدل
     const s = await getStream();
     const pc = new RTCPeerConnection(RTC_CONFIG);
-    const entry = { pc, statsTimer: null, pendingIce: [], recoverTimer: null, connectTimer: null, offer: null };
+    const entry = { pc, statsTimer: null, pendingIce: [], recoverTimer: null, connectTimer: null, offer: null, startedAt: Date.now() };
+
     peers.set(viewerId, entry);
     window.agent.setViewerCount?.(peers.size);
 
