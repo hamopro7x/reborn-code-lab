@@ -405,8 +405,8 @@ function closePeer(viewerId) {
   if (entry.recoverTimer) clearTimeout(entry.recoverTimer);
   if (entry.connectTimer) clearTimeout(entry.connectTimer);
   try { entry.pc.close(); } catch {}
-  // نوقف نسخة المسار الخاصة بهذا المشاهد فقط — المصدر يبقى للباقين
-  try { entry.track?.stop(); } catch {}
+  // مسار الشاشة مشترك بين كل المشاهدين — لا نوقفه هنا
+
   peers.delete(viewerId);
   window.agent.setViewerCount?.(peers.size);
   setStatus(peers.size > 0 ? `متصل · ${peers.size} مشاهد` : "متصل", true);
