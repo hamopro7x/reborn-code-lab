@@ -312,11 +312,14 @@ async function getStream() {
 function startAdaptive(entry, sender) {
   if (entry.statsTimer) clearInterval(entry.statsTimer);
 
-  const MIN = 6_000_000;   // أرضية عالية: لا تقل الجودة عند الحركة
+  // أرضية منخفضة: عند ضيق الشبكة نُنزل الـ bitrate بدل تجمّد الصورة تماماً
+  const MIN = 1_200_000;
   const MAX = 40_000_000;  // سقف عالي جداً لأعلى كفاءة وضوح
   let target = 14_000_000;
   let lastLost = 0;
-  let lastPackets = 0;
+  let lastFramesEncoded = -1;
+  let frozenTicks = 0;
+
   entry.statsTimer = setInterval(async () => {
     if (!entry.pc || entry.pc.connectionState !== "connected") return;
     try {
