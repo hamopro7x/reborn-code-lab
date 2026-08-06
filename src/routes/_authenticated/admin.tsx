@@ -79,16 +79,39 @@ function Admin() {
   };
   const isEmployee = role === "employee";
   const adminOnly = role === "admin";
+  const qc = useQueryClient();
+  const sharedQ = useQuery({
+    queryKey: ["employee-panels"],
+    queryFn: async () => {
+      const { data } = await supabase.from("site_settings").select("value").eq("key", "employee_panels").maybeSingle();
+      const v = (data?.value ?? {}) as any;
+      return Array.isArray(v.panels) ? (v.panels as PanelKey[]) : [];
+    },
+    refetchInterval: 5000,
+  });
+  const shared = sharedQ.data ?? [];
+  const basePanels: PanelKey[] = ["orders", "courses"];
+  const employeeAllowed = (key: PanelKey) => basePanels.includes(key) || shared.includes(key);
+  const canView = (key: PanelKey) => adminOnly || employeeAllowed(key);
+  const readOnly = isEmployee && !basePanels.includes(panel);
+  async function toggleShare(key: PanelKey, on: boolean) {
+    const next = on ? Array.from(new Set([...shared, key])) : shared.filter((k) => k !== key);
+    const { error } = await supabase.from("site_settings").upsert({ key: "employee_panels", value: { panels: next } as any }, { onConflict: "key" });
+    if (error) { toast.error("فشل الحفظ"); return; }
+    toast.success(on ? "تم إظهار القسم للموظف" : "تم إخفاء القسم عن الموظف");
+    qc.invalidateQueries({ queryKey: ["employee-panels"] });
+  }
   const identityFn = useServerFn(getViewerIdentity);
   const [me, setMe] = useState<{ email: string; full_name: string; avatar_url: string } | null>(null);
   useEffect(() => {
     if (role !== "admin" && role !== "employee") return;
     identityFn().then((v: any) => setMe(v)).catch(() => {});
   }, [role, identityFn]);
-  // Employees only see the Orders section
+  // Employees only see the sections the admin shared with them
   useEffect(() => {
-    if (isEmployee && panel !== "orders" && panel !== "courses") setPanel("orders");
-  }, [isEmployee, panel]);
+    if (isEmployee && !employeeAllowed(panel)) setPanel("orders");
+  }, [isEmployee, panel, shared.join(",")]);
+
   if (role === null) return <div className="p-8 text-center">جاري التحقق...</div>;
   if (role !== "admin" && role !== "employee") {
     return (
