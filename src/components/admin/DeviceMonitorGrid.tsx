@@ -142,8 +142,9 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
       // مخزن تشغيل صغير لكن ليس صفراً: 0.03s كان يسبب تجميد/سواد عند أي فقد حزم.
       try {
         // مخزن صغير (80ms) = صورة أسرع بتأخير أقل، وما زال يمتص فقد الحزم
-        (e.receiver as unknown as { jitterBufferTarget?: number }).jitterBufferTarget = 20;
-        (e.receiver as unknown as { playoutDelayHint?: number }).playoutDelayHint = 0.02;
+        // أقل تأخير ممكن: نلعب الإطار بمجرد وصوله (بدون مخزن مؤقت)
+        (e.receiver as unknown as { jitterBufferTarget?: number }).jitterBufferTarget = 0;
+        (e.receiver as unknown as { playoutDelayHint?: number }).playoutDelayHint = 0;
       } catch {
         /* غير مدعوم في بعض المتصفحات */
       }
@@ -406,19 +407,29 @@ function LiveScreen({
 
   useEffect(() => {
     if (!active) return;
-    const onDown = (e: KeyboardEvent) => {
+    const stop = (e: KeyboardEvent) => {
       e.preventDefault();
+      e.stopPropagation();
+    };
+    const onDown = (e: KeyboardEvent) => {
+      stop(e);
+      // حرف قابل للطباعة (يشمل العربي والحروف الكبيرة) يُرسل كنص مباشر
+      if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        sendInput({ t: "text", s: e.key });
+        return;
+      }
       sendInput({ t: "key", key: e.key, down: true });
     };
     const onUp = (e: KeyboardEvent) => {
-      e.preventDefault();
+      stop(e);
+      if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) return;
       sendInput({ t: "key", key: e.key, down: false });
     };
-    window.addEventListener("keydown", onDown);
-    window.addEventListener("keyup", onUp);
+    window.addEventListener("keydown", onDown, true);
+    window.addEventListener("keyup", onUp, true);
     return () => {
-      window.removeEventListener("keydown", onDown);
-      window.removeEventListener("keyup", onUp);
+      window.removeEventListener("keydown", onDown, true);
+      window.removeEventListener("keyup", onUp, true);
     };
   }, [active, sendInput]);
 
@@ -454,7 +465,7 @@ function LiveScreen({
       </div>
 
       <div
-        className={`relative w-full rounded-lg overflow-hidden bg-black ${expanded ? "h-[70vh]" : "aspect-video"} ${active ? "ring-2 ring-primary cursor-crosshair" : ""}`}
+        className={`relative w-full rounded-lg overflow-hidden bg-black ${expanded ? "h-[70vh]" : "aspect-video"} ${active ? "ring-2 ring-primary cursor-none" : ""}`}
         onMouseMove={
           active
             ? (e) => {
