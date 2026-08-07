@@ -73,6 +73,23 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
     const viewerId = makeViewerId();
     const pc = new RTCPeerConnection(RTC_CONFIG);
 
+    // قناة التحكم يفتحها الموظف مع كل اتصال جديد
+    setCanControl(false);
+    ctlRef.current = null;
+    pc.ondatachannel = (e) => {
+      if (e.channel.label !== "ctl") return;
+      ctlRef.current = e.channel;
+      e.channel.onopen = () => {
+        if (!closed) setCanControl(true);
+      };
+      e.channel.onclose = () => {
+        if (!closed) setCanControl(false);
+      };
+      if (e.channel.readyState === "open") setCanControl(true);
+    };
+
+
+
     // إعادة الاتصال تلقائياً عند انقطاع/فشل مسار ICE
     let recoverTimer: ReturnType<typeof setTimeout> | undefined;
     const scheduleReconnect = (delay: number) => {
