@@ -5,22 +5,34 @@ const RTC_CONFIG = {
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:stun1.l.google.com:19302" },
-    // مُرحّل (TURN) كخط بديل: يمنع فشل/تعليق البث على شبكات NAT الصعبة
-    {
-      urls: [
-        "turn:openrelay.metered.ca:80",
-        "turn:openrelay.metered.ca:443",
-        "turn:openrelay.metered.ca:443?transport=tcp",
-      ],
-      username: "openrelayproject",
-      credential: "openrelayproject",
-    },
+    { urls: "stun:stun.cloudflare.com:3478" },
   ],
   iceTransportPolicy: "all",
   bundlePolicy: "max-bundle",
   rtcpMuxPolicy: "require",
   iceCandidatePoolSize: 4,
 };
+
+// جلب خوادم TURN من الموقع (بيانات دخول مؤقتة). بدون TURN تفشل الشبكات المقيّدة
+// (NAT متماثل / إنترنت موبايل) فيظهر الجهاز «متصل» عند الموظف و«جاري الاتصال» عند الأدمن.
+let iceWarmedAt = 0;
+async function warmIceServers(force) {
+  if (!force && Date.now() - iceWarmedAt < 10 * 60 * 1000) return;
+  try {
+    const res = await fetch("https://mag-pro1.com/api/public/ice-servers", { cache: "no-store" });
+    if (!res.ok) return;
+    const json = await res.json();
+    if (Array.isArray(json?.iceServers) && json.iceServers.length) {
+      RTC_CONFIG.iceServers = json.iceServers;
+      iceWarmedAt = Date.now();
+    }
+  } catch {
+    /* نكمل بإعدادات STUN */
+  }
+}
+void warmIceServers(true);
+setInterval(() => void warmIceServers(), 10 * 60 * 1000);
+
 
 
 const consentEl = document.getElementById("consent");
