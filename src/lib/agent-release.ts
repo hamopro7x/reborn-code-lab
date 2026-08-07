@@ -3,11 +3,11 @@
 // دائماً آخر إصدار فقط — البرنامج ينزل هذا الإصدار مباشرة ولا يمر بأي
 // إصدارات وسيطة بالترتيب.
 export const AGENT_RELEASE = {
-  version: "3.1.2",
-  notes: "إصلاح الكيبورد (عربي/إنجليزي عبر يونيكود) وتسريع الماوس",
+  version: "3.1.3",
+  notes: "حل بديل لتأخير الماوس: مشغّل تحكم أصلي (native) بدل PowerShell + كتابة يونيكود عربي/إنجليزي.",
   url: "https://mag-pro1.com/api/public/agent-download.exe",
   storageBucket: "site-assets",
-  storagePath: "releases/MagProConnect-Setup-3.1.2.exe",
-  size: 110519357,
-  sha256: "e5c672e762341f547528f20b047cb0d8c2e32d2bb3f8b1d05aacacbf3b4e7824",
+  storagePath: "releases/MagProConnect-Setup-3.1.3.exe",
+  size: 110520416,
+  sha256: "747da6b61b934a80760c345e73a9584aab8520aa864a4dee486f096b808776d4",
 } as const;
