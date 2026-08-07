@@ -121,6 +121,15 @@ const EXTENDED = new Set([
   "PageUp", "PageDown", "Insert", "Delete",
 ]);
 
+function virtualKeyFor(key) {
+  if (typeof key !== "string") return null;
+  if (VK[key]) return VK[key];
+  // اختصارات Ctrl/Alt تستخدم e.key بحروف صغيرة؛ ويندوز يحتاج VK للحرف الكبير.
+  if (/^[a-z]$/i.test(key)) return key.toUpperCase().charCodeAt(0);
+  if (/^[0-9]$/.test(key)) return key.charCodeAt(0);
+  return null;
+}
+
 function write(line) {
   const p = ensure();
   if (!p || !p.stdin.writable) return;
@@ -215,8 +224,8 @@ function handleRemoteInput(cmd) {
   }
   if (cmd.t === "key") {
     const key = cmd.key;
-    const vk = VK[key];
-    if (vk) {
+    const vk = virtualKeyFor(key);
+    if (vk !== null) {
       write(`K ${vk} ${cmd.down ? 1 : 0} ${EXTENDED.has(key) ? 1 : 0}`);
     } else if (cmd.down && typeof key === "string" && [...key].length === 1) {
       // أي حرف (عربي/إنجليزي/رمز) يُكتب كيونيكود مضمون
