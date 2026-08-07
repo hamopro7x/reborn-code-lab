@@ -498,6 +498,12 @@ function LiveScreen({
             )}
           </div>
         )}
+
+        {control && (
+          <div className="absolute top-2 left-2 rounded-md bg-primary px-2 py-0.5 text-[10px] font-bold text-primary-foreground">
+            تحكم مباشر
+          </div>
+        )}
       </div>
 
 
@@ -513,7 +519,19 @@ function LiveScreen({
             </>
           )}
         </Button>
+        <Button
+          size="sm"
+          variant={control ? "default" : "outline"}
+          className="flex-1"
+          disabled={!canControl}
+          title={canControl ? "تحكم في جهاز الموظف" : "التحكم يحتاج آخر إصدار من البرنامج"}
+          onClick={() => setControl((v) => !v)}
+        >
+          <MousePointerClick className="size-4 ml-1" />
+          {control ? "إيقاف التحكم" : "تحكم"}
+        </Button>
       </div>
+
     </div>
   );
 }
