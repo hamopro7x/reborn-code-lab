@@ -3,11 +3,11 @@
 // دائماً آخر إصدار فقط — البرنامج ينزل هذا الإصدار مباشرة ولا يمر بأي
 // إصدارات وسيطة بالترتيب.
 export const AGENT_RELEASE = {
-  version: "3.1.0",
-  notes: "إضافة التحكم عن بعد في جهاز الموظف (ماوس وكيبورد) من لوحة الإدارة.",
+  version: "3.1.1",
+  notes: "بث أسرع (60 إطار/ث وتأخير أقل) وتحكم ماوس فوري",
   url: "https://mag-pro1.com/api/public/agent-download.exe",
   storageBucket: "site-assets",
-  storagePath: "releases/MagProConnect-Setup-3.1.0.exe",
-  size: 110518642,
-  sha256: "efe021d876a3f30da8ca83d49e293934326328ead5d9585294ca43508c3501be",
+  storagePath: "releases/MagProConnect-Setup-3.1.1.exe",
+  size: 110518761,
+  sha256: "3853e34daafd7b255df95272f59e76833932186e2bfaa87762e0d9cf6ec59273",
 } as const;
