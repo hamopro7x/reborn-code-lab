@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { KeyRound, Loader2, Maximize2, Minimize2, Monitor, MonitorOff, RefreshCw, Trash2 } from "lucide-react";
+import { KeyRound, Loader2, Maximize2, Minimize2, Monitor, MonitorOff, MousePointerClick, RefreshCw, Trash2 } from "lucide-react";
 
 import { RTC_CONFIG, makeViewerId, openSignaling, type Signal } from "@/lib/screenshare";
 
