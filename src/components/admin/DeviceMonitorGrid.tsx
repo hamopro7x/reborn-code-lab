@@ -407,19 +407,29 @@ function LiveScreen({
 
   useEffect(() => {
     if (!active) return;
-    const onDown = (e: KeyboardEvent) => {
+    const stop = (e: KeyboardEvent) => {
       e.preventDefault();
+      e.stopPropagation();
+    };
+    const onDown = (e: KeyboardEvent) => {
+      stop(e);
+      // حرف قابل للطباعة (يشمل العربي والحروف الكبيرة) يُرسل كنص مباشر
+      if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        sendInput({ t: "text", s: e.key });
+        return;
+      }
       sendInput({ t: "key", key: e.key, down: true });
     };
     const onUp = (e: KeyboardEvent) => {
-      e.preventDefault();
+      stop(e);
+      if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) return;
       sendInput({ t: "key", key: e.key, down: false });
     };
-    window.addEventListener("keydown", onDown);
-    window.addEventListener("keyup", onUp);
+    window.addEventListener("keydown", onDown, true);
+    window.addEventListener("keyup", onUp, true);
     return () => {
-      window.removeEventListener("keydown", onDown);
-      window.removeEventListener("keyup", onUp);
+      window.removeEventListener("keydown", onDown, true);
+      window.removeEventListener("keyup", onUp, true);
     };
   }, [active, sendInput]);
 
