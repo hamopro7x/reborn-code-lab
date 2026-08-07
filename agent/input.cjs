@@ -1,5 +1,6 @@
 // التحكم عن بعد في جهاز الموظف (ويندوز) بدون أي مكتبات أصلية.
-// نشغّل عملية PowerShell دائمة تقرأ أوامر JSON سطراً سطراً وتنفّذها عبر user32.dll
+// عملية PowerShell دائمة تقرأ أوامر نصية بسيطة (بدون JSON = أسرع بكثير)
+// وتنفّذها عبر SendInput في user32.dll مع دعم كامل لليونيكود (عربي/إنجليزي).
 const { spawn } = require("child_process");
 const fs = require("fs");
 const os = require("os");
@@ -11,63 +12,69 @@ Add-Type -TypeDefinition @'
 using System;
 using System.Runtime.InteropServices;
 public class MagInput {
+  [StructLayout(LayoutKind.Sequential)] public struct MOUSEINPUT { public int dx; public int dy; public uint mouseData; public uint dwFlags; public uint time; public IntPtr dwExtraInfo; }
+  [StructLayout(LayoutKind.Sequential)] public struct KEYBDINPUT { public ushort wVk; public ushort wScan; public uint dwFlags; public uint time; public IntPtr dwExtraInfo; }
+  [StructLayout(LayoutKind.Explicit)] public struct INPUTUNION { [FieldOffset(0)] public MOUSEINPUT mi; [FieldOffset(0)] public KEYBDINPUT ki; }
+  [StructLayout(LayoutKind.Sequential)] public struct INPUT { public uint type; public INPUTUNION u; }
+  [DllImport("user32.dll")] public static extern uint SendInput(uint n, INPUT[] i, int cb);
   [DllImport("user32.dll")] public static extern bool SetCursorPos(int X, int Y);
-  [DllImport("user32.dll")] public static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint dwData, UIntPtr dwExtraInfo);
-  [DllImport("user32.dll")] public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
   [DllImport("user32.dll")] public static extern int GetSystemMetrics(int nIndex);
+
+  static int Size = Marshal.SizeOf(typeof(INPUT));
+
+  public static void Mouse(uint flags, uint data) {
+    INPUT[] i = new INPUT[1];
+    i[0].type = 0;
+    i[0].u.mi.dwFlags = flags;
+    i[0].u.mi.mouseData = data;
+    SendInput(1, i, Size);
+  }
+  public static void Key(ushort vk, bool down, bool ext) {
+    INPUT[] i = new INPUT[1];
+    i[0].type = 1;
+    i[0].u.ki.wVk = vk;
+    i[0].u.ki.dwFlags = (uint)((down ? 0 : 2) | (ext ? 1 : 0));
+    SendInput(1, i, Size);
+  }
+  public static void Unicode(ushort code) {
+    INPUT[] i = new INPUT[2];
+    i[0].type = 1; i[0].u.ki.wScan = code; i[0].u.ki.dwFlags = 4;
+    i[1].type = 1; i[1].u.ki.wScan = code; i[1].u.ki.dwFlags = 4 | 2;
+    SendInput(2, i, Size);
+  }
+  public static void MoveTo(double fx, double fy) {
+    int w = GetSystemMetrics(0); int h = GetSystemMetrics(1);
+    SetCursorPos((int)(fx * w), (int)(fy * h));
+  }
 }
 '@
-Add-Type -AssemblyName System.Windows.Forms
-
-$ZERO = [UIntPtr]::Zero
-function ScreenW { [MagInput]::GetSystemMetrics(0) }
-function ScreenH { [MagInput]::GetSystemMetrics(1) }
 
 while ($true) {
   $line = [Console]::In.ReadLine()
   if ($line -eq $null) { break }
-  if ([string]::IsNullOrWhiteSpace($line)) { continue }
+  if ($line.Length -lt 1) { continue }
   try {
-    $c = $line | ConvertFrom-Json
-    switch ($c.t) {
-      'move' {
-        $x = [int]([double]$c.x * (ScreenW))
-        $y = [int]([double]$c.y * (ScreenH))
-        [MagInput]::SetCursorPos($x, $y) | Out-Null
+    $p = $line.Split(' ')
+    switch ($p[0]) {
+      'M' { [MagInput]::MoveTo([double]$p[1], [double]$p[2]) }
+      'D' {
+        if ($p.Length -ge 4) { [MagInput]::MoveTo([double]$p[2], [double]$p[3]) }
+        $b = [int]$p[1]
+        $f = 0x0002; if ($b -eq 2) { $f = 0x0008 } elseif ($b -eq 1) { $f = 0x0020 }
+        [MagInput]::Mouse([uint32]$f, 0)
       }
-      'down' {
-        if ($c.x -ne $null) {
-          $x = [int]([double]$c.x * (ScreenW)); $y = [int]([double]$c.y * (ScreenH))
-          [MagInput]::SetCursorPos($x, $y) | Out-Null
-        }
-        # 0=يسار 1=وسط 2=يمين (نفس ترقيم المتصفح)
-        $f = 0x0002
-        if ([int]$c.b -eq 2) { $f = 0x0008 } elseif ([int]$c.b -eq 1) { $f = 0x0020 }
-        [MagInput]::mouse_event($f, 0, 0, 0, $ZERO)
+      'U' {
+        $b = [int]$p[1]
+        $f = 0x0004; if ($b -eq 2) { $f = 0x0010 } elseif ($b -eq 1) { $f = 0x0040 }
+        [MagInput]::Mouse([uint32]$f, 0)
       }
-      'up' {
-        $f = 0x0004
-        if ([int]$c.b -eq 2) { $f = 0x0010 } elseif ([int]$c.b -eq 1) { $f = 0x0040 }
-        [MagInput]::mouse_event($f, 0, 0, 0, $ZERO)
-      }
-      'wheel' {
-        [MagInput]::mouse_event(0x0800, 0, 0, [uint32]([int]$c.d), $ZERO)
-      }
-      'key' {
-        $vk = [byte][int]$c.vk
-        $flags = 0
-        if ($c.ext) { $flags = $flags -bor 0x0001 }
-        if (-not $c.down) { $flags = $flags -bor 0x0002 }
-        [MagInput]::keybd_event($vk, 0, $flags, $ZERO)
-      }
-      'text' {
-        if ($c.s) { [System.Windows.Forms.SendKeys]::SendWait([string]$c.s) }
-      }
+      'W' { [MagInput]::Mouse(0x0800, [uint32][int]$p[1]) }
+      'K' { [MagInput]::Key([ushort][int]$p[1], ($p[2] -eq '1'), ($p[3] -eq '1')) }
+      'T' { for ($i = 1; $i -lt $p.Length; $i++) { [MagInput]::Unicode([ushort][int]$p[$i]) } }
     }
   } catch { }
 }
 `;
-
 
 let proc = null;
 let scriptPath = null;
@@ -85,6 +92,7 @@ function ensure() {
       ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", scriptPath],
       { windowsHide: true, stdio: ["pipe", "ignore", "ignore"] },
     );
+    proc.stdin.setDefaultEncoding("ascii");
     proc.on("exit", () => {
       proc = null;
     });
@@ -106,59 +114,124 @@ const VK = {
   Insert: 45, Delete: 46, Meta: 91, ContextMenu: 93,
   F1: 112, F2: 113, F3: 114, F4: 115, F5: 116, F6: 117,
   F7: 118, F8: 119, F9: 120, F10: 121, F11: 122, F12: 123,
-  ";": 186, "=": 187, ",": 188, "-": 189, ".": 190, "/": 191,
-  "`": 192, "[": 219, "\\": 220, "]": 221, "'": 222,
 };
 const EXTENDED = new Set([
   "ArrowLeft", "ArrowUp", "ArrowRight", "ArrowDown", "Home", "End",
   "PageUp", "PageDown", "Insert", "Delete",
 ]);
 
-function vkFor(key) {
-  if (!key) return 0;
-  if (VK[key] !== undefined) return VK[key];
-  if (key.length === 1) {
-    const c = key.toUpperCase();
-    const code = c.charCodeAt(0);
-    if ((code >= 48 && code <= 57) || (code >= 65 && code <= 90)) return code;
-  }
-  return 0;
-}
-
-function escapeSendKeys(s) {
-  return String(s).replace(/[+^%~(){}\[\]]/g, (m) => "{" + m + "}");
-}
-
-/** ينفّذ أمر تحكم واحد وارد من لوحة الإدارة */
-function handleRemoteInput(cmd) {
-  if (!cmd || typeof cmd !== "object") return;
+function write(line) {
   const p = ensure();
   if (!p || !p.stdin.writable) return;
-  let payload = null;
-  if (cmd.t === "move" || cmd.t === "up" || cmd.t === "down" || cmd.t === "wheel") {
-    payload = cmd;
-  } else if (cmd.t === "key") {
-    const vk = vkFor(cmd.key);
-    if (!vk) {
-      // حرف غير قياسي (عربي مثلاً) — نكتبه كنص عند الضغط فقط
-      if (cmd.down && cmd.key && cmd.key.length === 1) {
-        payload = { t: "text", s: escapeSendKeys(cmd.key) };
-      }
-    } else {
-      payload = { t: "key", vk, down: !!cmd.down, ext: EXTENDED.has(cmd.key) };
-    }
-  } else if (cmd.t === "text" && typeof cmd.s === "string") {
-    payload = { t: "text", s: escapeSendKeys(cmd.s) };
-  }
-  if (!payload) return;
   try {
-    p.stdin.write(JSON.stringify(payload) + "\n");
+    p.stdin.write(line + "\n", "ascii");
   } catch {
     proc = null;
   }
 }
 
+// تجميع حركة الماوس: نرسل آخر إحداثي فقط كل 6ms لتفادي تراكم الأوامر
+let pendingMove = null;
+let moveTimer = null;
+let lastMoveAt = 0;
+
+function flushMove() {
+  moveTimer = null;
+  if (!pendingMove) return;
+  const m = pendingMove;
+  pendingMove = null;
+  lastMoveAt = Date.now();
+  write(`M ${m.x.toFixed(5)} ${m.y.toFixed(5)}`);
+}
+
+function queueMove(x, y) {
+  pendingMove = { x, y };
+  const since = Date.now() - lastMoveAt;
+  if (since >= 6) {
+    if (moveTimer) {
+      clearTimeout(moveTimer);
+      moveTimer = null;
+    }
+    flushMove();
+  } else if (!moveTimer) {
+    moveTimer = setTimeout(flushMove, 6 - since);
+  }
+}
+
+function clamp01(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return null;
+  return Math.max(0, Math.min(1, n));
+}
+
+function sendText(s) {
+  const codes = [];
+  for (const ch of String(s)) {
+    const cp = ch.codePointAt(0);
+    if (cp > 0xffff) {
+      // زوج بديل (إيموجي)
+      const v = cp - 0x10000;
+      codes.push(0xd800 + (v >> 10), 0xdc00 + (v & 0x3ff));
+    } else if (cp >= 32 || cp === 9) {
+      codes.push(cp);
+    }
+  }
+  for (let i = 0; i < codes.length; i += 24) {
+    write("T " + codes.slice(i, i + 24).join(" "));
+  }
+}
+
+/** ينفّذ أمر تحكم واحد وارد من لوحة الإدارة */
+function handleRemoteInput(cmd) {
+  if (!cmd || typeof cmd !== "object") return;
+  if (cmd.t === "move") {
+    const x = clamp01(cmd.x);
+    const y = clamp01(cmd.y);
+    if (x === null || y === null) return;
+    queueMove(x, y);
+    return;
+  }
+  if (cmd.t === "down" || cmd.t === "up") {
+    const b = [0, 1, 2].includes(Number(cmd.b)) ? Number(cmd.b) : 0;
+    const x = clamp01(cmd.x);
+    const y = clamp01(cmd.y);
+    if (cmd.t === "down") {
+      if (x !== null && y !== null) {
+        pendingMove = null;
+        write(`D ${b} ${x.toFixed(5)} ${y.toFixed(5)}`);
+      } else {
+        write(`D ${b}`);
+      }
+    } else {
+      write(`U ${b}`);
+    }
+    return;
+  }
+  if (cmd.t === "wheel") {
+    const d = Math.max(-1200, Math.min(1200, Math.round(Number(cmd.d) || 0)));
+    if (d) write(`W ${d}`);
+    return;
+  }
+  if (cmd.t === "key") {
+    const key = cmd.key;
+    const vk = VK[key];
+    if (vk) {
+      write(`K ${vk} ${cmd.down ? 1 : 0} ${EXTENDED.has(key) ? 1 : 0}`);
+    } else if (cmd.down && typeof key === "string" && [...key].length === 1) {
+      // أي حرف (عربي/إنجليزي/رمز) يُكتب كيونيكود مضمون
+      sendText(key);
+    }
+    return;
+  }
+  if (cmd.t === "text" && typeof cmd.s === "string") sendText(cmd.s);
+}
+
 function stopRemoteInput() {
+  try {
+    if (moveTimer) clearTimeout(moveTimer);
+  } catch {}
+  moveTimer = null;
+  pendingMove = null;
   try {
     proc?.stdin?.end();
     proc?.kill();
