@@ -164,6 +164,19 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
       setFailed(false);
     };
 
+    // قناة التحكم يفتحها جهاز الموظف
+    pc.ondatachannel = (e) => {
+      if (e.channel.label !== "ctl") return;
+      ctlRef.current = e.channel;
+      e.channel.onopen = () => {
+        if (!closed) setCanControl(true);
+      };
+      e.channel.onclose = () => {
+        if (!closed) setCanControl(false);
+      };
+      if (e.channel.readyState === "open") setCanControl(true);
+    };
+
 
 
     const sig = openSignaling(
