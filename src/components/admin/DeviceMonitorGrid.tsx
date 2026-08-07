@@ -335,52 +335,10 @@ function LiveScreen({
     const timer = setTimeout(() => setStreamEnabled(true), startupDelay);
     return () => clearTimeout(timer);
   }, [online, startupDelay]);
-  const { videoRef, live, failed, canControl, sendControl } = useDeviceStream(
+  const { videoRef, live, failed } = useDeviceStream(
     device.device_id,
     streamEnabled,
   );
-
-  // ===== التحكم عن بعد =====
-  const [control, setControl] = useState(false);
-  const surfaceRef = useRef<HTMLDivElement | null>(null);
-  const lastMove = useRef(0);
-
-  // إحداثيات نسبية داخل الفيديو (يراعي object-contain حتى لا يزيح المؤشر)
-  const pointFor = (e: React.MouseEvent) => {
-    const v = videoRef.current;
-    const box = surfaceRef.current?.getBoundingClientRect();
-    if (!v || !box) return null;
-    const vw = v.videoWidth || 16;
-    const vh = v.videoHeight || 9;
-    const scale = Math.min(box.width / vw, box.height / vh);
-    const dw = vw * scale;
-    const dh = vh * scale;
-    const ox = (box.width - dw) / 2;
-    const oy = (box.height - dh) / 2;
-    const x = (e.clientX - box.left - ox) / dw;
-    const y = (e.clientY - box.top - oy) / dh;
-    if (x < 0 || x > 1 || y < 0 || y > 1) return null;
-    return { x: Number(x.toFixed(5)), y: Number(y.toFixed(5)) };
-  };
-
-  useEffect(() => {
-    if (!control || !canControl) return;
-    const onKey = (e: KeyboardEvent) => {
-      e.preventDefault();
-      sendControl({ t: "key", key: e.key, down: e.type === "keydown" });
-    };
-    window.addEventListener("keydown", onKey);
-    window.addEventListener("keyup", onKey);
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      window.removeEventListener("keyup", onKey);
-    };
-  }, [control, canControl, sendControl]);
-
-  useEffect(() => {
-    if (!canControl) setControl(false);
-  }, [canControl]);
-
 
   return (
     <div className="w-full rounded-xl border border-border/60 p-3 space-y-2 flex flex-col">
@@ -413,39 +371,9 @@ function LiveScreen({
         </div>
       </div>
 
-
       <div
-        ref={surfaceRef}
-        className={`relative w-full rounded-lg overflow-hidden bg-black ${expanded ? "h-[70vh]" : "aspect-video"} ${control ? "cursor-crosshair ring-2 ring-primary" : ""}`}
-        onContextMenu={(e) => {
-          if (control) e.preventDefault();
-        }}
-        onMouseMove={(e) => {
-          if (!control) return;
-          const now = Date.now();
-          if (now - lastMove.current < 25) return;
-          lastMove.current = now;
-          const p = pointFor(e);
-          if (p) sendControl({ t: "move", ...p });
-        }}
-        onMouseDown={(e) => {
-          if (!control) return;
-          e.preventDefault();
-          const p = pointFor(e);
-          sendControl({ t: "down", b: e.button, ...(p ?? {}) });
-        }}
-        onMouseUp={(e) => {
-          if (!control) return;
-          e.preventDefault();
-          sendControl({ t: "up", b: e.button });
-        }}
-        onWheel={(e) => {
-          if (!control) return;
-          e.preventDefault();
-          sendControl({ t: "wheel", d: e.deltaY > 0 ? -120 : 120 });
-        }}
+        className={`relative w-full rounded-lg overflow-hidden bg-black ${expanded ? "h-[70vh]" : "aspect-video"}`}
       >
-
         {online ? (
           <video
             ref={videoRef}
@@ -474,14 +402,7 @@ function LiveScreen({
             )}
           </div>
         )}
-
-        {control && (
-          <div className="absolute top-2 left-2 rounded-md bg-primary px-2 py-0.5 text-[10px] font-bold text-primary-foreground">
-            تحكم مباشر
-          </div>
-        )}
       </div>
-
 
       <div className="flex gap-2">
         <Button size="sm" variant="outline" className="flex-1" onClick={onToggleExpand}>
@@ -495,18 +416,8 @@ function LiveScreen({
             </>
           )}
         </Button>
-        <Button
-          size="sm"
-          variant={control ? "default" : "outline"}
-          className="flex-1"
-          disabled={!canControl}
-          title={canControl ? "تحكم في جهاز الموظف" : "التحكم يحتاج آخر إصدار من البرنامج"}
-          onClick={() => setControl((v) => !v)}
-        >
-          <MousePointerClick className="size-4 ml-1" />
-          {control ? "إيقاف التحكم" : "تحكم"}
-        </Button>
       </div>
+
 
     </div>
   );
