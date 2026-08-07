@@ -924,6 +924,7 @@ export type Database = {
           id: string
           product_id: string
           rating: number
+          user_id: string | null
         }
         Insert: {
           approved?: boolean
@@ -933,6 +934,7 @@ export type Database = {
           id?: string
           product_id: string
           rating: number
+          user_id?: string | null
         }
         Update: {
           approved?: boolean
@@ -942,6 +944,7 @@ export type Database = {
           id?: string
           product_id?: string
           rating?: number
+          user_id?: string | null
         }
         Relationships: [
           {
