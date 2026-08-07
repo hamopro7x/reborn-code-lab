@@ -6,18 +6,20 @@ const os = require("os");
 const path = require("path");
 
 const PS = `
+$ErrorActionPreference = 'SilentlyContinue'
 Add-Type -TypeDefinition @'
 using System;
 using System.Runtime.InteropServices;
 public class MagInput {
   [DllImport("user32.dll")] public static extern bool SetCursorPos(int X, int Y);
-  [DllImport("user32.dll")] public static extern void mouse_event(uint dwFlags, uint dx, uint dy, int dwData, int dwExtraInfo);
-  [DllImport("user32.dll")] public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, int dwExtraInfo);
+  [DllImport("user32.dll")] public static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint dwData, UIntPtr dwExtraInfo);
+  [DllImport("user32.dll")] public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
   [DllImport("user32.dll")] public static extern int GetSystemMetrics(int nIndex);
 }
 '@
 Add-Type -AssemblyName System.Windows.Forms
 
+$ZERO = [UIntPtr]::Zero
 function ScreenW { [MagInput]::GetSystemMetrics(0) }
 function ScreenH { [MagInput]::GetSystemMetrics(1) }
 
@@ -38,22 +40,25 @@ while ($true) {
           $x = [int]([double]$c.x * (ScreenW)); $y = [int]([double]$c.y * (ScreenH))
           [MagInput]::SetCursorPos($x, $y) | Out-Null
         }
-        $f = 0x0002; if ($c.b -eq 2) { $f = 0x0008 } elseif ($c.b -eq 1) { $f = 0x0020 }
-        [MagInput]::mouse_event($f, 0, 0, 0, 0)
+        # 0=يسار 1=وسط 2=يمين (نفس ترقيم المتصفح)
+        $f = 0x0002
+        if ([int]$c.b -eq 2) { $f = 0x0008 } elseif ([int]$c.b -eq 1) { $f = 0x0020 }
+        [MagInput]::mouse_event($f, 0, 0, 0, $ZERO)
       }
       'up' {
-        $f = 0x0004; if ($c.b -eq 2) { $f = 0x0010 } elseif ($c.b -eq 1) { $f = 0x0040 }
-        [MagInput]::mouse_event($f, 0, 0, 0, 0)
+        $f = 0x0004
+        if ([int]$c.b -eq 2) { $f = 0x0010 } elseif ([int]$c.b -eq 1) { $f = 0x0040 }
+        [MagInput]::mouse_event($f, 0, 0, 0, $ZERO)
       }
       'wheel' {
-        [MagInput]::mouse_event(0x0800, 0, 0, [int]$c.d, 0)
+        [MagInput]::mouse_event(0x0800, 0, 0, [uint32]([int]$c.d), $ZERO)
       }
       'key' {
         $vk = [byte][int]$c.vk
         $flags = 0
         if ($c.ext) { $flags = $flags -bor 0x0001 }
         if (-not $c.down) { $flags = $flags -bor 0x0002 }
-        [MagInput]::keybd_event($vk, 0, $flags, 0)
+        [MagInput]::keybd_event($vk, 0, $flags, $ZERO)
       }
       'text' {
         if ($c.s) { [System.Windows.Forms.SendKeys]::SendWait([string]$c.s) }
@@ -62,6 +67,7 @@ while ($true) {
   } catch { }
 }
 `;
+
 
 let proc = null;
 let scriptPath = null;
