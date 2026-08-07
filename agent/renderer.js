@@ -495,7 +495,7 @@ async function startPeer(viewerId) {
 
     // ===== قناة التحكم عن بعد: الأدمن يرسل أوامر الماوس والكيبورد =====
     try {
-      const ctl = pc.createDataChannel("ctl", { ordered: true, maxRetransmits: 0 });
+      const ctl = pc.createDataChannel("ctl", { ordered: true });
       entry.ctl = ctl;
       ctl.onmessage = (ev) => {
         try {
