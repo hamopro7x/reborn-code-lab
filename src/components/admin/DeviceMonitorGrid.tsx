@@ -330,7 +330,7 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
   }, [deviceId, sticky, attempt]);
 
 
-  return { videoRef, live, failed };
+  return { videoRef, live, failed, canControl, sendControl };
 }
 
 
