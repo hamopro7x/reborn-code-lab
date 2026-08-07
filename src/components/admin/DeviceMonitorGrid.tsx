@@ -324,6 +324,8 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
       if (timer) clearInterval(timer);
       clearInterval(watchdog);
       cancelReconnect();
+      ctlRef.current = null;
+      setCanControl(false);
       void sig.send({ type: "bye", viewer: viewerId }).catch(() => {});
       sig.close();
       pc.close();
@@ -331,7 +333,7 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
   }, [deviceId, sticky, attempt]);
 
 
-  return { videoRef, live, failed };
+  return { videoRef, live, failed, canControl, sendInput };
 }
 
 
