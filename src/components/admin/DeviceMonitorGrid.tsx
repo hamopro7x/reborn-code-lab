@@ -40,14 +40,17 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
   const sendInput = (cmd: Record<string, unknown>) => {
     const ch = ctlRef.current;
     if (!ch || ch.readyState !== "open") return;
-    // ضغط خلفي: لو الطابور امتلأ نُسقط الأمر بدل ما يتأخر التحكم كله
-    if (ch.bufferedAmount > 65_536) return;
+    // ضغط خلفي: حركة الماوس تُسقط بسرعة عند أول ازدحام حتى لا يتراكم التأخير،
+    // أما النقر/الكيبورد فنحاول إرسالها دائماً تقريباً.
+    const limit = cmd.t === "move" ? 4_096 : 65_536;
+    if (ch.bufferedAmount > limit) return;
     try {
       ch.send(JSON.stringify(cmd));
     } catch {
       /* القناة أُغلقت */
     }
   };
+
 
   // حركة الماوس تُجمَّع في إطار عرض واحد (~60 مرة/ث) بدل إرسال كل حدث
   const moveRef = useRef<{ x: number; y: number } | null>(null);
