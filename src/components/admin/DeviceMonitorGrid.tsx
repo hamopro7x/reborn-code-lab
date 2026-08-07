@@ -439,8 +439,37 @@ function LiveScreen({
 
 
       <div
-        className={`relative w-full rounded-lg overflow-hidden bg-black ${expanded ? "h-[70vh]" : "aspect-video"}`}
+        ref={surfaceRef}
+        className={`relative w-full rounded-lg overflow-hidden bg-black ${expanded ? "h-[70vh]" : "aspect-video"} ${control ? "cursor-crosshair ring-2 ring-primary" : ""}`}
+        onContextMenu={(e) => {
+          if (control) e.preventDefault();
+        }}
+        onMouseMove={(e) => {
+          if (!control) return;
+          const now = Date.now();
+          if (now - lastMove.current < 25) return;
+          lastMove.current = now;
+          const p = pointFor(e);
+          if (p) sendControl({ t: "move", ...p });
+        }}
+        onMouseDown={(e) => {
+          if (!control) return;
+          e.preventDefault();
+          const p = pointFor(e);
+          sendControl({ t: "down", b: e.button, ...(p ?? {}) });
+        }}
+        onMouseUp={(e) => {
+          if (!control) return;
+          e.preventDefault();
+          sendControl({ t: "up", b: e.button });
+        }}
+        onWheel={(e) => {
+          if (!control) return;
+          e.preventDefault();
+          sendControl({ t: "wheel", d: e.deltaY > 0 ? -120 : 120 });
+        }}
       >
+
         {online ? (
           <video
             ref={videoRef}
