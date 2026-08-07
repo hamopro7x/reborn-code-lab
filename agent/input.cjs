@@ -8,6 +8,7 @@ const path = require("path");
 
 const PS = `
 $ErrorActionPreference = 'SilentlyContinue'
+$culture = [System.Globalization.CultureInfo]::InvariantCulture
 Add-Type -TypeDefinition @'
 using System;
 using System.Runtime.InteropServices;
@@ -56,9 +57,9 @@ while ($true) {
   try {
     $p = $line.Split(' ')
     switch ($p[0]) {
-      'M' { [MagInput]::MoveTo([double]$p[1], [double]$p[2]) }
+      'M' { [MagInput]::MoveTo([double]::Parse($p[1], $culture), [double]::Parse($p[2], $culture)) }
       'D' {
-        if ($p.Length -ge 4) { [MagInput]::MoveTo([double]$p[2], [double]$p[3]) }
+        if ($p.Length -ge 4) { [MagInput]::MoveTo([double]::Parse($p[2], $culture), [double]::Parse($p[3], $culture)) }
         $b = [int]$p[1]
         $f = 0x0002; if ($b -eq 2) { $f = 0x0008 } elseif ($b -eq 1) { $f = 0x0020 }
         [MagInput]::Mouse([uint32]$f, 0)
@@ -130,7 +131,7 @@ function write(line) {
   }
 }
 
-// تجميع حركة الماوس: نرسل آخر إحداثي فقط كل 6ms لتفادي تراكم الأوامر
+// نحتفظ بآخر إحداثي فقط ونرسله كل 2ms كحد أقصى؛ أي حركة قديمة تُستبدل فوراً.
 let pendingMove = null;
 let moveTimer = null;
 let lastMoveAt = 0;
@@ -147,14 +148,14 @@ function flushMove() {
 function queueMove(x, y) {
   pendingMove = { x, y };
   const since = Date.now() - lastMoveAt;
-  if (since >= 6) {
+  if (since >= 2) {
     if (moveTimer) {
       clearTimeout(moveTimer);
       moveTimer = null;
     }
     flushMove();
   } else if (!moveTimer) {
-    moveTimer = setTimeout(flushMove, 6 - since);
+    moveTimer = setTimeout(flushMove, 2 - since);
   }
 }
 
