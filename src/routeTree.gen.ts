@@ -31,6 +31,7 @@ import { Route as ApiPublicAgentDownloadDotexeRouteImport } from './routes/api/p
 import { Route as ApiPublicAgentVersionRouteImport } from './routes/api/public/agent-version'
 import { Route as ApiPublicBuildVersionRouteImport } from './routes/api/public/build-version'
 import { Route as ApiPublicCardTransactionsRouteImport } from './routes/api/public/card-transactions'
+import { Route as ApiPublicIceServersRouteImport } from './routes/api/public/ice-servers'
 import { Route as ApiPublicV1ProductsRouteImport } from './routes/api/public/v1.products'
 
 const IndexRoute = IndexRouteImport.update({
@@ -147,6 +148,11 @@ const ApiPublicCardTransactionsRoute =
     path: '/api/public/card-transactions',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicIceServersRoute = ApiPublicIceServersRouteImport.update({
+  id: '/api/public/ice-servers',
+  path: '/api/public/ice-servers',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicV1ProductsRoute = ApiPublicV1ProductsRouteImport.update({
   id: '/api/public/v1/products',
   path: '/api/public/v1/products',
@@ -175,6 +181,7 @@ export interface FileRoutesByFullPath {
   '/api/public/agent-version': typeof ApiPublicAgentVersionRoute
   '/api/public/build-version': typeof ApiPublicBuildVersionRoute
   '/api/public/card-transactions': typeof ApiPublicCardTransactionsRoute
+  '/api/public/ice-servers': typeof ApiPublicIceServersRoute
   '/api/public/v1/products': typeof ApiPublicV1ProductsRoute
 }
 export interface FileRoutesByTo {
@@ -199,6 +206,7 @@ export interface FileRoutesByTo {
   '/api/public/agent-version': typeof ApiPublicAgentVersionRoute
   '/api/public/build-version': typeof ApiPublicBuildVersionRoute
   '/api/public/card-transactions': typeof ApiPublicCardTransactionsRoute
+  '/api/public/ice-servers': typeof ApiPublicIceServersRoute
   '/api/public/v1/products': typeof ApiPublicV1ProductsRoute
 }
 export interface FileRoutesById {
@@ -225,6 +233,7 @@ export interface FileRoutesById {
   '/api/public/agent-version': typeof ApiPublicAgentVersionRoute
   '/api/public/build-version': typeof ApiPublicBuildVersionRoute
   '/api/public/card-transactions': typeof ApiPublicCardTransactionsRoute
+  '/api/public/ice-servers': typeof ApiPublicIceServersRoute
   '/api/public/v1/products': typeof ApiPublicV1ProductsRoute
 }
 export interface FileRouteTypes {
@@ -251,6 +260,7 @@ export interface FileRouteTypes {
     | '/api/public/agent-version'
     | '/api/public/build-version'
     | '/api/public/card-transactions'
+    | '/api/public/ice-servers'
     | '/api/public/v1/products'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -275,6 +285,7 @@ export interface FileRouteTypes {
     | '/api/public/agent-version'
     | '/api/public/build-version'
     | '/api/public/card-transactions'
+    | '/api/public/ice-servers'
     | '/api/public/v1/products'
   id:
     | '__root__'
@@ -300,6 +311,7 @@ export interface FileRouteTypes {
     | '/api/public/agent-version'
     | '/api/public/build-version'
     | '/api/public/card-transactions'
+    | '/api/public/ice-servers'
     | '/api/public/v1/products'
   fileRoutesById: FileRoutesById
 }
@@ -324,6 +336,7 @@ export interface RootRouteChildren {
   ApiPublicAgentVersionRoute: typeof ApiPublicAgentVersionRoute
   ApiPublicBuildVersionRoute: typeof ApiPublicBuildVersionRoute
   ApiPublicCardTransactionsRoute: typeof ApiPublicCardTransactionsRoute
+  ApiPublicIceServersRoute: typeof ApiPublicIceServersRoute
   ApiPublicV1ProductsRoute: typeof ApiPublicV1ProductsRoute
 }
 
@@ -483,6 +496,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCardTransactionsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/ice-servers': {
+      id: '/api/public/ice-servers'
+      path: '/api/public/ice-servers'
+      fullPath: '/api/public/ice-servers'
+      preLoaderRoute: typeof ApiPublicIceServersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/v1/products': {
       id: '/api/public/v1/products'
       path: '/api/public/v1/products'
@@ -528,6 +548,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicAgentVersionRoute: ApiPublicAgentVersionRoute,
   ApiPublicBuildVersionRoute: ApiPublicBuildVersionRoute,
   ApiPublicCardTransactionsRoute: ApiPublicCardTransactionsRoute,
+  ApiPublicIceServersRoute: ApiPublicIceServersRoute,
   ApiPublicV1ProductsRoute: ApiPublicV1ProductsRoute,
 }
 export const routeTree = rootRouteImport
