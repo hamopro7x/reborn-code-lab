@@ -40,12 +40,29 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
   const sendInput = (cmd: Record<string, unknown>) => {
     const ch = ctlRef.current;
     if (!ch || ch.readyState !== "open") return;
+    // ضغط خلفي: لو الطابور امتلأ نُسقط الأمر بدل ما يتأخر التحكم كله
+    if (ch.bufferedAmount > 65_536) return;
     try {
       ch.send(JSON.stringify(cmd));
     } catch {
       /* القناة أُغلقت */
     }
   };
+
+  // حركة الماوس تُجمَّع في إطار عرض واحد (~60 مرة/ث) بدل إرسال كل حدث
+  const moveRef = useRef<{ x: number; y: number } | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const sendMove = (p: { x: number; y: number }) => {
+    moveRef.current = p;
+    if (rafRef.current != null) return;
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = null;
+      const m = moveRef.current;
+      moveRef.current = null;
+      if (m) sendInput({ t: "move", x: m.x, y: m.y });
+    });
+  };
+
 
 
 
