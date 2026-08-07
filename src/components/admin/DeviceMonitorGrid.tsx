@@ -34,19 +34,7 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
   // كل زيادة تعيد بناء الاتصال من الصفر (إعادة اتصال تلقائية)
   const [attempt, setAttempt] = useState(0);
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  // قناة التحكم عن بعد (ماوس/كيبورد) — يفتحها جهاز الموظف
-  const ctlRef = useRef<RTCDataChannel | null>(null);
-  const [canControl, setCanControl] = useState(false);
-  const sendControl = (cmd: Record<string, unknown>) => {
-    const ch = ctlRef.current;
-    if (ch?.readyState === "open") {
-      try {
-        ch.send(JSON.stringify(cmd));
-      } catch {
-        /* تجاهل */
-      }
-    }
-  };
+
 
 
   // مهلة سماح: لا نقطع البث لمجرد تأخّر نبضة الجهاز 15-60 ثانية
