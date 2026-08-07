@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { KeyRound, Loader2, Maximize2, Minimize2, Monitor, MonitorOff, RefreshCw, Trash2 } from "lucide-react";
+import { KeyRound, Loader2, Maximize2, Minimize2, Monitor, MonitorOff, MousePointerClick, RefreshCw, Trash2 } from "lucide-react";
 
 import { RTC_CONFIG, makeViewerId, openSignaling, type Signal } from "@/lib/screenshare";
 
@@ -34,6 +34,20 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
   // كل زيادة تعيد بناء الاتصال من الصفر (إعادة اتصال تلقائية)
   const [attempt, setAttempt] = useState(0);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  // قناة التحكم عن بعد (ماوس/كيبورد) — يفتحها جهاز الموظف
+  const ctlRef = useRef<RTCDataChannel | null>(null);
+  const [canControl, setCanControl] = useState(false);
+  const sendControl = (cmd: Record<string, unknown>) => {
+    const ch = ctlRef.current;
+    if (ch?.readyState === "open") {
+      try {
+        ch.send(JSON.stringify(cmd));
+      } catch {
+        /* تجاهل */
+      }
+    }
+  };
+
 
   // مهلة سماح: لا نقطع البث لمجرد تأخّر نبضة الجهاز 15-60 ثانية
   const [sticky, setSticky] = useState(enabled);
@@ -58,6 +72,23 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
     // معرّف فريد لكل مشاهد: يسمح بعدة أجهزة إدارة تشاهد نفس الجهاز في نفس الوقت
     const viewerId = makeViewerId();
     const pc = new RTCPeerConnection(RTC_CONFIG);
+
+    // قناة التحكم يفتحها الموظف مع كل اتصال جديد
+    setCanControl(false);
+    ctlRef.current = null;
+    pc.ondatachannel = (e) => {
+      if (e.channel.label !== "ctl") return;
+      ctlRef.current = e.channel;
+      e.channel.onopen = () => {
+        if (!closed) setCanControl(true);
+      };
+      e.channel.onclose = () => {
+        if (!closed) setCanControl(false);
+      };
+      if (e.channel.readyState === "open") setCanControl(true);
+    };
+
+
 
     // إعادة الاتصال تلقائياً عند انقطاع/فشل مسار ICE
     let recoverTimer: ReturnType<typeof setTimeout> | undefined;
@@ -299,7 +330,7 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
   }, [deviceId, sticky, attempt]);
 
 
-  return { videoRef, live, failed };
+  return { videoRef, live, failed, canControl, sendControl };
 }
 
 
@@ -328,7 +359,52 @@ function LiveScreen({
     const timer = setTimeout(() => setStreamEnabled(true), startupDelay);
     return () => clearTimeout(timer);
   }, [online, startupDelay]);
-  const { videoRef, live, failed } = useDeviceStream(device.device_id, streamEnabled);
+  const { videoRef, live, failed, canControl, sendControl } = useDeviceStream(
+    device.device_id,
+    streamEnabled,
+  );
+
+  // ===== التحكم عن بعد =====
+  const [control, setControl] = useState(false);
+  const surfaceRef = useRef<HTMLDivElement | null>(null);
+  const lastMove = useRef(0);
+
+  // إحداثيات نسبية داخل الفيديو (يراعي object-contain حتى لا يزيح المؤشر)
+  const pointFor = (e: React.MouseEvent) => {
+    const v = videoRef.current;
+    const box = surfaceRef.current?.getBoundingClientRect();
+    if (!v || !box) return null;
+    const vw = v.videoWidth || 16;
+    const vh = v.videoHeight || 9;
+    const scale = Math.min(box.width / vw, box.height / vh);
+    const dw = vw * scale;
+    const dh = vh * scale;
+    const ox = (box.width - dw) / 2;
+    const oy = (box.height - dh) / 2;
+    const x = (e.clientX - box.left - ox) / dw;
+    const y = (e.clientY - box.top - oy) / dh;
+    if (x < 0 || x > 1 || y < 0 || y > 1) return null;
+    return { x: Number(x.toFixed(5)), y: Number(y.toFixed(5)) };
+  };
+
+  useEffect(() => {
+    if (!control || !canControl) return;
+    const onKey = (e: KeyboardEvent) => {
+      e.preventDefault();
+      sendControl({ t: "key", key: e.key, down: e.type === "keydown" });
+    };
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("keyup", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keyup", onKey);
+    };
+  }, [control, canControl, sendControl]);
+
+  useEffect(() => {
+    if (!canControl) setControl(false);
+  }, [canControl]);
+
 
   return (
     <div className="w-full rounded-xl border border-border/60 p-3 space-y-2 flex flex-col">
@@ -363,8 +439,37 @@ function LiveScreen({
 
 
       <div
-        className={`relative w-full rounded-lg overflow-hidden bg-black ${expanded ? "h-[70vh]" : "aspect-video"}`}
+        ref={surfaceRef}
+        className={`relative w-full rounded-lg overflow-hidden bg-black ${expanded ? "h-[70vh]" : "aspect-video"} ${control ? "cursor-crosshair ring-2 ring-primary" : ""}`}
+        onContextMenu={(e) => {
+          if (control) e.preventDefault();
+        }}
+        onMouseMove={(e) => {
+          if (!control) return;
+          const now = Date.now();
+          if (now - lastMove.current < 25) return;
+          lastMove.current = now;
+          const p = pointFor(e);
+          if (p) sendControl({ t: "move", ...p });
+        }}
+        onMouseDown={(e) => {
+          if (!control) return;
+          e.preventDefault();
+          const p = pointFor(e);
+          sendControl({ t: "down", b: e.button, ...(p ?? {}) });
+        }}
+        onMouseUp={(e) => {
+          if (!control) return;
+          e.preventDefault();
+          sendControl({ t: "up", b: e.button });
+        }}
+        onWheel={(e) => {
+          if (!control) return;
+          e.preventDefault();
+          sendControl({ t: "wheel", d: e.deltaY > 0 ? -120 : 120 });
+        }}
       >
+
         {online ? (
           <video
             ref={videoRef}
@@ -393,6 +498,12 @@ function LiveScreen({
             )}
           </div>
         )}
+
+        {control && (
+          <div className="absolute top-2 left-2 rounded-md bg-primary px-2 py-0.5 text-[10px] font-bold text-primary-foreground">
+            تحكم مباشر
+          </div>
+        )}
       </div>
 
 
@@ -408,7 +519,19 @@ function LiveScreen({
             </>
           )}
         </Button>
+        <Button
+          size="sm"
+          variant={control ? "default" : "outline"}
+          className="flex-1"
+          disabled={!canControl}
+          title={canControl ? "تحكم في جهاز الموظف" : "التحكم يحتاج آخر إصدار من البرنامج"}
+          onClick={() => setControl((v) => !v)}
+        >
+          <MousePointerClick className="size-4 ml-1" />
+          {control ? "إيقاف التحكم" : "تحكم"}
+        </Button>
       </div>
+
     </div>
   );
 }

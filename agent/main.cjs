@@ -271,6 +271,17 @@ ipcMain.handle("get-screen-source", async () => {
 
 ipcMain.handle("get-app-version", () => app.getVersion());
 
+// ===== التحكم عن بعد: أوامر الماوس/الكيبورد الواردة من لوحة الإدارة =====
+const { handleRemoteInput } = require("./input.cjs");
+ipcMain.on("remote-input", (_e, cmd) => {
+  try {
+    handleRemoteInput(cmd);
+  } catch {
+    /* تجاهل أمر تالف */
+  }
+});
+
+
 let activeViewerCount = 0;
 ipcMain.on("viewer-count", (_event, count) => {
   const value = Number(count);

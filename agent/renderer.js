@@ -493,6 +493,22 @@ async function startPeer(viewerId) {
     pc.addTrack(track, s);
 
 
+    // ===== قناة التحكم عن بعد: الأدمن يرسل أوامر الماوس والكيبورد =====
+    try {
+      const ctl = pc.createDataChannel("ctl", { ordered: true });
+      entry.ctl = ctl;
+      ctl.onmessage = (ev) => {
+        try {
+          const cmd = JSON.parse(ev.data);
+          window.agent?.remoteInput?.(cmd);
+        } catch {
+          /* أمر تالف */
+        }
+      };
+    } catch {
+      /* بعض النسخ لا تدعم قنوات البيانات */
+    }
+
     let videoSender = null;
     for (const sender of pc.getSenders()) {
       if (!sender.track || sender.track.kind !== "video") continue;

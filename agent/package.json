@@ -1,7 +1,7 @@
 {
   "name": "mag-pro-connect",
   "productName": "Mag Pro Connect",
-  "version": "3.0.2",
+  "version": "3.1.0",
   "description": "Mag Pro Connect remote screen service",
   "main": "main.cjs",
   "author": "Mag Pro",
@@ -15,6 +15,7 @@
     "productName": "Mag Pro Connect",
     "files": [
       "main.cjs",
+      "input.cjs",
       "preload.cjs",
       "renderer.html",
       "renderer.js",
