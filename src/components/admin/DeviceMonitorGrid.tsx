@@ -465,7 +465,7 @@ function LiveScreen({
       </div>
 
       <div
-        className={`relative w-full rounded-lg overflow-hidden bg-black ${expanded ? "h-[70vh]" : "aspect-video"} ${active ? "ring-2 ring-primary cursor-crosshair" : ""}`}
+        className={`relative w-full rounded-lg overflow-hidden bg-black ${expanded ? "h-[70vh]" : "aspect-video"} ${active ? "ring-2 ring-primary cursor-none" : ""}`}
         onMouseMove={
           active
             ? (e) => {
