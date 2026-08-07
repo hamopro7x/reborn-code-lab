@@ -475,6 +475,7 @@ async function startPeer(viewerId) {
   }
   startingViewers.add(viewerId);
   try {
+    await warmIceServers();
     closePeer(viewerId); // أي اتصال قديم لنفس المشاهد يُستبدل
     const s = await getStream();
     const pc = new RTCPeerConnection(RTC_CONFIG);
