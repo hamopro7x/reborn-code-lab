@@ -34,6 +34,18 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
   // كل زيادة تعيد بناء الاتصال من الصفر (إعادة اتصال تلقائية)
   const [attempt, setAttempt] = useState(0);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  // قناة التحكم عن بعد (ينشئها جهاز الموظف ونستقبلها هنا)
+  const ctlRef = useRef<RTCDataChannel | null>(null);
+  const [canControl, setCanControl] = useState(false);
+  const sendInput = (cmd: Record<string, unknown>) => {
+    const ch = ctlRef.current;
+    if (!ch || ch.readyState !== "open") return;
+    try {
+      ch.send(JSON.stringify(cmd));
+    } catch {
+      /* القناة أُغلقت */
+    }
+  };
 
 
 
