@@ -8,21 +8,32 @@ export const RTC_CONFIG: RTCConfiguration = {
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:stun1.l.google.com:19302" },
-    // مُرحّل بديل: يمنع فشل/بطء الاتصال على الشبكات المقيّدة
-    {
-      urls: [
-        "turn:openrelay.metered.ca:80",
-        "turn:openrelay.metered.ca:443",
-        "turn:openrelay.metered.ca:443?transport=tcp",
-      ],
-      username: "openrelayproject",
-      credential: "openrelayproject",
-    },
+    { urls: "stun:stun.cloudflare.com:3478" },
   ],
   bundlePolicy: "max-bundle",
   rtcpMuxPolicy: "require",
   iceCandidatePoolSize: 4,
 };
+
+// خوادم TURN تُجلب من الخادم (بيانات دخول مؤقتة) وتُحدَّث داخل RTC_CONFIG نفسه.
+// بدون TURN تفشل شبكات NAT الصعبة/الجيل الرابع فتبقى شاشة الموظف «جاري الاتصال».
+let iceWarmed = 0;
+export async function warmIceServers(): Promise<void> {
+  if (Date.now() - iceWarmed < 10 * 60_000) return;
+  try {
+    const res = await fetch("/api/public/ice-servers", { cache: "no-store" });
+    if (!res.ok) return;
+    const json = (await res.json()) as { iceServers?: RTCIceServer[] };
+    if (Array.isArray(json.iceServers) && json.iceServers.length) {
+      RTC_CONFIG.iceServers = json.iceServers;
+      iceWarmed = Date.now();
+    }
+  } catch {
+    /* نكمل بإعدادات STUN الافتراضية */
+  }
+}
+if (typeof window !== "undefined") void warmIceServers();
+
 
 
 export type Signal =
