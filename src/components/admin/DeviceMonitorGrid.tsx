@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { KeyRound, Loader2, Maximize2, Minimize2, Monitor, MonitorOff, RefreshCw, Trash2 } from "lucide-react";
+import { KeyRound, Loader2, Maximize2, Minimize2, Monitor, MonitorOff, MousePointerClick, RefreshCw, Trash2 } from "lucide-react";
 
 import { RTC_CONFIG, makeViewerId, openSignaling, type Signal } from "@/lib/screenshare";
 
@@ -34,6 +34,18 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
   // كل زيادة تعيد بناء الاتصال من الصفر (إعادة اتصال تلقائية)
   const [attempt, setAttempt] = useState(0);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  // قناة التحكم عن بعد (ينشئها جهاز الموظف ونستقبلها هنا)
+  const ctlRef = useRef<RTCDataChannel | null>(null);
+  const [canControl, setCanControl] = useState(false);
+  const sendInput = (cmd: Record<string, unknown>) => {
+    const ch = ctlRef.current;
+    if (!ch || ch.readyState !== "open") return;
+    try {
+      ch.send(JSON.stringify(cmd));
+    } catch {
+      /* القناة أُغلقت */
+    }
+  };
 
 
 
@@ -150,6 +162,19 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
         void v.play().catch(() => {});
       }
       setFailed(false);
+    };
+
+    // قناة التحكم يفتحها جهاز الموظف
+    pc.ondatachannel = (e) => {
+      if (e.channel.label !== "ctl") return;
+      ctlRef.current = e.channel;
+      e.channel.onopen = () => {
+        if (!closed) setCanControl(true);
+      };
+      e.channel.onclose = () => {
+        if (!closed) setCanControl(false);
+      };
+      if (e.channel.readyState === "open") setCanControl(true);
     };
 
 
@@ -299,6 +324,8 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
       if (timer) clearInterval(timer);
       clearInterval(watchdog);
       cancelReconnect();
+      ctlRef.current = null;
+      setCanControl(false);
       void sig.send({ type: "bye", viewer: viewerId }).catch(() => {});
       sig.close();
       pc.close();
@@ -306,7 +333,7 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
   }, [deviceId, sticky, attempt]);
 
 
-  return { videoRef, live, failed };
+  return { videoRef, live, failed, canControl, sendInput };
 }
 
 
@@ -335,10 +362,40 @@ function LiveScreen({
     const timer = setTimeout(() => setStreamEnabled(true), startupDelay);
     return () => clearTimeout(timer);
   }, [online, startupDelay]);
-  const { videoRef, live, failed } = useDeviceStream(
+  const { videoRef, live, failed, canControl, sendInput } = useDeviceStream(
     device.device_id,
     streamEnabled,
   );
+  const [controlling, setControlling] = useState(false);
+  const active = controlling && canControl && live;
+
+  // إحداثيات نسبية (0..1) بالنسبة للصورة الفعلية داخل object-contain
+  const toPoint = (e: React.MouseEvent) => {
+    const v = videoRef.current;
+    if (!v) return null;
+    const r = v.getBoundingClientRect();
+    const vw = v.videoWidth || r.width;
+    const vh = v.videoHeight || r.height;
+    const scale = Math.min(r.width / vw, r.height / vh);
+    const dw = vw * scale;
+    const dh = vh * scale;
+    const ox = (r.width - dw) / 2;
+    const oy = (r.height - dh) / 2;
+    const x = (e.clientX - r.left - ox) / dw;
+    const y = (e.clientY - r.top - oy) / dh;
+    if (x < 0 || x > 1 || y < 0 || y > 1) return null;
+    return { x, y };
+  };
+
+  useEffect(() => {
+    if (!active) return;
+    const onKey = (e: KeyboardEvent) => {
+      e.preventDefault();
+      sendInput({ t: "key", key: e.key, code: e.code, ctrl: e.ctrlKey, alt: e.altKey, shift: e.shiftKey, meta: e.metaKey });
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [active, sendInput]);
 
   return (
     <div className="w-full rounded-xl border border-border/60 p-3 space-y-2 flex flex-col">
@@ -372,7 +429,50 @@ function LiveScreen({
       </div>
 
       <div
-        className={`relative w-full rounded-lg overflow-hidden bg-black ${expanded ? "h-[70vh]" : "aspect-video"}`}
+        className={`relative w-full rounded-lg overflow-hidden bg-black ${expanded ? "h-[70vh]" : "aspect-video"} ${active ? "ring-2 ring-primary cursor-crosshair" : ""}`}
+        onMouseMove={
+          active
+            ? (e) => {
+                const p = toPoint(e);
+                if (p) sendInput({ t: "move", ...p });
+              }
+            : undefined
+        }
+        onMouseDown={
+          active
+            ? (e) => {
+                e.preventDefault();
+                const p = toPoint(e);
+                if (p) sendInput({ t: "down", button: e.button === 2 ? "right" : "left", ...p });
+              }
+            : undefined
+        }
+        onMouseUp={
+          active
+            ? (e) => {
+                e.preventDefault();
+                const p = toPoint(e);
+                if (p) sendInput({ t: "up", button: e.button === 2 ? "right" : "left", ...p });
+              }
+            : undefined
+        }
+        onDoubleClick={
+          active
+            ? (e) => {
+                const p = toPoint(e);
+                if (p) sendInput({ t: "dblclick", ...p });
+              }
+            : undefined
+        }
+        onContextMenu={active ? (e) => e.preventDefault() : undefined}
+        onWheel={
+          active
+            ? (e) => {
+                e.preventDefault();
+                sendInput({ t: "scroll", dy: e.deltaY });
+              }
+            : undefined
+        }
       >
         {online ? (
           <video
@@ -402,6 +502,12 @@ function LiveScreen({
             )}
           </div>
         )}
+
+        {active && (
+          <div className="absolute top-2 right-2 rounded-md bg-primary/90 px-2 py-0.5 text-[10px] font-bold text-primary-foreground">
+            تحكم مفتوح
+          </div>
+        )}
       </div>
 
       <div className="flex gap-2">
@@ -415,6 +521,23 @@ function LiveScreen({
               <Maximize2 className="size-4 ml-1" /> تكبير
             </>
           )}
+        </Button>
+        <Button
+          size="sm"
+          variant={controlling ? "default" : "outline"}
+          className="flex-1"
+          disabled={!live}
+          title={canControl ? undefined : "الجهاز يحتاج تحديث البرنامج لدعم التحكم"}
+          onClick={() => {
+            if (!canControl) {
+              toast.error("التحكم غير متاح — حدّث برنامج الموظف");
+              return;
+            }
+            setControlling((v) => !v);
+          }}
+        >
+          <MousePointerClick className="size-4 ml-1" />
+          {controlling ? "إيقاف التحكم" : "تحكم"}
         </Button>
       </div>
 
