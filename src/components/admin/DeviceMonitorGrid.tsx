@@ -142,8 +142,9 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
       // مخزن تشغيل صغير لكن ليس صفراً: 0.03s كان يسبب تجميد/سواد عند أي فقد حزم.
       try {
         // مخزن صغير (80ms) = صورة أسرع بتأخير أقل، وما زال يمتص فقد الحزم
-        (e.receiver as unknown as { jitterBufferTarget?: number }).jitterBufferTarget = 20;
-        (e.receiver as unknown as { playoutDelayHint?: number }).playoutDelayHint = 0.02;
+        // أقل تأخير ممكن: نلعب الإطار بمجرد وصوله (بدون مخزن مؤقت)
+        (e.receiver as unknown as { jitterBufferTarget?: number }).jitterBufferTarget = 0;
+        (e.receiver as unknown as { playoutDelayHint?: number }).playoutDelayHint = 0;
       } catch {
         /* غير مدعوم في بعض المتصفحات */
       }
