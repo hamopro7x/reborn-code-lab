@@ -142,8 +142,8 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
       // مخزن تشغيل صغير لكن ليس صفراً: 0.03s كان يسبب تجميد/سواد عند أي فقد حزم.
       try {
         // مخزن صغير (80ms) = صورة أسرع بتأخير أقل، وما زال يمتص فقد الحزم
-        (e.receiver as unknown as { jitterBufferTarget?: number }).jitterBufferTarget = 80;
-        (e.receiver as unknown as { playoutDelayHint?: number }).playoutDelayHint = 0.08;
+        (e.receiver as unknown as { jitterBufferTarget?: number }).jitterBufferTarget = 20;
+        (e.receiver as unknown as { playoutDelayHint?: number }).playoutDelayHint = 0.02;
       } catch {
         /* غير مدعوم في بعض المتصفحات */
       }
@@ -350,7 +350,7 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
   }, [deviceId, sticky, attempt]);
 
 
-  return { videoRef, live, failed, canControl, sendInput };
+  return { videoRef, live, failed, canControl, sendInput, sendMove };
 }
 
 
@@ -379,7 +379,7 @@ function LiveScreen({
     const timer = setTimeout(() => setStreamEnabled(true), startupDelay);
     return () => clearTimeout(timer);
   }, [online, startupDelay]);
-  const { videoRef, live, failed, canControl, sendInput } = useDeviceStream(
+  const { videoRef, live, failed, canControl, sendInput, sendMove } = useDeviceStream(
     device.device_id,
     streamEnabled,
   );
@@ -406,12 +406,20 @@ function LiveScreen({
 
   useEffect(() => {
     if (!active) return;
-    const onKey = (e: KeyboardEvent) => {
+    const onDown = (e: KeyboardEvent) => {
       e.preventDefault();
-      sendInput({ t: "key", key: e.key, code: e.code, ctrl: e.ctrlKey, alt: e.altKey, shift: e.shiftKey, meta: e.metaKey });
+      sendInput({ t: "key", key: e.key, down: true });
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    const onUp = (e: KeyboardEvent) => {
+      e.preventDefault();
+      sendInput({ t: "key", key: e.key, down: false });
+    };
+    window.addEventListener("keydown", onDown);
+    window.addEventListener("keyup", onUp);
+    return () => {
+      window.removeEventListener("keydown", onDown);
+      window.removeEventListener("keyup", onUp);
+    };
   }, [active, sendInput]);
 
   return (
@@ -451,7 +459,7 @@ function LiveScreen({
           active
             ? (e) => {
                 const p = toPoint(e);
-                if (p) sendInput({ t: "move", ...p });
+                if (p) sendMove(p);
               }
             : undefined
         }
@@ -460,7 +468,7 @@ function LiveScreen({
             ? (e) => {
                 e.preventDefault();
                 const p = toPoint(e);
-                if (p) sendInput({ t: "down", button: e.button === 2 ? "right" : "left", ...p });
+                if (p) sendInput({ t: "down", b: e.button, ...p });
               }
             : undefined
         }
@@ -469,7 +477,7 @@ function LiveScreen({
             ? (e) => {
                 e.preventDefault();
                 const p = toPoint(e);
-                if (p) sendInput({ t: "up", button: e.button === 2 ? "right" : "left", ...p });
+                if (p) sendInput({ t: "up", b: e.button, ...p });
               }
             : undefined
         }
@@ -477,7 +485,11 @@ function LiveScreen({
           active
             ? (e) => {
                 const p = toPoint(e);
-                if (p) sendInput({ t: "dblclick", ...p });
+                if (!p) return;
+                for (let i = 0; i < 2; i++) {
+                  sendInput({ t: "down", b: 0, ...p });
+                  sendInput({ t: "up", b: 0 });
+                }
               }
             : undefined
         }
@@ -486,7 +498,7 @@ function LiveScreen({
           active
             ? (e) => {
                 e.preventDefault();
-                sendInput({ t: "scroll", dy: e.deltaY });
+                sendInput({ t: "wheel", d: Math.round(Math.max(-600, Math.min(600, -e.deltaY))) });
               }
             : undefined
         }
