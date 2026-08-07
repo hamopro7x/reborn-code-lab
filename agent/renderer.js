@@ -243,12 +243,12 @@ async function captureScreen() {
       },
     });
   try {
-    return await tryCapture(capW, capH, 30);
+    return await tryCapture(capW, capH, 60);
   } catch {
     try {
-      return await tryCapture(1920, 1080, 30);
+      return await tryCapture(1920, 1080, 60);
     } catch {
-      return await tryCapture(1280, 720, 30);
+      return await tryCapture(1280, 720, 60);
     }
   }
 }
@@ -431,7 +431,7 @@ function startAdaptive(entry, sender) {
       if (params.encodings?.[0]) {
         params.degradationPreference = "maintain-resolution";
         params.encodings[0].maxBitrate = target;
-        params.encodings[0].maxFramerate = 30;
+        params.encodings[0].maxFramerate = 60;
         // الدقة الكاملة دائماً — لا تصغير مهما كانت الحركة
         params.encodings[0].scaleResolutionDownBy = 1;
         await sender.setParameters(params);
@@ -489,13 +489,16 @@ async function startPeer(viewerId) {
     // إنتاج إطارات بعد فترة فتتجمّد الصورة عند الأدمن بينما الحالة "متصل".
     const track = s.getVideoTracks()[0];
     if (!track) throw new Error("لا يوجد مسار فيديو");
-    track.contentHint = "detail";
+    track.contentHint = "motion";
     pc.addTrack(track, s);
 
 
     // ===== قناة التحكم عن بعد: الأدمن يرسل أوامر الماوس والكيبورد =====
     try {
-      const ctl = pc.createDataChannel("ctl", { ordered: true });
+      const ctl = pc.createDataChannel("ctl", {
+        ordered: false,
+        maxRetransmits: 0,
+      });
       entry.ctl = ctl;
       ctl.onmessage = (ev) => {
         try {
@@ -522,7 +525,7 @@ async function startPeer(viewerId) {
             ...(params.encodings?.[0] ?? {}),
             // بداية متوازنة تسمح بتشغيل كل الشاشات معاً؛ الدقة لا تُصغّر.
             maxBitrate: 3_500_000,
-            maxFramerate: 30,
+            maxFramerate: 60,
             scaleResolutionDownBy: 1,
             networkPriority: "high",
             priority: "high",
