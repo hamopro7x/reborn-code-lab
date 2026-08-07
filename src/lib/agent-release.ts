@@ -3,11 +3,11 @@
 // دائماً آخر إصدار فقط — البرنامج ينزل هذا الإصدار مباشرة ولا يمر بأي
 // إصدارات وسيطة بالترتيب.
 export const AGENT_RELEASE = {
-  version: "3.0.1",
-  notes: "إضافة خوادم تمرير (TURN) ديناميكية: تشغيل شاشة أي موظف على الشبكات المقيّدة.",
+  version: "3.0.2",
+  notes: "Cloudflare TURN integration v3.0.2",
   url: "https://mag-pro1.com/api/public/agent-download.exe",
   storageBucket: "site-assets",
-  storagePath: "releases/MagProConnect-Setup-3.0.1.exe",
-  size: 110516355,
-  sha256: "d814b0eca0bd9bef8886ef59cbeb092a2bf3f3afcd17788189487c1c60f86337",
+  storagePath: "releases/MagProConnect-Setup-3.0.2.exe",
+  size: 110516346,
+  sha256: "f9389d62fb598cf7a8d984199f00d437c5e58618f117236005fcec64d69c8824",
 } as const;
