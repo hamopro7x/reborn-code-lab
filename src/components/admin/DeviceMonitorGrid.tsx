@@ -34,16 +34,15 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
   // كل زيادة تعيد بناء الاتصال من الصفر (إعادة اتصال تلقائية)
   const [attempt, setAttempt] = useState(0);
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  // قناة موثوقة للكيبورد والنقر + قناة سريعة مستقلة لحركة المؤشر.
-  // فصل القناتين يمنع إطارات الماوس الكثيرة من حجز أو إسقاط ضغطات الكيبورد.
+  // قناة التحكم عن بعد (ينشئها جهاز الموظف ونستقبلها هنا)
   const ctlRef = useRef<RTCDataChannel | null>(null);
-  const pointerRef = useRef<RTCDataChannel | null>(null);
   const [canControl, setCanControl] = useState(false);
   const sendInput = (cmd: Record<string, unknown>) => {
-    const ch = cmd.t === "move" ? (pointerRef.current ?? ctlRef.current) : ctlRef.current;
+    const ch = ctlRef.current;
     if (!ch || ch.readyState !== "open") return;
-    // لا نسمح بتراكم حركة قديمة؛ أوامر الكيبورد والنقر تمر عبر قناة موثوقة.
-    const limit = cmd.t === "move" ? 256 : 65_536;
+    // ضغط خلفي: حركة الماوس تُسقط بسرعة عند أول ازدحام حتى لا يتراكم التأخير،
+    // أما النقر/الكيبورد فنحاول إرسالها دائماً تقريباً.
+    const limit = cmd.t === "move" ? 4_096 : 65_536;
     if (ch.bufferedAmount > limit) return;
     try {
       ch.send(JSON.stringify(cmd));
@@ -53,8 +52,18 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
   };
 
 
+  // حركة الماوس تُجمَّع في إطار عرض واحد (~60 مرة/ث) بدل إرسال كل حدث
+  const moveRef = useRef<{ x: number; y: number } | null>(null);
+  const rafRef = useRef<number | null>(null);
   const sendMove = (p: { x: number; y: number }) => {
-    sendInput({ t: "move", x: p.x, y: p.y });
+    moveRef.current = p;
+    if (rafRef.current != null) return;
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = null;
+      const m = moveRef.current;
+      moveRef.current = null;
+      if (m) sendInput({ t: "move", x: m.x, y: m.y });
+    });
   };
 
 
@@ -176,12 +185,8 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
       setFailed(false);
     };
 
-    // جهاز الموظف يفتح قناة موثوقة للأوامر وقناة غير موثوقة سريعة للمؤشر.
+    // قناة التحكم يفتحها جهاز الموظف
     pc.ondatachannel = (e) => {
-      if (e.channel.label === "pointer") {
-        pointerRef.current = e.channel;
-        return;
-      }
       if (e.channel.label !== "ctl") return;
       ctlRef.current = e.channel;
       e.channel.onopen = () => {
@@ -341,7 +346,6 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
       clearInterval(watchdog);
       cancelReconnect();
       ctlRef.current = null;
-      pointerRef.current = null;
       setCanControl(false);
       void sig.send({ type: "bye", viewer: viewerId }).catch(() => {});
       sig.close();
@@ -412,7 +416,6 @@ function LiveScreen({
     };
     const onDown = (e: KeyboardEvent) => {
       stop(e);
-      if (e.isComposing || e.key === "Process" || e.key === "Dead") return;
       // حرف قابل للطباعة (يشمل العربي والحروف الكبيرة) يُرسل كنص مباشر
       if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
         sendInput({ t: "text", s: e.key });
@@ -422,7 +425,6 @@ function LiveScreen({
     };
     const onUp = (e: KeyboardEvent) => {
       stop(e);
-      if (e.isComposing || e.key === "Process" || e.key === "Dead") return;
       if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) return;
       sendInput({ t: "key", key: e.key, down: false });
     };

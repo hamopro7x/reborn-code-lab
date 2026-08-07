@@ -493,31 +493,17 @@ async function startPeer(viewerId) {
     pc.addTrack(track, s);
 
 
-    // ===== التحكم عن بعد =====
-    // الكيبورد والنقرات على قناة مرتبة وموثوقة حتى لا تسقط أي ضغطة.
-    // حركة الماوس وحدها على قناة غير مرتبة بلا إعادة إرسال كي لا يتراكم التأخير.
+    // ===== قناة التحكم عن بعد: الأدمن يرسل أوامر الماوس والكيبورد =====
     try {
       const ctl = pc.createDataChannel("ctl", {
-        ordered: true,
-      });
-      const pointer = pc.createDataChannel("pointer", {
         ordered: false,
         maxRetransmits: 0,
       });
       entry.ctl = ctl;
-      entry.pointer = pointer;
       ctl.onmessage = (ev) => {
         try {
           const cmd = JSON.parse(ev.data);
           window.agent?.remoteInput?.(cmd);
-        } catch {
-          /* أمر تالف */
-        }
-      };
-      pointer.onmessage = (ev) => {
-        try {
-          const cmd = JSON.parse(ev.data);
-          if (cmd?.t === "move") window.agent?.remoteInput?.(cmd);
         } catch {
           /* أمر تالف */
         }
