@@ -359,7 +359,52 @@ function LiveScreen({
     const timer = setTimeout(() => setStreamEnabled(true), startupDelay);
     return () => clearTimeout(timer);
   }, [online, startupDelay]);
-  const { videoRef, live, failed } = useDeviceStream(device.device_id, streamEnabled);
+  const { videoRef, live, failed, canControl, sendControl } = useDeviceStream(
+    device.device_id,
+    streamEnabled,
+  );
+
+  // ===== التحكم عن بعد =====
+  const [control, setControl] = useState(false);
+  const surfaceRef = useRef<HTMLDivElement | null>(null);
+  const lastMove = useRef(0);
+
+  // إحداثيات نسبية داخل الفيديو (يراعي object-contain حتى لا يزيح المؤشر)
+  const pointFor = (e: React.MouseEvent) => {
+    const v = videoRef.current;
+    const box = surfaceRef.current?.getBoundingClientRect();
+    if (!v || !box) return null;
+    const vw = v.videoWidth || 16;
+    const vh = v.videoHeight || 9;
+    const scale = Math.min(box.width / vw, box.height / vh);
+    const dw = vw * scale;
+    const dh = vh * scale;
+    const ox = (box.width - dw) / 2;
+    const oy = (box.height - dh) / 2;
+    const x = (e.clientX - box.left - ox) / dw;
+    const y = (e.clientY - box.top - oy) / dh;
+    if (x < 0 || x > 1 || y < 0 || y > 1) return null;
+    return { x: Number(x.toFixed(5)), y: Number(y.toFixed(5)) };
+  };
+
+  useEffect(() => {
+    if (!control || !canControl) return;
+    const onKey = (e: KeyboardEvent) => {
+      e.preventDefault();
+      sendControl({ t: "key", key: e.key, down: e.type === "keydown" });
+    };
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("keyup", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keyup", onKey);
+    };
+  }, [control, canControl, sendControl]);
+
+  useEffect(() => {
+    if (!canControl) setControl(false);
+  }, [canControl]);
+
 
   return (
     <div className="w-full rounded-xl border border-border/60 p-3 space-y-2 flex flex-col">
