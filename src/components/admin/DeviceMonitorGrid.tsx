@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { KeyRound, Loader2, Maximize2, Minimize2, Monitor, MonitorOff, MousePointerClick, RefreshCw, Trash2 } from "lucide-react";
 
-import { RTC_CONFIG, makeViewerId, openSignaling, type Signal } from "@/lib/screenshare";
+import { getScreenSession, type ScreenSession, type SessionState } from "@/lib/screen-session";
 
 type Device = {
   id: string;
