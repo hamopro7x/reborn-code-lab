@@ -429,8 +429,7 @@ function looksLikeInstaller(file) {
   }
 }
 
-async function performDownload(url, version, notify) {
-  const fs = require("fs");
+function targetPathFor(url, version) {
   const os = require("os");
   const crypto = require("crypto");
   const isSetup = /\.exe(\?|$)/i.test(url) || url === PERMANENT_DOWNLOAD_URL;
@@ -441,10 +440,19 @@ async function performDownload(url, version, notify) {
     .update(`${url}|${safeVersion}`)
     .digest("hex")
     .slice(0, 12);
-  const target = path.join(
-    os.tmpdir(),
-    isSetup ? `mag-pro-agent-setup-${downloadId}.exe` : `mag-pro-agent-update-${downloadId}.zip`,
-  );
+  return {
+    isSetup,
+    path: path.join(
+      os.tmpdir(),
+      isSetup ? `mag-pro-agent-setup-${downloadId}.exe` : `mag-pro-agent-update-${downloadId}.zip`,
+    ),
+  };
+}
+
+async function performDownload(url, version, notify) {
+  const fs = require("fs");
+  const { isSetup, path: target } = targetPathFor(url, version);
+
 
   let received = 0;
   let total = 0;
@@ -670,17 +678,19 @@ ipcMain.handle("download-update", async (_e, url, version) => {
 
 
 
-function cleanupOldDownloads() {
+function cleanupOldDownloads(keepPath = null) {
   // تنظيف ملفات التحديث المؤقتة القديمة (كانت تتراكم بعد كل تحديث)
   try {
     const fs = require("fs");
     const os = require("os");
     const dir = os.tmpdir();
-    const now = Date.now();
     for (const name of fs.readdirSync(dir)) {
       if (!/^mag-pro-agent-(setup|update)-/.test(name)) continue;
       const full = path.join(dir, name);
-      if (full === downloadedFile) continue;
+      if (downloadedFile && full.startsWith(downloadedFile)) continue;
+      // نُبقي ملف الإصدار الأحدث المطلوب حتى يستكمل التنزيل من مكان توقفه
+      // بدل إعادة تنزيل الحزمة كاملة في كل تشغيل.
+      if (keepPath && full.startsWith(keepPath)) continue;
       try {
         // أي ملف تحديث لا يخص الإصدار الحالي يُحذف فوراً حتى لا يُثبَّت
         // إصدار قديم متبقٍ من محاولة سابقة.
@@ -693,6 +703,7 @@ function cleanupOldDownloads() {
     /* ignore */
   }
 }
+
 
 let installing = false;
 
@@ -746,9 +757,9 @@ async function installUpdate() {
       [
         'Set sh = CreateObject("WScript.Shell")',
         'Set fso = CreateObject("Scripting.FileSystemObject")',
-        "WScript.Sleep 2000",
+        "WScript.Sleep 400",
         `sh.Run """${vbsQuote(downloadedFile)}"" /S", 0, True`,
-        "WScript.Sleep 3000",
+        "WScript.Sleep 1200",
         `If fso.FileExists("${vbsQuote(relaunchTarget)}") Then sh.Run """${vbsQuote(relaunchTarget)}"" --hidden", 0, False`,
         "WScript.Sleep 500",
         "fso.DeleteFile WScript.ScriptFullName, True",
@@ -856,23 +867,59 @@ async function runBootUpdateOnce(attempt = 0) {
       typeof info?.url === "string" && /^https:\/\//.test(info.url)
         ? info.url
         : PERMANENT_DOWNLOAD_URL;
-    // ننزل الإصدار الأحدث فقط. أي ملف تحديث قديم متبقٍ يُحذف أولاً حتى لا
-    // يُثبَّت إصدار وسيط بالترتيب.
+    // ننزل الإصدار الأحدث فقط (قفزة مباشرة، بدون أي إصدار وسيط).
+    // نحذف ملفات الإصدارات القديمة فقط ونُبقي ملف الإصدار الأحدث حتى يستكمل
+    // التنزيل من مكان توقفه بدل البدء من الصفر في كل تشغيل.
+    const wanted = targetPathFor(publishedUrl, latest);
     downloadedFile = null;
-    cleanupOldDownloads();
-    const out = await downloadUpdate(publishedUrl, latest, true);
-    // تحقق من بصمة الملف قبل التثبيت: أي ملف ناقص أو تالف يُحذف ويُعاد تنزيله
-    // بدل تثبيت فاشل صامت يُبقي الموظف على إصدار قديم.
-    if (typeof info?.sha256 === "string" && /^[0-9a-f]{64}$/i.test(info.sha256)) {
-      const ok = await verifySha256(out?.path || downloadedFile, info.sha256);
-      if (!ok) {
+    cleanupOldDownloads(wanted.path);
+    const stampPath = `${wanted.path}.ok`;
+    const fsMod = require("fs");
+    const expectedHash =
+      typeof info?.sha256 === "string" && /^[0-9a-f]{64}$/i.test(info.sha256)
+        ? info.sha256.toLowerCase()
+        : null;
+
+    // لو نفس الملف تم تنزيله والتحقق منه في تشغيل سابق، نثبّته فوراً بدون
+    // إعادة تنزيل ولا إعادة حساب البصمة (كان هذا سبب التأخير الطويل).
+    let ready = false;
+    try {
+      if (
+        expectedHash &&
+        fsMod.existsSync(wanted.path) &&
+        fsMod.readFileSync(stampPath, "utf8").trim() === expectedHash &&
+        looksLikeInstaller(wanted.path)
+      ) {
+        downloadedFile = wanted.path;
+        ready = true;
+      }
+    } catch {
+      ready = false;
+    }
+
+    if (!ready) {
+      const out = await downloadUpdate(publishedUrl, latest, true);
+      const file = out?.path || downloadedFile;
+      // تحقق من بصمة الملف قبل التثبيت: أي ملف ناقص أو تالف يُحذف ويُعاد تنزيله
+      // بدل تثبيت فاشل صامت يُبقي الموظف على إصدار قديم.
+      if (expectedHash) {
+        const ok = await verifySha256(file, expectedHash);
+        if (!ok) {
+          try {
+            fsMod.unlinkSync(file);
+          } catch {}
+          try {
+            fsMod.unlinkSync(stampPath);
+          } catch {}
+          downloadedFile = null;
+          throw new Error("بصمة ملف التحديث غير مطابقة");
+        }
         try {
-          require("fs").unlinkSync(out?.path || downloadedFile);
+          fsMod.writeFileSync(stampPath, expectedHash, "utf8");
         } catch {}
-        downloadedFile = null;
-        throw new Error("بصمة ملف التحديث غير مطابقة");
       }
     }
+
     await installUpdate();
     // لا نوقف دورة الفحص إلا بعد نجاح التثبيت فعلاً، وإلا يبقى الجهاز
     // على إصدار قديم للأبد بعد أي فشل مؤقت.
