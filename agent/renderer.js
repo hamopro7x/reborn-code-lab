@@ -24,6 +24,13 @@ async function warmIceServers(force) {
     const json = await res.json();
     if (Array.isArray(json?.iceServers) && json.iceServers.length) {
       RTC_CONFIG.iceServers = json.iceServers;
+      // عند توفر TURN نستخدمه مباشرة. تبادل offer/answer كان ينجح لكن مسار
+      // NAT المباشر يظل عالقاً، فيظهر الجهاز متصلاً بلا أي صورة.
+      const hasTurn = json.iceServers.some((server) => {
+        const urls = Array.isArray(server.urls) ? server.urls : [server.urls];
+        return urls.some((url) => typeof url === "string" && url.startsWith("turn"));
+      });
+      if (hasTurn) RTC_CONFIG.iceTransportPolicy = "relay";
       iceWarmedAt = Date.now();
     }
   } catch {
@@ -536,6 +543,18 @@ const startingViewers = new Set();
 
 async function startPeer(viewerId) {
   if (startingViewers.has(viewerId)) return; // منع بدء اتصالين لنفس المشاهد
+  // تنظيف المصافحات القديمة التي تركتها إعادة تحميل لوحة الإدارة. بقاؤها
+  // كان يشغّل عدة مشفّرات لنفس الشاشة ويمنع الجلسة الجديدة من الاستجابة.
+  const now = Date.now();
+  for (const [oldViewerId, oldEntry] of peers) {
+    if (
+      oldViewerId !== viewerId &&
+      oldEntry.pc?.connectionState !== "connected" &&
+      now - (oldEntry.startedAt ?? 0) > 20_000
+    ) {
+      closePeer(oldViewerId);
+    }
+  }
   const current = peers.get(viewerId);
   if (current?.pc && ["new", "connecting", "connected"].includes(current.pc.connectionState)) {
     if (current.pc.connectionState === "connected") return;
