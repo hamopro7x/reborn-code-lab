@@ -678,17 +678,19 @@ ipcMain.handle("download-update", async (_e, url, version) => {
 
 
 
-function cleanupOldDownloads() {
+function cleanupOldDownloads(keepPath = null) {
   // تنظيف ملفات التحديث المؤقتة القديمة (كانت تتراكم بعد كل تحديث)
   try {
     const fs = require("fs");
     const os = require("os");
     const dir = os.tmpdir();
-    const now = Date.now();
     for (const name of fs.readdirSync(dir)) {
       if (!/^mag-pro-agent-(setup|update)-/.test(name)) continue;
       const full = path.join(dir, name);
       if (full === downloadedFile) continue;
+      // نُبقي ملف الإصدار الأحدث المطلوب حتى يستكمل التنزيل من مكان توقفه
+      // بدل إعادة تنزيل الحزمة كاملة في كل تشغيل.
+      if (keepPath && full === keepPath) continue;
       try {
         // أي ملف تحديث لا يخص الإصدار الحالي يُحذف فوراً حتى لا يُثبَّت
         // إصدار قديم متبقٍ من محاولة سابقة.
@@ -701,6 +703,7 @@ function cleanupOldDownloads() {
     /* ignore */
   }
 }
+
 
 let installing = false;
 
