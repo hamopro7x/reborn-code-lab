@@ -2064,6 +2064,7 @@ function DevicesTab({ userId, employeeName }: { userId?: string; employeeName?: 
 
   const grouped = new Map<string, any[]>();
   for (const d of (devices.data ?? []) as any[]) {
+    if (scoped && d.user_id !== userId) continue;
     if (!grouped.has(d.user_id)) grouped.set(d.user_id, []);
     grouped.get(d.user_id)!.push(d);
   }
@@ -2073,19 +2074,23 @@ function DevicesTab({ userId, employeeName }: { userId?: string; employeeName?: 
   return (
     <div className="space-y-4">
       <div className="card-surface rounded-2xl p-4 space-y-3">
-        <div className="font-bold text-sm">تفعيل جهاز جديد لموظف</div>
+        <div className="font-bold text-sm">
+          {scoped ? `تفعيل جهاز جديد لـ ${employeeName || "هذا الموظف"}` : "تفعيل جهاز جديد لموظف"}
+        </div>
         <p className="text-xs text-muted-foreground">اطلب من الموظف فتح صفحة الكورسات ونسخ معرّف الجهاز الظاهر له، ثم ألصقه هنا.</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <Label className="text-xs">الموظف</Label>
-            <select value={newUserId} onChange={(e) => setNewUserId(e.target.value)} className="w-full h-10 rounded-xl border border-border/60 bg-background px-3 text-sm">
-              <option value="">— اختر —</option>
-              {(employees.data ?? []).map((u: any) => {
-                const uid = u.id ?? u.user_id;
-                return <option key={uid} value={uid}>{u.full_name || u.email}</option>;
-              })}
-            </select>
-          </div>
+        <div className={scoped ? "grid grid-cols-1 gap-3" : "grid grid-cols-1 md:grid-cols-2 gap-3"}>
+          {!scoped && (
+            <div>
+              <Label className="text-xs">الموظف</Label>
+              <select value={newUserId} onChange={(e) => setNewUserId(e.target.value)} className="w-full h-10 rounded-xl border border-border/60 bg-background px-3 text-sm">
+                <option value="">— اختر —</option>
+                {(employees.data ?? []).map((u: any) => {
+                  const uid = u.id ?? u.user_id;
+                  return <option key={uid} value={uid}>{u.full_name || u.email}</option>;
+                })}
+              </select>
+            </div>
+          )}
           <div>
             <Label className="text-xs">اسم مختصر (اختياري)</Label>
             <Input value={newLabel} onChange={(e) => setNewLabel(e.target.value)} placeholder="مثلاً: لابتوب المكتب" />
@@ -2100,15 +2105,18 @@ function DevicesTab({ userId, employeeName }: { userId?: string; employeeName?: 
         </Button>
       </div>
 
-      <div className="card-surface rounded-2xl p-4 space-y-2">
-        <Label className="text-xs">عرض أجهزة موظف محدد</Label>
-        <select value={filterUser} onChange={(e) => setFilterUser(e.target.value)} className="w-full h-10 rounded-xl border border-border/60 bg-background px-3 text-sm">
-          <option value="">— كل الموظفين —</option>
-          {Array.from(grouped.entries()).map(([uid, list]) => (
-            <option key={uid} value={uid}>{list[0].full_name || list[0].email} ({list.length})</option>
-          ))}
-        </select>
-      </div>
+      {!scoped && (
+        <div className="card-surface rounded-2xl p-4 space-y-2">
+          <Label className="text-xs">عرض أجهزة موظف محدد</Label>
+          <select value={filterUser} onChange={(e) => setFilterUser(e.target.value)} className="w-full h-10 rounded-xl border border-border/60 bg-background px-3 text-sm">
+            <option value="">— كل الموظفين —</option>
+            {Array.from(grouped.entries()).map(([uid, list]) => (
+              <option key={uid} value={uid}>{list[0].full_name || list[0].email} ({list.length})</option>
+            ))}
+          </select>
+        </div>
+      )}
+
 
       {devices.isLoading ? <Loader2 className="animate-spin mx-auto" /> :
         !entries.length ? <div className="card-surface p-8 text-center text-muted-foreground rounded-2xl">لا توجد أجهزة مسجّلة بعد</div> :
