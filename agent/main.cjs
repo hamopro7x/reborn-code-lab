@@ -687,10 +687,10 @@ function cleanupOldDownloads(keepPath = null) {
     for (const name of fs.readdirSync(dir)) {
       if (!/^mag-pro-agent-(setup|update)-/.test(name)) continue;
       const full = path.join(dir, name);
-      if (full === downloadedFile) continue;
+      if (downloadedFile && full.startsWith(downloadedFile)) continue;
       // نُبقي ملف الإصدار الأحدث المطلوب حتى يستكمل التنزيل من مكان توقفه
       // بدل إعادة تنزيل الحزمة كاملة في كل تشغيل.
-      if (keepPath && full === keepPath) continue;
+      if (keepPath && full.startsWith(keepPath)) continue;
       try {
         // أي ملف تحديث لا يخص الإصدار الحالي يُحذف فوراً حتى لا يُثبَّت
         // إصدار قديم متبقٍ من محاولة سابقة.
@@ -757,9 +757,9 @@ async function installUpdate() {
       [
         'Set sh = CreateObject("WScript.Shell")',
         'Set fso = CreateObject("Scripting.FileSystemObject")',
-        "WScript.Sleep 2000",
+        "WScript.Sleep 400",
         `sh.Run """${vbsQuote(downloadedFile)}"" /S", 0, True`,
-        "WScript.Sleep 3000",
+        "WScript.Sleep 1200",
         `If fso.FileExists("${vbsQuote(relaunchTarget)}") Then sh.Run """${vbsQuote(relaunchTarget)}"" --hidden", 0, False`,
         "WScript.Sleep 500",
         "fso.DeleteFile WScript.ScriptFullName, True",
