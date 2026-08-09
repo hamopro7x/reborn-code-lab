@@ -44,7 +44,7 @@ export const Route = createFileRoute("/api/public/agent-version")({
         return Response.json(
           {
             version: AGENT_RELEASE.version,
-            notes: AGENT_RELEASE.notes,
+            notes: "تحديث جديد متاح.",
             url: AGENT_RELEASE.url,
             size: AGENT_RELEASE.size,
             sha256: AGENT_RELEASE.sha256,
