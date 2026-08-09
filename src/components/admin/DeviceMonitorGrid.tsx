@@ -527,13 +527,12 @@ export function DeviceMonitorGrid({ screensOnly = false }: { screensOnly?: boole
         <div className="flex items-center gap-2">
           <Monitor className="size-5 text-primary" />
           <h3 className="font-bold">شاشات الموظفين المباشرة</h3>
+          <StreamDoctorPanel targets={doctorTargets} />
         </div>
         <Button variant="outline" size="sm" onClick={() => void handleRefresh()} disabled={isFetching}>
           <RefreshCw className={`size-4 ml-1 ${isFetching ? "animate-spin" : ""}`} /> تحديث
         </Button>
       </div>
-
-      <StreamDoctorPanel targets={doctorTargets} />
 
       {!expandedId && !screensOnly && <PairDeviceBox />}
 
@@ -543,10 +542,8 @@ export function DeviceMonitorGrid({ screensOnly = false }: { screensOnly?: boole
           <Loader2 className="size-6 animate-spin text-primary" />
         </div>
       ) : devices.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          لا توجد أجهزة مسجّلة بعد. نزّل برنامج الوكيل على جهاز الموظف — يوافق مرة واحدة فقط وبعدها
-          تظهر شاشته هنا مباشرة طالما الجهاز متصل.
-        </p>
+        <p className="text-sm text-muted-foreground">لا توجد أجهزة مسجّلة بعد.</p>
+
       ) : (
         <div className={expandedId ? "" : "grid gap-3 grid-cols-2 items-stretch"}>
           {shown.map((d, index) => (
