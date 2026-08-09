@@ -27,7 +27,9 @@ class ScreenSession {
   offerAt = 0;
   sigFailed = false;
   startedAt = Date.now();
-  private viewerId: string | null = null;
+  // هوية ثابتة طوال عمر الصفحة. تغييرها في كل محاولة كان يترك البرنامج
+  // محتفظاً بعشرات الاتصالات القديمة ويستهلك المشفّر قبل اكتمال الاتصال.
+  private readonly viewerId = makeViewerId();
 
   constructor(deviceId: string) {
     this.deviceId = deviceId;
@@ -169,8 +171,7 @@ class ScreenSession {
   }
 
   private openTransport() {
-    const viewerId = makeViewerId();
-    this.viewerId = viewerId;
+    const viewerId = this.viewerId;
     const pc = new RTCPeerConnection(RTC_CONFIG);
     this.pc = pc;
     const gen = this.generation;
@@ -270,12 +271,7 @@ class ScreenSession {
         if (s.type === "offer") {
           const offerSdp = s.sdp.sdp;
           if (!offerSdp || acceptedOfferSdp === offerSdp || pc.remoteDescription?.sdp === offerSdp) return;
-          if (pc.signalingState !== "stable") {
-            // لا نسقط عرض ICE الجديد بصمت؛ إعادة البناء السريعة تضمن عدم
-            // بقاء الصورة مجمدة إذا وصل العرض أثناء إنهاء تفاوض سابق.
-            this.scheduleReconnect(300, gen);
-            return;
-          }
+          if (pc.signalingState !== "stable") return;
           acceptedOfferSdp = offerSdp;
           this.offerAt = Date.now();
           this.sigFailed = false;
