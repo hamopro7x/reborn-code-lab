@@ -12,6 +12,7 @@ let win = null;
 let tray = null;
 let rendererRecoveryAttempts = 0;
 let rendererRecoveryTimer = null;
+let lastRendererPulse = Date.now();
 
 // تشغيل ويندوز يحمل --hidden فيبقى بالخلفية، أما فتح الموظف للاختصار فيُظهر النافذة.
 const startedHidden = process.argv.includes("--hidden");
@@ -208,6 +209,7 @@ function cleanupLegacyInstall() {
 
 
 function createWindow() {
+  lastRendererPulse = Date.now();
   win = new BrowserWindow({
     width: 460,
     height: 420,
@@ -270,6 +272,25 @@ ipcMain.handle("get-screen-source", async () => {
 });
 
 ipcMain.handle("get-app-version", () => app.getVersion());
+
+// حارس مستقل داخل العملية الرئيسية. إذا علقت واجهة البرنامج الخلفية فلن يصل
+// نبضها، فنُعيد تحميلها تلقائياً بدل أن يبقى البرنامج ظاهرياً مفتوحاً بينما
+// يتوقف نبض الجهاز والبث في لوحة الإدارة.
+ipcMain.on("renderer-pulse", () => {
+  lastRendererPulse = Date.now();
+});
+ipcMain.on("reload-renderer", () => {
+  if (!win || win.isDestroyed() || app.isQuiting || installing) return;
+  lastRendererPulse = Date.now();
+  win.webContents.reloadIgnoringCache();
+});
+setInterval(() => {
+  if (!win || win.isDestroyed() || app.isQuiting || installing) return;
+  if (Date.now() - lastRendererPulse < 45_000) return;
+  lastRendererPulse = Date.now();
+  console.error("[renderer] pulse stopped — reloading background service");
+  win.webContents.reloadIgnoringCache();
+}, 15_000);
 
 // ===== التحكم عن بعد: أوامر الماوس/الكيبورد الواردة من لوحة الإدارة =====
 const { handleRemoteInput } = require("./input.cjs");

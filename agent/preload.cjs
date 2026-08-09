@@ -8,6 +8,8 @@ contextBridge.exposeInMainWorld("agent", {
   downloadUpdate: (url, version) => ipcRenderer.invoke("download-update", url, version),
   installUpdate: () => ipcRenderer.invoke("install-update"),
   checkUpdate: () => ipcRenderer.invoke("check-update"),
+  rendererPulse: () => ipcRenderer.send("renderer-pulse"),
+  reloadRenderer: () => ipcRenderer.send("reload-renderer"),
   setViewerCount: (count) => ipcRenderer.send("viewer-count", count),
   remoteInput: (cmd) => ipcRenderer.send("remote-input", cmd),
   onUpdateProgress: (cb) => {
