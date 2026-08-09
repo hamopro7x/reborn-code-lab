@@ -10,6 +10,7 @@ import { warmIceServers } from "@/lib/screenshare";
 export const STALL_MS = 3_000;
 const COOLDOWN_MS = 8_000;
 const OFFLINE_MS = 150_000;
+const NEGOTIATION_GRACE_MS = 45_000;
 
 export type DoctorEvent = {
   id: string;
@@ -93,6 +94,16 @@ async function inspect(target: DoctorTarget, session: ScreenSession) {
   // يفصل الشاشة كلما توقف الموظف عن الحركة لثلاث ثوانٍ.
   const transportHealthy = session.connState === "connected" && session.state.live;
   const stalled = !transportHealthy && now - reference > STALL_MS;
+
+  // التفاوض عبر TURN قد يستغرق عدة ثوانٍ على الشبكات المقيدة. الروبوت كان
+  // يعتبر ذلك عطلاً بعد 3 ثوانٍ فيهدم الاتصال أثناء المصافحة، فتتغير هوية
+  // المشاهد باستمرار ولا تصل الشاشة أبداً. مهلة الثلاث ثوانٍ تطبق بعد نجاح
+  // الجلسة، أما بدء الاتصال نفسه فله مهلة مستقلة.
+  const negotiating =
+    session.lastFrameAt === 0 &&
+    (now - session.startedAt < NEGOTIATION_GRACE_MS ||
+      (session.offerAt > 0 && now - session.offerAt < NEGOTIATION_GRACE_MS));
+  if (negotiating) return;
 
   if (!stalled) {
     if (track.attempts > 0) {

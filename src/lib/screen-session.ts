@@ -1,6 +1,6 @@
 // جلسات بث دائمة: الاتصال بجهاز الموظف يُنشأ مرة واحدة ويبقى حياً
 // طالما الصفحة مفتوحة — الخروج من القسم أو الرجوع إليه لا يقطع البث.
-import { RTC_CONFIG, makeViewerId, openSignaling, type Signal } from "@/lib/screenshare";
+import { RTC_CONFIG, makeViewerId, openSignaling, warmIceServers, type Signal } from "@/lib/screenshare";
 
 export type SessionState = { live: boolean; failed: boolean; canControl: boolean };
 
@@ -19,6 +19,7 @@ class ScreenSession {
   private recoverTimer: ReturnType<typeof setTimeout> | undefined;
   private muteTimer: ReturnType<typeof setTimeout> | undefined;
   private generation = 0;
+  private connecting = false;
   private moveQueued: { x: number; y: number } | null = null;
   private raf: number | null = null;
   // بيانات تشخيصية يستخدمها روبوت الإصلاح في لوحة الإدارة
@@ -156,7 +157,18 @@ class ScreenSession {
   }
 
   connect() {
-    if (this.pc) return;
+    if (this.pc || this.connecting) return;
+    this.connecting = true;
+    // يجب تحميل TURN قبل إنشاء PeerConnection. تعديل RTC_CONFIG بعد إنشائه
+    // لا يضيف الخوادم للاتصال الحالي، وكان ذلك يترك الشاشة على «جاري الاتصال»
+    // في الشبكات التي لا تنجح فيها وصلة STUN المباشرة.
+    void warmIceServers().finally(() => {
+      this.connecting = false;
+      if (!this.pc) this.openTransport();
+    });
+  }
+
+  private openTransport() {
     const viewerId = makeViewerId();
     this.viewerId = viewerId;
     const pc = new RTCPeerConnection(RTC_CONFIG);
@@ -174,13 +186,14 @@ class ScreenSession {
         return;
       }
       if (pc.connectionState === "disconnected") {
-        this.set({ live: false });
+        // disconnected غالباً تذبذب لحظي. نُبقي آخر إطار ظاهراً ونمنح ICE
+        // وقتاً كافياً للتعافي بدلاً من هدم جلسة سليمة بعد أربع ثوانٍ.
         try {
           pc.restartIce();
         } catch {
           /* غير مدعوم */
         }
-        this.scheduleReconnect(4000, gen);
+        this.scheduleReconnect(15_000, gen);
       } else if (pc.connectionState === "failed" || pc.connectionState === "closed") {
         this.set({ live: false });
         this.scheduleReconnect(1200, gen);
