@@ -24,13 +24,9 @@ async function warmIceServers(force) {
     const json = await res.json();
     if (Array.isArray(json?.iceServers) && json.iceServers.length) {
       RTC_CONFIG.iceServers = json.iceServers;
-      // عند توفر TURN نستخدمه مباشرة. تبادل offer/answer كان ينجح لكن مسار
-      // NAT المباشر يظل عالقاً، فيظهر الجهاز متصلاً بلا أي صورة.
-      const hasTurn = json.iceServers.some((server) => {
-        const urls = Array.isArray(server.urls) ? server.urls : [server.urls];
-        return urls.some((url) => typeof url === "string" && url.startsWith("turn"));
-      });
-      if (hasTurn) RTC_CONFIG.iceTransportPolicy = "relay";
+      // لا نفرض TURN: نعرضه كمسار احتياطي ونترك WebRTC يختار بين المباشر
+      // والمرحّل. فرض relay كان يقطع كل الأجهزة عند تعثر TURN مؤقتاً.
+      RTC_CONFIG.iceTransportPolicy = "all";
       iceWarmedAt = Date.now();
     }
   } catch {
@@ -268,6 +264,14 @@ let signalPolling = false;
 const outgoingSignals = [];
 // كل مشاهد (جهاز إدارة) له اتصال منفصل بنفس جودة وسرعة البث
 const peers = new Map(); // viewerId -> { pc, statsTimer }
+
+function reportConnectedViewers() {
+  let connected = 0;
+  for (const entry of peers.values()) {
+    if (entry.pc?.connectionState === "connected") connected += 1;
+  }
+  window.agent.setViewerCount?.(connected);
+}
 
 function send(signal) {
   const viewerId = signal.viewer || signal.to;
@@ -539,12 +543,21 @@ function closePeer(viewerId) {
   // مسار الشاشة مشترك بين كل المشاهدين — لا نوقفه هنا
 
   peers.delete(viewerId);
-  window.agent.setViewerCount?.(peers.size);
+  reportConnectedViewers();
   setStatus("متصل", true);
 }
 
 async function restartPeerIce(entry) {
-  if (!entry?.pc || entry.restartingIce || entry.pc.signalingState !== "stable") return;
+  if (!entry?.pc || entry.restartingIce) return;
+  if (entry.pc.signalingState !== "stable") {
+    if (!entry.recoverTimer) {
+      entry.recoverTimer = setTimeout(() => {
+        entry.recoverTimer = null;
+        if (entry.pc?.connectionState !== "connected") void restartPeerIce(entry);
+      }, 1500);
+    }
+    return;
+  }
   entry.restartingIce = true;
   try {
     const offer = await entry.pc.createOffer({ iceRestart: true });
@@ -598,7 +611,7 @@ async function startPeer(viewerId) {
     const entry = { viewerId, pc, statsTimer: null, pendingIce: [], recoverTimer: null, connectTimer: null, offer: null, startedAt: Date.now(), restartingIce: false };
 
     peers.set(viewerId, entry);
-    window.agent.setViewerCount?.(peers.size);
+    reportConnectedViewers();
 
     // نستخدم مسار الشاشة الأصلي نفسه لكل مشاهد. كل اتصال (PeerConnection)
     // له مشفّر مستقل أصلاً، أما نسخ المسار (clone) في Electron كان يتوقف عن
@@ -665,6 +678,7 @@ async function startPeer(viewerId) {
         if (entry.connectTimer) { clearTimeout(entry.connectTimer); entry.connectTimer = null; }
         if (entry.recoverTimer) { clearTimeout(entry.recoverTimer); entry.recoverTimer = null; }
         setStatus("متصل", true);
+        reportConnectedViewers();
         // رشقة إطارات مفتاحية في أول ثوانٍ: تظهر الصورة فوراً ولا تبقى
         // متجمّدة لو ضاع أول keyframe في الشبكة.
         let kf = 0;
@@ -682,8 +696,17 @@ async function startPeer(viewerId) {
         if (!entry.recoverTimer) {
           entry.recoverTimer = setTimeout(() => {
             entry.recoverTimer = null;
-            if (pc.connectionState !== "connected") void restartPeerIce(entry);
-          }, 2500);
+            if (pc.connectionState !== "connected") {
+              void restartPeerIce(entry).finally(() => {
+                if (pc.connectionState === "disconnected" && !entry.recoverTimer) {
+                  entry.recoverTimer = setTimeout(() => {
+                    entry.recoverTimer = null;
+                    if (pc.connectionState !== "connected") void restartPeerIce(entry);
+                  }, 5000);
+                }
+              });
+            }
+          }, 10_000);
         }
         return;
       }
@@ -705,7 +728,7 @@ async function startPeer(viewerId) {
     entry.connectTimer = setTimeout(() => {
       entry.connectTimer = null;
       if (pc.connectionState !== "connected") closePeer(viewerId);
-    }, 35_000);
+    }, 60_000);
     if (videoSender) startAdaptive(entry, videoSender);
   } finally {
     startingViewers.delete(viewerId);
@@ -750,12 +773,8 @@ async function refreshHeartbeat(device) {
   }
   heartbeatFailures += 1;
   setStatus("انقطع الاتصال — جاري الاستعادة…", false);
-  // إذا كانت الشبكة موجودة لكن ست محاولات متتالية فشلت، نعيد تشغيل واجهة
-  // الخدمة نفسها لتنظيف أي fetch/WebRTC عالق. بيانات الجهاز محفوظة محلياً.
-  if (heartbeatFailures >= 6 && navigator.onLine) {
-    heartbeatFailures = 0;
-    window.agent?.reloadRenderer?.();
-  }
+  // فشل نبض قاعدة البيانات لا يعني أن مسار WebRTC متوقف؛ لا نهدم بثاً حياً
+  // بسبب طلب HTTP بطيء. دورة النبض والإشارات ستتعافى تلقائياً.
 }
 
 function stopSession() {
@@ -929,6 +948,7 @@ setTimeout(() => {
 // إعادة اتصال ناعمة: تعيد قناة الإشارات فقط دون إعادة تحميل الصفحة،
 // وبالتالي يفضل البث (WebRTC) شغالاً كما هو بدون الحاجة لاتصال جديد.
 let reconnecting = false;
+let reconnectRequestTimer = null;
 async function softReconnect() {
   if (reconnecting) return;
   const d = loadDevice();
@@ -945,6 +965,14 @@ async function softReconnect() {
   }
 }
 
+function requestReconnect(delay = 1500) {
+  if (reconnectRequestTimer || reconnecting) return;
+  reconnectRequestTimer = setTimeout(() => {
+    reconnectRequestTimer = null;
+    void softReconnect();
+  }, delay);
+}
+
 // زر التحديث أعلى اليمين: يفحص التحديثات ويجدّد الاتصال بدون إعادة تحميل
 document.getElementById("refresh")?.addEventListener("click", async (e) => {
   const btn = e.currentTarget;
@@ -959,18 +987,16 @@ document.getElementById("refresh")?.addEventListener("click", async (e) => {
 
 // إعادة الاتصال تلقائياً لما الشبكة ترجع (بعد قفل اللابتوب/فقد النت)
 window.addEventListener("online", () => {
-  setTimeout(() => void softReconnect(), 1500);
+  requestReconnect(1500);
 });
 
 window.agent.onPowerResume?.(() => {
   setStatus("جارٍ استعادة الاتصال…", false);
-  setTimeout(() => void softReconnect(), 2500);
+  requestReconnect(2500);
 });
 
 window.addEventListener("unhandledrejection", (event) => {
   console.error("[renderer] unhandled rejection:", event.reason);
-  const d = loadDevice();
-  if (d) setTimeout(() => void softReconnect(), 1500);
 });
 
 // ============ حارس التحديث الذاتي ============
@@ -1003,10 +1029,6 @@ setInterval(() => {
     void ensureFreshCapture("track muted");
     return;
   }
-  // تحديث دوري وقائي كل 4 دقائق يمنع تراكم أخطاء المشفّر الصامتة
-  if (Date.now() - lastCaptureRefresh > 4 * 60 * 1000) {
-    void ensureFreshCapture("periodic refresh");
-  }
 }, 15_000);
 
 // إعادة اتصال ناعم دوري كل 5 دقائق: يعيد جلب TURN ويجدد قناة الإشارات
@@ -1014,12 +1036,23 @@ setInterval(() => {
 setInterval(() => {
   if (!running) return;
   void warmIceServers(true);
-  void softReconnect();
+  // تجديد بيانات TURN لا يستلزم هدم قناة الإشارات أو لمس بث حي.
 }, 5 * 60 * 1000);
 
-// خطة الطوارئ: إذا لم يمر أي بايت لأي مشاهد لأكثر من 90 ثانية بينما توجد
-// اتصالات نشطة، نعيد تحميل نافذة الوكيل بالكامل. آخر ملاذ يضمن ألا تبقى
-// الشاشة متوقفة أبداً.
+// تنظيف المصافحات الميتة مستقلاً عن وصول JOIN جديد. لا نحتفظ باتصال شبح
+// يستهلك المشفر أو يمنع تثبيت تحديث جاهز.
+setInterval(() => {
+  const now = Date.now();
+  for (const [viewerId, entry] of peers) {
+    if (entry.pc?.connectionState !== "connected" && now - (entry.startedAt || 0) > 75_000) {
+      closePeer(viewerId);
+    }
+  }
+  reportConnectedViewers();
+}, 15_000);
+
+// مراقبة خفيفة لا تهدم الواجهة: سطح المكتب الثابت قد لا ينتج بايتات جديدة،
+// لذلك نصلح فقط الاتصالات التي دخلت حالة فشل حقيقية.
 let lastAnyBytes = { total: 0, at: Date.now() };
 setInterval(async () => {
   if (!running || peers.size === 0) { lastAnyBytes.at = Date.now(); return; }
@@ -1035,9 +1068,11 @@ setInterval(async () => {
     return;
   }
   if (Date.now() - lastAnyBytes.at > 90_000) {
-    console.warn("[watchdog] no bytes for 90s — reloading renderer");
-    lastAnyBytes = { total: 0, at: Date.now() };
-    try { window.location.reload(); } catch {}
+    for (const entry of peers.values()) {
+      if (entry.pc?.connectionState === "disconnected") void restartPeerIce(entry);
+      else if (["failed", "closed"].includes(entry.pc?.connectionState)) closePeer(entry.viewerId);
+    }
+    lastAnyBytes.at = Date.now();
   }
 }, 20_000);
 

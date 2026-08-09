@@ -166,7 +166,7 @@ async function inspect(target: DoctorTarget, session: ScreenSession) {
       level: "fix",
     });
     if (!sent) {
-      await warmIceServers();
+      await warmIceServers(true);
       session.hardReset();
     }
     return;
@@ -174,7 +174,7 @@ async function inspect(target: DoctorTarget, session: ScreenSession) {
 
   // 4) قناة الإشارات لا تعمل
   if (session.sigFailed) {
-    await warmIceServers();
+    await warmIceServers(true);
     session.hardReset();
     log({ ...base, cause: "فشل قناة الإشارات بين اللوحة والبرنامج", action: "تجديد خوادم الاتصال وبناء مسار جديد", level: "fix" });
     return;
@@ -194,7 +194,7 @@ async function inspect(target: DoctorTarget, session: ScreenSession) {
   }
 
   // 6) مسار الشبكة بين الطرفين ساقط
-  await warmIceServers();
+  await warmIceServers(true);
   session.hardReset();
   log({
     ...base,
