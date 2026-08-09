@@ -102,6 +102,9 @@ class ScreenSession {
       /* تجاهل */
     }
     this.pc = null;
+    // لا نُبقِ عنصر الفيديو مربوطاً بمسار انتهى بعد إعادة الاتصال.
+    this.stream = null;
+    this.set({ live: false, canControl: false });
   }
 
   private scheduleReconnect(delay: number, gen: number) {
@@ -132,6 +135,7 @@ class ScreenSession {
         return;
       }
       if (pc.connectionState === "disconnected") {
+        this.set({ live: false });
         try {
           pc.restartIce();
         } catch {
@@ -212,7 +216,12 @@ class ScreenSession {
         if (s.type === "offer") {
           const offerSdp = s.sdp.sdp;
           if (!offerSdp || acceptedOfferSdp === offerSdp || pc.remoteDescription?.sdp === offerSdp) return;
-          if (pc.signalingState !== "stable") return;
+          if (pc.signalingState !== "stable") {
+            // لا نسقط عرض ICE الجديد بصمت؛ إعادة البناء السريعة تضمن عدم
+            // بقاء الصورة مجمدة إذا وصل العرض أثناء إنهاء تفاوض سابق.
+            this.scheduleReconnect(300, gen);
+            return;
+          }
           acceptedOfferSdp = offerSdp;
           try {
             await pc.setRemoteDescription(s.sdp);
@@ -261,6 +270,8 @@ class ScreenSession {
           from: "viewer",
           viewer: viewerId,
           candidate: e.candidate.toJSON(),
+        }).catch(() => {
+          // عرض ICE الكامل يحتوي مرشحات احتياطية؛ لا نترك رفضاً غير معالج.
         });
     };
 

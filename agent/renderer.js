@@ -528,7 +528,7 @@ async function startPeer(viewerId) {
     const age = Date.now() - (current.startedAt ?? 0);
     // لو الاتصال عالق أكثر من 6 ثوانٍ نبنيه من جديد بدل إعادة نفس العرض
     // القديم للأبد (كان يترك الشاشة على "جاري الاتصال" بلا نهاية).
-    if (age < 6000) {
+    if (age < 6000 && current.pc.signalingState === "have-local-offer") {
       if (current.offer) await send({ type: "offer", to: viewerId, sdp: current.offer });
       return;
     }
@@ -600,7 +600,7 @@ async function startPeer(viewerId) {
 
     pc.onicecandidate = (e) => {
       if (e.candidate)
-        void send({ type: "ice", from: "host", to: viewerId, candidate: e.candidate.toJSON() });
+        void send({ type: "ice", from: "host", to: viewerId, candidate: e.candidate.toJSON() }).catch(() => {});
     };
     pc.onconnectionstatechange = () => {
       if (pc.connectionState === "connected") {
