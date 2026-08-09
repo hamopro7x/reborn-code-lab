@@ -54,11 +54,16 @@ function useDeviceStream(deviceId: string, enabled: boolean) {
     };
     attach();
     const unsub = session.subscribe(attach);
+    // إعادة ربط دورية: عند الرجوع للقسم يكون عنصر الفيديو جديداً بينما
+    // الجلسة قديمة ولا تُصدر أحداثاً، فلا تظهر الصورة بدون هذا الفحص.
+    const retimer = setInterval(attach, 500);
     return () => {
       unsub();
+      clearInterval(retimer);
       session.release();
     };
   }, [deviceId, started]);
+
 
   const sendInput = (cmd: Record<string, unknown>) => sessionRef.current?.sendInput(cmd);
   const sendMove = (p: { x: number; y: number }) => sessionRef.current?.sendMove(p);
