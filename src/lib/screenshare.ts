@@ -26,6 +26,15 @@ export async function warmIceServers(): Promise<void> {
     const json = (await res.json()) as { iceServers?: RTCIceServer[] };
     if (Array.isArray(json.iceServers) && json.iceServers.length) {
       RTC_CONFIG.iceServers = json.iceServers;
+      // الاتصال المباشر كان يُكمل تبادل SDP ثم يعلق في ICE على بعض الشبكات.
+      // ما دام TURN متاحاً نستخدم المسار المرحّل المضمون بدلاً من مسار NAT
+      // المتذبذب؛ هذا يحوّل حالة «لا يستجيب» إلى اتصال فعلي ثابت.
+      if (json.iceServers.some((server) => {
+        const urls = Array.isArray(server.urls) ? server.urls : [server.urls];
+        return urls.some((url) => typeof url === "string" && url.startsWith("turn"));
+      })) {
+        RTC_CONFIG.iceTransportPolicy = "relay";
+      }
       iceWarmed = Date.now();
     }
   } catch {

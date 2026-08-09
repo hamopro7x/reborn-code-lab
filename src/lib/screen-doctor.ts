@@ -139,14 +139,14 @@ async function inspect(target: DoctorTarget, session: ScreenSession) {
     return;
   }
 
-  // 2) إصدار قديم متراكم أو محاولات متكررة فشلت → تحديث كامل لآخر إصدار
-  if (isOutdated(target.appVersion) || track.attempts >= 3) {
+  // 2) نحدّث فقط عندما يكون الإصدار قديماً فعلاً. سابقاً كانت المحاولة
+  // الثالثة ترسل update حتى لأحدث إصدار، وبرنامج الموظف يعيد تحميل نفسه بعد
+  // الفحص، فتُقطع المصافحة قبل اكتمالها في حلقة لا تنتهي.
+  if (isOutdated(target.appVersion)) {
     const sent = await session.sendCommand("update");
     log({
       ...base,
-      cause: isOutdated(target.appVersion)
-        ? `إصدار برنامج الموظف قديم (${target.appVersion ?? "غير معروف"}) — تحديثات متراكمة`
-        : "المشكلة مستمرة بعد عدة إصلاحات — البرنامج معلّق",
+      cause: `إصدار برنامج الموظف قديم (${target.appVersion ?? "غير معروف"}) — تحديثات متراكمة`,
       action: sent
         ? `تنزيل وتثبيت آخر إصدار v${AGENT_RELEASE.version} ثم إعادة تشغيل البرنامج`
         : "تعذّر إرسال أمر التحديث — إعادة بناء الاتصال",
