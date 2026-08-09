@@ -116,11 +116,11 @@ export function openSignaling(
         .select("id,viewer_id,payload")
         .eq("device_id", deviceId)
         .eq("sender", "host")
-        .order("created_at", { ascending: true })
+        .order("created_at", { ascending: false })
         .limit(30);
       if (opts?.viewerId) q = q.eq("viewer_id", opts.viewerId);
       const { data } = await q;
-      for (const row of data ?? []) {
+      for (const row of [...(data ?? [])].reverse()) {
         emit((row as any).id as string, (row as any).payload as Signal);
       }
     } catch {

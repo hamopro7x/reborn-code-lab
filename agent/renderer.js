@@ -439,8 +439,6 @@ function startAdaptive(entry, sender) {
   let target = 3_500_000;
   let lastLost = 0;
   let lastPackets = 0;
-  let lastBytesSent = -1;
-  let frozenTicks = 0;
 
 
   entry.statsTimer = setInterval(async () => {
@@ -451,7 +449,6 @@ function startAdaptive(entry, sender) {
       let lost = 0;
       let packets = 0;
       let avail = 0;
-      let bytesSent = -1;
       stats.forEach((r) => {
         if (r.type === "remote-inbound-rtp") {
           if (typeof r.roundTripTime === "number") rtt = r.roundTripTime;
@@ -459,7 +456,6 @@ function startAdaptive(entry, sender) {
         }
         if (r.type === "outbound-rtp" && r.kind === "video") {
           if (typeof r.packetsSent === "number") packets = r.packetsSent;
-          if (typeof r.bytesSent === "number") bytesSent = r.bytesSent;
         }
         if (r.type === "candidate-pair" && r.state === "succeeded") {
           if (typeof r.availableOutgoingBitrate === "number") avail = r.availableOutgoingBitrate;
@@ -471,23 +467,6 @@ function startAdaptive(entry, sender) {
       lastLost = lost;
       lastPackets = packets;
       const lossRate = dLost / dPackets;
-
-      // الصورة متجمّدة عند المشاهد؟ المشفّر واقف => نطلب إطاراً مفتاحياً
-      // ونهبط بالـ bitrate خطوة حتى يستأنف البث فوراً بدل ما يفضل واقف.
-      if (bytesSent >= 0) {
-        if (bytesSent === lastBytesSent) {
-          frozenTicks += 1;
-          if (frozenTicks === 8) {
-            frozenTicks = 0;
-            target = Math.max(MIN, Math.round(target * 0.6));
-            try { sender.generateKeyFrame?.(); } catch {}
-            void restartPeerIce(entry);
-          }
-        } else {
-          frozenTicks = 0;
-        }
-        lastBytesSent = bytesSent;
-      }
 
       const severe = rtt > 0.5 || lossRate > 0.12;
       if (avail > 0) {
@@ -561,12 +540,13 @@ async function startPeer(viewerId) {
   if (current?.pc && ["new", "connecting", "connected"].includes(current.pc.connectionState)) {
     if (current.pc.connectionState === "connected") return;
     const age = Date.now() - (current.startedAt ?? 0);
-    // لو الاتصال عالق أكثر من 6 ثوانٍ نبنيه من جديد بدل إعادة نفس العرض
-    // القديم للأبد (كان يترك الشاشة على "جاري الاتصال" بلا نهاية).
-    if (age < 6000 && current.pc.signalingState === "have-local-offer") {
+    // JOIN يُعاد كثيراً كضمان لوصول الإشارة. لا نهدم الاتصال الجاري بسبب
+    // رسالة JOIN مكررة؛ على الشبكات الضعيفة قد يستغرق TURN أكثر من 15 ثانية.
+    if (age < 30_000 && current.pc.signalingState === "have-local-offer") {
       if (current.offer) await send({ type: "offer", to: viewerId, sdp: current.offer });
       return;
     }
+    if (age < 30_000) return;
   }
   startingViewers.add(viewerId);
   try {
@@ -681,7 +661,7 @@ async function startPeer(viewerId) {
     entry.connectTimer = setTimeout(() => {
       entry.connectTimer = null;
       if (pc.connectionState !== "connected") closePeer(viewerId);
-    }, 15000);
+    }, 35_000);
     if (videoSender) startAdaptive(entry, videoSender);
   } finally {
     startingViewers.delete(viewerId);

@@ -88,7 +88,11 @@ async function inspect(target: DoctorTarget, session: ScreenSession) {
   const track = tracks.get(key) ?? { attempts: 0, lastActionAt: 0, firstAttemptAt: now };
 
   const reference = Math.max(session.lastFrameAt, session.startedAt);
-  const stalled = now - reference > STALL_MS;
+  // ثبات سطح المكتب لا يعني توقف البث: بعض المشفّرات لا ترسل بايتات جديدة
+  // حتى تتغير الصورة. لا نتدخل في اتصال WebRTC سليم، وإلا كان الروبوت نفسه
+  // يفصل الشاشة كلما توقف الموظف عن الحركة لثلاث ثوانٍ.
+  const transportHealthy = session.connState === "connected" && session.state.live;
+  const stalled = !transportHealthy && now - reference > STALL_MS;
 
   if (!stalled) {
     if (track.attempts > 0) {
