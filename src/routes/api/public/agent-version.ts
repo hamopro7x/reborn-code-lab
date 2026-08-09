@@ -17,6 +17,7 @@ async function syncLegacySetting() {
       .maybeSingle();
     const current = (data?.value ?? null) as { version?: string } | null;
     if (current?.version === AGENT_RELEASE.version) return;
+    // لا نكتب ملاحظات تشغيلية داخلية في صف عام يقرأه الجميع — فقط الإصدار والرابط
     await supabaseAdmin
       .from("site_settings")
       .upsert(
@@ -24,7 +25,6 @@ async function syncLegacySetting() {
           key: "agent_update",
           value: {
             version: AGENT_RELEASE.version,
-            notes: AGENT_RELEASE.notes,
             url: "https://mag-pro1.com/api/public/agent-download.exe",
           },
           updated_at: new Date().toISOString(),
