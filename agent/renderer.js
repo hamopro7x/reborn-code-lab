@@ -532,7 +532,7 @@ function closePeer(viewerId) {
 
   peers.delete(viewerId);
   window.agent.setViewerCount?.(peers.size);
-  setStatus(peers.size > 0 ? `متصل · ${peers.size} مشاهد` : "متصل", true);
+  setStatus("متصل", true);
 }
 
 async function restartPeerIce(entry) {
@@ -641,7 +641,7 @@ async function startPeer(viewerId) {
       if (pc.connectionState === "connected") {
         if (entry.connectTimer) { clearTimeout(entry.connectTimer); entry.connectTimer = null; }
         if (entry.recoverTimer) { clearTimeout(entry.recoverTimer); entry.recoverTimer = null; }
-        setStatus(`متصل · ${peers.size} مشاهد`, true);
+        setStatus("متصل", true);
         // رشقة إطارات مفتاحية في أول ثوانٍ: تظهر الصورة فوراً ولا تبقى
         // متجمّدة لو ضاع أول keyframe في الشبكة.
         let kf = 0;
@@ -717,7 +717,7 @@ async function refreshHeartbeat(device) {
   const ok = await heartbeat(device);
   if (ok === true) {
     heartbeatFailures = 0;
-    setStatus(peers.size > 0 ? `متصل · ${peers.size} مشاهد` : "متصل", true);
+    setStatus("متصل", true);
     return;
   }
   if (ok === false) {
