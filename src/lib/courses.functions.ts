@@ -29,21 +29,36 @@ export const checkDevice = createServerFn({ method: "POST" })
       return { ok: true as const };
     }
 
-    const { data: existing } = await supabaseAdmin
+    // Authorization is per DEVICE, not per account: if this device fingerprint
+    // was ever approved (for any staff account), any staff login on it passes.
+    const { data: approved } = await supabaseAdmin
       .from("user_devices")
-      .select("id")
-      .eq("user_id", context.userId)
+      .select("id,user_id,device_label")
       .eq("device_fingerprint", data.fingerprint)
+      .order("last_seen_at", { ascending: false })
+      .limit(1)
       .maybeSingle();
 
-    if (existing) {
-      await supabaseAdmin
-        .from("user_devices")
-        .update({ last_seen_at: new Date().toISOString(), user_agent: data.user_agent ?? null })
-        .eq("id", existing.id);
+    if (approved) {
+      if (approved.user_id === context.userId) {
+        await supabaseAdmin
+          .from("user_devices")
+          .update({ last_seen_at: new Date().toISOString(), user_agent: data.user_agent ?? null })
+          .eq("id", approved.id);
+      } else {
+        // Same physical device, different account → inherit the approval.
+        await supabaseAdmin.from("user_devices").upsert({
+          user_id: context.userId,
+          device_fingerprint: data.fingerprint,
+          device_label: approved.device_label ?? null,
+          user_agent: data.user_agent ?? null,
+          last_seen_at: new Date().toISOString(),
+        }, { onConflict: "user_id,device_fingerprint" });
+      }
       return { ok: true as const };
     }
     return { ok: false as const, blocked: true, fingerprint: data.fingerprint };
+
   });
 
 /** Admin: manually authorize a device fingerprint for a specific user. */
