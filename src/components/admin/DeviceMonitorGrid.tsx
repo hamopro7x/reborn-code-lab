@@ -304,6 +304,7 @@ function LiveScreen({
 }
 
 export function PairDeviceBox({
+  userId,
   employeeName,
   title,
 }: { userId?: string; employeeName?: string | null; title?: string } = {}) {
@@ -315,6 +316,7 @@ export function PairDeviceBox({
     setBusy(true);
     const { data, error } = await supabase.rpc("agent_create_enroll_code", {
       p_employee_name: (employeeName ?? "").trim() || undefined,
+      p_user_id: userId ?? undefined,
     });
     setBusy(false);
     if (error || typeof data !== "string") return toast.error("تعذّر إنشاء كود التسجيل");
@@ -322,6 +324,7 @@ export function PairDeviceBox({
     toast.success("تم إنشاء كود التسجيل — سلّمه للموظف");
     void qc.invalidateQueries({ queryKey: ["agent-devices"] });
   };
+
 
   return (
     <div className="rounded-xl border border-border/60 p-3 space-y-2">
