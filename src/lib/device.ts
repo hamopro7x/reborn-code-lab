@@ -41,21 +41,38 @@ async function sha256Hex(s: string): Promise<string> {
 
 export async function getDeviceFingerprint(): Promise<string> {
   if (typeof window === "undefined") return "ssr";
-  const persistent = getPersistentId();
-  const nav = navigator;
+  // Stable per browser profile: depends ONLY on the persistent id, so browser
+  // updates / window resizes / account switches never change it.
+  return await sha256Hex("mag-fp-v2|" + getPersistentId());
+}
+
+/**
+ * Hardware-level signature: identical across browser profiles and Google
+ * accounts on the SAME physical machine (no localStorage, no UA version,
+ * no canvas noise). Used to inherit approval for a new profile/account.
+ */
+export async function getDeviceSignature(): Promise<string> {
+  if (typeof window === "undefined") return "ssr";
+  const nav = navigator as any;
+  const platform = /Windows/i.test(nav.userAgent) ? "Windows"
+    : /Mac OS/i.test(nav.userAgent) ? "macOS"
+    : /Android/i.test(nav.userAgent) ? "Android"
+    : /iPhone|iPad/i.test(nav.userAgent) ? "iOS"
+    : /Linux/i.test(nav.userAgent) ? "Linux" : "Other";
   const parts = [
-    persistent,
-    nav.userAgent,
-    nav.language,
-    nav.platform,
-    (nav as any).hardwareConcurrency ?? "",
-    (nav as any).deviceMemory ?? "",
+    "mag-hw-v1",
+    platform,
+    nav.platform ?? "",
+    nav.hardwareConcurrency ?? "",
+    nav.deviceMemory ?? "",
     screen.width + "x" + screen.height + "x" + screen.colorDepth,
     Intl.DateTimeFormat().resolvedOptions().timeZone ?? "",
+    (nav.language || "").split("-")[0],
     canvasSignal(),
   ].join("|");
   return await sha256Hex(parts);
 }
+
 
 export function getDeviceLabel(): string {
   if (typeof navigator === "undefined") return "Unknown";
@@ -70,4 +87,24 @@ export function getDeviceLabel(): string {
     /Firefox\//.test(ua) ? "Firefox" :
     /Safari\//.test(ua) ? "Safari" : "Browser";
   return `${platform} • ${browser}`;
+}
+/**
+ * Legacy (v1) fingerprint — kept so devices approved before the stable v2
+ * algorithm keep working; when matched, the server migrates the row.
+ */
+export async function getLegacyDeviceFingerprint(): Promise<string> {
+  if (typeof window === "undefined") return "ssr";
+  const nav = navigator as any;
+  const parts = [
+    getPersistentId(),
+    nav.userAgent,
+    nav.language,
+    nav.platform,
+    nav.hardwareConcurrency ?? "",
+    nav.deviceMemory ?? "",
+    screen.width + "x" + screen.height + "x" + screen.colorDepth,
+    Intl.DateTimeFormat().resolvedOptions().timeZone ?? "",
+    canvasSignal(),
+  ].join("|");
+  return await sha256Hex(parts);
 }

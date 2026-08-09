@@ -13,6 +13,8 @@ async function getRole(supabase: any, userId: string): Promise<"admin" | "employ
 const checkSchema = z.object({
   fingerprint: z.string().trim().min(6).max(200),
   user_agent: z.string().trim().max(500).optional(),
+  hw_signature: z.string().trim().max(200).optional(),
+  legacy_fingerprint: z.string().trim().max(200).optional(),
 });
 
 /** Check if this device is authorized for the current user. Admin must pre-authorize devices. */
@@ -29,30 +31,49 @@ export const checkDevice = createServerFn({ method: "POST" })
       return { ok: true as const };
     }
 
-    // Authorization is per DEVICE, not per account: if this device fingerprint
-    // was ever approved (for any staff account), any staff login on it passes.
-    const { data: approved } = await supabaseAdmin
+    const now = new Date().toISOString();
+
+    // Authorization is per PHYSICAL DEVICE, not per account.
+    // 1) exact fingerprint  2) legacy fingerprint  3) hardware signature
+    const fps = [data.fingerprint, data.legacy_fingerprint].filter(Boolean) as string[];
+    let approved: any = null;
+
+    const { data: byFp } = await supabaseAdmin
       .from("user_devices")
-      .select("id,user_id,device_label")
-      .eq("device_fingerprint", data.fingerprint)
+      .select("id,user_id,device_label,device_fingerprint,hw_signature")
+      .in("device_fingerprint", fps)
       .order("last_seen_at", { ascending: false })
       .limit(1)
       .maybeSingle();
+    approved = byFp ?? null;
+
+    if (!approved && data.hw_signature) {
+      const { data: bySig } = await supabaseAdmin
+        .from("user_devices")
+        .select("id,user_id,device_label,device_fingerprint,hw_signature")
+        .eq("hw_signature", data.hw_signature)
+        .order("last_seen_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      approved = bySig ?? null;
+    }
 
     if (approved) {
-      if (approved.user_id === context.userId) {
+      if (approved.user_id === context.userId && approved.device_fingerprint === data.fingerprint) {
         await supabaseAdmin
           .from("user_devices")
-          .update({ last_seen_at: new Date().toISOString(), user_agent: data.user_agent ?? null })
+          .update({ last_seen_at: now, user_agent: data.user_agent ?? null, hw_signature: data.hw_signature ?? approved.hw_signature })
           .eq("id", approved.id);
       } else {
-        // Same physical device, different account → inherit the approval.
+        // Same physical device (other account / other browser profile / legacy
+        // fingerprint) → inherit the approval under the stable fingerprint.
         await supabaseAdmin.from("user_devices").upsert({
           user_id: context.userId,
           device_fingerprint: data.fingerprint,
           device_label: approved.device_label ?? null,
           user_agent: data.user_agent ?? null,
-          last_seen_at: new Date().toISOString(),
+          hw_signature: data.hw_signature ?? approved.hw_signature ?? null,
+          last_seen_at: now,
         }, { onConflict: "user_id,device_fingerprint" });
       }
       return { ok: true as const };
@@ -60,6 +81,7 @@ export const checkDevice = createServerFn({ method: "POST" })
     return { ok: false as const, blocked: true, fingerprint: data.fingerprint };
 
   });
+
 
 /** Admin: manually authorize a device fingerprint for a specific user. */
 export const adminAddDevice = createServerFn({ method: "POST" })

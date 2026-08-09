@@ -1009,6 +1009,7 @@ export type Database = {
           device_fingerprint: string
           device_label: string | null
           first_seen_at: string
+          hw_signature: string | null
           id: string
           ip: string | null
           last_seen_at: string
@@ -1019,6 +1020,7 @@ export type Database = {
           device_fingerprint: string
           device_label?: string | null
           first_seen_at?: string
+          hw_signature?: string | null
           id?: string
           ip?: string | null
           last_seen_at?: string
@@ -1029,6 +1031,7 @@ export type Database = {
           device_fingerprint?: string
           device_label?: string | null
           first_seen_at?: string
+          hw_signature?: string | null
           id?: string
           ip?: string | null
           last_seen_at?: string
