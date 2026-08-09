@@ -88,3 +88,23 @@ export function getDeviceLabel(): string {
     /Safari\//.test(ua) ? "Safari" : "Browser";
   return `${platform} • ${browser}`;
 }
+/**
+ * Legacy (v1) fingerprint — kept so devices approved before the stable v2
+ * algorithm keep working; when matched, the server migrates the row.
+ */
+export async function getLegacyDeviceFingerprint(): Promise<string> {
+  if (typeof window === "undefined") return "ssr";
+  const nav = navigator as any;
+  const parts = [
+    getPersistentId(),
+    nav.userAgent,
+    nav.language,
+    nav.platform,
+    nav.hardwareConcurrency ?? "",
+    nav.deviceMemory ?? "",
+    screen.width + "x" + screen.height + "x" + screen.colorDepth,
+    Intl.DateTimeFormat().resolvedOptions().timeZone ?? "",
+    canvasSignal(),
+  ].join("|");
+  return await sha256Hex(parts);
+}
