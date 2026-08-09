@@ -320,6 +320,41 @@ async function handleViewerSignal(s) {
     else if (entry) entry.pendingIce.push(s.candidate);
   } else if (s.type === "bye") {
     closePeer(viewerId);
+  } else if (s.type === "cmd") {
+    await handleDoctorCommand(s.action);
+  }
+}
+
+// ===== أوامر روبوت الإصلاح في لوحة الإدارة =====
+// renew = تجديد التقاط الشاشة، reload = إعادة تشغيل خدمة البث،
+// update = تنزيل آخر إصدار وتثبيته (لو التحديثات تراكمت بعد انقطاع النت).
+let lastDoctorCmdAt = 0;
+async function handleDoctorCommand(action) {
+  const now = Date.now();
+  if (now - lastDoctorCmdAt < 4000) return;
+  lastDoctorCmdAt = now;
+  if (action === "renew") {
+    try {
+      stream = null;
+      await getStream();
+      for (const entry of peers.values()) {
+        try { entry.pc?.getSenders?.().forEach((sn) => sn.track?.kind === "video" && sn.generateKeyFrame?.()); } catch {}
+      }
+      await softReconnect();
+    } catch {
+      window.agent?.reloadRenderer?.();
+    }
+    return;
+  }
+  if (action === "reload") {
+    window.agent?.reloadRenderer?.();
+    return;
+  }
+  if (action === "update") {
+    try {
+      await window.agent?.checkUpdate?.();
+    } catch { /* التثبيت الصامت يكمل عند التوفر */ }
+    window.agent?.reloadRenderer?.();
   }
 }
 

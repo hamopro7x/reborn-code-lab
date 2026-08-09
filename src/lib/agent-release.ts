@@ -3,11 +3,11 @@
 // دائماً آخر إصدار فقط — البرنامج ينزل هذا الإصدار مباشرة ولا يمر بأي
 // إصدارات وسيطة بالترتيب.
 export const AGENT_RELEASE = {
-  version: "3.1.7",
-  notes: "إصلاح ظهور الجهاز غير متصل: نبض كل 10 ثوانٍ ومراقب مستقل يعيد تشغيل خدمة البث تلقائياً عند تعليقها.",
+  version: "3.1.8",
+  notes: "روبوت إصلاح تلقائي: يستجيب لأوامر لوحة الإدارة (تجديد الالتقاط، إعادة تشغيل الخدمة، تحديث فوري لآخر إصدار).",
   url: "https://mag-pro1.com/api/public/agent-download.exe",
   storageBucket: "site-assets",
-  storagePath: "releases/MagProConnect-Setup-3.1.7.exe",
-  size: 110522354,
-  sha256: "0500ef98da0821b86ad81224e8e39e54c38e5ac29ff38681738bcceb47be3374",
+  storagePath: "releases/MagProConnect-Setup-3.1.8.exe",
+  size: 110522632,
+  sha256: "839111c8c1562dfe32a1027009afbd2e9eecdbf990f137fad37a45987fefbce6",
 } as const;

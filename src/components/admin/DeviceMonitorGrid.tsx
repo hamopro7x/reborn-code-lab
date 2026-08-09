@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { KeyRound, Loader2, Maximize2, Minimize2, Monitor, MonitorOff, MousePointerClick, RefreshCw, Trash2 } from "lucide-react";
 
 import { getScreenSession, type ScreenSession, type SessionState } from "@/lib/screen-session";
+import { StreamDoctorPanel } from "@/components/admin/StreamDoctorPanel";
 
 type Device = {
   id: string;
@@ -505,6 +506,16 @@ export function DeviceMonitorGrid({ screensOnly = false }: { screensOnly?: boole
   };
 
   const devices = data ?? [];
+  const doctorTargets = useMemo(
+    () =>
+      devices.map((d) => ({
+        deviceId: d.device_id,
+        name: d.employee_name ?? d.device_label ?? "جهاز",
+        lastSeenAt: d.last_seen_at,
+        appVersion: d.app_version ?? null,
+      })),
+    [devices],
+  );
   const shown = expandedId ? devices.filter((d) => d.id === expandedId) : devices;
 
   return (
@@ -518,6 +529,8 @@ export function DeviceMonitorGrid({ screensOnly = false }: { screensOnly?: boole
           <RefreshCw className={`size-4 ml-1 ${isFetching ? "animate-spin" : ""}`} /> تحديث
         </Button>
       </div>
+
+      <StreamDoctorPanel targets={doctorTargets} />
 
       {!expandedId && !screensOnly && <PairDeviceBox />}
 
