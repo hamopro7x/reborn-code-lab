@@ -2033,7 +2033,8 @@ function CourseAccessManager({ courseId, courseTitle }: { courseId: string; cour
 }
 
 // ============ DEVICES ============
-function DevicesTab() {
+function DevicesTab({ userId, employeeName }: { userId?: string; employeeName?: string | null } = {}) {
+  const scoped = !!userId;
   const qc = useQueryClient();
   const listFn = useServerFn(adminListDevices);
   const delFn = useServerFn(adminDeleteDevice);
@@ -2041,12 +2042,13 @@ function DevicesTab() {
   const addFn = useServerFn(adminAddDevice);
   const empFn = useServerFn(adminListEmployees);
   const devices = useQuery({ queryKey: ["admin-devices"], queryFn: () => listFn() });
-  const employees = useQuery({ queryKey: ["admin-devices-employees"], queryFn: () => empFn() });
-  const [newUserId, setNewUserId] = useState<string>("");
+  const employees = useQuery({ queryKey: ["admin-devices-employees"], queryFn: () => empFn(), enabled: !scoped });
+  const [newUserId, setNewUserId] = useState<string>(userId ?? "");
   const [newFp, setNewFp] = useState<string>("");
   const [newLabel, setNewLabel] = useState<string>("");
   const [saving, setSaving] = useState(false);
   const [filterUser, setFilterUser] = useState<string>("");
+
 
   async function addDevice() {
     if (!newUserId || newFp.trim().length < 6) { toast.error("اختر موظف وأدخل معرّف الجهاز"); return; }
