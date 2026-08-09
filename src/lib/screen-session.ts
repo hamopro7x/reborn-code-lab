@@ -21,6 +21,12 @@ class ScreenSession {
   private generation = 0;
   private moveQueued: { x: number; y: number } | null = null;
   private raf: number | null = null;
+  // بيانات تشخيصية يستخدمها روبوت الإصلاح في لوحة الإدارة
+  lastFrameAt = 0;
+  offerAt = 0;
+  sigFailed = false;
+  startedAt = Date.now();
+  private viewerId: string | null = null;
 
   constructor(deviceId: string) {
     this.deviceId = deviceId;
@@ -117,9 +123,39 @@ class ScreenSession {
     }, delay);
   }
 
+  /** حالة الاتصال الحقيقية لتشخيص سبب توقف الصورة */
+  get connState(): RTCPeerConnectionState | "none" {
+    return this.pc?.connectionState ?? "none";
+  }
+
+  /** يهدم المسار الحالي ويبني اتصالاً جديداً من الصفر (إصلاح من جهة الأدمن) */
+  hardReset() {
+    this.dropTransport();
+    this.startedAt = Date.now();
+    this.connect();
+  }
+
+  /**
+   * أمر تشغيلي يُرسل لبرنامج الموظف عبر قناة الإشارات (يعمل حتى لو مسار
+   * WebRTC ميت تماماً): renew = تجديد التقاط الشاشة، reload = إعادة تشغيل
+   * خدمة البث، update = تنزيل آخر إصدار وتثبيته ثم إعادة التشغيل.
+   */
+  async sendCommand(action: "renew" | "reload" | "update"): Promise<boolean> {
+    const sig = this.sig;
+    const viewer = this.viewerId;
+    if (!sig || !viewer) return false;
+    try {
+      await sig.send({ type: "cmd", action, viewer } as unknown as Signal);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   connect() {
     if (this.pc) return;
     const viewerId = makeViewerId();
+    this.viewerId = viewerId;
     const pc = new RTCPeerConnection(RTC_CONFIG);
     this.pc = pc;
     const gen = this.generation;
@@ -190,6 +226,8 @@ class ScreenSession {
         this.muteTimer = undefined;
         if (alive()) this.set({ live: true, failed: false });
       });
+      this.offerAt = this.offerAt || Date.now();
+      this.lastFrameAt = Date.now();
       this.stream = e.streams[0] ?? new MediaStream([e.track]);
       this.set({ failed: false });
       this.emit();
@@ -223,6 +261,8 @@ class ScreenSession {
             return;
           }
           acceptedOfferSdp = offerSdp;
+          this.offerAt = Date.now();
+          this.sigFailed = false;
           try {
             await pc.setRemoteDescription(s.sdp);
             for (const candidate of pendingIce.splice(0)) {
@@ -298,6 +338,7 @@ class ScreenSession {
       })
       .catch(() => {
         if (!alive()) return;
+        this.sigFailed = true;
         this.set({ failed: true });
         this.scheduleReconnect(8000, gen);
       });
@@ -335,6 +376,7 @@ class ScreenSession {
           } else {
             stalled = 0;
             lastBytes = bytes;
+            this.lastFrameAt = Date.now();
             this.set({ live: true });
           }
         })
@@ -356,3 +398,8 @@ export function getScreenSession(deviceId: string): ScreenSession {
 }
 
 export type { ScreenSession };
+
+/** الجلسات المفتوحة حالياً — يستخدمها روبوت التشخيص في لوحة الإدارة */
+export function getOpenScreenSession(deviceId: string): ScreenSession | undefined {
+  return sessions.get(deviceId);
+}
