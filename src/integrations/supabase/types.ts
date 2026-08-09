@@ -96,6 +96,7 @@ export type Database = {
           created_by: string | null
           employee_name: string | null
           note: string | null
+          target_user_id: string | null
           used_at: string | null
           used_by_device: string | null
         }
@@ -105,6 +106,7 @@ export type Database = {
           created_by?: string | null
           employee_name?: string | null
           note?: string | null
+          target_user_id?: string | null
           used_at?: string | null
           used_by_device?: string | null
         }
@@ -114,6 +116,7 @@ export type Database = {
           created_by?: string | null
           employee_name?: string | null
           note?: string | null
+          target_user_id?: string | null
           used_at?: string | null
           used_by_device?: string | null
         }
@@ -1071,10 +1074,19 @@ export type Database = {
     Functions: {
       admin_allow_signup: { Args: { p_email: string }; Returns: boolean }
       agent_claim_pairing: { Args: { p_code: string }; Returns: Json }
-      agent_create_enroll_code: {
-        Args: { p_employee_name?: string; p_note?: string }
-        Returns: string
-      }
+      agent_create_enroll_code:
+        | {
+            Args: { p_employee_name?: string; p_note?: string }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_employee_name?: string
+              p_note?: string
+              p_user_id?: string
+            }
+            Returns: string
+          }
       agent_exchange_signals: {
         Args: { p_device_id: string; p_outgoing?: Json; p_secret: string }
         Returns: Json
@@ -1096,10 +1108,10 @@ export type Database = {
       agent_register: {
         Args: {
           p_device_id: string
-          p_device_label: string
-          p_employee_name: string
+          p_device_label?: string
+          p_employee_name?: string
           p_enroll_code?: string
-          p_os: string
+          p_os?: string
           p_secret: string
           p_version?: string
         }
