@@ -671,6 +671,33 @@ async function heartbeat(device) {
 let hbTimer = null;
 let pairTimer = null;
 let running = false;
+let heartbeatFailures = 0;
+
+// نبض داخلي للعملية الرئيسية لا يعتمد على الشبكة. إذا توقف JavaScript لأي
+// سبب تكتشفه عملية Electron الرئيسية وتعيد تشغيل خدمة البث تلقائياً.
+window.agent?.rendererPulse?.();
+setInterval(() => window.agent?.rendererPulse?.(), 5_000);
+
+async function refreshHeartbeat(device) {
+  const ok = await heartbeat(device);
+  if (ok === true) {
+    heartbeatFailures = 0;
+    setStatus(peers.size > 0 ? `متصل · ${peers.size} مشاهد` : "متصل", true);
+    return;
+  }
+  if (ok === false) {
+    void showPairing(device, "تم حذف تسجيل هذا الجهاز — اطلب كود تسجيل جديد من الإدارة");
+    return;
+  }
+  heartbeatFailures += 1;
+  setStatus("انقطع الاتصال — جاري الاستعادة…", false);
+  // إذا كانت الشبكة موجودة لكن ست محاولات متتالية فشلت، نعيد تشغيل واجهة
+  // الخدمة نفسها لتنظيف أي fetch/WebRTC عالق. بيانات الجهاز محفوظة محلياً.
+  if (heartbeatFailures >= 6 && navigator.onLine) {
+    heartbeatFailures = 0;
+    window.agent?.reloadRenderer?.();
+  }
+}
 
 function stopSession() {
   running = false;
@@ -757,15 +784,18 @@ async function run(device) {
     // الإدارة حذفت الجهاز — نطلب مفتاح ربط جديد
     return showPairing(device, "تم حذف تسجيل هذا الجهاز — اطلب كود تسجيل جديد من الإدارة");
   }
+  if (first === true) {
+    heartbeatFailures = 0;
+  } else {
+    heartbeatFailures = 1;
+    setStatus("انقطع الاتصال — جاري الاستعادة…", false);
+  }
 
   // نجهّز التقاط الشاشة أثناء فتح لوحة الإدارة، فلا نضيّع عدة ثوانٍ بعد JOIN.
   // الفشل هنا لا يوقف البرنامج؛ startPeer سيعيد المحاولة عند أول مشاهدة.
   void getStream().catch(() => {});
 
-  hbTimer = setInterval(async () => {
-    const ok = await heartbeat(device);
-    if (ok === false) void showPairing(device, "تم حذف تسجيل هذا الجهاز — اطلب كود تسجيل جديد من الإدارة");
-  }, 20000);
+  hbTimer = setInterval(() => void refreshHeartbeat(device), 10_000);
 
   // قناة الإشارات القديمة المفتوحة أُزيلت. البرنامج يسحب فقط الطلبات
   // التي مرّت بسياسة الأدمن، مستخدماً مفتاح الجهاز السري.
@@ -773,7 +803,7 @@ async function run(device) {
   // دورة مستقرة موزعة زمنياً: تكفي لاتصال سريع، وتمنع تزامن كل الأجهزة على
   // قاعدة الإشارات في اللحظة نفسها. كل طلب له مهلة ولا تتداخل الطلبات.
   signalTimer = setInterval(() => void exchangeSignals(device), 900 + Math.floor(Math.random() * 350));
-  setStatus("متصل", true);
+  if (first === true) setStatus("متصل", true);
 }
 
 approveBtn.addEventListener("click", async () => {
