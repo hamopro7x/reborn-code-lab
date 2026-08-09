@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { KeyRound, Loader2, Maximize2, Minimize2, Monitor, MonitorOff, MousePointerClick, RefreshCw, Trash2 } from "lucide-react";
 
-import { RTC_CONFIG, makeViewerId, openSignaling, type Signal } from "@/lib/screenshare";
+import { getScreenSession, type ScreenSession, type SessionState } from "@/lib/screen-session";
 
 type Device = {
   id: string;
@@ -27,335 +27,45 @@ type Device = {
 const isOnline = (d: Device) =>
   !!d.last_seen_at && Date.now() - new Date(d.last_seen_at).getTime() < 75_000;
 
-/** يفتح بثاً مباشراً للجهاز تلقائياً طالما enabled = true (زي كاميرات المراقبة) */
+/** يفتح بثاً دائماً للجهاز: الجلسة تبقى حيّة حتى لو خرجت من القسم */
 function useDeviceStream(deviceId: string, enabled: boolean) {
-  const [live, setLive] = useState(false);
-  const [failed, setFailed] = useState(false);
-  // كل زيادة تعيد بناء الاتصال من الصفر (إعادة اتصال تلقائية)
-  const [attempt, setAttempt] = useState(0);
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  // قناة التحكم عن بعد (ينشئها جهاز الموظف ونستقبلها هنا)
-  const ctlRef = useRef<RTCDataChannel | null>(null);
-  const [canControl, setCanControl] = useState(false);
-  const sendInput = (cmd: Record<string, unknown>) => {
-    const ch = ctlRef.current;
-    if (!ch || ch.readyState !== "open") return;
-    // ضغط خلفي: حركة الماوس تُسقط بسرعة عند أول ازدحام حتى لا يتراكم التأخير،
-    // أما النقر/الكيبورد فنحاول إرسالها دائماً تقريباً.
-    const limit = cmd.t === "move" ? 4_096 : 65_536;
-    if (ch.bufferedAmount > limit) return;
-    try {
-      ch.send(JSON.stringify(cmd));
-    } catch {
-      /* القناة أُغلقت */
-    }
-  };
+  const [state, setState] = useState<SessionState>({ live: false, failed: false, canControl: false });
+  const sessionRef = useRef<ScreenSession | null>(null);
 
-
-  // حركة الماوس تُجمَّع في إطار عرض واحد (~60 مرة/ث) بدل إرسال كل حدث
-  const moveRef = useRef<{ x: number; y: number } | null>(null);
-  const rafRef = useRef<number | null>(null);
-  const sendMove = (p: { x: number; y: number }) => {
-    moveRef.current = p;
-    if (rafRef.current != null) return;
-    rafRef.current = requestAnimationFrame(() => {
-      rafRef.current = null;
-      const m = moveRef.current;
-      moveRef.current = null;
-      if (m) sendInput({ t: "move", x: m.x, y: m.y });
-    });
-  };
-
-
-
-
-  // مهلة سماح: لا نقطع البث لمجرد تأخّر نبضة الجهاز 15-60 ثانية
-  const [sticky, setSticky] = useState(enabled);
+  // مهلة سماح: لا نبدأ الجلسة إلا عند التمكين، وبعد التمكين لا نغلقها
+  const [started, setStarted] = useState(enabled);
   useEffect(() => {
-    if (enabled) {
-      setSticky(true);
-      return;
-    }
-    const t = setTimeout(() => setSticky(false), 45_000);
-    return () => clearTimeout(t);
+    if (enabled) setStarted(true);
   }, [enabled]);
 
   useEffect(() => {
-    if (!sticky) {
-      setLive(false);
-      setFailed(false);
-      return;
-    }
-    let closed = false;
-    setLive(false);
-    setFailed(false);
-    // معرّف فريد لكل مشاهد: يسمح بعدة أجهزة إدارة تشاهد نفس الجهاز في نفس الوقت
-    const viewerId = makeViewerId();
-    const pc = new RTCPeerConnection(RTC_CONFIG);
-
-
-
-
-
-
-    // إعادة الاتصال تلقائياً عند انقطاع/فشل مسار ICE
-    let recoverTimer: ReturnType<typeof setTimeout> | undefined;
-    const scheduleReconnect = (delay: number) => {
-      if (closed || recoverTimer) return;
-      recoverTimer = setTimeout(() => {
-        if (closed) return;
-        setAttempt((n) => n + 1);
-      }, delay);
-    };
-    const cancelReconnect = () => {
-      if (recoverTimer) clearTimeout(recoverTimer);
-      recoverTimer = undefined;
-    };
-    pc.onconnectionstatechange = () => {
-      if (closed) return;
-      if (pc.connectionState === "connected") {
-        cancelReconnect();
-        setFailed(false);
-        return;
-      }
-      if (pc.connectionState === "disconnected") {
-        try {
-          pc.restartIce();
-        } catch {
-          /* غير مدعوم */
-        }
-        scheduleReconnect(4000);
-      } else if (pc.connectionState === "failed" || pc.connectionState === "closed") {
-        setLive(false);
-        scheduleReconnect(1200);
-      }
-    };
-    const pendingIce: RTCIceCandidateInit[] = [];
-    let acceptedOfferSdp: string | undefined;
-
-    // مستقبل فيديو واحد بالإعدادات الافتراضية للمتصفح.
-    // (ترتيب الكودك يدوياً كان يسبب سقوط أول keyframe = شاشة سوداء)
-    try {
-      pc.addTransceiver("video", { direction: "recvonly" });
-    } catch {
-      /* غير مدعوم */
-    }
-
-    pc.ontrack = (e) => {
-      // مخزن تشغيل صغير لكن ليس صفراً: 0.03s كان يسبب تجميد/سواد عند أي فقد حزم.
-      try {
-        // مخزن صغير (80ms) = صورة أسرع بتأخير أقل، وما زال يمتص فقد الحزم
-        // أقل تأخير ممكن: نلعب الإطار بمجرد وصوله (بدون مخزن مؤقت)
-        (e.receiver as unknown as { jitterBufferTarget?: number }).jitterBufferTarget = 0;
-        (e.receiver as unknown as { playoutDelayHint?: number }).playoutDelayHint = 0;
-      } catch {
-        /* غير مدعوم في بعض المتصفحات */
-      }
-
-      // انتهاء المسار من جهة الموظف = إعادة اتصال فوري
-      e.track.addEventListener("ended", () => {
-        if (closed) return;
-        setLive(false);
-        scheduleReconnect(1000);
-      });
-      // كتم المسار مؤقتاً (انقطاع حزم) = نُظهر مؤشر الانتظار بدل شاشة سوداء
-      e.track.addEventListener("mute", () => {
-        if (!closed) setLive(false);
-      });
-      e.track.addEventListener("unmute", () => {
-        if (!closed) setFailed(false);
-      });
-
+    if (!started) return;
+    const session = getScreenSession(deviceId);
+    sessionRef.current = session;
+    session.acquire();
+    const attach = () => {
+      setState(session.state);
       const v = videoRef.current;
-      if (v) {
-        v.srcObject = e.streams[0] ?? new MediaStream([e.track]);
-        // لا نعلن "بث مباشر" إلا عند وصول أول إطار حقيقي
-        const markLive = () => {
-          if (!closed) {
-            setFailed(false);
-            setLive(true);
-          }
-        };
-        const rvfc = (v as unknown as { requestVideoFrameCallback?: (cb: () => void) => number })
-          .requestVideoFrameCallback;
-        if (typeof rvfc === "function") rvfc.call(v, markLive);
-        else v.addEventListener("timeupdate", markLive, { once: true });
+      if (v && session.stream && v.srcObject !== session.stream) {
+        v.srcObject = session.stream;
         void v.play().catch(() => {});
       }
-      setFailed(false);
     };
-
-    // قناة التحكم يفتحها جهاز الموظف
-    pc.ondatachannel = (e) => {
-      if (e.channel.label !== "ctl") return;
-      ctlRef.current = e.channel;
-      e.channel.onopen = () => {
-        if (!closed) setCanControl(true);
-      };
-      e.channel.onclose = () => {
-        if (!closed) setCanControl(false);
-      };
-      if (e.channel.readyState === "open") setCanControl(true);
-    };
-
-
-
-    const sig = openSignaling(
-      deviceId,
-      async (s: Signal) => {
-        if (closed) return;
-        // نتجاهل الإشارات الموجّهة لمشاهد آخر
-        const to = (s as { to?: string }).to;
-        if (to && to !== viewerId) return;
-        if (s.type === "offer") {
-          const offerSdp = s.sdp.sdp;
-          // Polling وRealtime قد يسلّمان نفس العرض في نفس اللحظة. نحجزه قبل
-          // أول await حتى لا ينفذ setRemoteDescription مرتين بالتوازي ويعلق
-          // جهاز واحد بينما تعمل الأجهزة الأخرى.
-          if (!offerSdp || acceptedOfferSdp === offerSdp || pc.remoteDescription?.sdp === offerSdp) return;
-          if (pc.signalingState !== "stable") return;
-          acceptedOfferSdp = offerSdp;
-          try {
-            await pc.setRemoteDescription(s.sdp);
-            for (const candidate of pendingIce.splice(0)) {
-              await pc.addIceCandidate(candidate).catch(() => {});
-            }
-            const answer = await pc.createAnswer();
-            await pc.setLocalDescription(answer);
-            // ننتظر قليلاً حتى تدخل مرشحات ICE في الإجابة نفسها؛ الرسائل
-            // المنفصلة تظل مساراً سريعاً، لكن الاتصال لم يعد يعتمد عليها.
-            if (pc.iceGatheringState !== "complete") {
-              await new Promise<void>((resolve) => {
-                let settled = false;
-                const finish = () => {
-                  if (settled) return;
-                  settled = true;
-                  clearTimeout(timeout);
-                  pc.removeEventListener("icegatheringstatechange", onChange);
-                  resolve();
-                };
-                const onChange = () => {
-                  if (pc.iceGatheringState === "complete") finish();
-                };
-                const timeout = setTimeout(finish, 1800);
-                pc.addEventListener("icegatheringstatechange", onChange);
-              });
-            }
-            const completeAnswer = pc.localDescription;
-            if (!completeAnswer) throw new Error("تعذّر إنشاء إجابة الاتصال");
-            await sig.send({ type: "answer", sdp: completeAnswer, viewer: viewerId });
-          } catch {
-            acceptedOfferSdp = undefined;
-            scheduleReconnect(400);
-          }
-        } else if (s.type === "ice" && s.from === "host") {
-          if (pc.remoteDescription) await pc.addIceCandidate(s.candidate).catch(() => {});
-          else pendingIce.push(s.candidate);
-        }
-      },
-      { raw: true, viewerId },
-    );
-
-
-    pc.onicecandidate = (e) => {
-      if (e.candidate)
-        void sig.send({
-          type: "ice",
-          from: "viewer",
-          viewer: viewerId,
-          candidate: e.candidate.toJSON(),
-        });
-    };
-
-    // إعادة إرسال طلب الانضمام حتى يستجيب جهاز الموظف
-    let tries = 0;
-    let timer: ReturnType<typeof setInterval> | undefined;
-    sig.ready
-      .then(() => {
-        if (closed) return;
-        void sig.send({ type: "join", viewer: viewerId });
-        timer = setInterval(() => {
-          if (closed || pc.remoteDescription) {
-            if (timer) clearInterval(timer);
-            return;
-          }
-          tries += 1;
-          if (tries > 30) {
-            if (timer) clearInterval(timer);
-            setFailed(true);
-            // لا نتوقف نهائياً: نحاول من جديد بعد قليل
-            scheduleReconnect(3000);
-            return;
-          }
-          void sig.send({ type: "join", viewer: viewerId });
-        }, 350);
-      })
-      .catch(() => {
-        if (closed) return;
-        setFailed(true);
-        scheduleReconnect(8000);
-      });
-
-    // مراقب توقّف الصورة: نعتمد على عدد الإطارات المفكوكة فعلاً (framesDecoded)
-    // لأن الشاشة قد تتجمّد بينما currentTime يتقدّم، فتظهر "بث مباشر" بلا صورة.
-    let lastFrames = -1;
-    let stalled = 0;
-    const watchdog = setInterval(() => {
-      const v = videoRef.current;
-      if (closed || !v || !v.srcObject) return;
-      void pc
-        .getStats()
-        .then((stats) => {
-          if (closed) return;
-          let frames = -1;
-          stats.forEach((r: any) => {
-            if (r.type === "inbound-rtp" && r.kind === "video" && typeof r.framesDecoded === "number") {
-              frames = r.framesDecoded;
-            }
-          });
-          if (frames < 0) return;
-          if (frames === lastFrames) {
-            stalled += 1;
-            setLive(false);
-            if (stalled === 2) {
-              // تجميد ~3 ثوانٍ: إصلاح مسار ICE بدون قطع البث
-              try {
-                pc.restartIce();
-              } catch {
-                /* غير مدعوم */
-              }
-              void v.play().catch(() => {});
-            } else if (stalled >= 4) {
-              stalled = 0;
-              scheduleReconnect(400);
-            }
-          } else {
-            stalled = 0;
-            lastFrames = frames;
-            setLive(true);
-          }
-        })
-        .catch(() => {});
-    }, 1500);
-
-
-
+    attach();
+    const unsub = session.subscribe(attach);
     return () => {
-      closed = true;
-      if (timer) clearInterval(timer);
-      clearInterval(watchdog);
-      cancelReconnect();
-      ctlRef.current = null;
-      setCanControl(false);
-      void sig.send({ type: "bye", viewer: viewerId }).catch(() => {});
-      sig.close();
-      pc.close();
+      unsub();
+      session.release();
     };
-  }, [deviceId, sticky, attempt]);
+  }, [deviceId, started]);
 
+  const sendInput = (cmd: Record<string, unknown>) => sessionRef.current?.sendInput(cmd);
+  const sendMove = (p: { x: number; y: number }) => sessionRef.current?.sendMove(p);
 
-  return { videoRef, live, failed, canControl, sendInput, sendMove };
+  return { videoRef, live: state.live, failed: state.failed, canControl: state.canControl, sendInput, sendMove };
 }
+
 
 
 
