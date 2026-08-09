@@ -17,6 +17,7 @@ class ScreenSession {
   private ctl: RTCDataChannel | null = null;
   private timers: Array<ReturnType<typeof setInterval>> = [];
   private recoverTimer: ReturnType<typeof setTimeout> | undefined;
+  private muteTimer: ReturnType<typeof setTimeout> | undefined;
   private generation = 0;
   private moveQueued: { x: number; y: number } | null = null;
   private raf: number | null = null;
@@ -84,6 +85,8 @@ class ScreenSession {
     this.generation += 1;
     if (this.recoverTimer) clearTimeout(this.recoverTimer);
     this.recoverTimer = undefined;
+    if (this.muteTimer) clearTimeout(this.muteTimer);
+    this.muteTimer = undefined;
     for (const t of this.timers) clearInterval(t);
     this.timers = [];
     this.ctl = null;
@@ -164,10 +167,24 @@ class ScreenSession {
         this.scheduleReconnect(1000, gen);
       });
       e.track.addEventListener("mute", () => {
-        if (alive()) this.set({ live: false });
+        if (!alive() || this.muteTimer) return;
+        // ضعف الشبكة قد يعمل mute مؤقتاً للمسار. نُبقي آخر صورة ظاهرة
+        // ونعطي WebRTC فرصة للتعافي بدل تحويل الشاشة إلى أسود فوراً.
+        this.muteTimer = setTimeout(() => {
+          this.muteTimer = undefined;
+          if (!alive() || !e.track.muted) return;
+          try {
+            pc.restartIce();
+          } catch {
+            /* غير مدعوم */
+          }
+          this.scheduleReconnect(2500, gen);
+        }, 6000);
       });
       e.track.addEventListener("unmute", () => {
-        if (alive()) this.set({ failed: false });
+        if (this.muteTimer) clearTimeout(this.muteTimer);
+        this.muteTimer = undefined;
+        if (alive()) this.set({ live: true, failed: false });
       });
       this.stream = e.streams[0] ?? new MediaStream([e.track]);
       this.set({ failed: false });
@@ -275,7 +292,7 @@ class ScreenSession {
       });
 
     // مراقب توقّف الصورة
-    let lastFrames = -1;
+    let lastBytes = -1;
     let stalled = 0;
     const watchdog = setInterval(() => {
       if (!alive() || !this.stream) return;
@@ -283,29 +300,30 @@ class ScreenSession {
         .getStats()
         .then((stats) => {
           if (!alive()) return;
-          let frames = -1;
+          let bytes = -1;
           stats.forEach((r: any) => {
-            if (r.type === "inbound-rtp" && r.kind === "video" && typeof r.framesDecoded === "number") {
-              frames = r.framesDecoded;
+            if (r.type === "inbound-rtp" && r.kind === "video" && typeof r.bytesReceived === "number") {
+              bytes = r.bytesReceived;
             }
           });
-          if (frames < 0) return;
-          if (frames === lastFrames) {
+          if (bytes < 0) return;
+          if (bytes === lastBytes && pc.connectionState === "connected") {
             stalled += 1;
-            this.set({ live: false });
-            if (stalled === 2) {
+            // لا نعتبر سطح المكتب الثابت انقطاعاً. ننتظر 12 ثانية بلا أي
+            // بايتات فيديو قبل إصلاح ICE، و18 ثانية قبل بناء مسار جديد.
+            if (stalled === 8) {
               try {
                 pc.restartIce();
               } catch {
                 /* غير مدعوم */
               }
-            } else if (stalled >= 4) {
+            } else if (stalled >= 12) {
               stalled = 0;
               this.scheduleReconnect(400, gen);
             }
           } else {
             stalled = 0;
-            lastFrames = frames;
+            lastBytes = bytes;
             this.set({ live: true });
           }
         })

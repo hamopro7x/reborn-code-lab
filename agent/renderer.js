@@ -302,7 +302,7 @@ async function handleViewerSignal(s) {
     const entry = peers.get(viewerId);
     // نقبل الإجابة في أي حالة تسمح بها المواصفة، ولا نرفضها لمجرد أن حالة
     // الإشارة تأخّرت — الرفض كان يترك الشاشة معلّقة على "جاري الاتصال".
-    if (entry?.pc && !entry.pc.currentRemoteDescription) {
+    if (entry?.pc && entry.pc.signalingState === "have-local-offer") {
       try {
         await entry.pc.setRemoteDescription(s.sdp);
       } catch (err) {
@@ -326,7 +326,49 @@ async function handleViewerSignal(s) {
 async function getStream() {
   if (stream && stream.getTracks().some((t) => t.readyState === "live")) return stream;
   stream = await captureScreen();
+  watchCapture(stream);
   return stream;
+}
+
+let captureRecovery = null;
+function watchCapture(activeStream) {
+  const track = activeStream?.getVideoTracks?.()[0];
+  if (!track || track.__magRecoveryAttached) return;
+  track.__magRecoveryAttached = true;
+  track.addEventListener("ended", () => void recoverCapture());
+}
+
+async function recoverCapture() {
+  if (captureRecovery) return captureRecovery;
+  captureRecovery = (async () => {
+    // Windows/Electron قد ينهي مسار الالتقاط بعد السكون أو تغيير الشاشة.
+    // نلتقط مساراً جديداً ونستبدله داخل كل الاتصالات بدون فصل المشاهدين.
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      try {
+        const next = await captureScreen();
+        const nextTrack = next.getVideoTracks()[0];
+        if (!nextTrack) throw new Error("no video track");
+        nextTrack.contentHint = "motion";
+        watchCapture(next);
+        const previous = stream;
+        stream = next;
+        await Promise.all(Array.from(peers.values()).map(async (entry) => {
+          const sender = entry.pc?.getSenders?.().find((item) => item.track?.kind === "video");
+          if (sender) {
+            await sender.replaceTrack(nextTrack);
+            try { sender.generateKeyFrame?.(); } catch {}
+          }
+        }));
+        previous?.getTracks?.().forEach((item) => {
+          if (item !== nextTrack) try { item.stop(); } catch {}
+        });
+        return;
+      } catch {
+        await new Promise((resolve) => setTimeout(resolve, Math.min(5000, 500 + attempt * 300)));
+      }
+    }
+  })().finally(() => { captureRecovery = null; });
+  return captureRecovery;
 }
 
 function waitForIceGathering(pc, timeoutMs = 1800) {
@@ -362,7 +404,7 @@ function startAdaptive(entry, sender) {
   let target = 3_500_000;
   let lastLost = 0;
   let lastPackets = 0;
-  let lastFramesEncoded = -1;
+  let lastBytesSent = -1;
   let frozenTicks = 0;
 
 
@@ -374,7 +416,7 @@ function startAdaptive(entry, sender) {
       let lost = 0;
       let packets = 0;
       let avail = 0;
-      let framesEncoded = -1;
+      let bytesSent = -1;
       stats.forEach((r) => {
         if (r.type === "remote-inbound-rtp") {
           if (typeof r.roundTripTime === "number") rtt = r.roundTripTime;
@@ -382,7 +424,7 @@ function startAdaptive(entry, sender) {
         }
         if (r.type === "outbound-rtp" && r.kind === "video") {
           if (typeof r.packetsSent === "number") packets = r.packetsSent;
-          if (typeof r.framesEncoded === "number") framesEncoded = r.framesEncoded;
+          if (typeof r.bytesSent === "number") bytesSent = r.bytesSent;
         }
         if (r.type === "candidate-pair" && r.state === "succeeded") {
           if (typeof r.availableOutgoingBitrate === "number") avail = r.availableOutgoingBitrate;
@@ -397,19 +439,19 @@ function startAdaptive(entry, sender) {
 
       // الصورة متجمّدة عند المشاهد؟ المشفّر واقف => نطلب إطاراً مفتاحياً
       // ونهبط بالـ bitrate خطوة حتى يستأنف البث فوراً بدل ما يفضل واقف.
-      if (framesEncoded >= 0) {
-        if (framesEncoded === lastFramesEncoded) {
+      if (bytesSent >= 0) {
+        if (bytesSent === lastBytesSent) {
           frozenTicks += 1;
-          if (frozenTicks >= 2) {
+          if (frozenTicks === 8) {
             frozenTicks = 0;
             target = Math.max(MIN, Math.round(target * 0.6));
             try { sender.generateKeyFrame?.(); } catch {}
-            try { entry.pc.restartIce?.(); } catch {}
+            void restartPeerIce(entry);
           }
         } else {
           frozenTicks = 0;
         }
-        lastFramesEncoded = framesEncoded;
+        lastBytesSent = bytesSent;
       }
 
       const severe = rtt > 0.5 || lossRate > 0.12;
@@ -458,6 +500,24 @@ function closePeer(viewerId) {
   setStatus(peers.size > 0 ? `متصل · ${peers.size} مشاهد` : "متصل", true);
 }
 
+async function restartPeerIce(entry) {
+  if (!entry?.pc || entry.restartingIce || entry.pc.signalingState !== "stable") return;
+  entry.restartingIce = true;
+  try {
+    const offer = await entry.pc.createOffer({ iceRestart: true });
+    await entry.pc.setLocalDescription(offer);
+    await waitForIceGathering(entry.pc, 2200);
+    const completeOffer = entry.pc.localDescription;
+    if (!completeOffer) return;
+    entry.offer = { type: completeOffer.type, sdp: completeOffer.sdp };
+    await send({ type: "offer", to: entry.viewerId, sdp: entry.offer });
+  } catch {
+    /* المشاهد سيعيد JOIN لو تعذر إصلاح المسار الحالي */
+  } finally {
+    entry.restartingIce = false;
+  }
+}
+
 const startingViewers = new Set();
 
 async function startPeer(viewerId) {
@@ -479,7 +539,7 @@ async function startPeer(viewerId) {
     closePeer(viewerId); // أي اتصال قديم لنفس المشاهد يُستبدل
     const s = await getStream();
     const pc = new RTCPeerConnection(RTC_CONFIG);
-    const entry = { pc, statsTimer: null, pendingIce: [], recoverTimer: null, connectTimer: null, offer: null, startedAt: Date.now() };
+    const entry = { viewerId, pc, statsTimer: null, pendingIce: [], recoverTimer: null, connectTimer: null, offer: null, startedAt: Date.now(), restartingIce: false };
 
     peers.set(viewerId, entry);
     window.agent.setViewerCount?.(peers.size);
@@ -559,12 +619,12 @@ async function startPeer(viewerId) {
       }
       // انقطاع مؤقت للشبكة: نحاول إصلاح مسار ICE بدل قطع البث فوراً
       if (pc.connectionState === "disconnected") {
-        try { pc.restartIce(); } catch {}
+        void restartPeerIce(entry);
         if (!entry.recoverTimer) {
           entry.recoverTimer = setTimeout(() => {
             entry.recoverTimer = null;
-            if (pc.connectionState !== "connected") closePeer(viewerId);
-          }, 8000);
+            if (pc.connectionState !== "connected") void restartPeerIce(entry);
+          }, 6000);
         }
         return;
       }
