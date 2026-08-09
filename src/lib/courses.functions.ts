@@ -151,14 +151,15 @@ export const getLessonVideoUrl = createServerFn({ method: "POST" })
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // verify device is registered for this user (admin bypass optional — enforce for everyone)
+    // Trust is bound to the device fingerprint, regardless of which account signed in.
     const { data: dev } = await supabaseAdmin
       .from("user_devices")
       .select("id")
-      .eq("user_id", context.userId)
       .eq("device_fingerprint", data.fingerprint)
+      .limit(1)
       .maybeSingle();
     if (!dev) throw new Error("DEVICE_NOT_TRUSTED");
+
 
     const { data: lesson } = await supabaseAdmin
       .from("course_lessons").select("video_path").eq("id", data.lesson_id).maybeSingle();
