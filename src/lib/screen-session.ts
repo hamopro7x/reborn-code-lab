@@ -108,6 +108,9 @@ class ScreenSession {
       /* تجاهل */
     }
     this.pc = null;
+    this.offerAt = 0;
+    this.sigFailed = false;
+    this.lastFrameAt = 0;
     // لا نُبقِ عنصر الفيديو مربوطاً بمسار انتهى بعد إعادة الاتصال.
     this.stream = null;
     this.set({ live: false, canControl: false });
@@ -343,9 +346,10 @@ class ScreenSession {
         this.scheduleReconnect(8000, gen);
       });
 
-    // مراقب توقّف الصورة
+    // مراقب وصول الوسائط. سطح المكتب الثابت قد لا ينتج بايتات جديدة لفترة؛
+    // لذلك لا نهدم اتصالاً سليماً لمجرد ثبات الصورة. حالات ICE وmute/ended
+    // أعلاه هي الإشارات الموثوقة لإصلاح الشبكة أو التقاط الشاشة.
     let lastBytes = -1;
-    let stalled = 0;
     const watchdog = setInterval(() => {
       if (!alive() || !this.stream) return;
       void pc
@@ -359,22 +363,7 @@ class ScreenSession {
             }
           });
           if (bytes < 0) return;
-          if (bytes === lastBytes && pc.connectionState === "connected") {
-            stalled += 1;
-            // لا نعتبر سطح المكتب الثابت انقطاعاً. ننتظر 12 ثانية بلا أي
-            // بايتات فيديو قبل إصلاح ICE، و18 ثانية قبل بناء مسار جديد.
-            if (stalled === 8) {
-              try {
-                pc.restartIce();
-              } catch {
-                /* غير مدعوم */
-              }
-            } else if (stalled >= 12) {
-              stalled = 0;
-              this.scheduleReconnect(400, gen);
-            }
-          } else {
-            stalled = 0;
+          if (bytes !== lastBytes) {
             lastBytes = bytes;
             this.lastFrameAt = Date.now();
             this.set({ live: true });
