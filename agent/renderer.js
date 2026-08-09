@@ -228,12 +228,12 @@ function osLabel() {
 async function captureScreen() {
   const sourceId = await window.agent.getScreenSource();
   if (!sourceId) throw new Error("لا توجد شاشة متاحة");
-  // دقة عالية ثابتة: نلتقط بدقة الشاشة الأصلية (حتى 2560x1440) بدون تصغير
-  // أثناء الحركة، مع bitrate عالٍ للحفاظ على حدة النصوص والتفاصيل.
+  // نلتقط البكسلات الفعلية للشاشة بدون سقف 1440p. السقف السابق كان يصغّر
+  // شاشات 4K قبل الترميز، لذلك يستحيل على الموقع عرض نفس جودة جهاز الموظف.
   const dpr = window.devicePixelRatio || 1;
   const rawW = Math.round((window.screen?.width || 1920) * dpr);
   const rawH = Math.round((window.screen?.height || 1080) * dpr);
-  const scale = Math.min(1, 2560 / rawW, 1440 / rawH);
+  const scale = Math.min(1, 7680 / rawW, 4320 / rawH);
   const capW = Math.round(rawW * scale);
   const capH = Math.round(rawH * scale);
   const tryCapture = async (w, h, fps) =>
@@ -390,7 +390,7 @@ async function recoverCapture() {
         const next = await captureScreen();
         const nextTrack = next.getVideoTracks()[0];
         if (!nextTrack) throw new Error("no video track");
-        nextTrack.contentHint = "motion";
+        nextTrack.contentHint = "detail";
         watchCapture(next);
         const previous = stream;
         stream = next;
@@ -438,12 +438,10 @@ function startAdaptive(entry, sender) {
   if (entry.statsTimer) clearInterval(entry.statsTimer);
 
   // أرضية منخفضة: عند ضيق الشبكة نُنزل الـ bitrate بدل تجمّد الصورة تماماً
-  const MIN = 800_000;
-  const MAX = 12_000_000;
-  // البداية المتوسطة مهمة عند عرض عدة أجهزة معاً: بدء كل شاشة على 14Mbps
-  // كان يملأ اتصال الأدمن فوراً فتنجح أول شاشة فقط وتسقط بقية اتصالات ICE.
-  // نحافظ على الدقة الأصلية ونزيد السرعة تدريجياً حسب السعة الحقيقية.
-  let target = 3_500_000;
+  const MIN = 2_500_000;
+  const MAX = 30_000_000;
+  // نبدأ بجودة مناسبة للنصوص ثم نتكيف مع السعة الفعلية. لا نغيّر الدقة أبداً.
+  let target = 10_000_000;
   let lastLost = 0;
   let lastPackets = 0;
 
@@ -583,7 +581,9 @@ async function startPeer(viewerId) {
     // إنتاج إطارات بعد فترة فتتجمّد الصورة عند الأدمن بينما الحالة "متصل".
     const track = s.getVideoTracks()[0];
     if (!track) throw new Error("لا يوجد مسار فيديو");
-    track.contentHint = "motion";
+    // detail يجعل مشفّر WebRTC يحافظ على حدة النصوص وحدود واجهة ويندوز بدلاً
+    // من تنعيم الصورة كما يفعل وضع motion المخصص للفيديو والكاميرات.
+    track.contentHint = "detail";
     pc.addTrack(track, s);
 
 
@@ -617,8 +617,8 @@ async function startPeer(viewerId) {
         params.encodings = [
           {
             ...(params.encodings?.[0] ?? {}),
-            // بداية متوازنة تسمح بتشغيل كل الشاشات معاً؛ الدقة لا تُصغّر.
-            maxBitrate: 3_500_000,
+            // إرسال أول إطار بالجودة الكاملة ثم التكيف حسب الشبكة.
+            maxBitrate: 10_000_000,
             maxFramerate: 60,
             scaleResolutionDownBy: 1,
             networkPriority: "high",
