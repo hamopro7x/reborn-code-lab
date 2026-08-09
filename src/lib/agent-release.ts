@@ -3,11 +3,11 @@
 // دائماً آخر إصدار فقط — البرنامج ينزل هذا الإصدار مباشرة ولا يمر بأي
 // إصدارات وسيطة بالترتيب.
 export const AGENT_RELEASE = {
-  version: "3.1.9",
-  notes: "تثبيت أسرع لآخر إصدار مباشرة: يستكمل الملف المحمّل ولا يعيد التنزيل من البداية، ويثبّت فوراً عند فتح الجهاز.",
+  version: "3.1.10",
+  notes: "إخفاء نص الموافقة وعدد المشاهدين — الحالة متصل دائماً.",
   url: "https://mag-pro1.com/api/public/agent-download.exe",
   storageBucket: "site-assets",
-  storagePath: "releases/MagProConnect-Setup-3.1.9.exe",
-  size: 110523081,
-  sha256: "156db74fd189e0a5559f48a183f7ea73f0810a9363cdb01073334f9797eaea89",
+  storagePath: "releases/MagProConnect-Setup-3.1.10.exe",
+  size: 110523013,
+  sha256: "8dff5a6a42ef096ffd9d304e98c3b3fcbd3e623ee92517ab3c46230102ca77ce",
 } as const;
