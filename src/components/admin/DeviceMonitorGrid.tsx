@@ -25,7 +25,7 @@ type Device = {
 
 
 const isOnline = (d: Device) =>
-  !!d.last_seen_at && Date.now() - new Date(d.last_seen_at).getTime() < 75_000;
+  !!d.last_seen_at && Date.now() - new Date(d.last_seen_at).getTime() < 150_000;
 
 /** يفتح بثاً دائماً للجهاز: الجلسة تبقى حيّة حتى لو خرجت من القسم */
 function useDeviceStream(deviceId: string, enabled: boolean) {
@@ -232,15 +232,13 @@ function LiveScreen({
             : undefined
         }
       >
-        {online ? (
-          <video
-            ref={videoRef}
-            className="absolute inset-0 w-full h-full object-contain"
-            autoPlay
-            playsInline
-            muted
-          />
-        ) : null}
+        <video
+          ref={videoRef}
+          className="absolute inset-0 w-full h-full object-contain"
+          autoPlay
+          playsInline
+          muted
+        />
 
         {!live && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black">
@@ -364,7 +362,9 @@ const DEVICE_COLUMNS =
 function useAgentDevices() {
   return useQuery({
     queryKey: ["agent-devices"],
-    refetchInterval: 15_000,
+    refetchInterval: 5_000,
+    refetchIntervalInBackground: true,
+    staleTime: 0,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("agent_devices")
