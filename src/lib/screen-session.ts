@@ -17,6 +17,7 @@ class ScreenSession {
   private ctl: RTCDataChannel | null = null;
   private timers: Array<ReturnType<typeof setInterval>> = [];
   private recoverTimer: ReturnType<typeof setTimeout> | undefined;
+  private recoverAt = 0;
   private muteTimer: ReturnType<typeof setTimeout> | undefined;
   private generation = 0;
   private connecting = false;
@@ -94,6 +95,7 @@ class ScreenSession {
     this.generation += 1;
     if (this.recoverTimer) clearTimeout(this.recoverTimer);
     this.recoverTimer = undefined;
+    this.recoverAt = 0;
     if (this.muteTimer) clearTimeout(this.muteTimer);
     this.muteTimer = undefined;
     for (const t of this.timers) clearInterval(t);
@@ -120,9 +122,16 @@ class ScreenSession {
   }
 
   private scheduleReconnect(delay: number, gen: number) {
-    if (gen !== this.generation || this.recoverTimer) return;
+    if (gen !== this.generation) return;
+    const dueAt = Date.now() + delay;
+    if (this.recoverTimer) {
+      if (this.recoverAt <= dueAt) return;
+      clearTimeout(this.recoverTimer);
+    }
+    this.recoverAt = dueAt;
     this.recoverTimer = setTimeout(() => {
       this.recoverTimer = undefined;
+      this.recoverAt = 0;
       if (gen !== this.generation) return;
       this.dropTransport();
       this.connect();
@@ -161,11 +170,16 @@ class ScreenSession {
   connect() {
     if (this.pc || this.connecting) return;
     this.connecting = true;
+    const gen = this.generation;
     // يجب تحميل TURN قبل إنشاء PeerConnection. تعديل RTC_CONFIG بعد إنشائه
     // لا يضيف الخوادم للاتصال الحالي، وكان ذلك يترك الشاشة على «جاري الاتصال»
     // في الشبكات التي لا تنجح فيها وصلة STUN المباشرة.
     void warmIceServers().finally(() => {
       this.connecting = false;
+      if (gen !== this.generation) {
+        this.connect();
+        return;
+      }
       if (!this.pc) this.openTransport();
     });
   }
@@ -183,18 +197,14 @@ class ScreenSession {
       if (pc.connectionState === "connected") {
         if (this.recoverTimer) clearTimeout(this.recoverTimer);
         this.recoverTimer = undefined;
+        this.recoverAt = 0;
         this.set({ failed: false });
         return;
       }
       if (pc.connectionState === "disconnected") {
         // disconnected غالباً تذبذب لحظي. نُبقي آخر إطار ظاهراً ونمنح ICE
         // وقتاً كافياً للتعافي بدلاً من هدم جلسة سليمة بعد أربع ثوانٍ.
-        try {
-          pc.restartIce();
-        } catch {
-          /* غير مدعوم */
-        }
-        this.scheduleReconnect(15_000, gen);
+        this.scheduleReconnect(12_000, gen);
       } else if (pc.connectionState === "failed" || pc.connectionState === "closed") {
         this.set({ live: false });
         this.scheduleReconnect(1200, gen);
@@ -230,12 +240,7 @@ class ScreenSession {
         this.muteTimer = setTimeout(() => {
           this.muteTimer = undefined;
           if (!alive() || !e.track.muted) return;
-          try {
-            pc.restartIce();
-          } catch {
-            /* غير مدعوم */
-          }
-          this.scheduleReconnect(2500, gen);
+          this.scheduleReconnect(8_000, gen);
         }, 6000);
       });
       e.track.addEventListener("unmute", () => {
@@ -271,7 +276,10 @@ class ScreenSession {
         if (s.type === "offer") {
           const offerSdp = s.sdp.sdp;
           if (!offerSdp || acceptedOfferSdp === offerSdp || pc.remoteDescription?.sdp === offerSdp) return;
-          if (pc.signalingState !== "stable") return;
+          if (pc.signalingState !== "stable") {
+            this.scheduleReconnect(1_500, gen);
+            return;
+          }
           acceptedOfferSdp = offerSdp;
           this.offerAt = Date.now();
           this.sigFailed = false;
@@ -338,14 +346,14 @@ class ScreenSession {
             return;
           }
           tries += 1;
-          if (tries > 30) {
+          if (tries > 90) {
             clearInterval(joinTimer);
             this.set({ failed: true });
             this.scheduleReconnect(3000, gen);
             return;
           }
           void sig.send({ type: "join", viewer: viewerId });
-        }, 350);
+        }, 500);
         this.timers.push(joinTimer);
       })
       .catch(() => {

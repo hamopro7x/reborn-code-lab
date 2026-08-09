@@ -287,7 +287,7 @@ ipcMain.on("reload-renderer", () => {
 });
 setInterval(() => {
   if (!win || win.isDestroyed() || app.isQuiting || installing) return;
-  if (Date.now() - lastRendererPulse < 45_000) return;
+  if (Date.now() - lastRendererPulse < 90_000) return;
   lastRendererPulse = Date.now();
   console.error("[renderer] pulse stopped — reloading background service");
   win.webContents.reloadIgnoringCache();
@@ -1007,7 +1007,8 @@ app.whenReady().then(() => {
       // تستعد بعد، وإعادة التحميل كانت تهدم البث وتترك الواجهة معلقة.
       if (win && !win.isDestroyed()) win.webContents.send("power-resume");
       // بعد الاستئناف نفحص التحديث فوراً بدل انتظار الدورة القادمة
-      setTimeout(() => void runBootUpdate(), 5000);
+      // أعطِ البث والشبكة وقتاً للاستقرار بعد الاستيقاظ قبل فحص تحديث كبير.
+      setTimeout(() => void runBootUpdate(), 30000);
     };
 
     powerMonitor.on("resume", reconnect);

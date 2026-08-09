@@ -13,28 +13,23 @@ export const RTC_CONFIG: RTCConfiguration = {
   bundlePolicy: "max-bundle",
   rtcpMuxPolicy: "require",
   iceCandidatePoolSize: 4,
+  iceTransportPolicy: "all",
 };
 
 // خوادم TURN تُجلب من الخادم (بيانات دخول مؤقتة) وتُحدَّث داخل RTC_CONFIG نفسه.
 // بدون TURN تفشل شبكات NAT الصعبة/الجيل الرابع فتبقى شاشة الموظف «جاري الاتصال».
 let iceWarmed = 0;
-export async function warmIceServers(): Promise<void> {
-  if (Date.now() - iceWarmed < 10 * 60_000) return;
+export async function warmIceServers(force = false): Promise<void> {
+  if (!force && Date.now() - iceWarmed < 2 * 60_000) return;
   try {
     const res = await fetch("/api/public/ice-servers", { cache: "no-store" });
     if (!res.ok) return;
     const json = (await res.json()) as { iceServers?: RTCIceServer[] };
     if (Array.isArray(json.iceServers) && json.iceServers.length) {
       RTC_CONFIG.iceServers = json.iceServers;
-      // الاتصال المباشر كان يُكمل تبادل SDP ثم يعلق في ICE على بعض الشبكات.
-      // ما دام TURN متاحاً نستخدم المسار المرحّل المضمون بدلاً من مسار NAT
-      // المتذبذب؛ هذا يحوّل حالة «لا يستجيب» إلى اتصال فعلي ثابت.
-      if (json.iceServers.some((server) => {
-        const urls = Array.isArray(server.urls) ? server.urls : [server.urls];
-        return urls.some((url) => typeof url === "string" && url.startsWith("turn"));
-      })) {
-        RTC_CONFIG.iceTransportPolicy = "relay";
-      }
+      // اترك WebRTC يختار أسرع مسار صالح. فرض TURN كان يمنع الاتصال بالكامل
+      // عند انتهاء بياناته المؤقتة أو تعثر خادمه، رغم توفر مسار مباشر سليم.
+      RTC_CONFIG.iceTransportPolicy = "all";
       iceWarmed = Date.now();
     }
   } catch {
@@ -138,7 +133,7 @@ export function openSignaling(
       polling = false;
     }
   };
-  const pollTimer = setInterval(() => void poll(), 400);
+  const pollTimer = setInterval(() => void poll(), 1_200);
   void poll();
 
   return {
