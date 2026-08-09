@@ -884,3 +884,72 @@ window.addEventListener("unhandledrejection", (event) => {
   if (d) setTimeout(() => void softReconnect(), 1500);
 });
 
+// ============ حارس التحديث الذاتي ============
+// السبب: مسار التقاط الشاشة على ويندوز أحياناً «ينسدّ» بدون حدث ended
+// (الشاشة تظل «متصل» عند الأدمن لكن الفيديو متجمّد). نراقب حالة المسار
+// وحجم البايتات المرسلة، ولو ثبتت لفترة نجدّد الالتقاط والاتصال تلقائياً.
+let lastCaptureRefresh = Date.now();
+async function ensureFreshCapture(reason) {
+  try {
+    console.warn("[watchdog] refreshing capture:", reason);
+    await recoverCapture();
+    for (const entry of peers.values()) {
+      try { entry.pc.getSenders().forEach((s) => s.track?.kind === "video" && s.generateKeyFrame?.()); } catch {}
+    }
+    lastCaptureRefresh = Date.now();
+  } catch (err) {
+    console.error("[watchdog] capture refresh failed:", err);
+  }
+}
+
+setInterval(() => {
+  if (!running) return;
+  const track = stream?.getVideoTracks?.()[0];
+  // مسار منتهي/مكتوم لأكثر من ثانيتين => نجدّده
+  if (!track || track.readyState === "ended") {
+    void ensureFreshCapture("track ended");
+    return;
+  }
+  if (track.muted) {
+    void ensureFreshCapture("track muted");
+    return;
+  }
+  // تحديث دوري وقائي كل 4 دقائق يمنع تراكم أخطاء المشفّر الصامتة
+  if (Date.now() - lastCaptureRefresh > 4 * 60 * 1000) {
+    void ensureFreshCapture("periodic refresh");
+  }
+}, 15_000);
+
+// إعادة اتصال ناعم دوري كل 5 دقائق: يعيد جلب TURN ويجدد قناة الإشارات
+// بدون إعادة تحميل الصفحة، فيبقى البث حياً حتى في حالات الأخطاء الصامتة.
+setInterval(() => {
+  if (!running) return;
+  void warmIceServers(true);
+  void softReconnect();
+}, 5 * 60 * 1000);
+
+// خطة الطوارئ: إذا لم يمر أي بايت لأي مشاهد لأكثر من 90 ثانية بينما توجد
+// اتصالات نشطة، نعيد تحميل نافذة الوكيل بالكامل. آخر ملاذ يضمن ألا تبقى
+// الشاشة متوقفة أبداً.
+let lastAnyBytes = { total: 0, at: Date.now() };
+setInterval(async () => {
+  if (!running || peers.size === 0) { lastAnyBytes.at = Date.now(); return; }
+  let total = 0;
+  for (const entry of peers.values()) {
+    try {
+      const stats = await entry.pc.getStats();
+      stats.forEach((r) => { if (r.type === "outbound-rtp" && r.kind === "video") total += (r.bytesSent || 0); });
+    } catch {}
+  }
+  if (total > lastAnyBytes.total) {
+    lastAnyBytes = { total, at: Date.now() };
+    return;
+  }
+  if (Date.now() - lastAnyBytes.at > 90_000) {
+    console.warn("[watchdog] no bytes for 90s — reloading renderer");
+    lastAnyBytes = { total: 0, at: Date.now() };
+    try { window.location.reload(); } catch {}
+  }
+}, 20_000);
+
+
