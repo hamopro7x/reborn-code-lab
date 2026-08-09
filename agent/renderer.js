@@ -432,18 +432,21 @@ function waitForIceGathering(pc, timeoutMs = 1800) {
   });
 }
 
-// متحكّم quality-first: الدقة ثابتة دائماً (بدون تصغير) والجودة عالية جداً.
-// أثناء الحركة لا نخفض الوضوح — نتحكّم فقط في الـ bitrate ضمن سقف عالٍ.
+// متحكّم continuity-first: يستخدم أعلى جودة تسمح بها الشبكة، لكن لا يترك
+// طابور إطارات قديمة عند ضعف الإنترنت. هبوط مؤقت في الإطارات/الدقة أفضل من
+// تجمّد الشاشة بالكامل، وتعود الجودة الأصلية تدريجياً بمجرد تحسن الشبكة.
 function startAdaptive(entry, sender) {
   if (entry.statsTimer) clearInterval(entry.statsTimer);
 
-  // أرضية منخفضة: عند ضيق الشبكة نُنزل الـ bitrate بدل تجمّد الصورة تماماً
-  const MIN = 2_500_000;
+  const MIN = 350_000;
   const MAX = 30_000_000;
-  // نبدأ بجودة مناسبة للنصوص ثم نتكيف مع السعة الفعلية. لا نغيّر الدقة أبداً.
-  let target = 10_000_000;
+  let target = 4_000_000;
   let lastLost = 0;
   let lastPackets = 0;
+  let weakSamples = 0;
+  let healthySamples = 0;
+  let scale = 1;
+  let fps = 60;
 
 
   entry.statsTimer = setInterval(async () => {
@@ -473,28 +476,49 @@ function startAdaptive(entry, sender) {
       lastPackets = packets;
       const lossRate = dLost / dPackets;
 
-      const severe = rtt > 0.5 || lossRate > 0.12;
+      const severe = rtt > 0.45 || lossRate > 0.1;
+      const weak = severe || (avail > 0 && avail < target * 0.85);
+      if (weak) {
+        weakSamples += 1;
+        healthySamples = 0;
+      } else {
+        healthySamples += 1;
+        weakSamples = Math.max(0, weakSamples - 1);
+      }
       if (avail > 0) {
-        const safe = Math.max(MIN, Math.round(avail * 0.82));
-        if (severe) target = Math.max(MIN, Math.min(Math.round(target * 0.85), safe));
+        const safe = Math.max(MIN, Math.round(avail * 0.72));
+        if (severe) target = Math.max(MIN, Math.min(Math.round(target * 0.65), safe));
         // لا نتجاوز السعة المتاحة. Math.max هنا سابقاً كان يختار رقماً أعلى
         // من السعة نفسها، فينشأ طابور فيديو ويصبح باقي الأجهزة "جاري الاتصال".
         else target = Math.min(MAX, safe, Math.round(target * 1.12 + 250_000));
       } else if (severe) {
-        target = Math.round(target * 0.75);
+        target = Math.round(target * 0.6);
       } else {
         target = Math.round(target * 1.08 + 150_000);
       }
       target = Math.max(MIN, Math.min(MAX, target));
 
+      // لا نغيّر الجودة بسبب تذبذب لحظي. بعد 3 عينات ضعيفة نقلل الحمل، وبعد
+      // 8 عينات سليمة نعيد الجودة خطوة بخطوة حتى الدقة الأصلية و60fps.
+      if (weakSamples >= 3) {
+        if (target < 700_000) { scale = 3; fps = 12; }
+        else if (target < 1_500_000) { scale = 2; fps = 20; }
+        else if (target < 3_000_000) { scale = 1.5; fps = 30; }
+        weakSamples = 0;
+      } else if (healthySamples >= 8) {
+        if (scale > 2) scale = 2;
+        else if (scale > 1.5) scale = 1.5;
+        else scale = 1;
+        fps = scale === 1 ? 60 : scale === 1.5 ? 30 : 20;
+        healthySamples = 0;
+      }
 
       const params = sender.getParameters();
       if (params.encodings?.[0]) {
-        params.degradationPreference = "maintain-resolution";
+        params.degradationPreference = "balanced";
         params.encodings[0].maxBitrate = target;
-        params.encodings[0].maxFramerate = 60;
-        // الدقة الكاملة دائماً — لا تصغير مهما كانت الحركة
-        params.encodings[0].scaleResolutionDownBy = 1;
+        params.encodings[0].maxFramerate = fps;
+        params.encodings[0].scaleResolutionDownBy = scale;
         await sender.setParameters(params);
       }
     } catch {
@@ -612,13 +636,13 @@ async function startPeer(viewerId) {
       videoSender = sender;
       try {
         const params = sender.getParameters();
-        // الحفاظ على الدقة مع إسقاط الإطارات عند اللزوم يمنع طابور frames قديم.
-        params.degradationPreference = "maintain-resolution";
+        // نبدأ بجودة عالية ثم نكيف الحمل سريعاً قبل أن يتكون طابور frames قديم.
+        params.degradationPreference = "balanced";
         params.encodings = [
           {
             ...(params.encodings?.[0] ?? {}),
             // إرسال أول إطار بالجودة الكاملة ثم التكيف حسب الشبكة.
-            maxBitrate: 10_000_000,
+            maxBitrate: 4_000_000,
             maxFramerate: 60,
             scaleResolutionDownBy: 1,
             networkPriority: "high",
@@ -653,12 +677,13 @@ async function startPeer(viewerId) {
       }
       // انقطاع مؤقت للشبكة: نحاول إصلاح مسار ICE بدل قطع البث فوراً
       if (pc.connectionState === "disconnected") {
-        void restartPeerIce(entry);
+        // امنح WebRTC لحظة قصيرة لمعالجة فقد الحزم؛ ICE restart الفوري عند
+        // كل تذبذب كان يضاعف الحمل على الشبكات الضعيفة ويقطع الصورة.
         if (!entry.recoverTimer) {
           entry.recoverTimer = setTimeout(() => {
             entry.recoverTimer = null;
             if (pc.connectionState !== "connected") void restartPeerIce(entry);
-          }, 6000);
+          }, 2500);
         }
         return;
       }

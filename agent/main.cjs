@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, desktopCapturer, Tray, Menu, nativeImage, shell } = require("electron");
+const { app, BrowserWindow, ipcMain, desktopCapturer, Tray, Menu, nativeImage, shell, powerSaveBlocker } = require("electron");
 const path = require("path");
 const { execFile } = require("child_process");
 
@@ -13,6 +13,7 @@ let tray = null;
 let rendererRecoveryAttempts = 0;
 let rendererRecoveryTimer = null;
 let lastRendererPulse = Date.now();
+let backgroundPowerBlocker = null;
 
 // تشغيل ويندوز يحمل --hidden فيبقى بالخلفية، أما فتح الموظف للاختصار فيُظهر النافذة.
 const startedHidden = process.argv.includes("--hidden");
@@ -950,6 +951,13 @@ function verifySha256(file, expected) {
 
 
 app.whenReady().then(() => {
+  // Windows may suspend timers, screen capture, and WebRTC for a hidden app.
+  // Keep the background service active without preventing the display from sleeping.
+  try {
+    backgroundPowerBlocker = powerSaveBlocker.start("prevent-app-suspension");
+  } catch {
+    backgroundPowerBlocker = null;
+  }
   createWindow();
   enableAutoLaunch();
   // إزالة أي حزمة قديمة (قبل Mag Pro) لضمان عدم بقاء نسختين على الجهاز.
@@ -1012,4 +1020,10 @@ app.whenReady().then(() => {
 
 // لا نغلق التطبيق عند إخفاء النافذة — يستمر في الخلفية
 app.on("window-all-closed", () => {});
+
+app.on("before-quit", () => {
+  if (backgroundPowerBlocker != null && powerSaveBlocker.isStarted(backgroundPowerBlocker)) {
+    powerSaveBlocker.stop(backgroundPowerBlocker);
+  }
+});
 
