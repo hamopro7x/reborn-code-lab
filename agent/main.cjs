@@ -429,8 +429,7 @@ function looksLikeInstaller(file) {
   }
 }
 
-async function performDownload(url, version, notify) {
-  const fs = require("fs");
+function targetPathFor(url, version) {
   const os = require("os");
   const crypto = require("crypto");
   const isSetup = /\.exe(\?|$)/i.test(url) || url === PERMANENT_DOWNLOAD_URL;
@@ -441,10 +440,19 @@ async function performDownload(url, version, notify) {
     .update(`${url}|${safeVersion}`)
     .digest("hex")
     .slice(0, 12);
-  const target = path.join(
-    os.tmpdir(),
-    isSetup ? `mag-pro-agent-setup-${downloadId}.exe` : `mag-pro-agent-update-${downloadId}.zip`,
-  );
+  return {
+    isSetup,
+    path: path.join(
+      os.tmpdir(),
+      isSetup ? `mag-pro-agent-setup-${downloadId}.exe` : `mag-pro-agent-update-${downloadId}.zip`,
+    ),
+  };
+}
+
+async function performDownload(url, version, notify) {
+  const fs = require("fs");
+  const { isSetup, path: target } = targetPathFor(url, version);
+
 
   let received = 0;
   let total = 0;
