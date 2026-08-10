@@ -214,7 +214,18 @@ function BybitCardVisual({
   );
 }
 
+const copyText = async (value: string, label: string) => {
+  if (!value.trim()) return;
+  try {
+    await navigator.clipboard.writeText(value.trim());
+    toast.success(`تم نسخ ${label}`);
+  } catch {
+    toast.error("تعذر النسخ");
+  }
+};
+
 /** نافذة إضافة كرت جديد */
+
 function AddCardDialog({ onAdd }: { onAdd: (card: ManualCard) => Promise<void> }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
