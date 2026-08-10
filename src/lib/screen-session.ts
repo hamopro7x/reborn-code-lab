@@ -116,8 +116,8 @@ class ScreenSession {
     this.offerAt = 0;
     this.sigFailed = false;
     this.lastFrameAt = 0;
-    // لا نُبقِ عنصر الفيديو مربوطاً بمسار انتهى بعد إعادة الاتصال.
-    this.stream = null;
+    // نُبقي آخر إطار مربوطاً بعنصر الفيديو أثناء إعادة التفاوض. تصفير المسار
+    // هنا كان يحول الشاشة إلى أسود عند أي تذبذب لحظي في الإنترنت.
     this.set({ live: false, canControl: false });
   }
 
@@ -204,7 +204,7 @@ class ScreenSession {
       if (pc.connectionState === "disconnected") {
         // disconnected غالباً تذبذب لحظي. نُبقي آخر إطار ظاهراً ونمنح ICE
         // وقتاً كافياً للتعافي بدلاً من هدم جلسة سليمة بعد أربع ثوانٍ.
-        this.scheduleReconnect(12_000, gen);
+        this.scheduleReconnect(20_000, gen);
       } else if (pc.connectionState === "failed" || pc.connectionState === "closed") {
         this.set({ live: false });
         this.scheduleReconnect(1200, gen);
@@ -346,14 +346,14 @@ class ScreenSession {
             return;
           }
           tries += 1;
-          if (tries > 90) {
+          if (tries > 30) {
             clearInterval(joinTimer);
             this.set({ failed: true });
             this.scheduleReconnect(3000, gen);
             return;
           }
           void sig.send({ type: "join", viewer: viewerId });
-        }, 500);
+        }, 2_000);
         this.timers.push(joinTimer);
       })
       .catch(() => {

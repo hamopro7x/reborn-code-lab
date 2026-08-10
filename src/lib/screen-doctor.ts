@@ -7,10 +7,12 @@ import { AGENT_RELEASE } from "@/lib/agent-release";
 import { getOpenScreenSession, type ScreenSession } from "@/lib/screen-session";
 import { warmIceServers } from "@/lib/screenshare";
 
-export const STALL_MS = 3_000;
-const COOLDOWN_MS = 8_000;
+// نشخّص سريعاً لكن لا نهدم ICE أثناء تعافيه الطبيعي. الإصلاح العنيف بعد ثلاث
+// ثوانٍ كان يعيد المصافحة في حلقة على الشبكات الضعيفة ولا يسمح لها أن تكتمل.
+export const STALL_MS = 15_000;
+const COOLDOWN_MS = 20_000;
 const OFFLINE_MS = 150_000;
-const NEGOTIATION_GRACE_MS = 45_000;
+const NEGOTIATION_GRACE_MS = 60_000;
 
 export type DoctorEvent = {
   id: string;

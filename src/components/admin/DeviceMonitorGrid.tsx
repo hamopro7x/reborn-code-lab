@@ -242,7 +242,7 @@ function LiveScreen({
         />
 
         {!live && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-background/35 backdrop-blur-[1px]">
             {!online ? (
               <>
                 <MonitorOff className="size-7 text-muted-foreground" />

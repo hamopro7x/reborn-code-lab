@@ -229,7 +229,10 @@ async function captureScreen() {
   const dpr = window.devicePixelRatio || 1;
   const rawW = Math.round((window.screen?.width || 1920) * dpr);
   const rawH = Math.round((window.screen?.height || 1080) * dpr);
-  const scale = Math.min(1, 7680 / rawW, 4320 / rawH);
+  // ترميز 8K/60 داخل Electron كان يستهلك المعالج والمشفّر قبل أن يبدأ
+  // WebRTC، فتظهر شاشة سوداء خصوصاً على أجهزة الموظفين الأضعف. 4K/30 يحافظ
+  // على وضوح النصوص، ثم متحكم الشبكة يخفض الدقة فقط عند الحاجة.
+  const scale = Math.min(1, 3840 / rawW, 2160 / rawH);
   const capW = Math.round(rawW * scale);
   const capH = Math.round(rawH * scale);
   const tryCapture = async (w, h, fps) =>
@@ -246,12 +249,12 @@ async function captureScreen() {
       },
     });
   try {
-    return await tryCapture(capW, capH, 60);
+    return await tryCapture(capW, capH, 30);
   } catch {
     try {
-      return await tryCapture(1920, 1080, 60);
+      return await tryCapture(1920, 1080, 30);
     } catch {
-      return await tryCapture(1280, 720, 60);
+      return await tryCapture(1280, 720, 24);
     }
   }
 }
@@ -276,7 +279,17 @@ function reportConnectedViewers() {
 function send(signal) {
   const viewerId = signal.viewer || signal.to;
   if (!viewerId) return Promise.reject(new Error("missing viewer identity"));
+  // JOIN المتكرر من لوحة الإدارة قد يصل عدة مرات أثناء ضعف الشبكة. نحتفظ
+  // بآخر offer فقط لكل مشاهد بدلاً من تكوين طابور عروض قديمة يسبب stable-state.
+  if (signal.type === "offer") {
+    for (let i = outgoingSignals.length - 1; i >= 0; i -= 1) {
+      if (outgoingSignals[i].viewer_id === viewerId && outgoingSignals[i].payload?.type === "offer") {
+        outgoingSignals.splice(i, 1);
+      }
+    }
+  }
   outgoingSignals.push({ viewer_id: viewerId, payload: signal });
+  if (outgoingSignals.length > 250) outgoingSignals.splice(0, outgoingSignals.length - 250);
   return Promise.resolve();
 }
 
@@ -444,13 +457,13 @@ function startAdaptive(entry, sender) {
 
   const MIN = 350_000;
   const MAX = 30_000_000;
-  let target = 4_000_000;
+  let target = 1_800_000;
   let lastLost = 0;
   let lastPackets = 0;
   let weakSamples = 0;
   let healthySamples = 0;
   let scale = 1;
-  let fps = 60;
+  let fps = 30;
 
 
   entry.statsTimer = setInterval(async () => {
@@ -513,7 +526,7 @@ function startAdaptive(entry, sender) {
         if (scale > 2) scale = 2;
         else if (scale > 1.5) scale = 1.5;
         else scale = 1;
-        fps = scale === 1 ? 60 : scale === 1.5 ? 30 : 20;
+        fps = scale === 1 ? 30 : scale === 1.5 ? 24 : 18;
         healthySamples = 0;
       }
 
@@ -597,7 +610,10 @@ async function startPeer(viewerId) {
     // JOIN يُعاد كثيراً كضمان لوصول الإشارة. لا نهدم الاتصال الجاري بسبب
     // رسالة JOIN مكررة؛ على الشبكات الضعيفة قد يستغرق TURN أكثر من 15 ثانية.
     if (age < 30_000 && current.pc.signalingState === "have-local-offer") {
-      if (current.offer) await send({ type: "offer", to: viewerId, sdp: current.offer });
+      if (current.offer && Date.now() - (current.lastOfferSentAt || 0) > 2_000) {
+        await send({ type: "offer", to: viewerId, sdp: current.offer });
+        current.lastOfferSentAt = Date.now();
+      }
       return;
     }
     if (age < 30_000) return;
@@ -608,7 +624,7 @@ async function startPeer(viewerId) {
     closePeer(viewerId); // أي اتصال قديم لنفس المشاهد يُستبدل
     const s = await getStream();
     const pc = new RTCPeerConnection(RTC_CONFIG);
-    const entry = { viewerId, pc, statsTimer: null, pendingIce: [], recoverTimer: null, connectTimer: null, offer: null, startedAt: Date.now(), restartingIce: false };
+    const entry = { viewerId, pc, statsTimer: null, pendingIce: [], recoverTimer: null, connectTimer: null, offer: null, lastOfferSentAt: 0, startedAt: Date.now(), restartingIce: false };
 
     peers.set(viewerId, entry);
     reportConnectedViewers();
@@ -655,8 +671,8 @@ async function startPeer(viewerId) {
           {
             ...(params.encodings?.[0] ?? {}),
             // إرسال أول إطار بالجودة الكاملة ثم التكيف حسب الشبكة.
-            maxBitrate: 4_000_000,
-            maxFramerate: 60,
+            maxBitrate: 1_800_000,
+            maxFramerate: 30,
             scaleResolutionDownBy: 1,
             networkPriority: "high",
             priority: "high",
@@ -725,6 +741,7 @@ async function startPeer(viewerId) {
     if (!completeOffer) throw new Error("تعذّر إنشاء عرض الاتصال");
     entry.offer = { type: completeOffer.type, sdp: completeOffer.sdp };
     await send({ type: "offer", to: viewerId, sdp: entry.offer });
+    entry.lastOfferSentAt = Date.now();
     entry.connectTimer = setTimeout(() => {
       entry.connectTimer = null;
       if (pc.connectionState !== "connected") closePeer(viewerId);
@@ -857,31 +874,27 @@ async function run(device) {
     ]);
   } catch { /* لا يوقف التشغيل */ }
 
-  const first = await heartbeat(device);
-  if (first === false) {
-    // الإدارة حذفت الجهاز — نطلب مفتاح ربط جديد
-    return showPairing(device, "تم حذف تسجيل هذا الجهاز — اطلب كود تسجيل جديد من الإدارة");
-  }
-  if (first === true) {
-    heartbeatFailures = 0;
-  } else {
-    heartbeatFailures = 1;
-    setStatus("انقطع الاتصال — جاري الاستعادة…", false);
-  }
-
-  // نجهّز التقاط الشاشة أثناء فتح لوحة الإدارة، فلا نضيّع عدة ثوانٍ بعد JOIN.
-  // الفشل هنا لا يوقف البرنامج؛ startPeer سيعيد المحاولة عند أول مشاهدة.
+  // نبدأ الالتقاط والإشارات فوراً بالتوازي. سابقاً كان فشل/بطء أول heartbeat
+  // يؤخر استقبال JOIN حتى 8 ثوانٍ ويجعل الأدمن يكرر عشرات الطلبات.
   void getStream().catch(() => {});
-
-  hbTimer = setInterval(() => void refreshHeartbeat(device), 10_000);
-
-  // قناة الإشارات القديمة المفتوحة أُزيلت. البرنامج يسحب فقط الطلبات
-  // التي مرّت بسياسة الأدمن، مستخدماً مفتاح الجهاز السري.
-  await exchangeSignals(device);
+  void exchangeSignals(device);
   // دورة مستقرة موزعة زمنياً: تكفي لاتصال سريع، وتمنع تزامن كل الأجهزة على
   // قاعدة الإشارات في اللحظة نفسها. كل طلب له مهلة ولا تتداخل الطلبات.
   signalTimer = setInterval(() => void exchangeSignals(device), 900 + Math.floor(Math.random() * 350));
-  if (first === true) setStatus("متصل", true);
+  hbTimer = setInterval(() => void refreshHeartbeat(device), 10_000);
+
+  void heartbeat(device).then((first) => {
+    if (!running) return;
+    if (first === false) {
+      void showPairing(device, "تم حذف تسجيل هذا الجهاز — اطلب كود تسجيل جديد من الإدارة");
+    } else if (first === true) {
+      heartbeatFailures = 0;
+      setStatus("متصل", true);
+    } else {
+      heartbeatFailures = 1;
+      setStatus("جاري استعادة الاتصال…", false);
+    }
+  });
 }
 
 approveBtn.addEventListener("click", async () => {
