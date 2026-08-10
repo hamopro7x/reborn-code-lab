@@ -542,6 +542,72 @@ export function CardTransactionsTab() {
           </div>
         </div>
       </div>
+
+      <Dialog open={!!detail} onOpenChange={(o) => !o && setDetail(null)}>
+        <DialogContent dir="rtl" className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-right">تفاصيل المعاملة</DialogTitle>
+          </DialogHeader>
+          {detail && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 rounded-xl bg-muted/40 p-3">
+                <MerchantIcon name={detail.merchant || "Card"} />
+                <div className="flex-1">
+                  <div className="text-sm font-bold">{detail.merchant || "شراء بالبطاقة"}</div>
+                  <div className="text-xs text-muted-foreground">{statusLabel(detail.status)}</div>
+                </div>
+                <div
+                  className={`text-lg font-black tabular-nums ${
+                    isRefund(detail) ? "text-emerald-500" : "text-destructive"
+                  }`}
+                >
+                  {isRefund(detail) ? "+" : "-"}
+                  {detail.currency || "USD"} {money(detail.amount)}
+                </div>
+              </div>
+
+              <ol className="space-y-3">
+                {[
+                  { label: "تم إرسال المعاملة", at: detail.occurredAt },
+                  { label: "جاري المعالجة", at: detail.occurredAt },
+                  {
+                    label: statusLabel(detail.status) === "فاشلة" ? "فشلت المعاملة" : "اكتملت المعاملة",
+                    at: detail.occurredAt,
+                  },
+                ].map((s, i) => (
+                  <li key={i} className="flex items-start gap-2">
+                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" />
+                    <div>
+                      <div className="text-sm font-semibold">{s.label}</div>
+                      <div className="text-xs text-muted-foreground">{dateLine(s.at)}</div>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+
+              <dl className="rounded-xl bg-muted/40 p-4 text-sm">
+                {[
+                  ["الحالة", statusLabel(detail.status)],
+                  ["الوقت", dateLine(detail.occurredAt)],
+                  ["النوع", isRefund(detail) ? "مبلغ مسترد" : "شراء بالبطاقة"],
+                  ["اسم التاجر", detail.merchant || "—"],
+                  ["العملة", detail.currency || "USD"],
+                  ["المبلغ", money(detail.amount)],
+                  ["آخر 4 أرقام", detail.last4 || "••••"],
+                  ["نوع البطاقة", cardKindLabel(detail.cardKind) || "—"],
+                  ["رقم المعاملة", detail.id],
+                ].map(([k, v]) => (
+                  <div key={k} className="flex items-start justify-between gap-4 py-1.5">
+                    <dt className="text-muted-foreground">{k}</dt>
+                    <dd className="break-all text-right font-medium">{v}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
+
   );
 }
