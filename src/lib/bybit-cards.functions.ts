@@ -102,6 +102,60 @@ export const getBybitCards = createServerFn({ method: "POST" })
       }
     }
 
+    // بعض حسابات Bybit لا تتيح مسار قائمة البطاقات لمفاتيح API، بينما
+    // تعيد بيانات البطاقة داخل سجل معاملاتها. استخرج بطاقة فريدة لكل PAN
+    // حتى تظل شاشة إدارة البطاقة عاملة بنفس بيانات الحساب الفعلية.
+    if (raw.length === 0) {
+      const transactionCards: Record<string, unknown>[] = [];
+      for (const type of ["SIDE_QUERY_AUTH", "SIDE_QUERY_FINANCIAL", "SIDE_QUERY_REFUND"]) {
+        try {
+          const result = await (async () => {
+            const ts = Date.now().toString();
+            const payload = JSON.stringify({ type, page: 1, limit: 100 });
+            const sign = createHmac("sha256", apiSecret)
+              .update(ts + apiKey + recv + payload)
+              .digest("hex");
+            const response = await fetch("https://api.bybit.com/v5/card/transaction/query-asset-records", {
+              method: "POST",
+              headers: {
+                Accept: "application/json",
+                "Content-Type": "application/json",
+                "X-BAPI-API-KEY": apiKey,
+                "X-BAPI-TIMESTAMP": ts,
+                "X-BAPI-RECV-WINDOW": recv,
+                "X-BAPI-SIGN": sign,
+              },
+              body: payload,
+            });
+            const body = (await response.json()) as {
+              retCode?: number;
+              retMsg?: string;
+              result?: unknown;
+            };
+            if (!response.ok || body.retCode !== 0) {
+              throw new Error(String(body.retMsg ?? response.status));
+            }
+            return body.result ?? {};
+          })();
+          transactionCards.push(...listFrom(result));
+        } catch (e) {
+          error ||= e instanceof Error ? e.message : String(e);
+        }
+      }
+
+      const unique = new Map<string, Record<string, unknown>>();
+      for (const row of transactionCards) {
+        const panValue = String(
+          row["maskPan"] ?? row["maskedPan"] ?? row["cardNo"] ?? row["pan4"] ?? row["last4"] ?? "",
+        );
+        const last4 = panValue.replace(/\D/g, "").slice(-4);
+        if (!last4) continue;
+        const previous = unique.get(last4) ?? {};
+        unique.set(last4, { ...previous, ...row, pan4: last4 });
+      }
+      raw = [...unique.values()];
+    }
+
     const str = (v: unknown) => String(v ?? "").trim();
     const brandOf = (c: Record<string, unknown>) => {
       const v = str(c["cardBrand"] ?? c["brand"] ?? c["cardOrg"] ?? c["cardScheme"] ?? c["cardNetwork"] ?? "").toLowerCase();
@@ -145,8 +199,8 @@ export const getBybitCards = createServerFn({ method: "POST" })
 
         brand: brandOf(c),
         kind: kindOf(c),
-        status: str(c["status"] ?? c["cardStatus"] ?? ""),
-        currency: str(c["currency"] ?? c["cardCurrency"] ?? c["settleCurrency"] ?? ""),
+        status: str(c["cardStatus"] ?? c["status"] ?? ""),
+        currency: str(c["cardCurrency"] ?? c["basicCurrency"] ?? c["currency"] ?? c["settleCurrency"] ?? ""),
         expiry: str(c["expireDate"] ?? c["expiryDate"] ?? c["expDate"] ?? c["validThru"] ?? ""),
         holder: str(c["cardHolder"] ?? c["holderName"] ?? c["ownerName"] ?? c["name"] ?? ""),
         fields,
