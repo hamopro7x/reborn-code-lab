@@ -447,12 +447,15 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
       points: string;
       settlementDate: string;
       settleAmount: string;
+      settleCurrency: string;
+      authAmount: string;
       mcc: string;
       mccDesc: string;
       location: string;
       merchantEmail: string;
       merchantWebsite: string;
     };
+
     const cardRows: CardRow[] = [];
     // Authorizations are captured too so a transaction is recorded the moment
     // it is detected (before it settles); settled records overwrite them.
