@@ -447,13 +447,7 @@ export function CardTransactionsTab() {
 
                     <td className="px-4 py-4 text-muted-foreground tabular-nums">{dateLine(r.occurredAt)}</td>
                     <td
-                      className={`px-4 py-4 ${
-                        failed
-                          ? "text-muted-foreground"
-                          : st === "قيد المعالجة"
-                            ? "text-amber-500"
-                            : "text-foreground"
-                      }`}
+                      className={`px-4 py-4 ${failed ? "text-destructive" : "text-emerald-500"}`}
                     >
                       {st}
                     </td>
