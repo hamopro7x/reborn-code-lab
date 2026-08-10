@@ -3,7 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { getBybitActivity, getBybitCardRewards, getBybitCardTransactions } from "@/lib/bybit.functions";
+import { OnChainTransfersSection } from "@/components/admin/OnChainTransfersSection";
 import { Button } from "@/components/ui/button";
+
 import { RefreshCw, CreditCard, AlertTriangle } from "lucide-react";
 
 type Row = {
@@ -364,7 +366,10 @@ export function CardTransactionsTab() {
         </div>
       )}
 
+      <OnChainTransfersSection />
+
       {/* Transactions — Bybit table layout */}
+
       <div className="rounded-2xl border bg-card overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-2 p-4 pb-3">
           <h3 className="text-base font-bold">المعاملات</h3>
