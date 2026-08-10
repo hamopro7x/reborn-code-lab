@@ -6,8 +6,11 @@ import { getBybitActivity, getBybitCardRewards, getBybitCardTransactions } from 
 import { OnChainTransfersSection } from "@/components/admin/OnChainTransfersSection";
 import { InternalTransfersSection } from "@/components/admin/InternalTransfersSection";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { CoinIcon } from "@/components/admin/CoinIcon";
+import { dateLineAr } from "@/lib/format-ar";
 
-import { RefreshCw, CreditCard, AlertTriangle } from "lucide-react";
+import { RefreshCw, CreditCard, AlertTriangle, CheckCircle2 } from "lucide-react";
 
 type Row = {
   id: string;
@@ -24,22 +27,8 @@ type Row = {
 const money = (n: number) =>
   Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-const weekdayAr = (ms: number) =>
-  new Date(ms).toLocaleDateString("ar-EG", { weekday: "long" });
+const dateLine = (ms: number) => dateLineAr(ms);
 
-const dateLine = (ms: number) => {
-  if (!ms) return "\u2014";
-  const d = new Date(ms);
-  const day = weekdayAr(ms);
-  const date = d.toLocaleDateString("en-GB", { year: "numeric", month: "2-digit", day: "2-digit" });
-  const time = d.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: true,
-  });
-  return `[ ${day} - ${date} - ${time} ]`;
-};
 
 const isRefund = (r: Row) => r.amount > 0 || /refund|reversal|cashback/i.test(r.status + r.merchant);
 
