@@ -343,7 +343,23 @@ export function CardTransactionsTab() {
   const [page, setPage] = useState(1);
   const [openId, setOpenId] = useState<string | null>(null);
   const [showCard, setShowCard] = useState(false);
+  const queryClient = useQueryClient();
+  const { data: manualCards = [] } = useQuery({
+    queryKey: ["manual-cards"],
+    queryFn: loadManualCards,
+  });
+  const addManualCard = async (card: ManualCard) => {
+    const next = [...manualCards, card];
+    await saveManualCards(next);
+    queryClient.setQueryData(["manual-cards"], next);
+  };
+  const removeManualCard = async (id: string) => {
+    const next = manualCards.filter((c) => c.id !== id);
+    await saveManualCards(next);
+    queryClient.setQueryData(["manual-cards"], next);
+  };
   const fetchCards = useServerFn(getBybitCards);
+
   const { data: cardsData, isLoading: cardsLoading } = useQuery({
     queryKey: ["bybit-cards"],
     queryFn: () => fetchCards(),
