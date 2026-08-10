@@ -9,6 +9,8 @@ import { CartProvider } from "@/lib/cart";
 import { CurrencyProvider } from "@/lib/currency-context";
 import { supabase } from "@/integrations/supabase/client";
 import { useAutoRefreshOnDeploy } from "@/lib/use-auto-refresh";
+import { useGlobalAutoSave } from "@/lib/use-global-autosave";
+
 
 
 function NotFoundComponent() {
@@ -125,6 +127,8 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
   useAutoRefreshOnDeploy();
+  useGlobalAutoSave();
+
   useEffect(() => {
 
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {

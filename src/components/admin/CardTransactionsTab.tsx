@@ -1,17 +1,30 @@
 import { Fragment, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { getBybitActivity, getBybitCardRewards, getBybitCardTransactions } from "@/lib/bybit.functions";
 import { getBybitCardTransactionDetail } from "@/lib/bybit-card-detail.functions";
 import { getBybitCards, type BybitCard } from "@/lib/bybit-cards.functions";
+import { loadManualCards, saveManualCards, last4Of, type ManualCard } from "@/lib/manual-cards";
 
 import { OnChainTransfersSection } from "@/components/admin/OnChainTransfersSection";
 import { InternalTransfersSection } from "@/components/admin/InternalTransfersSection";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { dateLineAr, statusAr } from "@/lib/format-ar";
+import { toast } from "sonner";
 
-import { RefreshCw, CreditCard, AlertTriangle, ChevronDown } from "lucide-react";
+import { RefreshCw, CreditCard, AlertTriangle, ChevronDown, Plus, Trash2 } from "lucide-react";
+
 
 type Row = {
   id: string;
@@ -201,10 +214,124 @@ function BybitCardVisual({
   );
 }
 
+/** نافذة إضافة كرت جديد */
+function AddCardDialog({ onAdd }: { onAdd: (card: ManualCard) => Promise<void> }) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [brand, setBrand] = useState<"visa" | "mastercard">("visa");
+  const [kind, setKind] = useState<"virtual" | "physical">("virtual");
+  const [number, setNumber] = useState("");
+  const [expiry, setExpiry] = useState("");
+  const [saving, setSaving] = useState(false);
 
+  const submit = async () => {
+    if (!name.trim() || !number.replace(/\D/g, "")) {
+      toast.error("اكتب اسم البطاقة ورقمها");
+      return;
+    }
+    setSaving(true);
+    try {
+      await onAdd({
+        id: crypto.randomUUID(),
+        name: name.trim(),
+        brand,
+        kind,
+        number: number.trim(),
+        expiry: expiry.trim(),
+      });
+      toast.success("تم إضافة الكرت");
+      setOpen(false);
+      setName("");
+      setNumber("");
+      setExpiry("");
+    } catch {
+      toast.error("تعذر حفظ الكرت");
+    } finally {
+      setSaving(false);
+    }
+  };
 
-
-
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <button
+          type="button"
+          className="flex min-h-[220px] flex-col items-center justify-center gap-2 rounded-2xl border border-dashed bg-background/40 p-4 text-sm text-muted-foreground transition-colors hover:border-amber-400 hover:text-amber-400"
+        >
+          <Plus className="size-6" />
+          إضافة كرت جديد
+        </button>
+      </DialogTrigger>
+      <DialogContent dir="rtl" className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>كرت جديد</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-3">
+          <div className="grid gap-1.5">
+            <Label htmlFor="mc-name">اسم البطاقة</Label>
+            <Input id="mc-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="مثال: بطاقة الإعلانات" />
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="mc-number">رقم البطاقة</Label>
+            <Input
+              id="mc-number"
+              dir="ltr"
+              value={number}
+              onChange={(e) => setNumber(e.target.value)}
+              placeholder="5596 1234 5678 4938"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-1.5">
+              <Label htmlFor="mc-expiry">تاريخ الانتهاء</Label>
+              <Input id="mc-expiry" dir="ltr" value={expiry} onChange={(e) => setExpiry(e.target.value)} placeholder="MM/YY" />
+            </div>
+            <div className="grid gap-1.5">
+              <Label>النوع</Label>
+              <div className="flex gap-2">
+                {(["virtual", "physical"] as const).map((k) => (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => setKind(k)}
+                    className={`flex-1 rounded-lg border px-2 py-2 text-xs font-bold ${
+                      kind === k ? "border-amber-400 text-amber-400" : "text-muted-foreground"
+                    }`}
+                  >
+                    {k === "virtual" ? "افتراضية" : "فعلية"}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="grid gap-1.5">
+            <Label>الأيقونة</Label>
+            <div className="flex gap-2">
+              {(["visa", "mastercard"] as const).map((b) => (
+                <button
+                  key={b}
+                  type="button"
+                  onClick={() => setBrand(b)}
+                  className={`flex flex-1 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold ${
+                    brand === b ? "border-amber-400 text-amber-400" : "text-muted-foreground"
+                  }`}
+                >
+                  <CardBrandIcon brand={b} last4="" />
+                  {b === "visa" ? "Visa" : "Mastercard"}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button onClick={submit} disabled={saving}>
+            {saving ? "جاري الحفظ..." : "إضافة"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 
 export function CardTransactionsTab() {
@@ -216,7 +343,23 @@ export function CardTransactionsTab() {
   const [page, setPage] = useState(1);
   const [openId, setOpenId] = useState<string | null>(null);
   const [showCard, setShowCard] = useState(false);
+  const queryClient = useQueryClient();
+  const { data: manualCards = [] } = useQuery({
+    queryKey: ["manual-cards"],
+    queryFn: loadManualCards,
+  });
+  const addManualCard = async (card: ManualCard) => {
+    const next = [...manualCards, card];
+    await saveManualCards(next);
+    queryClient.setQueryData(["manual-cards"], next);
+  };
+  const removeManualCard = async (id: string) => {
+    const next = manualCards.filter((c) => c.id !== id);
+    await saveManualCards(next);
+    queryClient.setQueryData(["manual-cards"], next);
+  };
   const fetchCards = useServerFn(getBybitCards);
+
   const { data: cardsData, isLoading: cardsLoading } = useQuery({
     queryKey: ["bybit-cards"],
     queryFn: () => fetchCards(),
@@ -392,57 +535,81 @@ export function CardTransactionsTab() {
           </div>
 
           {showCard && (
-            <div className="mt-4 grid gap-4 sm:grid-cols-2" dir="rtl">
-              {(cardsData?.cards ?? []).length === 0 ? (
+            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" dir="rtl">
+              {(cardsData?.cards ?? []).length === 0 && (
                 <div className="rounded-2xl border bg-background/70 p-4">
-                  <BybitCardVisual
-                    brand={myCard.brand}
-                    last4={myCard.last4}
-                    kind={myCard.cardKind}
-                  />
+                  <BybitCardVisual brand={myCard.brand} last4={myCard.last4} kind={myCard.cardKind} />
                   <div className="mt-3 text-[11px] text-muted-foreground">
                     {cardsLoading
                       ? "جاري جلب بيانات البطاقة..."
                       : "تعذر جلب قائمة البطاقات من باي بت."}
                   </div>
                 </div>
-              ) : (
-                ((cardsData?.cards ?? []) as BybitCard[]).map((c) => {
-                  const brandName =
-                    (c.brand || myCard.brand) === "mastercard"
-                      ? "Mastercard"
-                      : (c.brand || myCard.brand) === "visa"
-                        ? "Visa"
-                        : "Card";
-                  const kind = c.kind || myCard.cardKind;
-                  const active = statusAr(c.status) === "ناجحة" || /active|normal|1/i.test(c.status);
-                  return (
-                    <div key={c.id} className="rounded-2xl border bg-background/70 p-4">
-                      <div className="flex flex-wrap items-center justify-end gap-2 text-right">
-                        <h3 className="text-base font-black">
-                          {brandName} {kind === "physical" ? "Physical" : "Virtual"}
-                        </h3>
-                        <span
-                          className={`rounded px-2 py-0.5 text-[10px] font-bold ${
-                            active ? "bg-amber-400 text-black" : "bg-muted text-muted-foreground"
-                          }`}
-                        >
-                          {active ? "Active" : c.status || "—"}
-                        </span>
-                      </div>
-                      <div className="mt-3">
-                        <BybitCardVisual
-                          brand={c.brand || myCard.brand}
-                          last4={c.last4 || myCard.last4}
-                          kind={kind}
-                        />
-                      </div>
-                    </div>
-                  );
-                })
               )}
+
+              {((cardsData?.cards ?? []) as BybitCard[]).map((c) => {
+                const brandName =
+                  (c.brand || myCard.brand) === "mastercard"
+                    ? "Mastercard"
+                    : (c.brand || myCard.brand) === "visa"
+                      ? "Visa"
+                      : "Card";
+                const kind = c.kind || myCard.cardKind;
+                const active = statusAr(c.status) === "ناجحة" || /active|normal|1/i.test(c.status);
+                return (
+                  <div key={c.id} className="rounded-2xl border bg-background/70 p-4">
+                    <div className="flex flex-wrap items-center justify-end gap-2 text-right">
+                      <h3 className="text-base font-black">
+                        {brandName} {kind === "physical" ? "Physical" : "Virtual"}
+                      </h3>
+                      <span
+                        className={`rounded px-2 py-0.5 text-[10px] font-bold ${
+                          active ? "bg-amber-400 text-black" : "bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        {active ? "Active" : c.status || "—"}
+                      </span>
+                    </div>
+                    <div className="mt-3">
+                      <BybitCardVisual
+                        brand={c.brand || myCard.brand}
+                        last4={c.last4 || myCard.last4}
+                        kind={kind}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+
+              {manualCards.map((c) => (
+                <div key={c.id} className="rounded-2xl border bg-background/70 p-4">
+                  <div className="flex flex-wrap items-center justify-end gap-2 text-right">
+                    <h3 className="text-base font-black">{c.name}</h3>
+                    <span className="rounded bg-amber-400 px-2 py-0.5 text-[10px] font-bold text-black">Active</span>
+                    <button
+                      type="button"
+                      onClick={() => removeManualCard(c.id)}
+                      className="me-auto text-muted-foreground transition-colors hover:text-destructive"
+                      aria-label="حذف الكرت"
+                    >
+                      <Trash2 className="size-4" />
+                    </button>
+                  </div>
+                  <div className="mt-3">
+                    <BybitCardVisual brand={c.brand} last4={last4Of(c.number)} kind={c.kind} />
+                  </div>
+                  {c.expiry && (
+                    <div className="mt-2 text-right text-[11px] text-muted-foreground" dir="ltr">
+                      {c.expiry}
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              <AddCardDialog onAdd={addManualCard} />
             </div>
           )}
+
 
 
 
