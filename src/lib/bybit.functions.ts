@@ -441,6 +441,17 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
       last4: string;
       brand: string;
       cardKind: string;
+      /** تفاصيل إضافية مطابقة لصفحة تفاصيل المعاملة في باي بت */
+      txnType: string;
+      paymentId: string;
+      points: string;
+      settlementDate: string;
+      settleAmount: string;
+      mcc: string;
+      mccDesc: string;
+      location: string;
+      merchantEmail: string;
+      merchantWebsite: string;
     };
     const cardRows: CardRow[] = [];
     // Authorizations are captured too so a transaction is recorded the moment
@@ -547,6 +558,16 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
         last4,
         brand: brandOf(r, last4),
         cardKind: kindOf(r, last4),
+        txnType: String(r.txnType ?? r.transactionType ?? r.bizType ?? (type === "SIDE_QUERY_REFUND" ? "Refund" : "Purchase")),
+        paymentId: String(r.paymentId ?? r.orderNo ?? r.payId ?? ""),
+        points: String(r.points ?? r.pointsEarned ?? r.rewardPoints ?? ""),
+        settlementDate: String(r.settleDate ?? r.settlementDate ?? r.settleTime ?? ""),
+        settleAmount: String(r.settleAmount ?? r.paidAmount ?? ""),
+        mcc: String(r.mcc ?? r.merchCategoryCode ?? ""),
+        mccDesc: String(r.merchCategoryDesc ?? r.mccDesc ?? ""),
+        location: String(r.merchCountry ?? r.merchantCountry ?? r.country ?? r.merchCity ?? ""),
+        merchantEmail: String(r.merchEmail ?? r.merchantEmail ?? ""),
+        merchantWebsite: String(r.merchWebsite ?? r.merchantWebsite ?? r.merchUrl ?? ""),
       };
     };
 
