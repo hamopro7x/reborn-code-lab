@@ -1,6 +1,6 @@
 Unicode True
 Name "Mag Pro Connect"
-OutFile "/tmp/agent-release/MagProConnect-Setup-3.1.20.exe"
+OutFile "/tmp/agent-release/MagProConnect-Setup-3.1.22.exe"
 InstallDir "$LOCALAPPDATA\Programs\MagProConnect"
 RequestExecutionLevel user
 SilentInstall silent
