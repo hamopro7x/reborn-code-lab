@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,10 +6,9 @@ import { getBybitActivity, getBybitCardRewards, getBybitCardTransactions } from 
 import { OnChainTransfersSection } from "@/components/admin/OnChainTransfersSection";
 import { InternalTransfersSection } from "@/components/admin/InternalTransfersSection";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { dateLineAr, statusAr } from "@/lib/format-ar";
 
-import { RefreshCw, CreditCard, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { RefreshCw, CreditCard, AlertTriangle, ChevronDown } from "lucide-react";
 
 type Row = {
   id: string;
@@ -26,11 +25,14 @@ type Row = {
   points?: string;
   settlementDate?: string;
   settleAmount?: string;
+  settleCurrency?: string;
+  authAmount?: string;
   mcc?: string;
   mccDesc?: string;
   location?: string;
   merchantEmail?: string;
   merchantWebsite?: string;
+
 };
 
 const money = (n: number) =>
@@ -173,7 +175,7 @@ export function CardTransactionsTab() {
   const [tab, setTab] = useState<"all" | "purchase_ok" | "purchase_failed" | "refund">("all");
   const [section, setSection] = useState<"transactions" | "onchain" | "internal">("transactions");
   const [page, setPage] = useState(1);
-  const [detail, setDetail] = useState<Row | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null);
 
   const perPage = 50;
 
@@ -441,15 +443,18 @@ export function CardTransactionsTab() {
                 const refund = isRefund(r);
                 const st = statusAr(r.status);
                 const failed = st === "فاشلة";
+                const open = openId === r.id;
                 return (
-                  <tr key={r.id} className="border-b border-border/40 hover:bg-muted/20">
+                  <Fragment key={r.id}>
+                  <tr className="border-b border-border/40 hover:bg-muted/20">
                     <td className="px-4 py-4">
                       <button
                         type="button"
-                        onClick={() => setDetail(r)}
-                        className="font-semibold text-amber-500 hover:underline"
+                        onClick={() => setOpenId(open ? null : r.id)}
+                        className="inline-flex items-center gap-1 font-semibold text-amber-500 hover:underline"
                       >
                         التفاصيل
+                        <ChevronDown className={`size-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
                       </button>
 
                     </td>
@@ -492,8 +497,17 @@ export function CardTransactionsTab() {
                       </div>
                     </td>
                   </tr>
+                  {open && (
+                    <tr className="bg-muted/10">
+                      <td colSpan={6} className="p-0">
+                        <TxnDetails r={r} />
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
                 );
               })}
+
             </tbody>
           </table>
         </div>
@@ -535,107 +549,69 @@ export function CardTransactionsTab() {
         </div>
       </div>
 
-      <Dialog open={!!detail} onOpenChange={(o) => !o && setDetail(null)}>
-        <DialogContent dir="rtl" className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-right">تفاصيل المعاملة</DialogTitle>
-          </DialogHeader>
-          {detail && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 rounded-xl bg-muted/40 p-3">
-                <MerchantIcon name={detail.merchant || "Card"} />
-                <div className="flex-1">
-                  <div className="text-sm font-bold">{detail.merchant || "شراء بالبطاقة"}</div>
-                  <div className="text-xs text-muted-foreground">{statusAr(detail.status)}</div>
-                </div>
-                <div
-                  className={`text-lg font-black tabular-nums ${
-                    isRefund(detail) ? "text-emerald-500" : "text-destructive"
-                  }`}
-                >
-                  {isRefund(detail) ? "+" : "-"}
-                  {detail.currency || "USD"} {money(detail.amount)}
-                </div>
-              </div>
-
-              <ol className="space-y-3">
-                {[
-                  { label: "تم إرسال المعاملة", at: detail.occurredAt },
-                  { label: "جاري المعالجة", at: detail.occurredAt },
-                  {
-                    label: statusAr(detail.status) === "فاشلة" ? "فشلت المعاملة" : "اكتملت المعاملة",
-                    at: detail.occurredAt,
-                  },
-                ].map((s, i) => (
-                  <li key={i} className="flex items-start gap-2">
-                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" />
-                    <div>
-                      <div className="text-sm font-semibold">{s.label}</div>
-                      <div className="text-xs text-muted-foreground">{dateLine(s.at)}</div>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-
-              <section className="rounded-xl bg-muted/40 p-4 text-sm">
-                <h4 className="mb-2 text-sm font-bold">تفصيل العملة والرسوم</h4>
-                <dl>
-                  {[
-                    ["مبلغ المعاملة", `${detail.currency || "USD"} ${money(detail.amount)}`],
-                    ["مبلغ التسوية", detail.settleAmount ? `${detail.currency || "USD"} ${detail.settleAmount}` : "—"],
-                    ["النقاط المكتسبة", detail.points || "—"],
-                    ["Payment ID", detail.paymentId || "—"],
-                    ["Transaction ID", detail.id],
-                    ["تاريخ التسوية", detail.settlementDate || "—"],
-                  ].map(([k, v]) => (
-                    <div key={k} className="flex items-start justify-between gap-4 py-1.5">
-                      <dt className="text-muted-foreground">{k}</dt>
-                      <dd className="break-all text-right font-medium">{v}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </section>
-
-              <section className="rounded-xl bg-muted/40 p-4 text-sm">
-                <h4 className="mb-2 text-sm font-bold">تفاصيل التاجر</h4>
-                <dl>
-                  {[
-                    ["وصف التاجر", detail.merchant || "—"],
-                    ["فئة التاجر (MCC)", detail.mccDesc || detail.mcc ? `${detail.mccDesc || "—"}${detail.mcc ? ` (${detail.mcc})` : ""}` : "—"],
-                    ["الموقع", detail.location || "—"],
-                    ["البريد الإلكتروني للتواصل", detail.merchantEmail || "—"],
-                    ["الموقع الإلكتروني للتواصل", detail.merchantWebsite || "—"],
-                  ].map(([k, v]) => (
-                    <div key={k} className="flex items-start justify-between gap-4 py-1.5">
-                      <dt className="text-muted-foreground">{k}</dt>
-                      <dd className="break-all text-right font-medium">{v}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </section>
-
-              <section className="rounded-xl bg-muted/40 p-4 text-sm">
-                <h4 className="mb-2 text-sm font-bold">بيانات البطاقة</h4>
-                <dl>
-                  {[
-                    ["الحالة", statusAr(detail.status)],
-                    ["الوقت", dateLine(detail.occurredAt)],
-                    ["النوع", isRefund(detail) ? "مبلغ مسترد" : "شراء بالبطاقة"],
-                    ["آخر 4 أرقام", detail.last4 || "••••"],
-                    ["نوع البطاقة", cardKindLabel(detail.cardKind) || "—"],
-                  ].map(([k, v]) => (
-                    <div key={k} className="flex items-start justify-between gap-4 py-1.5">
-                      <dt className="text-muted-foreground">{k}</dt>
-                      <dd className="break-all text-right font-medium">{v}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </section>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
 
+  );
+}
+
+function Field({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+  return (
+    <div className="space-y-1">
+      <div className="text-[11px] text-muted-foreground">{label}</div>
+      <div className={`break-all text-xs font-semibold tabular-nums ${accent ? "text-amber-500" : ""}`}>
+        {value || "—"}
+      </div>
+    </div>
+  );
+}
+
+function TxnDetails({ r }: { r: Row }) {
+  const refund = isRefund(r);
+  const st = statusAr(r.status);
+  const cur = r.currency || "USD";
+  const settle =
+    r.settleAmount && Number(r.settleAmount) > 0
+      ? `${r.settleCurrency || cur} ${Number(r.settleAmount).toLocaleString("en-US", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })}`
+      : "";
+  const mcc = r.mccDesc ? `${r.mccDesc}${r.mcc ? ` (${r.mcc})` : ""}` : r.mcc || "";
+  return (
+    <div dir="rtl" className="space-y-5 border-t border-border/40 px-4 py-5 sm:px-8">
+      <section>
+        <h4 className="mb-3 text-sm font-bold">تفصيل العملة والرسوم</h4>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <Field label="مبلغ المعاملة" value={`${refund ? "+" : "-"}${cur} ${money(r.amount)}`} />
+          <Field label="مبلغ التسوية" value={settle} />
+          <Field label="النقاط المكتسبة" value={r.points || ""} accent />
+          <Field label="Payment ID" value={r.paymentId || ""} />
+          <Field label="Transaction ID" value={r.id} />
+          <Field label="تاريخ التسوية" value={r.settlementDate || ""} />
+        </div>
+      </section>
+
+      <section className="border-t border-border/40 pt-4">
+        <h4 className="mb-3 text-sm font-bold">تفاصيل التاجر</h4>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <Field label="وصف التاجر" value={r.merchant || ""} />
+          <Field label="فئة التاجر (MCC)" value={mcc} />
+          <Field label="الموقع" value={r.location || ""} />
+          <Field label="البريد الإلكتروني للتواصل" value={r.merchantEmail || ""} />
+          <Field label="الموقع الإلكتروني للتواصل" value={r.merchantWebsite || ""} />
+        </div>
+      </section>
+
+      <section className="border-t border-border/40 pt-4">
+        <h4 className="mb-3 text-sm font-bold">بيانات البطاقة</h4>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <Field label="الحالة" value={st} />
+          <Field label="الوقت" value={dateLine(r.occurredAt)} />
+          <Field label="النوع" value={refund ? "مبلغ مسترد" : "شراء بالبطاقة"} />
+          <Field label="آخر 4 أرقام" value={r.last4 || "••••"} />
+          <Field label="نوع البطاقة" value={cardKindLabel(r.cardKind) || ""} />
+        </div>
+      </section>
+    </div>
   );
 }
