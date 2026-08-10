@@ -3,11 +3,12 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getBybitInternalTransfers } from "@/lib/bybit-internal.functions";
 import { Badge } from "@/components/ui/badge";
-import { ArrowDownToLine, ArrowUpFromLine, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ArrowDownToLine, ArrowUpFromLine, CheckCircle2, Loader2 } from "lucide-react";
 
 const num = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 6 });
 const when = (ms: number) => (ms ? new Date(ms).toLocaleString("ar-EG") : "—");
-const shortId = (s: string) => (s.length > 14 ? `${s.slice(0, 6)}...${s.slice(-5)}` : s || "—");
 
 const statusLabel = (s: string) => {
   const v = s.toLowerCase();
@@ -18,6 +19,19 @@ const statusLabel = (s: string) => {
 };
 
 type TabKey = "withdraw" | "deposit";
+type Row = {
+  id: string;
+  coin: string;
+  amount: number;
+  fee: number;
+  status: string;
+  address: string;
+  txId: string;
+  at: number;
+  createdAt: number;
+  chain: string;
+};
+
 
 /** السحب والتحويل الداخلي — سجل حساب التمويل في باي بت */
 export function InternalTransfersSection() {
