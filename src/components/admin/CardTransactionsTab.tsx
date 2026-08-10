@@ -392,21 +392,18 @@ export function CardTransactionsTab() {
           </div>
 
           {showCard && (
-            <div className="mt-4 space-y-4" dir="rtl">
+            <div className="mt-4 grid gap-4 sm:grid-cols-2" dir="rtl">
               {(cardsData?.cards ?? []).length === 0 ? (
-                <div className="rounded-2xl border bg-background/70 p-4 md:p-5">
-                  <div className="grid gap-4 md:grid-cols-[280px_1fr] md:items-start">
-                    <BybitCardVisual
-                      brand={myCard.brand}
-                      last4={myCard.last4}
-                      kind={myCard.cardKind}
-                      balance={spendingPower}
-                    />
-                    <div className="rounded-xl bg-muted/50 p-4 text-xs text-muted-foreground">
-                      {cardsLoading
-                        ? "جاري جلب بيانات البطاقة..."
-                        : "تعذر جلب قائمة البطاقات من باي بت — تظهر البيانات المستخرجة من المعاملات."}
-                    </div>
+                <div className="rounded-2xl border bg-background/70 p-4">
+                  <BybitCardVisual
+                    brand={myCard.brand}
+                    last4={myCard.last4}
+                    kind={myCard.cardKind}
+                  />
+                  <div className="mt-3 text-[11px] text-muted-foreground">
+                    {cardsLoading
+                      ? "جاري جلب بيانات البطاقة..."
+                      : "تعذر جلب قائمة البطاقات من باي بت."}
                   </div>
                 </div>
               ) : (
@@ -420,9 +417,9 @@ export function CardTransactionsTab() {
                   const kind = c.kind || myCard.cardKind;
                   const active = statusAr(c.status) === "ناجحة" || /active|normal|1/i.test(c.status);
                   return (
-                    <div key={c.id} className="rounded-2xl border bg-background/70 p-4 md:p-5">
+                    <div key={c.id} className="rounded-2xl border bg-background/70 p-4">
                       <div className="flex flex-wrap items-center justify-end gap-2 text-right">
-                        <h3 className="text-lg font-black">
+                        <h3 className="text-base font-black">
                           {brandName} {kind === "physical" ? "Physical" : "Virtual"}
                         </h3>
                         <span
@@ -433,43 +430,20 @@ export function CardTransactionsTab() {
                           {active ? "Active" : c.status || "—"}
                         </span>
                       </div>
-                      <p className="mt-1 text-right text-[11px] text-muted-foreground">
-                        يمكنك الدفع مباشرة على منصات التجارة الإلكترونية
-                      </p>
-
-                      <div className="mt-4 grid gap-4 md:grid-cols-[280px_1fr] md:items-start">
+                      <div className="mt-3">
                         <BybitCardVisual
                           brand={c.brand || myCard.brand}
                           last4={c.last4 || myCard.last4}
                           kind={kind}
-                          balance={spendingPower}
                         />
-                        <div className="grid grid-cols-2 gap-x-6 gap-y-4 rounded-xl bg-muted/50 p-4">
-                          <Field label="رقم البطاقة" value={c.pan || (c.last4 ? `**** **** **** ${c.last4}` : "—")} />
-                          <Field label="اسم صاحب البطاقة" value={c.holder || "—"} />
-                          <Field label="تاريخ الانتهاء" value={c.expiry || "—"} />
-                          <Field label="العملة" value={c.currency || "—"} />
-                        </div>
                       </div>
-
-                      {c.fields.length > 0 && (
-                        <details className="mt-3">
-                          <summary className="cursor-pointer text-xs text-muted-foreground">
-                            كل بيانات البطاقة من باي بت
-                          </summary>
-                          <div className="mt-2 grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
-                            {c.fields.map((f) => (
-                              <Field key={f.key} label={f.key} value={f.value} />
-                            ))}
-                          </div>
-                        </details>
-                      )}
                     </div>
                   );
                 })
               )}
             </div>
           )}
+
 
 
 
