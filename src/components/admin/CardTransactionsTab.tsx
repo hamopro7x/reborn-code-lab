@@ -348,24 +348,7 @@ function AddCardDialog({ onAdd }: { onAdd: (card: ManualCard) => Promise<void> }
             </div>
           </div>
 
-            <div className="grid gap-1.5">
-              <Label>النوع</Label>
-              <div className="flex gap-2">
-                {(["virtual", "physical"] as const).map((k) => (
-                  <button
-                    key={k}
-                    type="button"
-                    onClick={() => setKind(k)}
-                    className={`flex-1 rounded-lg border px-2 py-2 text-xs font-bold ${
-                      kind === k ? "border-amber-400 text-amber-400" : "text-muted-foreground"
-                    }`}
-                  >
-                    {k === "virtual" ? "افتراضية" : "فعلية"}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
+
           <div className="grid gap-1.5">
             <Label>الأيقونة</Label>
             <div className="flex gap-2">
