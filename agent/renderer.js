@@ -359,14 +359,14 @@ async function handleDoctorCommand(action) {
   lastDoctorCmdAt = now;
   if (action === "renew") {
     try {
-      stream = null;
-      await getStream();
+      // استخدم مسار الاستعادة ذي المحاولات واستبدال track بدون إعادة تحميل
+      // الخدمة كلها؛ فشل التقاط لحظي لا يجب أن يقطع باقي المشاهدين.
+      await recoverCapture();
       for (const entry of peers.values()) {
         try { entry.pc?.getSenders?.().forEach((sn) => sn.track?.kind === "video" && sn.generateKeyFrame?.()); } catch {}
       }
-      await softReconnect();
     } catch {
-      window.agent?.reloadRenderer?.();
+      requestReconnect(2500);
     }
     return;
   }
@@ -510,7 +510,9 @@ function startAdaptive(entry, sender) {
         else target = Math.min(MAX, safe, Math.round(target * 1.12 + 250_000));
       } else if (severe) {
         target = Math.round(target * 0.6);
-      } else {
+      } else if (healthySamples >= 8) {
+        // لا نرفع الحمل عندما لا يرسل المسار تقديراً حقيقياً للسعة (شائع مع
+        // TURN). نزيد فقط بعد فترة صحة مؤكدة حتى لا يتذبذب الفيديو.
         target = Math.round(target * 1.08 + 150_000);
       }
       target = Math.max(MIN, Math.min(MAX, target));
@@ -609,14 +611,14 @@ async function startPeer(viewerId) {
     const age = Date.now() - (current.startedAt ?? 0);
     // JOIN يُعاد كثيراً كضمان لوصول الإشارة. لا نهدم الاتصال الجاري بسبب
     // رسالة JOIN مكررة؛ على الشبكات الضعيفة قد يستغرق TURN أكثر من 15 ثانية.
-    if (age < 30_000 && current.pc.signalingState === "have-local-offer") {
+    if (age < 12_000 && current.pc.signalingState === "have-local-offer") {
       if (current.offer && Date.now() - (current.lastOfferSentAt || 0) > 2_000) {
         await send({ type: "offer", to: viewerId, sdp: current.offer });
         current.lastOfferSentAt = Date.now();
       }
       return;
     }
-    if (age < 30_000) return;
+    if (age < 12_000) return;
   }
   startingViewers.add(viewerId);
   try {
