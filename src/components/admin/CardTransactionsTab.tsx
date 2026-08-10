@@ -26,11 +26,14 @@ type Row = {
   points?: string;
   settlementDate?: string;
   settleAmount?: string;
+  settleCurrency?: string;
+  authAmount?: string;
   mcc?: string;
   mccDesc?: string;
   location?: string;
   merchantEmail?: string;
   merchantWebsite?: string;
+
 };
 
 const money = (n: number) =>
