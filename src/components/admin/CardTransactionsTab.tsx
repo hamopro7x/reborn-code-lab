@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { getBybitActivity, getBybitCardRewards, getBybitCardTransactions } from "@/lib/bybit.functions";
+import { getBybitCardTransactionDetail } from "@/lib/bybit-card-detail.functions";
 import { OnChainTransfersSection } from "@/components/admin/OnChainTransfersSection";
 import { InternalTransfersSection } from "@/components/admin/InternalTransfersSection";
 import { Button } from "@/components/ui/button";
@@ -565,18 +566,121 @@ function Field({ label, value, accent }: { label: string; value: string; accent?
   );
 }
 
+/** أسماء عربية للحقول الإضافية اللي بترجع من باي بت */
+const FIELD_LABELS: Record<string, string> = {
+  txnId: "Transaction ID",
+  paymentId: "Payment ID",
+  orderNo: "رقم الطلب",
+  txnType: "نوع المعاملة",
+  bizType: "نوع العملية",
+  points: "النقاط المكتسبة",
+  point: "النقاط المكتسبة",
+  rebateAmount: "مبلغ الاسترداد",
+  rebateRate: "نسبة الاسترداد",
+  settleAmount: "مبلغ التسوية",
+  settleCurrency: "عملة التسوية",
+  settleDate: "تاريخ التسوية",
+  settleTime: "وقت التسوية",
+  basicAmount: "المبلغ الأساسي",
+  basicCurrency: "العملة الأساسية",
+  paidAmount: "المبلغ المدفوع",
+  paidCurrency: "عملة الدفع",
+  authAmount: "المبلغ المصرّح",
+  transactionAmount: "مبلغ المعاملة",
+  transactionCurrency: "عملة المعاملة",
+  fee: "الرسوم",
+  feeAmount: "الرسوم",
+  fxRate: "سعر التحويل",
+  exchangeRate: "سعر الصرف",
+  mcc: "فئة التاجر (MCC)",
+  merchCategoryCode: "كود فئة التاجر",
+  merchCategoryDesc: "وصف فئة التاجر",
+  merchName: "اسم التاجر",
+  merchCity: "مدينة التاجر",
+  merchCountry: "دولة التاجر",
+  merchEmail: "البريد الإلكتروني للتاجر",
+  merchWebsite: "الموقع الإلكتروني للتاجر",
+  cardType: "نوع البطاقة",
+  pan4: "آخر 4 أرقام",
+  status: "الحالة",
+  tradeStatus: "حالة العملية",
+  txnCreate: "وقت الإنشاء",
+  createTime: "وقت الإنشاء",
+  currency: "العملة",
+  entity: "الجهة",
+};
+
+const HIDDEN_FIELDS = new Set(["retCode", "retMsg", "extInfo", "time"]);
+
 function TxnDetails({ r }: { r: Row }) {
   const refund = isRefund(r);
   const st = statusAr(r.status);
   const cur = r.currency || "USD";
-  const settle =
-    r.settleAmount && Number(r.settleAmount) > 0
-      ? `${r.settleCurrency || cur} ${Number(r.settleAmount).toLocaleString("en-US", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        })}`
-      : "";
-  const mcc = r.mccDesc ? `${r.mccDesc}${r.mcc ? ` (${r.mcc})` : ""}` : r.mcc || "";
+
+  const fetchDetail = useServerFn(getBybitCardTransactionDetail);
+  const { data: detailRes, isLoading: detailLoading } = useQuery({
+    queryKey: ["bybit-card-txn-detail", r.id, r.paymentId ?? ""],
+    queryFn: () => fetchDetail({ data: { txnId: r.id, paymentId: r.paymentId ?? "" } }),
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+  const d = detailRes?.detail ?? {};
+  const pick = (...keys: string[]) => {
+    for (const k of keys) {
+      const v = d[k];
+      if (v && v !== "0" && v !== "0.00") return v;
+    }
+    return "";
+  };
+
+  const money2 = (v: string) =>
+    Number.isFinite(Number(v))
+      ? Number(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      : v;
+
+  const settleRaw = r.settleAmount && Number(r.settleAmount) > 0
+    ? r.settleAmount
+    : pick("settleAmount", "settlementAmount", "payAmount");
+  const settleCur = r.settleCurrency || pick("settleCurrency", "settlementCurrency", "payCurrency") || cur;
+  const settle = settleRaw ? `${settleCur} ${money2(settleRaw)}` : "";
+
+  const settleDate = r.settlementDate || (() => {
+    const v = pick("settleDate", "settlementDate", "settleTime", "postDate");
+    if (!v) return "";
+    return /^\d{10,13}$/.test(v)
+      ? new Date(v.length === 10 ? Number(v) * 1000 : Number(v)).toISOString().slice(0, 10)
+      : v.slice(0, 10);
+  })();
+
+  const points = r.points || pick("points", "point", "pointsEarned", "rewardPoints", "rewardPoint");
+  const paymentId = r.paymentId || pick("paymentId", "payId", "orderNo");
+  const mccCode = r.mcc || pick("mcc", "merchCategoryCode");
+  const mccDesc = r.mccDesc || pick("merchCategoryDesc", "mccDesc");
+  const mcc = mccDesc ? `${mccDesc}${mccCode ? ` (${mccCode})` : ""}` : mccCode;
+  const location =
+    r.location ||
+    [pick("merchCity", "merchantCity", "city"), pick("merchCountry", "merchantCountry", "country")]
+      .filter(Boolean)
+      .join(", ");
+  const email = r.merchantEmail || pick("merchEmail", "merchantEmail", "contactEmail");
+  const website = r.merchantWebsite || pick("merchWebsite", "merchantWebsite", "merchUrl", "contactWebsite");
+  const fee = pick("fee", "feeAmount", "transactionFee");
+  const fxRate = pick("fxRate", "exchangeRate", "rate");
+  const cashback = pick("rebateAmount", "cashbackAmount");
+
+  const usedKeys = new Set([
+    "txnId", "paymentId", "payId", "orderNo", "points", "point", "pointsEarned", "rewardPoints", "rewardPoint",
+    "settleAmount", "settlementAmount", "payAmount", "settleCurrency", "settlementCurrency", "payCurrency",
+    "settleDate", "settlementDate", "settleTime", "postDate", "mcc", "merchCategoryCode", "merchCategoryDesc",
+    "mccDesc", "merchCity", "merchantCity", "city", "merchCountry", "merchantCountry", "country", "merchEmail",
+    "merchantEmail", "contactEmail", "merchWebsite", "merchantWebsite", "merchUrl", "contactWebsite",
+    "fee", "feeAmount", "transactionFee", "fxRate", "exchangeRate", "rate", "rebateAmount", "cashbackAmount",
+    "merchName", "status", "tradeStatus", "pan4", "last4", "cardLast4", "cardType", "txnCreate", "createTime",
+  ]);
+  const extras = (detailRes?.fields ?? []).filter(
+    (f: { key: string; value: string }) => !usedKeys.has(f.key) && !HIDDEN_FIELDS.has(f.key),
+  );
+
   return (
     <div dir="rtl" className="space-y-5 border-t border-border/40 px-4 py-5 sm:px-8">
       <section>
@@ -584,21 +688,24 @@ function TxnDetails({ r }: { r: Row }) {
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <Field label="مبلغ المعاملة" value={`${refund ? "+" : "-"}${cur} ${money(r.amount)}`} />
           <Field label="مبلغ التسوية" value={settle} />
-          <Field label="النقاط المكتسبة" value={r.points || ""} accent />
-          <Field label="Payment ID" value={r.paymentId || ""} />
+          <Field label="النقاط المكتسبة" value={points} accent />
+          <Field label="Payment ID" value={paymentId} />
           <Field label="Transaction ID" value={r.id} />
-          <Field label="تاريخ التسوية" value={r.settlementDate || ""} />
+          <Field label="تاريخ التسوية" value={settleDate} />
+          <Field label="الرسوم" value={fee ? `${cur} ${money2(fee)}` : ""} />
+          <Field label="سعر التحويل" value={fxRate} />
+          <Field label="مبلغ الاسترداد" value={cashback ? money2(cashback) : ""} accent />
         </div>
       </section>
 
       <section className="border-t border-border/40 pt-4">
         <h4 className="mb-3 text-sm font-bold">تفاصيل التاجر</h4>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <Field label="وصف التاجر" value={r.merchant || ""} />
+          <Field label="وصف التاجر" value={r.merchant || pick("merchName")} />
           <Field label="فئة التاجر (MCC)" value={mcc} />
-          <Field label="الموقع" value={r.location || ""} />
-          <Field label="البريد الإلكتروني للتواصل" value={r.merchantEmail || ""} />
-          <Field label="الموقع الإلكتروني للتواصل" value={r.merchantWebsite || ""} />
+          <Field label="الموقع" value={location} />
+          <Field label="البريد الإلكتروني للتواصل" value={email} />
+          <Field label="الموقع الإلكتروني للتواصل" value={website} />
         </div>
       </section>
 
@@ -612,6 +719,27 @@ function TxnDetails({ r }: { r: Row }) {
           <Field label="نوع البطاقة" value={cardKindLabel(r.cardKind) || ""} />
         </div>
       </section>
+
+      {extras.length > 0 && (
+        <section className="border-t border-border/40 pt-4">
+          <h4 className="mb-3 text-sm font-bold">بيانات إضافية من باي بت</h4>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            {extras.map((f: { key: string; value: string }) => (
+              <Field key={f.key} label={FIELD_LABELS[f.key] ?? f.key} value={f.value} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {detailLoading && (
+        <div className="text-[11px] text-muted-foreground">جاري جلب التفاصيل الكاملة من باي بت…</div>
+      )}
+      {!detailLoading && detailRes && !detailRes.found && (
+        <div className="text-[11px] text-muted-foreground">
+          باقي الحقول (النقاط والتسوية) بتظهر من باي بت بعد تسوية المعاملة.
+        </div>
+      )}
     </div>
   );
 }
+
