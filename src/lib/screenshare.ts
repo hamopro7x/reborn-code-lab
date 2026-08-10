@@ -86,6 +86,7 @@ export function openSignaling(
         const record = row as { id?: string; sender?: string; viewer_id?: string; payload?: Signal };
         if (record.sender !== "host") return;
         if (opts?.viewerId && record.viewer_id && record.viewer_id !== opts.viewerId) return;
+        burstUntil = Date.now() + 8_000;
         emit(record.id, record.payload);
       },
     );
@@ -135,14 +136,28 @@ export function openSignaling(
       polling = false;
     }
   };
-  const pollTimer = setInterval(() => void poll(), 1_200);
+  // دورة تكيّفية: أثناء المصافحة (أو بعد إرسال إشارة) نستعلم كل ~180ms حتى
+  // تصل إشارة المضيف فوراً، ثم نهدأ إلى ~900ms لتخفيف الحمل على الخادم.
+  let burstUntil = Date.now() + 15_000;
+  let pollTimer: ReturnType<typeof setTimeout> | null = null;
+  let closed = false;
+  const schedule = () => {
+    if (closed) return;
+    const fast = Date.now() < burstUntil;
+    pollTimer = setTimeout(async () => {
+      await poll();
+      schedule();
+    }, fast ? 180 : 900);
+  };
   void poll();
+  schedule();
 
   return {
     ready,
     send: async (s: Signal) => {
       const viewerId = "viewer" in s ? s.viewer : "to" in s ? s.to : undefined;
       if (!viewerId) throw new Error("Missing viewer identity");
+      burstUntil = Date.now() + 15_000;
       const { error } = await supabase.from("screenshare_signals").insert({
         device_id: deviceId,
         viewer_id: viewerId,
@@ -152,7 +167,8 @@ export function openSignaling(
       if (error) throw error;
     },
     close: () => {
-      clearInterval(pollTimer);
+      closed = true;
+      if (pollTimer) clearTimeout(pollTimer);
       supabase.removeChannel(channel);
     },
   };

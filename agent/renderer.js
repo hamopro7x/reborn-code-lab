@@ -844,7 +844,7 @@ function stopSession() {
   running = false;
   if (hbTimer) clearInterval(hbTimer);
   hbTimer = null;
-  if (signalTimer) clearInterval(signalTimer);
+  if (signalTimer) clearTimeout(signalTimer);
   signalTimer = null;
   for (const id of Array.from(peers.keys())) closePeer(id);
   channel = null;
@@ -1015,7 +1015,7 @@ async function softReconnect() {
   reconnecting = true;
   try {
     if (hbTimer) { clearInterval(hbTimer); hbTimer = null; }
-    if (signalTimer) { clearInterval(signalTimer); signalTimer = null; }
+    if (signalTimer) { clearTimeout(signalTimer); signalTimer = null; }
     channel = null;
     running = false; // ملاحظة: لا نلمس pc/stream إطلاقاً حتى لا ينقطع البث
     await run(d);
