@@ -265,6 +265,13 @@ let channel = null;
 let signalTimer = null;
 let signalPolling = false;
 let signalPollingAt = 0;
+// نافذة «التبادل السريع»: أثناء المصافحة أو وجود إشارات معلّقة نستعلم كل ~150ms
+// بدل ~1s، فتقل مدة الاتصال وتأخير الإشارة بشكل ملموس، ثم نعود لدورة هادئة.
+let signalBurstUntil = 0;
+function bumpSignalBurst(ms = 8_000) {
+  signalBurstUntil = Math.max(signalBurstUntil, Date.now() + ms);
+}
+
 
 const outgoingSignals = [];
 // كل مشاهد (جهاز إدارة) له اتصال منفصل بنفس جودة وسرعة البث
@@ -292,7 +299,24 @@ function send(signal) {
   }
   outgoingSignals.push({ viewer_id: viewerId, payload: signal });
   if (outgoingSignals.length > 250) outgoingSignals.splice(0, outgoingSignals.length - 250);
+  bumpSignalBurst(8_000);
   return Promise.resolve();
+}
+
+function scheduleSignals(device) {
+  if (signalTimer) { clearTimeout(signalTimer); signalTimer = null; }
+  if (!running) return;
+  let handshaking = false;
+  for (const entry of peers.values()) {
+    const st = entry.pc?.connectionState;
+    if (st && st !== "connected") { handshaking = true; break; }
+  }
+  const fast = handshaking || outgoingSignals.length > 0 || Date.now() < signalBurstUntil;
+  const delay = fast ? 140 + Math.floor(Math.random() * 90) : 700 + Math.floor(Math.random() * 300);
+  signalTimer = setTimeout(async () => {
+    try { await exchangeSignals(device); } catch { /* تُعالج داخلياً */ }
+    scheduleSignals(device);
+  }, delay);
 }
 
 async function exchangeSignals(device) {
@@ -318,6 +342,7 @@ async function exchangeSignals(device) {
   }
   // المعالجة خارج القفل ودون انتظار: أي تعليق في مصافحة واحدة لا يوقف
   // القناة، والدورة التالية تكمل طبيعياً.
+  if (incoming.length) bumpSignalBurst(8_000);
   for (const row of incoming) {
     void Promise.resolve()
       .then(() => handleViewerSignal(row.payload))
@@ -819,7 +844,7 @@ function stopSession() {
   running = false;
   if (hbTimer) clearInterval(hbTimer);
   hbTimer = null;
-  if (signalTimer) clearInterval(signalTimer);
+  if (signalTimer) clearTimeout(signalTimer);
   signalTimer = null;
   for (const id of Array.from(peers.keys())) closePeer(id);
   channel = null;
@@ -901,7 +926,7 @@ async function run(device) {
   void exchangeSignals(device);
   // دورة مستقرة موزعة زمنياً: تكفي لاتصال سريع، وتمنع تزامن كل الأجهزة على
   // قاعدة الإشارات في اللحظة نفسها. كل طلب له مهلة ولا تتداخل الطلبات.
-  signalTimer = setInterval(() => void exchangeSignals(device), 900 + Math.floor(Math.random() * 350));
+  scheduleSignals(device);
   hbTimer = setInterval(() => void refreshHeartbeat(device), 10_000);
 
   void heartbeat(device).then((first) => {
@@ -990,7 +1015,7 @@ async function softReconnect() {
   reconnecting = true;
   try {
     if (hbTimer) { clearInterval(hbTimer); hbTimer = null; }
-    if (signalTimer) { clearInterval(signalTimer); signalTimer = null; }
+    if (signalTimer) { clearTimeout(signalTimer); signalTimer = null; }
     channel = null;
     running = false; // ملاحظة: لا نلمس pc/stream إطلاقاً حتى لا ينقطع البث
     await run(d);
