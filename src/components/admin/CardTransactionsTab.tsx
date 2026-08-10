@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { getBybitCardRewards, getBybitCardTransactions } from "@/lib/bybit.functions";
+import { getBybitActivity, getBybitCardRewards, getBybitCardTransactions } from "@/lib/bybit.functions";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, CreditCard, AlertTriangle } from "lucide-react";
 
@@ -176,6 +176,7 @@ const cardKindLabel = (kind?: string) =>
 export function CardTransactionsTab() {
   const fetchCard = useServerFn(getBybitCardTransactions);
   const fetchRewards = useServerFn(getBybitCardRewards);
+  const fetchActivity = useServerFn(getBybitActivity);
   const [tab, setTab] = useState<"all" | "purchase_ok" | "purchase_failed" | "refund">("all");
 
   const { data: rewards } = useQuery({
@@ -184,6 +185,17 @@ export function CardTransactionsTab() {
     refetchInterval: 60_000,
     retry: false,
   });
+
+  const { data: activity } = useQuery({
+    queryKey: ["bybit-activity-total"],
+    queryFn: () => fetchActivity({ data: { days: 30 } }),
+    refetchInterval: 30_000,
+    retry: false,
+  });
+  const totalBalanceUsd = (activity?.balances ?? []).reduce(
+    (s: number, c: { usdValue: number }) => s + c.usdValue,
+    0,
+  );
 
   const { data: live, isLoading, isFetching, refetch } = useQuery({
     queryKey: ["bybit-card-live"],
@@ -275,9 +287,12 @@ export function CardTransactionsTab() {
         <div className="p-5 md:p-6 bg-gradient-to-br from-muted/60 to-transparent">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <div className="text-xs text-muted-foreground">الرصيد المتاح في البطاقة</div>
+              <div className="text-xs text-muted-foreground">إجمالي الرصيد</div>
               <div className="mt-1 text-4xl font-black tracking-tight tabular-nums">
-                USD {money(spendingPower)}
+                USD {money(totalBalanceUsd)}
+              </div>
+              <div className="mt-1 text-[11px] text-muted-foreground tabular-nums">
+                الرصيد المتاح في البطاقة: USD {money(spendingPower)}
               </div>
               <div className="mt-2 inline-flex rounded-lg bg-muted/70 px-3 py-1 text-[11px] text-muted-foreground tabular-nums">
                 Fiat: USD {money(balance?.fiatUsd ?? 0)} + Crypto: USD {money(balance?.cryptoUsd ?? 0)}

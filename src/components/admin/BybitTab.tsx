@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { getBybitActivity } from "@/lib/bybit.functions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, RefreshCw, ArrowDownToLine, ArrowUpFromLine, Wallet, AlertTriangle } from "lucide-react";
+import { Loader2, RefreshCw, ArrowDownToLine, ArrowUpFromLine, AlertTriangle } from "lucide-react";
 
 type Coin = { coin: string; balance: number; usdValue: number };
 
@@ -30,7 +30,6 @@ export function BybitTab() {
     );
   }
 
-  const totalUsd = (data?.balances ?? []).reduce((s: number, c: Coin) => s + c.usdValue, 0);
   const depTotal = (data?.deposits ?? []).length;
   const wdTotal = (data?.withdrawals ?? []).length;
 
@@ -60,11 +59,7 @@ export function BybitTab() {
         </div>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-xl border bg-card p-4">
-          <div className="flex items-center gap-2 text-muted-foreground text-xs"><Wallet className="h-4 w-4" /> إجمالي الرصيد</div>
-          <div className="mt-1 text-2xl font-bold">${num(totalUsd)}</div>
-        </div>
+      <div className="grid gap-3 sm:grid-cols-2">
         <div className="rounded-xl border bg-card p-4">
           <div className="flex items-center gap-2 text-muted-foreground text-xs"><ArrowDownToLine className="h-4 w-4" /> عدد الإيداعات</div>
           <div className="mt-1 text-2xl font-bold">{depTotal}</div>
@@ -74,6 +69,7 @@ export function BybitTab() {
           <div className="mt-1 text-2xl font-bold">{wdTotal}</div>
         </div>
       </div>
+
 
       <div className="grid gap-3 lg:grid-cols-2">
         {(data?.accounts ?? []).map((acc) => (
