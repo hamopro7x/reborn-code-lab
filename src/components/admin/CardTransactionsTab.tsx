@@ -274,6 +274,15 @@ export function CardTransactionsTab() {
     .filter((r) => !isRefund(r) && r.occurredAt >= monthStart)
     .reduce((s, r) => s + Math.abs(r.amount), 0);
 
+  // الإنفاق اليومي (اليوم فقط، المشتريات فقط)
+  const dayStart = useMemo(() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  }, []);
+  const dailySpend = rows
+    .filter((r) => !isRefund(r) && r.occurredAt >= dayStart)
+    .reduce((s, r) => s + Math.abs(r.amount), 0);
+
   // نسبة الاستراداد النقدي — تلقائي من المنصة، وإن لم تتوفر تُحسب من المعاملات
   const platformRate = rewards?.rate ?? null;
   const refunded = rows
