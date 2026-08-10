@@ -364,7 +364,10 @@ export function CardTransactionsTab() {
         </div>
       )}
 
+      <OnChainTransfersSection />
+
       {/* Transactions — Bybit table layout */}
+
       <div className="rounded-2xl border bg-card overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-2 p-4 pb-3">
           <h3 className="text-base font-bold">المعاملات</h3>
