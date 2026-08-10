@@ -104,42 +104,7 @@ export function BybitTab() {
       </div>
 
 
-      <section className="rounded-xl border bg-card p-4">
-        <h3 className="mb-3 flex items-center gap-2 font-semibold"><ArrowDownToLine className="h-4 w-4" /> الإيداعات</h3>
-        {(data?.deposits ?? []).length === 0 ? (
-          <p className="text-sm text-muted-foreground">لا توجد إيداعات في هذه الفترة.</p>
-        ) : (
-          <div className="space-y-2">
-            {data!.deposits.map((d) => (
-              <div key={d.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm">
-                <span className="font-semibold">+{num(d.amount)} {d.coin}</span>
-                <span className="text-muted-foreground">{d.chain}</span>
-                <Badge variant="secondary">{d.status}</Badge>
-                <span className="text-muted-foreground text-xs">{when(d.at)}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
 
-      <section className="rounded-xl border bg-card p-4">
-        <h3 className="mb-3 flex items-center gap-2 font-semibold"><ArrowUpFromLine className="h-4 w-4" /> السحب</h3>
-        {(data?.withdrawals ?? []).length === 0 ? (
-          <p className="text-sm text-muted-foreground">لا توجد عمليات سحب في هذه الفترة.</p>
-        ) : (
-          <div className="space-y-2">
-            {data!.withdrawals.map((w) => (
-              <div key={w.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm">
-                <span className="font-semibold">-{num(w.amount)} {w.coin}</span>
-                <span className="text-muted-foreground">رسوم: {num(w.fee)}</span>
-                <span className="text-muted-foreground">{w.chain}</span>
-                <Badge variant="secondary">{w.status}</Badge>
-                <span className="text-muted-foreground text-xs">{when(w.at)}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
     </div>
   );
 }
