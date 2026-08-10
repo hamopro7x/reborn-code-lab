@@ -25,7 +25,7 @@ export function OnChainTransfersSection() {
 
   const deposits = data?.deposits ?? [];
   const withdrawals = data?.withdrawals ?? [];
-  const rows: { id: string; coin: string; amount: number; chain: string; status: string; at: number }[] =
+  const rows: { id: string; coin: string; amount: number; fee?: number; chain: string; status: string; at: number }[] =
     tab === "deposits" ? deposits : withdrawals;
 
   const tabs: { key: TabKey; label: string; icon: typeof ArrowDownToLine; count: number }[] = [
