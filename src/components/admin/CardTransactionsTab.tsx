@@ -423,7 +423,7 @@ export function CardTransactionsTab() {
                   }
                 />
               ) : (
-                (cardsData?.cards ?? []).map((c) => (
+                ((cardsData?.cards ?? []) as BybitCard[]).map((c) => (
                   <div key={c.id} className="rounded-2xl border bg-background/70 p-4">
                     <BybitCardVisual
                       brand={c.brand || myCard.brand}
