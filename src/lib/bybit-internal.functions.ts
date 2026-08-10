@@ -26,6 +26,8 @@ export const getBybitInternalTransfers = createServerFn({ method: "POST" })
       address: string;
       txId: string;
       at: number;
+      createdAt: number;
+      chain: string;
     };
     const empty = { configured: false as const, withdrawals: [] as Row[], deposits: [] as Row[], errors: [] as string[] };
 
@@ -112,6 +114,8 @@ export const getBybitInternalTransfers = createServerFn({ method: "POST" })
             address: String(r.toAddress ?? r.address ?? ""),
             txId: String(r.txID ?? r.txId ?? ""),
             at: Number(r.updateTime ?? r.createTime ?? 0),
+            createdAt: Number(r.createTime ?? 0),
+            chain: String(r.chain ?? ""),
           }))
         : [];
     if (wdRes.status === "rejected") errors.push(String(wdRes.reason?.message ?? wdRes.reason));
@@ -127,6 +131,8 @@ export const getBybitInternalTransfers = createServerFn({ method: "POST" })
             address: String(r.address ?? ""),
             txId: String(r.txID ?? r.txId ?? ""),
             at: Number(r.createdTime ?? r.successAt ?? 0),
+            createdAt: Number(r.createdTime ?? 0),
+            chain: String(r.chain ?? ""),
           }))
         : [];
     if (depRes.status === "rejected") errors.push(String(depRes.reason?.message ?? depRes.reason));
