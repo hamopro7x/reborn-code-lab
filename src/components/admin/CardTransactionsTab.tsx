@@ -373,6 +373,7 @@ export function CardTransactionsTab() {
           [
             ["transactions", "المعاملات"],
             ["onchain", "السحب والإيداع"],
+            ["internal", "السحب والتحويل الداخلي"],
           ] as const
         ).map(([key, label]) => (
           <button
@@ -391,6 +392,8 @@ export function CardTransactionsTab() {
       </nav>
 
       {section === "onchain" && <OnChainTransfersSection />}
+      {section === "internal" && <InternalTransfersSection />}
+
 
       {/* Transactions — Bybit table layout */}
 
