@@ -608,6 +608,18 @@ const FIELD_LABELS: Record<string, string> = {
   createTime: "وقت الإنشاء",
   currency: "العملة",
   entity: "الجهة",
+  pan6: "بادئة البطاقة (BIN)",
+  basicAmount: "المبلغ الإجمالي",
+  basicCurrency: "عملة المبلغ الإجمالي",
+  transactionAmount: "المبلغ قبل الرسوم",
+  transactionCurrency: "عملة المبلغ قبل الرسوم",
+  transactionCurrencyAmount: "المبلغ بعملة المعاملة",
+  interchangeFee: "رسوم الشبكة",
+  totalTax: "إجمالي الضرائب",
+  paidFiat: "المدفوع بالعملة الورقية",
+  withdrawalFee: "رسوم السحب",
+  fxPad: "هامش سعر الصرف",
+  declinedReason: "سبب الرفض",
 };
 
 const HIDDEN_FIELDS = new Set(["retCode", "retMsg", "extInfo", "time"]);
