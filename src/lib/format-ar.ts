@@ -20,3 +20,11 @@ export const dateLineAr = (ms: number) => {
   const date = d.toLocaleDateString("en-GB", { year: "numeric", month: "2-digit", day: "2-digit" });
   return `[ ${weekdayAr(ms)} - ${date} - ${timeAr(ms)} ]`;
 };
+
+/** حالة موحّدة: ناجحة أو فاشلة فقط */
+export function statusAr(s: string | number | null | undefined): "ناجحة" | "فاشلة" {
+  const v = String(s ?? "").toLowerCase();
+  if (!v) return "ناجحة";
+  if (/fail|reject|declin|cancel|error|expire/.test(v)) return "فاشلة";
+  return "ناجحة";
+}
