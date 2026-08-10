@@ -127,6 +127,8 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
   useAutoRefreshOnDeploy();
+  useGlobalAutoSave();
+
   useEffect(() => {
 
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
