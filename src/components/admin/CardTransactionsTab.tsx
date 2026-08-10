@@ -180,6 +180,7 @@ export function CardTransactionsTab() {
   const fetchRewards = useServerFn(getBybitCardRewards);
   const fetchActivity = useServerFn(getBybitActivity);
   const [tab, setTab] = useState<"all" | "purchase_ok" | "purchase_failed" | "refund">("all");
+  const [section, setSection] = useState<"transactions" | "onchain">("transactions");
   const [page, setPage] = useState(1);
   const perPage = 50;
 
@@ -366,11 +367,34 @@ export function CardTransactionsTab() {
         </div>
       )}
 
-      <OnChainTransfersSection />
+      {/* Section nav — same style as the storefront nav */}
+      <nav className="flex flex-wrap items-center gap-1" dir="rtl">
+        {(
+          [
+            ["transactions", "المعاملات"],
+            ["onchain", "السحب والإيداع"],
+          ] as const
+        ).map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setSection(key)}
+            className={`rounded-lg px-4 py-2 text-sm transition-colors ${
+              section === key
+                ? "bg-primary/20 text-primary"
+                : "text-foreground/80 hover:bg-secondary hover:text-foreground"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </nav>
+
+      {section === "onchain" && <OnChainTransfersSection />}
 
       {/* Transactions — Bybit table layout */}
 
-      <div className="rounded-2xl border bg-card overflow-hidden">
+      <div className={`rounded-2xl border bg-card overflow-hidden ${section === "transactions" ? "" : "hidden"}`}>
         <div className="flex flex-wrap items-center justify-between gap-2 p-4 pb-3">
           <h3 className="text-base font-bold">المعاملات</h3>
           <div className="flex gap-1">
