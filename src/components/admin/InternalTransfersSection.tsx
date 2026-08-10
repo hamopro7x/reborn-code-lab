@@ -122,7 +122,11 @@ export function InternalTransfersSection() {
                   </td>
                   {tab === "withdraw" && <td className="px-3 py-2 tabular-nums">{num(r.fee)}</td>}
                   <td className="px-3 py-2 text-muted-foreground">{r.address || "—"}</td>
-                  <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{shortId(r.txId)}</td>
+                  <td className="px-3 py-2">
+                    <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setDetail(r as Row)}>
+                      التفاصيل
+                    </Button>
+                  </td>
                   <td className="px-3 py-2">
                     <Badge variant="secondary">{statusLabel(r.status)}</Badge>
                   </td>
