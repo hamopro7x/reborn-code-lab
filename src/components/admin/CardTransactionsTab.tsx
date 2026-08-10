@@ -640,8 +640,9 @@ function TxnDetails({ r }: { r: Row }) {
 
   const settleRaw = r.settleAmount && Number(r.settleAmount) > 0
     ? r.settleAmount
-    : pick("settleAmount", "settlementAmount", "payAmount");
-  const settleCur = r.settleCurrency || pick("settleCurrency", "settlementCurrency", "payCurrency") || cur;
+    : pick("settleAmount", "settlementAmount", "payAmount", "paidAmount", "billAmount");
+  const settleCur =
+    r.settleCurrency || pick("settleCurrency", "settlementCurrency", "payCurrency", "paidCurrency") || cur;
   const settle = settleRaw ? `${settleCur} ${money2(settleRaw)}` : "";
 
   const settleDate = r.settlementDate || (() => {
