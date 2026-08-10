@@ -102,7 +102,7 @@ export function InternalTransfersSection() {
                 <th className="px-3 py-2 text-right font-medium">الكمية</th>
                 {tab === "withdraw" && <th className="px-3 py-2 text-right font-medium">رسوم المعاملات</th>}
                 <th className="px-3 py-2 text-right font-medium">العنوان</th>
-                <th className="px-3 py-2 text-right font-medium">Txid</th>
+                <th className="px-3 py-2 text-right font-medium">التفاصيل</th>
                 <th className="px-3 py-2 text-right font-medium">الحالة</th>
                 <th className="px-3 py-2 text-right font-medium">التاريخ والوقت</th>
               </tr>
