@@ -176,7 +176,7 @@ export function CardTransactionsTab() {
   const [tab, setTab] = useState<"all" | "purchase_ok" | "purchase_failed" | "refund">("all");
   const [section, setSection] = useState<"transactions" | "onchain" | "internal">("transactions");
   const [page, setPage] = useState(1);
-  const [detail, setDetail] = useState<Row | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null);
 
   const perPage = 50;
 
