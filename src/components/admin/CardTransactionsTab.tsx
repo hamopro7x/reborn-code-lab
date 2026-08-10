@@ -480,13 +480,19 @@ export function CardTransactionsTab() {
                       {st}
                     </td>
                     <td
-                      className={`px-4 py-4 text-end font-semibold tabular-nums ${
+                      className={`px-4 py-4 font-semibold tabular-nums ${
                         failed ? "text-muted-foreground" : refund ? "text-emerald-500" : "text-destructive"
                       }`}
                     >
-                      {refund ? "+" : "-"}
-                      {r.currency || "USD"} {money(r.amount)}
+                      <div className="flex items-center justify-end gap-2">
+                        <span>
+                          {refund ? "+" : "-"}
+                          {r.currency || "USD"} {money(r.amount)}
+                        </span>
+                        <CoinIcon coin={r.currency || "USD"} className="size-5" />
+                      </div>
                     </td>
+
                     <td className="px-4 py-4">
                       <div className="flex items-center justify-end gap-2 font-medium">
                         <span>{r.merchant || "شراء بالبطاقة"}</span>
