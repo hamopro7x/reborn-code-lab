@@ -1,17 +1,30 @@
 import { Fragment, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { getBybitActivity, getBybitCardRewards, getBybitCardTransactions } from "@/lib/bybit.functions";
 import { getBybitCardTransactionDetail } from "@/lib/bybit-card-detail.functions";
 import { getBybitCards, type BybitCard } from "@/lib/bybit-cards.functions";
+import { loadManualCards, saveManualCards, last4Of, type ManualCard } from "@/lib/manual-cards";
 
 import { OnChainTransfersSection } from "@/components/admin/OnChainTransfersSection";
 import { InternalTransfersSection } from "@/components/admin/InternalTransfersSection";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { dateLineAr, statusAr } from "@/lib/format-ar";
+import { toast } from "sonner";
 
-import { RefreshCw, CreditCard, AlertTriangle, ChevronDown } from "lucide-react";
+import { RefreshCw, CreditCard, AlertTriangle, ChevronDown, Plus, Trash2 } from "lucide-react";
+
 
 type Row = {
   id: string;
