@@ -43,3 +43,39 @@ export function FiatIcon({ code, className = "size-5" }: { code: string; classNa
     </span>
   );
 }
+
+const CHAIN_SYMBOL: Record<string, string> = {
+  ton: "ton",
+  trx: "trx",
+  tron: "trx",
+  trc20: "trx",
+  eth: "eth",
+  erc20: "eth",
+  ethereum: "eth",
+  bsc: "bnb",
+  bep20: "bnb",
+  bnb: "bnb",
+  sol: "sol",
+  solana: "sol",
+  matic: "matic",
+  polygon: "matic",
+  arbitrum: "eth",
+  arbi: "eth",
+  op: "eth",
+  optimism: "eth",
+  avax: "avax",
+  base: "eth",
+  btc: "btc",
+  bitcoin: "btc",
+  xrp: "xrp",
+  ada: "ada",
+  doge: "doge",
+  ltc: "ltc",
+};
+
+/** صورة شبكة/سلسلة التحويل بجانب اسمها */
+export function ChainIcon({ chain, className = "size-5" }: { chain: string; className?: string }) {
+  const key = (chain || "").trim().toLowerCase();
+  const sym = CHAIN_SYMBOL[key] ?? key;
+  return <CoinIcon coin={sym} className={className} />;
+}
