@@ -232,7 +232,9 @@ async function captureScreen() {
   // ترميز 8K/60 داخل Electron كان يستهلك المعالج والمشفّر قبل أن يبدأ
   // WebRTC، فتظهر شاشة سوداء خصوصاً على أجهزة الموظفين الأضعف. 4K/30 يحافظ
   // على وضوح النصوص، ثم متحكم الشبكة يخفض الدقة فقط عند الحاجة.
-  const scale = Math.min(1, 3840 / rawW, 2160 / rawH);
+  // 1440p سقفاً: ترميز 4K بمعدل بت معقول ينتج صورة ضبابية ومتقطعة، بينما
+  // 1440p بنفس معدل البت يعطي بكسلات أنقى وحركة أنعم بواقع 30 إطاراً.
+  const scale = Math.min(1, 2560 / rawW, 1440 / rawH);
   const capW = Math.round(rawW * scale);
   const capH = Math.round(rawH * scale);
   const tryCapture = async (w, h, fps) =>
@@ -499,9 +501,9 @@ function waitForIceGathering(pc, timeoutMs = 1800) {
 function startAdaptive(entry, sender) {
   if (entry.statsTimer) clearInterval(entry.statsTimer);
 
-  const MIN = 350_000;
+  const MIN = 1_200_000;
   const MAX = 30_000_000;
-  let target = 1_800_000;
+  let target = 6_000_000;
   let lastLost = 0;
   let lastPackets = 0;
   let weakSamples = 0;
@@ -554,7 +556,7 @@ function startAdaptive(entry, sender) {
         else target = Math.min(MAX, safe, Math.round(target * 1.12 + 250_000));
       } else if (severe) {
         target = Math.round(target * 0.6);
-      } else if (healthySamples >= 8) {
+      } else if (healthySamples >= 4) {
         // لا نرفع الحمل عندما لا يرسل المسار تقديراً حقيقياً للسعة (شائع مع
         // TURN). نزيد فقط بعد فترة صحة مؤكدة حتى لا يتذبذب الفيديو.
         target = Math.round(target * 1.08 + 150_000);
@@ -568,17 +570,16 @@ function startAdaptive(entry, sender) {
         else if (target < 1_500_000) { scale = 2; fps = 20; }
         else if (target < 3_000_000) { scale = 1.5; fps = 30; }
         weakSamples = 0;
-      } else if (healthySamples >= 8) {
-        if (scale > 2) scale = 2;
-        else if (scale > 1.5) scale = 1.5;
+      } else if (healthySamples >= 4) {
+        if (scale > 2) scale = 1.5;
         else scale = 1;
-        fps = scale === 1 ? 30 : scale === 1.5 ? 24 : 18;
+        fps = scale === 1 ? 30 : 24;
         healthySamples = 0;
       }
 
       const params = sender.getParameters();
       if (params.encodings?.[0]) {
-        params.degradationPreference = "balanced";
+        params.degradationPreference = "maintain-framerate";
         params.encodings[0].maxBitrate = target;
         params.encodings[0].maxFramerate = fps;
         params.encodings[0].scaleResolutionDownBy = scale;
@@ -712,12 +713,12 @@ async function startPeer(viewerId) {
       try {
         const params = sender.getParameters();
         // نبدأ بجودة عالية ثم نكيف الحمل سريعاً قبل أن يتكون طابور frames قديم.
-        params.degradationPreference = "balanced";
+        params.degradationPreference = "maintain-framerate";
         params.encodings = [
           {
             ...(params.encodings?.[0] ?? {}),
             // إرسال أول إطار بالجودة الكاملة ثم التكيف حسب الشبكة.
-            maxBitrate: 1_800_000,
+            maxBitrate: 6_000_000,
             maxFramerate: 30,
             scaleResolutionDownBy: 1,
             networkPriority: "high",
