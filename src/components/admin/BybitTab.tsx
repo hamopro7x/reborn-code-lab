@@ -60,11 +60,7 @@ export function BybitTab() {
         </div>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-xl border bg-card p-4">
-          <div className="flex items-center gap-2 text-muted-foreground text-xs"><Wallet className="h-4 w-4" /> إجمالي الرصيد</div>
-          <div className="mt-1 text-2xl font-bold">${num(totalUsd)}</div>
-        </div>
+      <div className="grid gap-3 sm:grid-cols-2">
         <div className="rounded-xl border bg-card p-4">
           <div className="flex items-center gap-2 text-muted-foreground text-xs"><ArrowDownToLine className="h-4 w-4" /> عدد الإيداعات</div>
           <div className="mt-1 text-2xl font-bold">{depTotal}</div>
@@ -74,6 +70,7 @@ export function BybitTab() {
           <div className="mt-1 text-2xl font-bold">{wdTotal}</div>
         </div>
       </div>
+
 
       <div className="grid gap-3 lg:grid-cols-2">
         {(data?.accounts ?? []).map((acc) => (
