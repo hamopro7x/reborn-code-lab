@@ -29,7 +29,7 @@ type Row = {
 export function InternalTransfersSection() {
   const fetchTransfers = useServerFn(getBybitInternalTransfers);
   const [tab, setTab] = useState<TabKey>("withdraw");
-  const [detail, setDetail] = useState<Row | null>(null);
+  const [expanded, setExpanded] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["bybit-internal-transfers"],
