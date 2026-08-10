@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { getBybitActivity, getBybitCardRewards, getBybitCardTransactions } from "@/lib/bybit.functions";
 import { OnChainTransfersSection } from "@/components/admin/OnChainTransfersSection";
+import { InternalTransfersSection } from "@/components/admin/InternalTransfersSection";
 import { Button } from "@/components/ui/button";
 
 import { RefreshCw, CreditCard, AlertTriangle } from "lucide-react";
@@ -180,7 +181,7 @@ export function CardTransactionsTab() {
   const fetchRewards = useServerFn(getBybitCardRewards);
   const fetchActivity = useServerFn(getBybitActivity);
   const [tab, setTab] = useState<"all" | "purchase_ok" | "purchase_failed" | "refund">("all");
-  const [section, setSection] = useState<"transactions" | "onchain">("transactions");
+  const [section, setSection] = useState<"transactions" | "onchain" | "internal">("transactions");
   const [page, setPage] = useState(1);
   const perPage = 50;
 
