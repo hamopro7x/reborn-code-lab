@@ -391,12 +391,22 @@ async function handleDoctorCommand(action) {
   }
 }
 
+let capturePending = null;
 async function getStream() {
   if (stream && stream.getTracks().some((t) => t.readyState === "live")) return stream;
-  stream = await captureScreen();
+  // بعض أجهزة ويندوز يتعلّق فيها desktopCapturer/getUserMedia بلا نهاية بعد
+  // السكون أو تغيير الشاشة. مهلة صريحة تمنع تجمّد المصافحة إلى الأبد.
+  if (!capturePending) {
+    capturePending = Promise.race([
+      captureScreen(),
+      new Promise((_r, reject) => setTimeout(() => reject(new Error("capture timeout")), 12_000)),
+    ]).finally(() => { capturePending = null; });
+  }
+  stream = await capturePending;
   watchCapture(stream);
   return stream;
 }
+
 
 let captureRecovery = null;
 function watchCapture(activeStream) {
