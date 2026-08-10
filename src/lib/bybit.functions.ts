@@ -441,6 +441,17 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
       last4: string;
       brand: string;
       cardKind: string;
+      /** تفاصيل إضافية مطابقة لصفحة تفاصيل المعاملة في باي بت */
+      txnType: string;
+      paymentId: string;
+      points: string;
+      settlementDate: string;
+      settleAmount: string;
+      mcc: string;
+      mccDesc: string;
+      location: string;
+      merchantEmail: string;
+      merchantWebsite: string;
     };
     const cardRows: CardRow[] = [];
     // Authorizations are captured too so a transaction is recorded the moment
