@@ -519,57 +519,81 @@ export function CardTransactionsTab() {
           </div>
 
           {showCard && (
-            <div className="mt-4 grid gap-4 sm:grid-cols-2" dir="rtl">
-              {(cardsData?.cards ?? []).length === 0 ? (
+            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" dir="rtl">
+              {(cardsData?.cards ?? []).length === 0 && (
                 <div className="rounded-2xl border bg-background/70 p-4">
-                  <BybitCardVisual
-                    brand={myCard.brand}
-                    last4={myCard.last4}
-                    kind={myCard.cardKind}
-                  />
+                  <BybitCardVisual brand={myCard.brand} last4={myCard.last4} kind={myCard.cardKind} />
                   <div className="mt-3 text-[11px] text-muted-foreground">
                     {cardsLoading
                       ? "جاري جلب بيانات البطاقة..."
                       : "تعذر جلب قائمة البطاقات من باي بت."}
                   </div>
                 </div>
-              ) : (
-                ((cardsData?.cards ?? []) as BybitCard[]).map((c) => {
-                  const brandName =
-                    (c.brand || myCard.brand) === "mastercard"
-                      ? "Mastercard"
-                      : (c.brand || myCard.brand) === "visa"
-                        ? "Visa"
-                        : "Card";
-                  const kind = c.kind || myCard.cardKind;
-                  const active = statusAr(c.status) === "ناجحة" || /active|normal|1/i.test(c.status);
-                  return (
-                    <div key={c.id} className="rounded-2xl border bg-background/70 p-4">
-                      <div className="flex flex-wrap items-center justify-end gap-2 text-right">
-                        <h3 className="text-base font-black">
-                          {brandName} {kind === "physical" ? "Physical" : "Virtual"}
-                        </h3>
-                        <span
-                          className={`rounded px-2 py-0.5 text-[10px] font-bold ${
-                            active ? "bg-amber-400 text-black" : "bg-muted text-muted-foreground"
-                          }`}
-                        >
-                          {active ? "Active" : c.status || "—"}
-                        </span>
-                      </div>
-                      <div className="mt-3">
-                        <BybitCardVisual
-                          brand={c.brand || myCard.brand}
-                          last4={c.last4 || myCard.last4}
-                          kind={kind}
-                        />
-                      </div>
-                    </div>
-                  );
-                })
               )}
+
+              {((cardsData?.cards ?? []) as BybitCard[]).map((c) => {
+                const brandName =
+                  (c.brand || myCard.brand) === "mastercard"
+                    ? "Mastercard"
+                    : (c.brand || myCard.brand) === "visa"
+                      ? "Visa"
+                      : "Card";
+                const kind = c.kind || myCard.cardKind;
+                const active = statusAr(c.status) === "ناجحة" || /active|normal|1/i.test(c.status);
+                return (
+                  <div key={c.id} className="rounded-2xl border bg-background/70 p-4">
+                    <div className="flex flex-wrap items-center justify-end gap-2 text-right">
+                      <h3 className="text-base font-black">
+                        {brandName} {kind === "physical" ? "Physical" : "Virtual"}
+                      </h3>
+                      <span
+                        className={`rounded px-2 py-0.5 text-[10px] font-bold ${
+                          active ? "bg-amber-400 text-black" : "bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        {active ? "Active" : c.status || "—"}
+                      </span>
+                    </div>
+                    <div className="mt-3">
+                      <BybitCardVisual
+                        brand={c.brand || myCard.brand}
+                        last4={c.last4 || myCard.last4}
+                        kind={kind}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+
+              {manualCards.map((c) => (
+                <div key={c.id} className="rounded-2xl border bg-background/70 p-4">
+                  <div className="flex flex-wrap items-center justify-end gap-2 text-right">
+                    <h3 className="text-base font-black">{c.name}</h3>
+                    <span className="rounded bg-amber-400 px-2 py-0.5 text-[10px] font-bold text-black">Active</span>
+                    <button
+                      type="button"
+                      onClick={() => removeManualCard(c.id)}
+                      className="me-auto text-muted-foreground transition-colors hover:text-destructive"
+                      aria-label="حذف الكرت"
+                    >
+                      <Trash2 className="size-4" />
+                    </button>
+                  </div>
+                  <div className="mt-3">
+                    <BybitCardVisual brand={c.brand} last4={last4Of(c.number)} kind={c.kind} />
+                  </div>
+                  {c.expiry && (
+                    <div className="mt-2 text-right text-[11px] text-muted-foreground" dir="ltr">
+                      {c.expiry}
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              <AddCardDialog onAdd={addManualCard} />
             </div>
           )}
+
 
 
 
