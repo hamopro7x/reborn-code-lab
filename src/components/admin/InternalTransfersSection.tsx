@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { getBybitInternalTransfers } from "@/lib/bybit-internal.functions";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { CoinIcon, ChainIcon } from "@/components/admin/CoinIcon";
+import { CoinIcon } from "@/components/admin/CoinIcon";
 import { dateLineAr, statusAr } from "@/lib/format-ar";
 import { ArrowDownToLine, ArrowUpFromLine, CheckCircle2, Loader2 } from "lucide-react";
 
