@@ -21,6 +21,16 @@ type Row = {
   last4: string;
   brand?: string;
   cardKind?: string;
+  txnType?: string;
+  paymentId?: string;
+  points?: string;
+  settlementDate?: string;
+  settleAmount?: string;
+  mcc?: string;
+  mccDesc?: string;
+  location?: string;
+  merchantEmail?: string;
+  merchantWebsite?: string;
 };
 
 const money = (n: number) =>
