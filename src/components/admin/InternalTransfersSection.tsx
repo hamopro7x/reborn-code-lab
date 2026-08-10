@@ -10,13 +10,6 @@ import { ArrowDownToLine, ArrowUpFromLine, CheckCircle2, Loader2 } from "lucide-
 
 const num = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 6 });
 
-const statusLabel = (s: string) => {
-  const v = s.toLowerCase();
-  if (/success|完成|3/.test(v)) return "تم التحويل بنجاح";
-  if (/pending|processing/.test(v)) return "قيد المعالجة";
-  if (/fail|reject|cancel/.test(v)) return "فاشلة";
-  return s || "—";
-};
 
 type TabKey = "withdraw" | "deposit";
 type Row = {
@@ -131,7 +124,7 @@ export function InternalTransfersSection() {
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">{r.address || "—"}</td>
                   <td className="px-4 py-3">
-                    <Badge variant="secondary">{statusLabel(r.status)}</Badge>
+                    <Badge variant="secondary">{statusAr(r.status)}</Badge>
                   </td>
                   <td className="px-4 py-3 text-xs text-muted-foreground tabular-nums">{dateLineAr(r.at)}</td>
                   <td className="px-4 py-3">
@@ -177,7 +170,7 @@ export function InternalTransfersSection() {
 
               <dl className="rounded-xl bg-muted/40 p-4 text-sm">
                 {[
-                  ["الحالة", statusLabel(detail.status)],
+                  ["الحالة", statusAr(detail.status)],
                   ["الوقت", dateLineAr(detail.createdAt || detail.at)],
                   [tab === "withdraw" ? "حساب السحب" : "حساب الإيداع", "التمويل"],
                   ["عملة", detail.coin || "—"],

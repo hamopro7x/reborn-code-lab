@@ -31,14 +31,6 @@ const dateLine = (ms: number) => dateLineAr(ms);
 
 const isRefund = (r: Row) => r.amount > 0 || /refund|reversal|cashback/i.test(r.status + r.merchant);
 
-const statusLabel = (s: string) => {
-  const v = s.toLowerCase();
-  if (!s) return "ناجحة";
-  if (/success|completed|filled|done/.test(v)) return "ناجحة";
-  if (/pending|processing/.test(v)) return "قيد المعالجة";
-  if (/fail|reject|declin/.test(v)) return "فاشلة";
-  return s;
-};
 
 const merchantDomains: Record<string, string> = {
   tiktok: "tiktok.com",
@@ -256,7 +248,7 @@ export function CardTransactionsTab() {
   const filtered = rows.filter((r) => {
     if (tab === "all") return true;
     if (tab === "refund") return isRefund(r);
-    const failed = statusLabel(r.status) === "\u0641\u0627\u0634\u0644\u0629";
+    const failed = statusAr(r.status) === "\u0641\u0627\u0634\u0644\u0629";
     if (tab === "purchase_failed") return !isRefund(r) && failed;
     return !isRefund(r) && !failed;
   });
@@ -427,7 +419,7 @@ export function CardTransactionsTab() {
               )}
               {pageRows.map((r) => {
                 const refund = isRefund(r);
-                const st = statusLabel(r.status);
+                const st = statusAr(r.status);
                 const failed = st === "فاشلة";
                 return (
                   <tr key={r.id} className="border-b border-border/40 hover:bg-muted/20">
@@ -540,7 +532,7 @@ export function CardTransactionsTab() {
                 <MerchantIcon name={detail.merchant || "Card"} />
                 <div className="flex-1">
                   <div className="text-sm font-bold">{detail.merchant || "شراء بالبطاقة"}</div>
-                  <div className="text-xs text-muted-foreground">{statusLabel(detail.status)}</div>
+                  <div className="text-xs text-muted-foreground">{statusAr(detail.status)}</div>
                 </div>
                 <div
                   className={`text-lg font-black tabular-nums ${
@@ -557,7 +549,7 @@ export function CardTransactionsTab() {
                   { label: "تم إرسال المعاملة", at: detail.occurredAt },
                   { label: "جاري المعالجة", at: detail.occurredAt },
                   {
-                    label: statusLabel(detail.status) === "فاشلة" ? "فشلت المعاملة" : "اكتملت المعاملة",
+                    label: statusAr(detail.status) === "فاشلة" ? "فشلت المعاملة" : "اكتملت المعاملة",
                     at: detail.occurredAt,
                   },
                 ].map((s, i) => (
@@ -573,7 +565,7 @@ export function CardTransactionsTab() {
 
               <dl className="rounded-xl bg-muted/40 p-4 text-sm">
                 {[
-                  ["الحالة", statusLabel(detail.status)],
+                  ["الحالة", statusAr(detail.status)],
                   ["الوقت", dateLine(detail.occurredAt)],
                   ["النوع", isRefund(detail) ? "مبلغ مسترد" : "شراء بالبطاقة"],
                   ["اسم التاجر", detail.merchant || "—"],

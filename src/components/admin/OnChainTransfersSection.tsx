@@ -104,7 +104,7 @@ export function OnChainTransfersSection() {
                     {num(r.amount)}
                   </td>
                   <td className="px-4 py-3">
-                    <Badge variant="secondary">{r.status}</Badge>
+                    <Badge variant="secondary">{statusAr(r.status)}</Badge>
                   </td>
                   <td className="px-4 py-3 text-xs text-muted-foreground tabular-nums">{dateLineAr(r.at)}</td>
                 </tr>
