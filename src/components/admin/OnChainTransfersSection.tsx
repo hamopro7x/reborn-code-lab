@@ -76,6 +76,7 @@ export function OnChainTransfersSection() {
                 <th className="px-4 py-3 text-right font-semibold">عملة</th>
                 <th className="px-4 py-3 text-right font-semibold">نوع السلسلة</th>
                 <th className="px-4 py-3 text-right font-semibold">الكمية</th>
+                <th className="px-4 py-3 text-right font-semibold">الرسوم</th>
                 <th className="px-4 py-3 text-right font-semibold">الحالة</th>
                 <th className="px-4 py-3 text-right font-semibold">التاريخ والوقت</th>
               </tr>
