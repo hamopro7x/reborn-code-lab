@@ -618,11 +618,8 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
         try {
           const result = await post(cardPath, params);
           const batch = ((result["data"] ?? result["list"] ?? result["rows"]) as any[]) ?? [];
-          cardRows.push(
-            ...batch
-              .map((row, index) => mapRow(row, type, `${type}-1-${index}`))
-              .filter((row) => row.occurredAt >= trackingStart),
-          );
+          cardRows.push(...batch.map((row, index) => mapRow(row, type, `${type}-1-${index}`)));
+
           lastError = "";
           break;
         } catch (error) {
