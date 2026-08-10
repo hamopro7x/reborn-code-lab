@@ -282,13 +282,8 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
     const apiKey = key;
     const apiSecret = secret;
 
-    const { data: trackingSetting } = await context.supabase
-      .from("site_settings")
-      .select("value")
-      .eq("key", "bybit_card_tracking")
-      .maybeSingle();
-    const trackingValue = trackingSetting?.value as { started_at?: number } | null;
-    const trackingStart = Number(trackingValue?.started_at ?? Date.now());
+
+
 
     const { createHmac } = await import("node:crypto");
     const recv = "20000";
