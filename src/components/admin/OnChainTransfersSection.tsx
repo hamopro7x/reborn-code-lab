@@ -104,6 +104,9 @@ export function OnChainTransfersSection() {
                     {tab === "deposits" ? "+" : "-"}
                     {num(r.amount)}
                   </td>
+                  <td className="px-4 py-3 tabular-nums text-muted-foreground">
+                    {num(r.fee ?? 0)} {r.coin || ""}
+                  </td>
                   <td className="px-4 py-3">
                     <Badge variant="secondary">{statusAr(r.status)}</Badge>
                   </td>
