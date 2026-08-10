@@ -547,10 +547,27 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
       return cardKindByLast4.get(last4) ?? "";
     };
 
+    const num2 = (v: unknown): string => {
+      const n = Number(v);
+      if (!Number.isFinite(n) || v === null || v === undefined || v === "") return "";
+      return n.toFixed(2);
+    };
+    const dateStr = (v: unknown): string => {
+      const s = String(v ?? "").trim();
+      if (!s) return "";
+      if (/^\d{10,13}$/.test(s)) {
+        const ms = s.length === 10 ? Number(s) * 1000 : Number(s);
+        return new Date(ms).toISOString().slice(0, 10);
+      }
+      return s.slice(0, 10);
+    };
+
     const mapRow = (r: any, type: string, key: string): CardRow => {
        const last4 = String(r.pan4 ?? r.last4 ?? r.cardLast4 ?? r.cardNo ?? r.maskPan ?? "")
          .replace(/\D/g, "")
          .slice(-4);
+      const city = String(r.merchCity ?? r.merchantCity ?? r.city ?? "").trim();
+      const country = String(r.merchCountry ?? r.merchantCountry ?? r.country ?? "").trim();
       return {
         id: String(r.txnId ?? r.orderNo ?? `${type}-${key}`),
         occurredAt: Number(r.txnCreate ?? r.createTime ?? r.txnTime ?? 0),
@@ -562,17 +579,23 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
         brand: brandOf(r, last4),
         cardKind: kindOf(r, last4),
         txnType: String(r.txnType ?? r.transactionType ?? r.bizType ?? (type === "SIDE_QUERY_REFUND" ? "Refund" : "Purchase")),
-        paymentId: String(r.paymentId ?? r.orderNo ?? r.payId ?? ""),
-        points: String(r.points ?? r.pointsEarned ?? r.rewardPoints ?? ""),
-        settlementDate: String(r.settleDate ?? r.settlementDate ?? r.settleTime ?? ""),
-        settleAmount: String(r.settleAmount ?? r.paidAmount ?? ""),
+        paymentId: String(r.paymentId ?? r.payId ?? r.orderNo ?? ""),
+        points: String(r.points ?? r.point ?? r.pointsEarned ?? r.rewardPoints ?? r.rewardPoint ?? ""),
+        settlementDate: dateStr(r.settleDate ?? r.settlementDate ?? r.settleTime ?? r.postDate ?? ""),
+        // مبلغ التسوية بعملة التسوية (وليس نفس مبلغ المعاملة)
+        settleAmount: num2(r.settleAmount ?? r.settlementAmount ?? r.payAmount ?? ""),
+        settleCurrency: String(
+          r.settleCurrency ?? r.settlementCurrency ?? r.payCurrency ?? r.paidCurrency ?? "",
+        ),
+        authAmount: num2(r.authAmount ?? r.transactionAmount ?? r.basicAmount ?? ""),
         mcc: String(r.mcc ?? r.merchCategoryCode ?? ""),
         mccDesc: String(r.merchCategoryDesc ?? r.mccDesc ?? ""),
-        location: String(r.merchCountry ?? r.merchantCountry ?? r.country ?? r.merchCity ?? ""),
-        merchantEmail: String(r.merchEmail ?? r.merchantEmail ?? ""),
-        merchantWebsite: String(r.merchWebsite ?? r.merchantWebsite ?? r.merchUrl ?? ""),
+        location: [city, country].filter(Boolean).join(", "),
+        merchantEmail: String(r.merchEmail ?? r.merchantEmail ?? r.contactEmail ?? ""),
+        merchantWebsite: String(r.merchWebsite ?? r.merchantWebsite ?? r.merchUrl ?? r.contactWebsite ?? ""),
       };
     };
+
 
 
     // Bounded requests only: track transactions created after the local
