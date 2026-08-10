@@ -35,8 +35,9 @@ export const getBybitCardTransactionDetail = createServerFn({ method: "POST" })
 
     const { createHmac } = await import("node:crypto");
     const recv = "20000";
+    const path = "/v5/card/transaction/query-asset-records";
 
-    async function post(path: string, params: Record<string, string | number>) {
+    async function post(params: Record<string, string | number>) {
       const payload = JSON.stringify(params);
       const ts = Date.now().toString();
       const sign = createHmac("sha256", apiSecret!).update(ts + apiKey! + recv + payload).digest("hex");
@@ -57,63 +58,34 @@ export const getBybitCardTransactionDetail = createServerFn({ method: "POST" })
           signal: controller.signal,
         });
         const text = await res.text();
-        const body = text.trim() ? (JSON.parse(text) as { retCode?: number; retMsg?: string; result?: unknown }) : {};
-        if (!res.ok || body.retCode !== 0) {
-          throw new Error(`${path} ${body.retMsg ?? res.status}`);
-        }
-        return body.result ?? {};
+        const body = text.trim()
+          ? (JSON.parse(text) as { retCode?: number; retMsg?: string; result?: { data?: unknown[] } })
+          : {};
+        if (!res.ok || body.retCode !== 0) throw new Error(String(body.retMsg ?? res.status));
+        return (body.result?.data ?? []) as Record<string, unknown>[];
       } finally {
         clearTimeout(timer);
       }
     }
 
-    // أول كائن فيه حقول فعلية داخل الردّ (الردّ ساعات بيكون متداخل)
-    const pickRecord = (value: unknown, depth = 0): Record<string, unknown> | null => {
-      if (depth > 4 || !value || typeof value !== "object") return null;
-      if (Array.isArray(value)) {
-        for (const item of value) {
-          const found = pickRecord(item, depth + 1);
-          if (found) return found;
-        }
-        return null;
-      }
-      const node = value as Record<string, unknown>;
-      const scalarKeys = Object.keys(node).filter((k) => {
-        const v = node[k];
-        return v !== null && typeof v !== "object";
-      });
-      if (scalarKeys.length >= 3) return node;
-      for (const k of Object.keys(node)) {
-        const found = pickRecord(node[k], depth + 1);
-        if (found) return found;
-      }
-      return null;
-    };
-
-    const attempts: { path: string; params: Record<string, string | number> }[] = [
-      { path: "/v5/card/transaction/query-asset-detail", params: { txnId: data.txnId } },
-      { path: "/v5/card/transaction/query-detail", params: { txnId: data.txnId } },
-      { path: "/v5/card/transaction/detail", params: { txnId: data.txnId } },
-      { path: "/v5/card/transaction/query-asset-records", params: { txnId: data.txnId, page: 1, limit: 1 } },
+    // نفس نداء السجلات هو نداء التفاصيل: txnId (أو orderNo) بحث مطابق تام
+    // ويرجّع كل حقول المعاملة (الرسوم، سعر التحويل، المبلغ المدفوع، MCC...).
+    const attempts: Record<string, string | number>[] = [
+      { txnId: data.txnId },
+      { txnId: data.txnId, type: "SIDE_QUERY_AUTH" },
     ];
-    if (data.paymentId) {
-      attempts.push(
-        { path: "/v5/card/transaction/query-asset-detail", params: { paymentId: data.paymentId } },
-        { path: "/v5/card/transaction/query-detail", params: { paymentId: data.paymentId } },
-      );
-    }
+    if (data.paymentId) attempts.push({ orderNo: data.paymentId });
 
     let record: Record<string, unknown> | null = null;
-    for (const attempt of attempts) {
+    for (const params of attempts) {
       try {
-        const result = await post(attempt.path, attempt.params);
-        const found = pickRecord(result);
-        if (found) {
-          record = found;
+        const rows = await post(params);
+        if (rows.length > 0 && rows[0]) {
+          record = rows[0];
           break;
         }
       } catch {
-        // نجرّب المسار التالي
+        // نجرّب الصيغة التالية
       }
     }
 
@@ -121,11 +93,22 @@ export const getBybitCardTransactionDetail = createServerFn({ method: "POST" })
       return { found: false as const, fields: [] as { key: string; value: string }[], detail: {} as Record<string, string> };
     }
 
+    // تنظيف الأرقام الطويلة (باي بت بيرجّع 18 خانة عشرية أو صيغة 0E-18)
+    const clean = (value: unknown): string => {
+      const str = String(value).trim();
+      if (!str) return "";
+      if (/^-?\d+(\.\d+)?([eE][-+]?\d+)?$/.test(str)) {
+        const n = Number(str);
+        if (Number.isFinite(n)) return n === 0 ? "0" : String(Number(n.toFixed(8)));
+      }
+      return str;
+    };
+
     const detail: Record<string, string> = {};
     const fields: { key: string; value: string }[] = [];
     for (const [key, value] of Object.entries(record)) {
       if (value === null || value === undefined || typeof value === "object") continue;
-      const str = String(value).trim();
+      const str = clean(value);
       if (!str) continue;
       detail[key] = str;
       fields.push({ key, value: str });
@@ -133,3 +116,4 @@ export const getBybitCardTransactionDetail = createServerFn({ method: "POST" })
 
     return { found: true as const, fields, detail };
   });
+

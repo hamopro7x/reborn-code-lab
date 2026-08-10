@@ -608,6 +608,14 @@ const FIELD_LABELS: Record<string, string> = {
   createTime: "وقت الإنشاء",
   currency: "العملة",
   entity: "الجهة",
+  pan6: "بادئة البطاقة (BIN)",
+  transactionCurrencyAmount: "المبلغ بعملة المعاملة",
+  interchangeFee: "رسوم الشبكة",
+  totalTax: "إجمالي الضرائب",
+  paidFiat: "المدفوع بالعملة الورقية",
+  withdrawalFee: "رسوم السحب",
+  fxPad: "هامش سعر الصرف",
+  declinedReason: "سبب الرفض",
 };
 
 const HIDDEN_FIELDS = new Set(["retCode", "retMsg", "extInfo", "time"]);
@@ -640,8 +648,9 @@ function TxnDetails({ r }: { r: Row }) {
 
   const settleRaw = r.settleAmount && Number(r.settleAmount) > 0
     ? r.settleAmount
-    : pick("settleAmount", "settlementAmount", "payAmount");
-  const settleCur = r.settleCurrency || pick("settleCurrency", "settlementCurrency", "payCurrency") || cur;
+    : pick("settleAmount", "settlementAmount", "payAmount", "paidAmount", "billAmount");
+  const settleCur =
+    r.settleCurrency || pick("settleCurrency", "settlementCurrency", "payCurrency", "paidCurrency") || cur;
   const settle = settleRaw ? `${settleCur} ${money2(settleRaw)}` : "";
 
   const settleDate = r.settlementDate || (() => {
@@ -664,18 +673,21 @@ function TxnDetails({ r }: { r: Row }) {
       .join(", ");
   const email = r.merchantEmail || pick("merchEmail", "merchantEmail", "contactEmail");
   const website = r.merchantWebsite || pick("merchWebsite", "merchantWebsite", "merchUrl", "contactWebsite");
-  const fee = pick("fee", "feeAmount", "transactionFee");
+  const fee = pick("fee", "feeAmount", "transactionFee", "totalFees", "foreignTransactionFee");
   const fxRate = pick("fxRate", "exchangeRate", "rate");
-  const cashback = pick("rebateAmount", "cashbackAmount");
+  const cashback = pick("rebateAmount", "cashbackAmount", "bonusAmount");
 
   const usedKeys = new Set([
     "txnId", "paymentId", "payId", "orderNo", "points", "point", "pointsEarned", "rewardPoints", "rewardPoint",
-    "settleAmount", "settlementAmount", "payAmount", "settleCurrency", "settlementCurrency", "payCurrency",
+    "settleAmount", "settlementAmount", "payAmount", "paidAmount", "billAmount", "settleCurrency",
+    "settlementCurrency", "payCurrency", "paidCurrency",
     "settleDate", "settlementDate", "settleTime", "postDate", "mcc", "merchCategoryCode", "merchCategoryDesc",
-    "mccDesc", "merchCity", "merchantCity", "city", "merchCountry", "merchantCountry", "country", "merchEmail",
+    "mccDesc", "mccCode", "merchCity", "merchantCity", "city", "merchCountry", "merchantCountry", "country", "merchEmail",
     "merchantEmail", "contactEmail", "merchWebsite", "merchantWebsite", "merchUrl", "contactWebsite",
-    "fee", "feeAmount", "transactionFee", "fxRate", "exchangeRate", "rate", "rebateAmount", "cashbackAmount",
+    "fee", "feeAmount", "transactionFee", "totalFees", "foreignTransactionFee", "fxRate", "exchangeRate", "rate",
+    "rebateAmount", "cashbackAmount", "bonusAmount",
     "merchName", "status", "tradeStatus", "pan4", "last4", "cardLast4", "cardType", "txnCreate", "createTime",
+    "uid", "side",
   ]);
   const extras = (detailRes?.fields ?? []).filter(
     (f: { key: string; value: string }) => !usedKeys.has(f.key) && !HIDDEN_FIELDS.has(f.key),
