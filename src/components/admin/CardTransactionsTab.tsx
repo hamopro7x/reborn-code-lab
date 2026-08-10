@@ -610,7 +610,6 @@ const FIELD_LABELS: Record<string, string> = {
   entity: "الجهة",
   pan6: "بادئة البطاقة (BIN)",
   transactionCurrencyAmount: "المبلغ بعملة المعاملة",
-  transactionCurrencyAmount: "المبلغ بعملة المعاملة",
   interchangeFee: "رسوم الشبكة",
   totalTax: "إجمالي الضرائب",
   paidFiat: "المدفوع بالعملة الورقية",
