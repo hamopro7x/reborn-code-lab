@@ -577,24 +577,60 @@ export function CardTransactionsTab() {
                 ))}
               </ol>
 
-              <dl className="rounded-xl bg-muted/40 p-4 text-sm">
-                {[
-                  ["الحالة", statusAr(detail.status)],
-                  ["الوقت", dateLine(detail.occurredAt)],
-                  ["النوع", isRefund(detail) ? "مبلغ مسترد" : "شراء بالبطاقة"],
-                  ["اسم التاجر", detail.merchant || "—"],
-                  ["العملة", detail.currency || "USD"],
-                  ["المبلغ", money(detail.amount)],
-                  ["آخر 4 أرقام", detail.last4 || "••••"],
-                  ["نوع البطاقة", cardKindLabel(detail.cardKind) || "—"],
-                  ["رقم المعاملة", detail.id],
-                ].map(([k, v]) => (
-                  <div key={k} className="flex items-start justify-between gap-4 py-1.5">
-                    <dt className="text-muted-foreground">{k}</dt>
-                    <dd className="break-all text-right font-medium">{v}</dd>
-                  </div>
-                ))}
-              </dl>
+              <section className="rounded-xl bg-muted/40 p-4 text-sm">
+                <h4 className="mb-2 text-sm font-bold">تفصيل العملة والرسوم</h4>
+                <dl>
+                  {[
+                    ["مبلغ المعاملة", `${detail.currency || "USD"} ${money(detail.amount)}`],
+                    ["مبلغ التسوية", detail.settleAmount ? `${detail.currency || "USD"} ${detail.settleAmount}` : "—"],
+                    ["النقاط المكتسبة", detail.points || "—"],
+                    ["Payment ID", detail.paymentId || "—"],
+                    ["Transaction ID", detail.id],
+                    ["تاريخ التسوية", detail.settlementDate || "—"],
+                  ].map(([k, v]) => (
+                    <div key={k} className="flex items-start justify-between gap-4 py-1.5">
+                      <dt className="text-muted-foreground">{k}</dt>
+                      <dd className="break-all text-right font-medium">{v}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+
+              <section className="rounded-xl bg-muted/40 p-4 text-sm">
+                <h4 className="mb-2 text-sm font-bold">تفاصيل التاجر</h4>
+                <dl>
+                  {[
+                    ["وصف التاجر", detail.merchant || "—"],
+                    ["فئة التاجر (MCC)", detail.mccDesc || detail.mcc ? `${detail.mccDesc || "—"}${detail.mcc ? ` (${detail.mcc})` : ""}` : "—"],
+                    ["الموقع", detail.location || "—"],
+                    ["البريد الإلكتروني للتواصل", detail.merchantEmail || "—"],
+                    ["الموقع الإلكتروني للتواصل", detail.merchantWebsite || "—"],
+                  ].map(([k, v]) => (
+                    <div key={k} className="flex items-start justify-between gap-4 py-1.5">
+                      <dt className="text-muted-foreground">{k}</dt>
+                      <dd className="break-all text-right font-medium">{v}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+
+              <section className="rounded-xl bg-muted/40 p-4 text-sm">
+                <h4 className="mb-2 text-sm font-bold">بيانات البطاقة</h4>
+                <dl>
+                  {[
+                    ["الحالة", statusAr(detail.status)],
+                    ["الوقت", dateLine(detail.occurredAt)],
+                    ["النوع", isRefund(detail) ? "مبلغ مسترد" : "شراء بالبطاقة"],
+                    ["آخر 4 أرقام", detail.last4 || "••••"],
+                    ["نوع البطاقة", cardKindLabel(detail.cardKind) || "—"],
+                  ].map(([k, v]) => (
+                    <div key={k} className="flex items-start justify-between gap-4 py-1.5">
+                      <dt className="text-muted-foreground">{k}</dt>
+                      <dd className="break-all text-right font-medium">{v}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
             </div>
           )}
         </DialogContent>
