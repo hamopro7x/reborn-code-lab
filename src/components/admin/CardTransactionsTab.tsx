@@ -229,6 +229,14 @@ export function CardTransactionsTab() {
   const [page, setPage] = useState(1);
   const [openId, setOpenId] = useState<string | null>(null);
   const [showCard, setShowCard] = useState(false);
+  const fetchCards = useServerFn(getBybitCards);
+  const { data: cardsData, isLoading: cardsLoading } = useQuery({
+    queryKey: ["bybit-cards"],
+    queryFn: () => fetchCards(),
+    enabled: showCard,
+    retry: false,
+  });
+
 
 
   const perPage = 50;
