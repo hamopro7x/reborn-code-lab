@@ -4,7 +4,7 @@
 // إصدارات وسيطة بالترتيب.
 export const AGENT_RELEASE = {
   version: "3.1.22",
-  notes: "--notes",
+  notes: "تحسين جودة البث: صورة أوضح وحركة أنعم مع معدل بت أعلى وسقف دقة 1440p.",
   url: "https://mag-pro1.com/api/public/agent-download.exe",
   storageBucket: "site-assets",
   storagePath: "releases/MagProConnect-Setup-3.1.22.exe",
