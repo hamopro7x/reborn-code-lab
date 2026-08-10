@@ -177,6 +177,8 @@ export function CardTransactionsTab() {
   const [section, setSection] = useState<"transactions" | "onchain" | "internal">("transactions");
   const [page, setPage] = useState(1);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [showCard, setShowCard] = useState(false);
+
 
   const perPage = 50;
 
@@ -307,6 +309,11 @@ export function CardTransactionsTab() {
   const cashbackRate = platformRate ?? derivedRate;
   const spendForRate = rewards?.monthlySpend ?? monthlySpend;
   const cashbackEarned = cashbackRate == null ? null : (spendForRate * cashbackRate) / 100;
+  // بيانات بطاقتي — من أحدث معاملة تحمل بيانات البطاقة
+  const myCard = useMemo(() => {
+    const r = rows.find((x) => x.last4);
+    return { last4: r?.last4 ?? "", brand: r?.brand ?? "", cardKind: r?.cardKind ?? "" };
+  }, [rows]);
 
 
 
@@ -324,14 +331,53 @@ export function CardTransactionsTab() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <div className="hidden sm:flex h-12 w-20 items-center justify-center rounded-lg bg-foreground/90 text-background text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setShowCard((v) => !v)}
+                aria-expanded={showCard}
+                className="flex h-12 w-20 items-center justify-center rounded-lg bg-foreground/90 text-background text-xs font-bold transition-opacity hover:opacity-90"
+              >
                 <CreditCard className="size-4 me-1" /> بطاقة
-              </div>
+              </button>
               <Button size="sm" variant="outline" onClick={() => refetch()} disabled={isFetching}>
                 <RefreshCw className={`size-4 ${isFetching ? "animate-spin" : ""}`} />
               </Button>
             </div>
           </div>
+
+          {showCard && (
+            <div className="mt-4 rounded-2xl border bg-background/70 p-4" dir="rtl">
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-sm font-bold">بطاقتي</div>
+                <CardBrandIcon brand={myCard.brand} last4={myCard.last4} />
+              </div>
+              <div className="mt-3 rounded-xl bg-gradient-to-br from-foreground/90 to-foreground/70 p-4 text-background">
+                <div className="text-[11px] opacity-80">الرصيد المتاح</div>
+                <div className="text-2xl font-black tabular-nums" dir="ltr">
+                  USD {money(spendingPower)}
+                </div>
+                <div className="mt-4 text-lg font-bold tracking-[0.2em]" dir="ltr">
+                  •••• •••• •••• {myCard.last4 || "----"}
+                </div>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <div className="text-muted-foreground">نوع البطاقة</div>
+                  <div className="font-semibold">{cardKindLabel(myCard.cardKind) || "—"}</div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground">آخر 4 أرقام</div>
+                  <div className="font-semibold tabular-nums" dir="ltr">{myCard.last4 || "—"}</div>
+                </div>
+              </div>
+              {!myCard.last4 && (
+                <div className="mt-3 text-[11px] text-muted-foreground">
+                  لا توجد بيانات بطاقة بعد — ستظهر بعد أول معاملة.
+                </div>
+              )}
+            </div>
+          )}
+
 
           <div className="mt-5 grid grid-cols-2 gap-3">
             <div className="rounded-xl border bg-background/60 px-3 py-2">
