@@ -131,6 +131,8 @@ export const getBybitInternalTransfers = createServerFn({ method: "POST" })
             address: String(r.address ?? ""),
             txId: String(r.txID ?? r.txId ?? ""),
             at: Number(r.createdTime ?? r.successAt ?? 0),
+            createdAt: Number(r.createdTime ?? 0),
+            chain: String(r.chain ?? ""),
           }))
         : [];
     if (depRes.status === "rejected") errors.push(String(depRes.reason?.message ?? depRes.reason));
