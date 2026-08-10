@@ -665,18 +665,21 @@ function TxnDetails({ r }: { r: Row }) {
       .join(", ");
   const email = r.merchantEmail || pick("merchEmail", "merchantEmail", "contactEmail");
   const website = r.merchantWebsite || pick("merchWebsite", "merchantWebsite", "merchUrl", "contactWebsite");
-  const fee = pick("fee", "feeAmount", "transactionFee");
+  const fee = pick("fee", "feeAmount", "transactionFee", "totalFees", "foreignTransactionFee");
   const fxRate = pick("fxRate", "exchangeRate", "rate");
-  const cashback = pick("rebateAmount", "cashbackAmount");
+  const cashback = pick("rebateAmount", "cashbackAmount", "bonusAmount");
 
   const usedKeys = new Set([
     "txnId", "paymentId", "payId", "orderNo", "points", "point", "pointsEarned", "rewardPoints", "rewardPoint",
-    "settleAmount", "settlementAmount", "payAmount", "settleCurrency", "settlementCurrency", "payCurrency",
+    "settleAmount", "settlementAmount", "payAmount", "paidAmount", "billAmount", "settleCurrency",
+    "settlementCurrency", "payCurrency", "paidCurrency",
     "settleDate", "settlementDate", "settleTime", "postDate", "mcc", "merchCategoryCode", "merchCategoryDesc",
-    "mccDesc", "merchCity", "merchantCity", "city", "merchCountry", "merchantCountry", "country", "merchEmail",
+    "mccDesc", "mccCode", "merchCity", "merchantCity", "city", "merchCountry", "merchantCountry", "country", "merchEmail",
     "merchantEmail", "contactEmail", "merchWebsite", "merchantWebsite", "merchUrl", "contactWebsite",
-    "fee", "feeAmount", "transactionFee", "fxRate", "exchangeRate", "rate", "rebateAmount", "cashbackAmount",
+    "fee", "feeAmount", "transactionFee", "totalFees", "foreignTransactionFee", "fxRate", "exchangeRate", "rate",
+    "rebateAmount", "cashbackAmount", "bonusAmount",
     "merchName", "status", "tradeStatus", "pan4", "last4", "cardLast4", "cardType", "txnCreate", "createTime",
+    "uid", "side",
   ]);
   const extras = (detailRes?.fields ?? []).filter(
     (f: { key: string; value: string }) => !usedKeys.has(f.key) && !HIDDEN_FIELDS.has(f.key),
