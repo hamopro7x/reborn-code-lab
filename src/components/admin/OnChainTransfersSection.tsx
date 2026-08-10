@@ -25,7 +25,7 @@ export function OnChainTransfersSection() {
 
   const deposits = data?.deposits ?? [];
   const withdrawals = data?.withdrawals ?? [];
-  const rows: { id: string; coin: string; amount: number; chain: string; status: string; at: number }[] =
+  const rows: { id: string; coin: string; amount: number; fee?: number; chain: string; status: string; at: number }[] =
     tab === "deposits" ? deposits : withdrawals;
 
   const tabs: { key: TabKey; label: string; icon: typeof ArrowDownToLine; count: number }[] = [
@@ -76,6 +76,7 @@ export function OnChainTransfersSection() {
                 <th className="px-4 py-3 text-right font-semibold">عملة</th>
                 <th className="px-4 py-3 text-right font-semibold">نوع السلسلة</th>
                 <th className="px-4 py-3 text-right font-semibold">الكمية</th>
+                <th className="px-4 py-3 text-right font-semibold">الرسوم</th>
                 <th className="px-4 py-3 text-right font-semibold">الحالة</th>
                 <th className="px-4 py-3 text-right font-semibold">التاريخ والوقت</th>
               </tr>
@@ -102,6 +103,9 @@ export function OnChainTransfersSection() {
                   >
                     {tab === "deposits" ? "+" : "-"}
                     {num(r.amount)}
+                  </td>
+                  <td className="px-4 py-3 tabular-nums text-muted-foreground">
+                    {num(r.fee ?? 0)} {r.coin || ""}
                   </td>
                   <td className="px-4 py-3">
                     <Badge variant="secondary">{statusAr(r.status)}</Badge>

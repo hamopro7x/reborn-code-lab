@@ -237,6 +237,7 @@ export const getBybitActivity = createServerFn({ method: "POST" })
             id: String(r.txID ?? r.txId ?? `${r.coin}-${r.successAt}`),
             coin: String(r.coin),
             amount: Number(r.amount ?? 0),
+            fee: Number(r.depositFee ?? 0),
             status: String(r.status ?? ""),
             chain: String(r.chain ?? ""),
             at: Number(r.successAt ?? r.createdTime ?? 0),
