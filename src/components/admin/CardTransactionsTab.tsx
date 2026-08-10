@@ -346,37 +346,56 @@ export function CardTransactionsTab() {
           </div>
 
           {showCard && (
-            <div className="mt-4 rounded-2xl border bg-background/70 p-4" dir="rtl">
-              <div className="flex items-center justify-between gap-3">
-                <div className="text-sm font-bold">بطاقتي</div>
-                <CardBrandIcon brand={myCard.brand} last4={myCard.last4} />
-              </div>
-              <div className="mt-3 rounded-xl bg-gradient-to-br from-foreground/90 to-foreground/70 p-4 text-background">
-                <div className="text-[11px] opacity-80">الرصيد المتاح</div>
-                <div className="text-2xl font-black tabular-nums" dir="ltr">
-                  USD {money(spendingPower)}
-                </div>
-                <div className="mt-4 text-lg font-bold tracking-[0.2em]" dir="ltr">
-                  •••• •••• •••• {myCard.last4 || "----"}
-                </div>
-              </div>
-              <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
-                <div>
-                  <div className="text-muted-foreground">نوع البطاقة</div>
-                  <div className="font-semibold">{cardKindLabel(myCard.cardKind) || "—"}</div>
-                </div>
-                <div>
-                  <div className="text-muted-foreground">آخر 4 أرقام</div>
-                  <div className="font-semibold tabular-nums" dir="ltr">{myCard.last4 || "—"}</div>
-                </div>
-              </div>
-              {!myCard.last4 && (
-                <div className="mt-3 text-[11px] text-muted-foreground">
-                  لا توجد بيانات بطاقة بعد — ستظهر بعد أول معاملة.
-                </div>
+            <div className="mt-4 space-y-3" dir="rtl">
+              {(cardsData?.cards ?? []).length === 0 ? (
+                <BybitCardVisual
+                  brand={myCard.brand}
+                  last4={myCard.last4}
+                  kind={myCard.cardKind}
+                  balance={spendingPower}
+                  note={
+                    cardsLoading
+                      ? "جاري جلب بيانات البطاقة..."
+                      : cardsData?.error
+                        ? "تعذر جلب قائمة البطاقات من باي بت — تظهر البيانات المستخرجة من المعاملات."
+                        : ""
+                  }
+                />
+              ) : (
+                (cardsData?.cards ?? []).map((c) => (
+                  <div key={c.id} className="rounded-2xl border bg-background/70 p-4">
+                    <BybitCardVisual
+                      brand={c.brand || myCard.brand}
+                      last4={c.last4 || myCard.last4}
+                      kind={c.kind || myCard.cardKind}
+                      balance={spendingPower}
+                    />
+                    <div className="mt-3 grid grid-cols-2 gap-3 text-xs sm:grid-cols-3">
+                      <Field label="نوع البطاقة" value={cardKindLabel(c.kind) || "—"} />
+                      <Field label="الحالة" value={c.status ? statusAr(c.status) : "—"} />
+                      <Field label="العملة" value={c.currency || "—"} />
+                      <Field label="تاريخ الانتهاء" value={c.expiry || "—"} />
+                      <Field label="حامل البطاقة" value={c.holder || "—"} />
+                      <Field label="آخر 4 أرقام" value={c.last4 || "—"} />
+                    </div>
+                    {c.fields.length > 0 && (
+                      <details className="mt-3">
+                        <summary className="cursor-pointer text-xs text-muted-foreground">
+                          كل بيانات البطاقة من باي بت
+                        </summary>
+                        <div className="mt-2 grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
+                          {c.fields.map((f) => (
+                            <Field key={f.key} label={f.key} value={f.value} />
+                          ))}
+                        </div>
+                      </details>
+                    )}
+                  </div>
+                ))
               )}
             </div>
           )}
+
 
 
           <div className="mt-5 grid grid-cols-2 gap-3">
