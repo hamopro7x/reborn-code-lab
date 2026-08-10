@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -445,8 +445,8 @@ export function CardTransactionsTab() {
                 const failed = st === "فاشلة";
                 const open = openId === r.id;
                 return (
-                  <>
-                  <tr key={r.id} className="border-b border-border/40 hover:bg-muted/20">
+                  <Fragment key={r.id}>
+                  <tr className="border-b border-border/40 hover:bg-muted/20">
                     <td className="px-4 py-4">
                       <button
                         type="button"
@@ -498,13 +498,13 @@ export function CardTransactionsTab() {
                     </td>
                   </tr>
                   {open && (
-                    <tr key={`${r.id}-detail`} className="bg-muted/10">
+                    <tr className="bg-muted/10">
                       <td colSpan={6} className="p-0">
                         <TxnDetails r={r} />
                       </td>
                     </tr>
                   )}
-                  </>
+                  </Fragment>
                 );
               })}
 
