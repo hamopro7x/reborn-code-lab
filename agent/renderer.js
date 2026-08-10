@@ -264,6 +264,8 @@ let stream = null;
 let channel = null;
 let signalTimer = null;
 let signalPolling = false;
+let signalPollingAt = 0;
+
 const outgoingSignals = [];
 // كل مشاهد (جهاز إدارة) له اتصال منفصل بنفس جودة وسرعة البث
 const peers = new Map(); // viewerId -> { pc, statsTimer }
@@ -294,28 +296,35 @@ function send(signal) {
 }
 
 async function exchangeSignals(device) {
-  if (signalPolling) return;
+  // القفل يحمي طلب الشبكة فقط. سابقاً كان يشمل معالجة الإشارات أيضاً، فإذا
+  // تعلّق التقاط الشاشة داخل startPeer لم يُفتح القفل أبداً: يتوقف تبادل
+  // الإشارات كلياً، فيظهر الجهاز «غير متصل» في الموقع مع أن البرنامج شغال.
+  if (signalPolling && Date.now() - signalPollingAt < 15_000) return;
   signalPolling = true;
+  signalPollingAt = Date.now();
   const batch = outgoingSignals.splice(0);
+  let incoming = [];
   try {
-    const incoming = await rpcFetch("agent_exchange_signals", {
+    const res = await rpcFetch("agent_exchange_signals", {
       p_device_id: device.device_id,
       p_secret: device.secret,
       p_outgoing: batch,
     }, 5000);
-    for (const row of Array.isArray(incoming) ? incoming : []) {
-      try {
-        await handleViewerSignal(row.payload);
-      } catch (err) {
-        console.error("[signal] ignored invalid signal:", err);
-      }
-    }
+    incoming = Array.isArray(res) ? res : [];
   } catch {
     outgoingSignals.unshift(...batch);
   } finally {
     signalPolling = false;
   }
+  // المعالجة خارج القفل ودون انتظار: أي تعليق في مصافحة واحدة لا يوقف
+  // القناة، والدورة التالية تكمل طبيعياً.
+  for (const row of incoming) {
+    void Promise.resolve()
+      .then(() => handleViewerSignal(row.payload))
+      .catch((err) => console.error("[signal] ignored invalid signal:", err));
+  }
 }
+
 
 async function handleViewerSignal(s) {
   const viewerId = s.viewer || s.from_id;
@@ -382,12 +391,22 @@ async function handleDoctorCommand(action) {
   }
 }
 
+let capturePending = null;
 async function getStream() {
   if (stream && stream.getTracks().some((t) => t.readyState === "live")) return stream;
-  stream = await captureScreen();
+  // بعض أجهزة ويندوز يتعلّق فيها desktopCapturer/getUserMedia بلا نهاية بعد
+  // السكون أو تغيير الشاشة. مهلة صريحة تمنع تجمّد المصافحة إلى الأبد.
+  if (!capturePending) {
+    capturePending = Promise.race([
+      captureScreen(),
+      new Promise((_r, reject) => setTimeout(() => reject(new Error("capture timeout")), 12_000)),
+    ]).finally(() => { capturePending = null; });
+  }
+  stream = await capturePending;
   watchCapture(stream);
   return stream;
 }
+
 
 let captureRecovery = null;
 function watchCapture(activeStream) {

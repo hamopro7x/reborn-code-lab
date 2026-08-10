@@ -3,11 +3,11 @@
 // دائماً آخر إصدار فقط — البرنامج ينزل هذا الإصدار مباشرة ولا يمر بأي
 // إصدارات وسيطة بالترتيب.
 export const AGENT_RELEASE = {
-  version: "3.1.18",
-  notes: "إصلاح نهائي لتعليق الشاشة السوداء: تجديد آمن بدون إعادة تحميل الخدمة، منع عروض الاتصال العالقة، وتثبيت البث عبر الشبكات الضعيفة وTURN.",
+  version: "3.1.19",
+  notes: "إصلاح توقف قناة الإشارات الذي كان يجعل الجهاز يظهر غير متصل، ومهلة لالتقاط الشاشة المعلّق.",
   url: "https://mag-pro1.com/api/public/agent-download.exe",
   storageBucket: "site-assets",
-  storagePath: "releases/MagProConnect-Setup-3.1.18.exe",
-  size: 110524228,
-  sha256: "21c55b9d9202ad0dd3c4c6ec21bab58e3864ed63ccc0a382874154d19919158d",
+  storagePath: "releases/MagProConnect-Setup-3.1.19.exe",
+  size: 110524617,
+  sha256: "1019f37dccf054a2e32e3799317d5bb5824576cc237ae72e882ec33f0712c5ed",
 } as const;
