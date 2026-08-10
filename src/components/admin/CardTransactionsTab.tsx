@@ -444,15 +444,18 @@ export function CardTransactionsTab() {
                 const refund = isRefund(r);
                 const st = statusAr(r.status);
                 const failed = st === "فاشلة";
+                const open = openId === r.id;
                 return (
+                  <>
                   <tr key={r.id} className="border-b border-border/40 hover:bg-muted/20">
                     <td className="px-4 py-4">
                       <button
                         type="button"
-                        onClick={() => setDetail(r)}
-                        className="font-semibold text-amber-500 hover:underline"
+                        onClick={() => setOpenId(open ? null : r.id)}
+                        className="inline-flex items-center gap-1 font-semibold text-amber-500 hover:underline"
                       >
                         التفاصيل
+                        <ChevronDown className={`size-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
                       </button>
 
                     </td>
@@ -495,8 +498,17 @@ export function CardTransactionsTab() {
                       </div>
                     </td>
                   </tr>
+                  {open && (
+                    <tr key={`${r.id}-detail`} className="bg-muted/10">
+                      <td colSpan={6} className="p-0">
+                        <TxnDetails r={r} />
+                      </td>
+                    </tr>
+                  )}
+                  </>
                 );
               })}
+
             </tbody>
           </table>
         </div>
