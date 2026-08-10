@@ -643,11 +643,43 @@ export function CardTransactionsTab() {
                   <div className="mt-3">
                     <BybitCardVisual brand={c.brand} last4={last4Of(c.number)} kind={c.kind} />
                   </div>
-                  {c.expiry && (
-                    <div className="mt-2 text-right text-[11px] text-muted-foreground" dir="ltr">
-                      {c.expiry}
+                  <div className="mt-3 grid gap-2 text-[11px]">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-muted-foreground">رقم البطاقة</span>
+                      <div className="flex items-center gap-2">
+                        <span dir="ltr" className="font-mono">{c.number}</span>
+                        <button
+                          type="button"
+                          onClick={() => copyText(c.number, "رقم البطاقة")}
+                          className="font-bold text-amber-400 hover:underline"
+                        >
+                          نسخ
+                        </button>
+                      </div>
                     </div>
-                  )}
+                    {c.cvv && (
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-muted-foreground">رمز CVV</span>
+                        <div className="flex items-center gap-2">
+                          <span dir="ltr" className="font-mono">{c.cvv}</span>
+                          <button
+                            type="button"
+                            onClick={() => copyText(c.cvv ?? "", "رمز CVV")}
+                            className="font-bold text-amber-400 hover:underline"
+                          >
+                            نسخ
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    {c.expiry && (
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-muted-foreground">تاريخ الانتهاء</span>
+                        <span dir="ltr" className="font-mono">{c.expiry}</span>
+                      </div>
+                    )}
+                  </div>
+
                 </div>
               ))}
 
