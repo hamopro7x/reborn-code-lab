@@ -489,7 +489,7 @@ export function CardTransactionsTab() {
                           {refund ? "+" : "-"}
                           {r.currency || "USD"} {money(r.amount)}
                         </span>
-                        <CoinIcon coin={r.currency || "USD"} className="size-5" />
+                        
                       </div>
                     </td>
 
