@@ -246,6 +246,16 @@ export function CardTransactionsTab() {
         // CardBrandIcon and fresh live rows carry current platform metadata.
         brand: "",
         cardKind: String(raw.cardKind ?? raw.cardType ?? ""),
+        txnType: String(raw.txnType ?? ""),
+        paymentId: String(raw.paymentId ?? ""),
+        points: String(raw.points ?? ""),
+        settlementDate: String(raw.settlementDate ?? ""),
+        settleAmount: String(raw.settleAmount ?? ""),
+        mcc: String(raw.mcc ?? ""),
+        mccDesc: String(raw.mccDesc ?? ""),
+        location: String(raw.location ?? ""),
+        merchantEmail: String(raw.merchantEmail ?? ""),
+        merchantWebsite: String(raw.merchantWebsite ?? ""),
       };
     });
     // The live row contains Bybit's latest card metadata; keep it when the
