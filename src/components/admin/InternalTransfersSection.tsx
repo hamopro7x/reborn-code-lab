@@ -1,12 +1,12 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getBybitInternalTransfers } from "@/lib/bybit-internal.functions";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CoinIcon } from "@/components/admin/CoinIcon";
 import { dateLineAr, statusAr } from "@/lib/format-ar";
-import { ArrowDownToLine, ArrowUpFromLine, CheckCircle2, Loader2 } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, CheckCircle2, ChevronDown, Loader2 } from "lucide-react";
+
 
 const num = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 6 });
 
