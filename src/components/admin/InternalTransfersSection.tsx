@@ -1,12 +1,12 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getBybitInternalTransfers } from "@/lib/bybit-internal.functions";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CoinIcon } from "@/components/admin/CoinIcon";
 import { dateLineAr, statusAr } from "@/lib/format-ar";
-import { ArrowDownToLine, ArrowUpFromLine, CheckCircle2, Loader2 } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, CheckCircle2, ChevronDown, Loader2 } from "lucide-react";
+
 
 const num = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 6 });
 
@@ -29,7 +29,7 @@ type Row = {
 export function InternalTransfersSection() {
   const fetchTransfers = useServerFn(getBybitInternalTransfers);
   const [tab, setTab] = useState<TabKey>("withdraw");
-  const [detail, setDetail] = useState<Row | null>(null);
+  const [expanded, setExpanded] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["bybit-internal-transfers"],
@@ -100,90 +100,97 @@ export function InternalTransfersSection() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => (
-                <tr key={r.id} className="border-t hover:bg-muted/20">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2 font-semibold">
-                      <CoinIcon coin={r.coin} />
-                      <span>{r.coin || "—"}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 font-semibold text-sky-400">التحويل الداخلي</td>
-                  <td
-                    className={`px-4 py-3 tabular-nums font-semibold ${
-                      tab === "withdraw" ? "text-destructive" : "text-emerald-500"
-                    }`}
-                  >
-                    {tab === "withdraw" ? "-" : "+"}
-                    {num(r.amount)}
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">{r.address || "—"}</td>
-                  <td className="px-4 py-3">
-                    <Badge variant="secondary">{statusAr(r.status)}</Badge>
-                  </td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground tabular-nums">{dateLineAr(r.at)}</td>
-                  <td className="px-4 py-3">
-                    <button
-                      type="button"
-                      onClick={() => setDetail(r as Row)}
-                      className="font-semibold text-amber-500 hover:underline"
-                    >
-                      التفاصيل
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {rows.map((r) => {
+                const open = expanded === r.id;
+                return (
+                  <Fragment key={r.id}>
+                    <tr className="border-t hover:bg-muted/20">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2 font-semibold">
+                          <CoinIcon coin={r.coin} />
+                          <span>{r.coin || "—"}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-sky-400">التحويل الداخلي</td>
+                      <td
+                        className={`px-4 py-3 tabular-nums font-semibold ${
+                          tab === "withdraw" ? "text-destructive" : "text-emerald-500"
+                        }`}
+                      >
+                        {tab === "withdraw" ? "-" : "+"}
+                        {num(r.amount)}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">{r.address || "—"}</td>
+                      <td className="px-4 py-3">
+                        <Badge variant="secondary">{statusAr(r.status)}</Badge>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground tabular-nums">{dateLineAr(r.at)}</td>
+                      <td className="px-4 py-3">
+                        <button
+                          type="button"
+                          onClick={() => setExpanded(open ? null : r.id)}
+                          className="flex items-center gap-1 font-semibold text-amber-500 hover:underline"
+                        >
+                          التفاصيل
+                          <ChevronDown className={`size-4 transition-transform ${open ? "rotate-180" : ""}`} />
+                        </button>
+                      </td>
+                    </tr>
+                    {open && (
+                      <tr className="bg-muted/10">
+                        <td colSpan={7} className="p-0">
+                          <div dir="rtl" className="grid gap-6 px-4 py-5 sm:grid-cols-2 sm:px-8">
+                            <ol className="space-y-3">
+                              {[
+                                {
+                                  label: tab === "withdraw" ? "تم إرسال طلب السحب" : "تم إرسال الإيداع",
+                                  at: r.createdAt,
+                                },
+                                { label: "جاري المعالجة", at: r.createdAt },
+                                {
+                                  label: tab === "withdraw" ? "اكتملت عملية السحب" : "اكتمل الإيداع",
+                                  at: r.at,
+                                },
+                              ].map((s, i) => (
+                                <li key={i} className="flex items-start gap-2">
+                                  <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" />
+                                  <div>
+                                    <div className="text-sm font-semibold">{s.label}</div>
+                                    <div className="text-xs text-muted-foreground">{dateLineAr(s.at)}</div>
+                                  </div>
+                                </li>
+                              ))}
+                            </ol>
+
+                            <dl className="rounded-xl bg-muted/40 p-4 text-sm">
+                              {[
+                                ["الحالة", statusAr(r.status)],
+                                ["الوقت", dateLineAr(r.createdAt || r.at)],
+                                [tab === "withdraw" ? "حساب السحب" : "حساب الإيداع", "التمويل"],
+                                ["عملة", r.coin || "—"],
+                                ["الكمية", num(r.amount)],
+                                ["نوع السلسلة", "التحويل الداخلي"],
+                                ["العنوان", r.address || "—"],
+                                ["Txid", r.txId || "—"],
+                              ].map(([k, v]) => (
+                                <div key={k} className="flex items-start justify-between gap-4 py-1.5">
+                                  <dt className="text-muted-foreground">{k}</dt>
+                                  <dd className="break-all text-right font-medium">{v}</dd>
+                                </div>
+                              ))}
+                            </dl>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>
       )}
 
-      <Dialog open={!!detail} onOpenChange={(o) => !o && setDetail(null)}>
-        <DialogContent dir="rtl" className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-right">
-              {tab === "withdraw" ? "تفاصيل السحب" : "تفاصيل الإيداع"}
-            </DialogTitle>
-          </DialogHeader>
-          {detail && (
-            <div className="space-y-4">
-              <ol className="space-y-3">
-                {[
-                  { label: tab === "withdraw" ? "تم إرسال طلب السحب" : "تم إرسال الإيداع", at: detail.createdAt },
-                  { label: "جاري المعالجة", at: detail.createdAt },
-                  { label: tab === "withdraw" ? "اكتملت عملية السحب" : "اكتمل الإيداع", at: detail.at },
-                ].map((s, i) => (
-                  <li key={i} className="flex items-start gap-2">
-                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" />
-                    <div>
-                      <div className="text-sm font-semibold">{s.label}</div>
-                      <div className="text-xs text-muted-foreground">{dateLineAr(s.at)}</div>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-
-              <dl className="rounded-xl bg-muted/40 p-4 text-sm">
-                {[
-                  ["الحالة", statusAr(detail.status)],
-                  ["الوقت", dateLineAr(detail.createdAt || detail.at)],
-                  [tab === "withdraw" ? "حساب السحب" : "حساب الإيداع", "التمويل"],
-                  ["عملة", detail.coin || "—"],
-                  ["الكمية", num(detail.amount)],
-                  ["نوع السلسلة", "التحويل الداخلي"],
-                  ["العنوان", detail.address || "—"],
-                  ["Txid", detail.txId || "—"],
-                ].map(([k, v]) => (
-                  <div key={k} className="flex items-start justify-between gap-4 py-1.5">
-                    <dt className="text-muted-foreground">{k}</dt>
-                    <dd className="break-all text-right font-medium">{v}</dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
