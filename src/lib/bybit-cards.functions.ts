@@ -126,11 +126,23 @@ export const getBybitCards = createServerFn({ method: "POST" })
         const v = str(value);
         if (v) fields.push({ key, value: v });
       }
+      const rawPan = str(
+        c["maskPan"] ?? c["maskedPan"] ?? c["cardNoMask"] ?? c["panMask"] ?? c["cardNo"] ?? "",
+      );
+      const last4 = str(c["pan4"] ?? c["last4"] ?? c["cardLast4"] ?? rawPan)
+        .replace(/\D/g, "")
+        .slice(-4);
+      const bin = str(c["cardBin"] ?? c["bin"] ?? c["pan6"] ?? "").replace(/\D/g, "");
+      const pan = rawPan.replace(/\D/g, "").length >= 12
+        ? rawPan
+        : bin || last4
+          ? `${(bin.slice(0, 4) || "****").padEnd(4, "*")} ${(bin.slice(4, 6) || "**").padEnd(4, "*")} **** ${last4 || "****"}`
+          : "";
       return {
         id: str(c["cardId"] ?? c["id"] ?? c["cardNo"] ?? i),
-        last4: str(c["pan4"] ?? c["last4"] ?? c["cardLast4"] ?? c["maskPan"] ?? c["maskedPan"] ?? c["cardNo"])
-          .replace(/\D/g, "")
-          .slice(-4),
+        last4,
+        pan,
+
         brand: brandOf(c),
         kind: kindOf(c),
         status: str(c["status"] ?? c["cardStatus"] ?? ""),
