@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { getBybitActivity } from "@/lib/bybit.functions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, RefreshCw, ArrowDownToLine, ArrowUpFromLine, Wallet, AlertTriangle } from "lucide-react";
+import { Loader2, RefreshCw, ArrowDownToLine, ArrowUpFromLine, AlertTriangle } from "lucide-react";
 
 type Coin = { coin: string; balance: number; usdValue: number };
 
@@ -30,7 +30,6 @@ export function BybitTab() {
     );
   }
 
-  const totalUsd = (data?.balances ?? []).reduce((s: number, c: Coin) => s + c.usdValue, 0);
   const depTotal = (data?.deposits ?? []).length;
   const wdTotal = (data?.withdrawals ?? []).length;
 
