@@ -598,18 +598,19 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
 
 
 
-    // Bounded requests only: track transactions created after the local
-    // monitoring start time and never scan historical pages.
+    // السجل دائم: نجلب أوسع نافذة يسمح بها Bybit (٢٩ يوم) ولا نستبعد أي معاملة
+    // بسبب وقت بدء المتابعة، عشان الأرشيف يفضل كامل ومحصلة الإنفاق متنقصش.
     // Bybit accepts slightly different parameter shapes for this endpoint
     // depending on account region/version, so try known-valid shapes in order
     // and stop at the first one the API accepts (avoids param_illegal loops).
-    const begin = Math.max(trackingStart, endTime - 29 * 24 * 60 * 60 * 1000);
+    const begin = endTime - 29 * 24 * 60 * 60 * 1000;
     const shapes = (type: string): Record<string, string | number>[] => [
       { type, page: 1, limit: 100, createBeginTime: String(begin), createEndTime: String(endTime) },
       { type, page: "1", limit: "100" },
       { type },
       { type, page: 1, limit: 100, beginTime: String(begin), endTime: String(endTime) },
     ];
+
 
     for (const type of cardQueryTypes) {
       let lastError = "";
