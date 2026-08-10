@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { getBybitActivity } from "@/lib/bybit.functions";
 import { Badge } from "@/components/ui/badge";
 import { CoinIcon, ChainIcon } from "@/components/admin/CoinIcon";
-import { dateLineAr } from "@/lib/format-ar";
+import { dateLineAr, statusAr } from "@/lib/format-ar";
 import { ArrowDownToLine, ArrowUpFromLine, Layers } from "lucide-react";
 
 const num = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 6 });

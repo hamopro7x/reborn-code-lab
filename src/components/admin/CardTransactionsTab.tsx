@@ -7,7 +7,7 @@ import { OnChainTransfersSection } from "@/components/admin/OnChainTransfersSect
 import { InternalTransfersSection } from "@/components/admin/InternalTransfersSection";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { dateLineAr } from "@/lib/format-ar";
+import { dateLineAr, statusAr } from "@/lib/format-ar";
 
 import { RefreshCw, CreditCard, AlertTriangle, CheckCircle2 } from "lucide-react";
 

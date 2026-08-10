@@ -5,7 +5,7 @@ import { getBybitInternalTransfers } from "@/lib/bybit-internal.functions";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CoinIcon, ChainIcon } from "@/components/admin/CoinIcon";
-import { dateLineAr } from "@/lib/format-ar";
+import { dateLineAr, statusAr } from "@/lib/format-ar";
 import { ArrowDownToLine, ArrowUpFromLine, CheckCircle2, Loader2 } from "lucide-react";
 
 const num = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 6 });
