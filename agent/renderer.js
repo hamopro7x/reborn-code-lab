@@ -265,6 +265,13 @@ let channel = null;
 let signalTimer = null;
 let signalPolling = false;
 let signalPollingAt = 0;
+// نافذة «التبادل السريع»: أثناء المصافحة أو وجود إشارات معلّقة نستعلم كل ~150ms
+// بدل ~1s، فتقل مدة الاتصال وتأخير الإشارة بشكل ملموس، ثم نعود لدورة هادئة.
+let signalBurstUntil = 0;
+function bumpSignalBurst(ms = 8_000) {
+  signalBurstUntil = Math.max(signalBurstUntil, Date.now() + ms);
+}
+
 
 const outgoingSignals = [];
 // كل مشاهد (جهاز إدارة) له اتصال منفصل بنفس جودة وسرعة البث
