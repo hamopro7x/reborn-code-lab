@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { getBybitInternalTransfers } from "@/lib/bybit-internal.functions";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { CoinIcon } from "@/components/admin/CoinIcon";
+import { CoinIcon, ChainIcon } from "@/components/admin/CoinIcon";
 import { dateLineAr } from "@/lib/format-ar";
 import { ArrowDownToLine, ArrowUpFromLine, CheckCircle2, Loader2 } from "lucide-react";
 
@@ -115,7 +115,12 @@ export function InternalTransfersSection() {
                       <span>{r.coin || "—"}</span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 font-semibold text-sky-400">التحويل الداخلي</td>
+                  <td className="px-4 py-3 font-semibold text-sky-400">
+                    <div className="flex items-center gap-2">
+                      <ChainIcon chain={r.coin || ""} />
+                      <span>التحويل الداخلي</span>
+                    </div>
+                  </td>
                   <td
                     className={`px-4 py-3 tabular-nums font-semibold ${
                       tab === "withdraw" ? "text-destructive" : "text-emerald-500"
