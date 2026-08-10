@@ -309,7 +309,7 @@ export function CardTransactionsTab() {
             </div>
           </div>
 
-          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="mt-5 grid grid-cols-2 gap-3">
             <div className="rounded-xl border bg-background/60 px-3 py-2">
               <div className="text-[11px] text-muted-foreground">الإنفاق الشهري</div>
               <div className="text-lg font-bold tabular-nums">${money(spendForRate)}</div>
@@ -318,30 +318,14 @@ export function CardTransactionsTab() {
               </div>
             </div>
             <div className="rounded-xl border bg-background/60 px-3 py-2">
-              <div className="text-[11px] text-muted-foreground">
-                نسبة الاسترداد{rewards?.tier ? ` · ${rewards.tier}` : ""}
+              <div className="text-[11px] text-muted-foreground">الإنفاق اليومي</div>
+              <div className="text-lg font-bold tabular-nums">${money(dailySpend)}</div>
+              <div className="text-[10px] text-muted-foreground">
+                {rows.length === 0 ? "يبدأ العد من أول معاملة جديدة" : "اليوم · المشتريات"}
               </div>
-              <div className="text-lg font-bold tabular-nums">
-                {cashbackRate == null ? "—" : `${cashbackRate.toFixed(2)}%`}
-              </div>
-              <div className="text-[10px] text-muted-foreground tabular-nums">
-                {cashbackEarned != null
-                  ? `≈ $${money(cashbackEarned)} استرداد`
-                  : platformRate == null
-                    ? "باي بت لا تتيح Pay Rewards عبر الـ API"
-                    : "تلقائي · باي بت"}
-              </div>
-            </div>
-
-            <div className="rounded-xl border bg-background/60 px-3 py-2">
-              <div className="text-[11px] text-muted-foreground">المعاملات</div>
-              <div className="text-lg font-bold tabular-nums">{rows.length}</div>
-            </div>
-            <div className="rounded-xl border bg-background/60 px-3 py-2">
-              <div className="text-[11px] text-muted-foreground">العملة</div>
-              <div className="text-lg font-bold">USD</div>
             </div>
           </div>
+
         </div>
       </div>
 
