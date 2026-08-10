@@ -7,7 +7,9 @@ export type ManualCard = {
   kind: "virtual" | "physical";
   number: string;
   expiry: string;
+  cvv?: string;
 };
+
 
 const KEY = "manual_cards";
 

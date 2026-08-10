@@ -214,7 +214,18 @@ function BybitCardVisual({
   );
 }
 
+const copyText = async (value: string, label: string) => {
+  if (!value.trim()) return;
+  try {
+    await navigator.clipboard.writeText(value.trim());
+    toast.success(`تم نسخ ${label}`);
+  } catch {
+    toast.error("تعذر النسخ");
+  }
+};
+
 /** نافذة إضافة كرت جديد */
+
 function AddCardDialog({ onAdd }: { onAdd: (card: ManualCard) => Promise<void> }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -222,11 +233,22 @@ function AddCardDialog({ onAdd }: { onAdd: (card: ManualCard) => Promise<void> }
   const [kind, setKind] = useState<"virtual" | "physical">("virtual");
   const [number, setNumber] = useState("");
   const [expiry, setExpiry] = useState("");
+  const [cvv, setCvv] = useState("");
   const [saving, setSaving] = useState(false);
+
+  const copy = async (value: string, label: string) => {
+    if (!value.trim()) return;
+    try {
+      await navigator.clipboard.writeText(value.trim());
+      toast.success(`تم نسخ ${label}`);
+    } catch {
+      toast.error("تعذر النسخ");
+    }
+  };
 
   const submit = async () => {
     if (!name.trim() || !number.replace(/\D/g, "")) {
-      toast.error("اكتب اسم البطاقة ورقمها");
+      toast.error("اكتب اسم صاحب البطاقة ورقمها");
       return;
     }
     setSaving(true);
@@ -238,12 +260,14 @@ function AddCardDialog({ onAdd }: { onAdd: (card: ManualCard) => Promise<void> }
         kind,
         number: number.trim(),
         expiry: expiry.trim(),
+        cvv: cvv.trim(),
       });
       toast.success("تم إضافة الكرت");
       setOpen(false);
       setName("");
       setNumber("");
       setExpiry("");
+      setCvv("");
     } catch {
       toast.error("تعذر حفظ الكرت");
     } finally {
@@ -268,11 +292,20 @@ function AddCardDialog({ onAdd }: { onAdd: (card: ManualCard) => Promise<void> }
         </DialogHeader>
         <div className="grid gap-3">
           <div className="grid gap-1.5">
-            <Label htmlFor="mc-name">اسم البطاقة</Label>
-            <Input id="mc-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="مثال: بطاقة الإعلانات" />
+            <Label htmlFor="mc-name">اسم صاحب البطاقة</Label>
+            <Input id="mc-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="مثال: أحمد محمد" />
           </div>
           <div className="grid gap-1.5">
-            <Label htmlFor="mc-number">رقم البطاقة</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="mc-number">رقم البطاقة</Label>
+              <button
+                type="button"
+                onClick={() => copy(number, "رقم البطاقة")}
+                className="text-[11px] font-bold text-amber-400 hover:underline"
+              >
+                نسخ
+              </button>
+            </div>
             <Input
               id="mc-number"
               dir="ltr"
@@ -287,23 +320,46 @@ function AddCardDialog({ onAdd }: { onAdd: (card: ManualCard) => Promise<void> }
               <Input id="mc-expiry" dir="ltr" value={expiry} onChange={(e) => setExpiry(e.target.value)} placeholder="MM/YY" />
             </div>
             <div className="grid gap-1.5">
-              <Label>النوع</Label>
-              <div className="flex gap-2">
-                {(["virtual", "physical"] as const).map((k) => (
-                  <button
-                    key={k}
-                    type="button"
-                    onClick={() => setKind(k)}
-                    className={`flex-1 rounded-lg border px-2 py-2 text-xs font-bold ${
-                      kind === k ? "border-amber-400 text-amber-400" : "text-muted-foreground"
-                    }`}
-                  >
-                    {k === "virtual" ? "افتراضية" : "فعلية"}
-                  </button>
-                ))}
+              <div className="flex items-center justify-between">
+                <Label htmlFor="mc-cvv">رمز CVV</Label>
+                <button
+                  type="button"
+                  onClick={() => copy(cvv, "رمز CVV")}
+                  className="text-[11px] font-bold text-amber-400 hover:underline"
+                >
+                  نسخ
+                </button>
               </div>
+              <Input
+                id="mc-cvv"
+                dir="ltr"
+                inputMode="numeric"
+                maxLength={4}
+                value={cvv}
+                onChange={(e) => setCvv(e.target.value.replace(/\D/g, ""))}
+                placeholder="123"
+              />
             </div>
           </div>
+          <div className="grid gap-1.5">
+            <Label>النوع</Label>
+            <div className="flex gap-2">
+              {(["virtual", "physical"] as const).map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setKind(k)}
+                  className={`flex-1 rounded-lg border px-2 py-2 text-xs font-bold ${
+                    kind === k ? "border-amber-400 text-amber-400" : "text-muted-foreground"
+                  }`}
+                >
+                  {k === "virtual" ? "افتراضية" : "فعلية"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+
           <div className="grid gap-1.5">
             <Label>الأيقونة</Label>
             <div className="flex gap-2">
@@ -598,11 +654,43 @@ export function CardTransactionsTab() {
                   <div className="mt-3">
                     <BybitCardVisual brand={c.brand} last4={last4Of(c.number)} kind={c.kind} />
                   </div>
-                  {c.expiry && (
-                    <div className="mt-2 text-right text-[11px] text-muted-foreground" dir="ltr">
-                      {c.expiry}
+                  <div className="mt-3 grid gap-2 text-[11px]">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-muted-foreground">رقم البطاقة</span>
+                      <div className="flex items-center gap-2">
+                        <span dir="ltr" className="font-mono">{c.number}</span>
+                        <button
+                          type="button"
+                          onClick={() => copyText(c.number, "رقم البطاقة")}
+                          className="font-bold text-amber-400 hover:underline"
+                        >
+                          نسخ
+                        </button>
+                      </div>
                     </div>
-                  )}
+                    {c.cvv && (
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-muted-foreground">رمز CVV</span>
+                        <div className="flex items-center gap-2">
+                          <span dir="ltr" className="font-mono">{c.cvv}</span>
+                          <button
+                            type="button"
+                            onClick={() => copyText(c.cvv ?? "", "رمز CVV")}
+                            className="font-bold text-amber-400 hover:underline"
+                          >
+                            نسخ
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    {c.expiry && (
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-muted-foreground">تاريخ الانتهاء</span>
+                        <span dir="ltr" className="font-mono">{c.expiry}</span>
+                      </div>
+                    )}
+                  </div>
+
                 </div>
               ))}
 
