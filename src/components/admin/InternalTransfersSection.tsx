@@ -138,6 +138,54 @@ export function InternalTransfersSection() {
           </table>
         </div>
       )}
+
+      <Dialog open={!!detail} onOpenChange={(o) => !o && setDetail(null)}>
+        <DialogContent dir="rtl" className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-right">
+              {tab === "withdraw" ? "تفاصيل السحب" : "تفاصيل الإيداع"}
+            </DialogTitle>
+          </DialogHeader>
+          {detail && (
+            <div className="space-y-4">
+              <ol className="space-y-3">
+                {[
+                  { label: tab === "withdraw" ? "تم إرسال طلب السحب" : "تم إرسال الإيداع", at: detail.createdAt },
+                  { label: "جاري المعالجة", at: detail.createdAt },
+                  { label: tab === "withdraw" ? "اكتملت عملية السحب" : "اكتمل الإيداع", at: detail.at },
+                ].map((s, i) => (
+                  <li key={i} className="flex items-start gap-2">
+                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" />
+                    <div>
+                      <div className="text-sm font-semibold">{s.label}</div>
+                      <div className="text-xs text-muted-foreground">{when(s.at)}</div>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+
+              <dl className="rounded-xl bg-muted/40 p-4 text-sm">
+                {[
+                  ["الحالة", statusLabel(detail.status)],
+                  ["الوقت", when(detail.createdAt || detail.at)],
+                  [tab === "withdraw" ? "حساب السحب" : "حساب الإيداع", "التمويل"],
+                  ["عملة", detail.coin || "—"],
+                  ["الكمية", num(detail.amount)],
+                  ["رسوم المعاملات", num(detail.fee)],
+                  ["نوع السلسلة", "التحويل الداخلي"],
+                  ["العنوان", detail.address || "—"],
+                  ["Txid", detail.txId || "—"],
+                ].map(([k, v]) => (
+                  <div key={k} className="flex items-start justify-between gap-4 py-1.5">
+                    <dt className="text-muted-foreground">{k}</dt>
+                    <dd className="break-all text-right font-medium">{v}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
