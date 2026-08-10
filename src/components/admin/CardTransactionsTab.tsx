@@ -166,6 +166,57 @@ function CardBrandIcon({ last4, brand }: { last4?: string; brand?: string }) {
 const cardKindLabel = (kind?: string) =>
   kind === "virtual" ? "افتراضية" : kind === "physical" ? "فعلية" : "";
 
+/** بطاقة باي بت بنفس شكل صفحة إدارة البطاقات */
+function BybitCardVisual({
+  brand,
+  last4,
+  kind,
+  balance,
+  note,
+}: {
+  brand?: string;
+  last4?: string;
+  kind?: string;
+  balance: number;
+  note?: string;
+}) {
+  return (
+    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-800 via-slate-900 to-black p-5 text-white shadow-lg">
+      <div className="flex items-start justify-between">
+        <div>
+          {kind && (
+            <div className="text-[11px] font-medium text-white/70">
+              {kind === "virtual" ? "Virtual" : "Physical"}
+            </div>
+          )}
+          <div className="text-xl font-black tracking-tight">
+            BYB<span className="text-amber-400">I</span>T
+          </div>
+        </div>
+        <div className="text-[11px] font-semibold text-white/70">prepaid</div>
+      </div>
+
+      <div className="mt-8 flex items-end justify-between gap-3">
+        <div>
+          <div className="text-[11px] text-white/70">الرصيد المتاح</div>
+          <div className="text-2xl font-black tabular-nums" dir="ltr">
+            USD {money(balance)}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="rounded-full bg-white/10 px-3 py-1 text-sm font-bold tabular-nums" dir="ltr">
+            {last4 || "----"}****
+          </div>
+          <CardBrandIcon brand={brand} last4={last4 ?? ""} />
+        </div>
+      </div>
+      {note && <div className="mt-3 text-[11px] text-white/60">{note}</div>}
+    </div>
+  );
+}
+
+
+
 
 
 
