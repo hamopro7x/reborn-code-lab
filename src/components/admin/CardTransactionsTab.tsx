@@ -309,6 +309,11 @@ export function CardTransactionsTab() {
   const cashbackRate = platformRate ?? derivedRate;
   const spendForRate = rewards?.monthlySpend ?? monthlySpend;
   const cashbackEarned = cashbackRate == null ? null : (spendForRate * cashbackRate) / 100;
+  // بيانات بطاقتي — من أحدث معاملة تحمل بيانات البطاقة
+  const myCard = useMemo(() => {
+    const r = rows.find((x) => x.last4);
+    return { last4: r?.last4 ?? "", brand: r?.brand ?? "", cardKind: r?.cardKind ?? "" };
+  }, [rows]);
 
 
 
