@@ -8,7 +8,7 @@ import { InternalTransfersSection } from "@/components/admin/InternalTransfersSe
 import { Button } from "@/components/ui/button";
 import { dateLineAr, statusAr } from "@/lib/format-ar";
 
-import { RefreshCw, CreditCard, AlertTriangle, CheckCircle2, ChevronDown } from "lucide-react";
+import { RefreshCw, CreditCard, AlertTriangle, ChevronDown } from "lucide-react";
 
 type Row = {
   id: string;
