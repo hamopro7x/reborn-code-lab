@@ -3,12 +3,12 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getBybitInternalTransfers } from "@/lib/bybit-internal.functions";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { CoinIcon } from "@/components/admin/CoinIcon";
+import { dateLineAr } from "@/lib/format-ar";
 import { ArrowDownToLine, ArrowUpFromLine, CheckCircle2, Loader2 } from "lucide-react";
 
 const num = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 6 });
-const when = (ms: number) => (ms ? new Date(ms).toLocaleString("ar-EG") : "—");
 
 const statusLabel = (s: string) => {
   const v = s.toLowerCase();
@@ -31,7 +31,6 @@ type Row = {
   createdAt: number;
   chain: string;
 };
-
 
 /** السحب والتحويل الداخلي — سجل حساب التمويل في باي بت */
 export function InternalTransfersSection() {
@@ -95,43 +94,50 @@ export function InternalTransfersSection() {
         <p className="p-4 text-sm text-muted-foreground">لا توجد عمليات تحويل داخلي في هذه الفترة.</p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/40 text-xs text-muted-foreground">
+          <table className="w-full min-w-[860px] border-collapse text-sm [&_th]:border [&_th]:border-border/60 [&_td]:border [&_td]:border-border/40">
+            <thead className="bg-muted/30 text-[11px] uppercase tracking-wide text-muted-foreground">
               <tr>
-                <th className="px-3 py-2 text-right font-medium">عملة</th>
-                <th className="px-3 py-2 text-right font-medium">نوع السلسلة</th>
-                <th className="px-3 py-2 text-right font-medium">الكمية</th>
-                {tab === "withdraw" && <th className="px-3 py-2 text-right font-medium">رسوم المعاملات</th>}
-                <th className="px-3 py-2 text-right font-medium">العنوان</th>
-                <th className="px-3 py-2 text-right font-medium">التفاصيل</th>
-                <th className="px-3 py-2 text-right font-medium">الحالة</th>
-                <th className="px-3 py-2 text-right font-medium">التاريخ والوقت</th>
+                <th className="px-4 py-3 text-right font-semibold">عملة</th>
+                <th className="px-4 py-3 text-right font-semibold">نوع السلسلة</th>
+                <th className="px-4 py-3 text-right font-semibold">الكمية</th>
+                <th className="px-4 py-3 text-right font-semibold">العنوان</th>
+                <th className="px-4 py-3 text-right font-semibold">الحالة</th>
+                <th className="px-4 py-3 text-right font-semibold">التاريخ والوقت</th>
+                <th className="px-4 py-3 text-right font-semibold">التفاصيل</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.id} className="border-t">
-                  <td className="px-3 py-2 font-semibold">{r.coin}</td>
-                  <td className="px-3 py-2 text-primary">التحويل الداخلي</td>
+                <tr key={r.id} className="border-t hover:bg-muted/20">
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2 font-semibold">
+                      <CoinIcon coin={r.coin} />
+                      <span>{r.coin || "—"}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 font-semibold text-sky-400">التحويل الداخلي</td>
                   <td
-                    className={`px-3 py-2 tabular-nums font-semibold ${
+                    className={`px-4 py-3 tabular-nums font-semibold ${
                       tab === "withdraw" ? "text-destructive" : "text-emerald-500"
                     }`}
                   >
                     {tab === "withdraw" ? "-" : "+"}
                     {num(r.amount)}
                   </td>
-                  {tab === "withdraw" && <td className="px-3 py-2 tabular-nums">{num(r.fee)}</td>}
-                  <td className="px-3 py-2 text-muted-foreground">{r.address || "—"}</td>
-                  <td className="px-3 py-2">
-                    <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setDetail(r as Row)}>
-                      التفاصيل
-                    </Button>
-                  </td>
-                  <td className="px-3 py-2">
+                  <td className="px-4 py-3 text-muted-foreground">{r.address || "—"}</td>
+                  <td className="px-4 py-3">
                     <Badge variant="secondary">{statusLabel(r.status)}</Badge>
                   </td>
-                  <td className="px-3 py-2 text-xs text-muted-foreground">{when(r.at)}</td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground tabular-nums">{dateLineAr(r.at)}</td>
+                  <td className="px-4 py-3">
+                    <button
+                      type="button"
+                      onClick={() => setDetail(r as Row)}
+                      className="font-semibold text-amber-500 hover:underline"
+                    >
+                      التفاصيل
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -158,7 +164,7 @@ export function InternalTransfersSection() {
                     <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" />
                     <div>
                       <div className="text-sm font-semibold">{s.label}</div>
-                      <div className="text-xs text-muted-foreground">{when(s.at)}</div>
+                      <div className="text-xs text-muted-foreground">{dateLineAr(s.at)}</div>
                     </div>
                   </li>
                 ))}
@@ -167,11 +173,10 @@ export function InternalTransfersSection() {
               <dl className="rounded-xl bg-muted/40 p-4 text-sm">
                 {[
                   ["الحالة", statusLabel(detail.status)],
-                  ["الوقت", when(detail.createdAt || detail.at)],
+                  ["الوقت", dateLineAr(detail.createdAt || detail.at)],
                   [tab === "withdraw" ? "حساب السحب" : "حساب الإيداع", "التمويل"],
                   ["عملة", detail.coin || "—"],
                   ["الكمية", num(detail.amount)],
-                  ["رسوم المعاملات", num(detail.fee)],
                   ["نوع السلسلة", "التحويل الداخلي"],
                   ["العنوان", detail.address || "—"],
                   ["Txid", detail.txId || "—"],

@@ -6,8 +6,11 @@ import { getBybitActivity, getBybitCardRewards, getBybitCardTransactions } from 
 import { OnChainTransfersSection } from "@/components/admin/OnChainTransfersSection";
 import { InternalTransfersSection } from "@/components/admin/InternalTransfersSection";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { CoinIcon } from "@/components/admin/CoinIcon";
+import { dateLineAr } from "@/lib/format-ar";
 
-import { RefreshCw, CreditCard, AlertTriangle } from "lucide-react";
+import { RefreshCw, CreditCard, AlertTriangle, CheckCircle2 } from "lucide-react";
 
 type Row = {
   id: string;
@@ -24,22 +27,8 @@ type Row = {
 const money = (n: number) =>
   Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-const weekdayAr = (ms: number) =>
-  new Date(ms).toLocaleDateString("ar-EG", { weekday: "long" });
+const dateLine = (ms: number) => dateLineAr(ms);
 
-const dateLine = (ms: number) => {
-  if (!ms) return "\u2014";
-  const d = new Date(ms);
-  const day = weekdayAr(ms);
-  const date = d.toLocaleDateString("en-GB", { year: "numeric", month: "2-digit", day: "2-digit" });
-  const time = d.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: true,
-  });
-  return `[ ${day} - ${date} - ${time} ]`;
-};
 
 const isRefund = (r: Row) => r.amount > 0 || /refund|reversal|cashback/i.test(r.status + r.merchant);
 
@@ -183,6 +172,8 @@ export function CardTransactionsTab() {
   const [tab, setTab] = useState<"all" | "purchase_ok" | "purchase_failed" | "refund">("all");
   const [section, setSection] = useState<"transactions" | "onchain" | "internal">("transactions");
   const [page, setPage] = useState(1);
+  const [detail, setDetail] = useState<Row | null>(null);
+
   const perPage = 50;
 
   const { data: rewards } = useQuery({
@@ -455,7 +446,14 @@ export function CardTransactionsTab() {
                 return (
                   <tr key={r.id} className="border-b border-border/40 hover:bg-muted/20">
                     <td className="px-4 py-4">
-                      <button className="font-medium text-amber-500 hover:underline">التفاصيل</button>
+                      <button
+                        type="button"
+                        onClick={() => setDetail(r)}
+                        className="font-semibold text-amber-500 hover:underline"
+                      >
+                        التفاصيل
+                      </button>
+
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-2">
@@ -482,13 +480,19 @@ export function CardTransactionsTab() {
                       {st}
                     </td>
                     <td
-                      className={`px-4 py-4 text-end font-semibold tabular-nums ${
+                      className={`px-4 py-4 font-semibold tabular-nums ${
                         failed ? "text-muted-foreground" : refund ? "text-emerald-500" : "text-destructive"
                       }`}
                     >
-                      {refund ? "+" : "-"}
-                      {r.currency || "USD"} {money(r.amount)}
+                      <div className="flex items-center justify-end gap-2">
+                        <span>
+                          {refund ? "+" : "-"}
+                          {r.currency || "USD"} {money(r.amount)}
+                        </span>
+                        <CoinIcon coin={r.currency || "USD"} className="size-5" />
+                      </div>
                     </td>
+
                     <td className="px-4 py-4">
                       <div className="flex items-center justify-end gap-2 font-medium">
                         <span>{r.merchant || "شراء بالبطاقة"}</span>
@@ -538,6 +542,72 @@ export function CardTransactionsTab() {
           </div>
         </div>
       </div>
+
+      <Dialog open={!!detail} onOpenChange={(o) => !o && setDetail(null)}>
+        <DialogContent dir="rtl" className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-right">تفاصيل المعاملة</DialogTitle>
+          </DialogHeader>
+          {detail && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 rounded-xl bg-muted/40 p-3">
+                <MerchantIcon name={detail.merchant || "Card"} />
+                <div className="flex-1">
+                  <div className="text-sm font-bold">{detail.merchant || "شراء بالبطاقة"}</div>
+                  <div className="text-xs text-muted-foreground">{statusLabel(detail.status)}</div>
+                </div>
+                <div
+                  className={`text-lg font-black tabular-nums ${
+                    isRefund(detail) ? "text-emerald-500" : "text-destructive"
+                  }`}
+                >
+                  {isRefund(detail) ? "+" : "-"}
+                  {detail.currency || "USD"} {money(detail.amount)}
+                </div>
+              </div>
+
+              <ol className="space-y-3">
+                {[
+                  { label: "تم إرسال المعاملة", at: detail.occurredAt },
+                  { label: "جاري المعالجة", at: detail.occurredAt },
+                  {
+                    label: statusLabel(detail.status) === "فاشلة" ? "فشلت المعاملة" : "اكتملت المعاملة",
+                    at: detail.occurredAt,
+                  },
+                ].map((s, i) => (
+                  <li key={i} className="flex items-start gap-2">
+                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" />
+                    <div>
+                      <div className="text-sm font-semibold">{s.label}</div>
+                      <div className="text-xs text-muted-foreground">{dateLine(s.at)}</div>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+
+              <dl className="rounded-xl bg-muted/40 p-4 text-sm">
+                {[
+                  ["الحالة", statusLabel(detail.status)],
+                  ["الوقت", dateLine(detail.occurredAt)],
+                  ["النوع", isRefund(detail) ? "مبلغ مسترد" : "شراء بالبطاقة"],
+                  ["اسم التاجر", detail.merchant || "—"],
+                  ["العملة", detail.currency || "USD"],
+                  ["المبلغ", money(detail.amount)],
+                  ["آخر 4 أرقام", detail.last4 || "••••"],
+                  ["نوع البطاقة", cardKindLabel(detail.cardKind) || "—"],
+                  ["رقم المعاملة", detail.id],
+                ].map(([k, v]) => (
+                  <div key={k} className="flex items-start justify-between gap-4 py-1.5">
+                    <dt className="text-muted-foreground">{k}</dt>
+                    <dd className="break-all text-right font-medium">{v}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
+
   );
 }

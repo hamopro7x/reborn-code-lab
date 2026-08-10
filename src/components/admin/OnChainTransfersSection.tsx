@@ -3,10 +3,11 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getBybitActivity } from "@/lib/bybit.functions";
 import { Badge } from "@/components/ui/badge";
+import { CoinIcon } from "@/components/admin/CoinIcon";
+import { dateLineAr } from "@/lib/format-ar";
 import { ArrowDownToLine, ArrowUpFromLine, Layers } from "lucide-react";
 
 const num = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 6 });
-const when = (ms: number) => (ms ? new Date(ms).toLocaleString("ar-EG") : "—");
 
 type TabKey = "deposits" | "withdrawals";
 
@@ -24,6 +25,8 @@ export function OnChainTransfersSection() {
 
   const deposits = data?.deposits ?? [];
   const withdrawals = data?.withdrawals ?? [];
+  const rows: { id: string; coin: string; amount: number; chain: string; status: string; at: number }[] =
+    tab === "deposits" ? deposits : withdrawals;
 
   const tabs: { key: TabKey; label: string; icon: typeof ArrowDownToLine; count: number }[] = [
     { key: "deposits", label: "الاستلام", icon: ArrowDownToLine, count: deposits.length },
@@ -61,49 +64,50 @@ export function OnChainTransfersSection() {
         </nav>
       </div>
 
-      <div className="p-4">
-        {tab === "deposits" ? (
-          deposits.length === 0 ? (
-            <p className="text-sm text-muted-foreground">لا توجد عمليات استلام في هذه الفترة.</p>
-          ) : (
-            <div className="space-y-2">
-              {deposits.map((d) => (
-                <div
-                  key={d.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm"
-                >
-                  <span className="font-semibold text-emerald-500 tabular-nums">
-                    +{num(d.amount)} {d.coin}
-                  </span>
-                  <span className="text-muted-foreground">{d.chain}</span>
-                  <Badge variant="secondary">{d.status}</Badge>
-                  <span className="text-xs text-muted-foreground">{when(d.at)}</span>
-                </div>
+      {rows.length === 0 ? (
+        <p className="p-4 text-sm text-muted-foreground">
+          {tab === "deposits" ? "لا توجد عمليات استلام في هذه الفترة." : "لا توجد عمليات تحويل في هذه الفترة."}
+        </p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[760px] border-collapse text-sm [&_th]:border [&_th]:border-border/60 [&_td]:border [&_td]:border-border/40">
+            <thead className="bg-muted/30 text-[11px] uppercase tracking-wide text-muted-foreground">
+              <tr>
+                <th className="px-4 py-3 text-right font-semibold">عملة</th>
+                <th className="px-4 py-3 text-right font-semibold">نوع السلسلة</th>
+                <th className="px-4 py-3 text-right font-semibold">الكمية</th>
+                <th className="px-4 py-3 text-right font-semibold">الحالة</th>
+                <th className="px-4 py-3 text-right font-semibold">التاريخ والوقت</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.id} className="border-t hover:bg-muted/20">
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2 font-semibold">
+                      <CoinIcon coin={r.coin} />
+                      <span>{r.coin || "—"}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 font-semibold text-sky-400">{r.chain || "—"}</td>
+                  <td
+                    className={`px-4 py-3 tabular-nums font-semibold ${
+                      tab === "deposits" ? "text-emerald-500" : "text-destructive"
+                    }`}
+                  >
+                    {tab === "deposits" ? "+" : "-"}
+                    {num(r.amount)}
+                  </td>
+                  <td className="px-4 py-3">
+                    <Badge variant="secondary">{r.status}</Badge>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground tabular-nums">{dateLineAr(r.at)}</td>
+                </tr>
               ))}
-            </div>
-          )
-        ) : withdrawals.length === 0 ? (
-          <p className="text-sm text-muted-foreground">لا توجد عمليات تحويل في هذه الفترة.</p>
-        ) : (
-          <div className="space-y-2">
-            {withdrawals.map((w) => (
-              <div
-                key={w.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm"
-              >
-                <span className="font-semibold text-destructive tabular-nums">
-                  -{num(w.amount)} {w.coin}
-                </span>
-                <span className="text-muted-foreground">رسوم: {num(w.fee)}</span>
-                <span className="text-muted-foreground">{w.chain}</span>
-                <Badge variant="secondary">{w.status}</Badge>
-                <span className="text-xs text-muted-foreground">{when(w.at)}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
-
