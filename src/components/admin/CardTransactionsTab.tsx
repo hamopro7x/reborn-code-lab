@@ -298,12 +298,6 @@ export function CardTransactionsTab() {
               <div className="mt-1 text-4xl font-black tracking-tight tabular-nums">
                 USD {money(totalBalanceUsd)}
               </div>
-              <div className="mt-1 text-[11px] text-muted-foreground tabular-nums">
-                الرصيد المتاح في البطاقة: USD {money(spendingPower)}
-              </div>
-              <div className="mt-2 inline-flex rounded-lg bg-muted/70 px-3 py-1 text-[11px] text-muted-foreground tabular-nums">
-                Fiat: USD {money(balance?.fiatUsd ?? 0)} + Crypto: USD {money(balance?.cryptoUsd ?? 0)}
-              </div>
             </div>
             <div className="flex items-center gap-2">
               <div className="hidden sm:flex h-12 w-20 items-center justify-center rounded-lg bg-foreground/90 text-background text-xs font-bold">
