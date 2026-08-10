@@ -214,10 +214,124 @@ function BybitCardVisual({
   );
 }
 
+/** نافذة إضافة كرت جديد */
+function AddCardDialog({ onAdd }: { onAdd: (card: ManualCard) => Promise<void> }) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [brand, setBrand] = useState<"visa" | "mastercard">("visa");
+  const [kind, setKind] = useState<"virtual" | "physical">("virtual");
+  const [number, setNumber] = useState("");
+  const [expiry, setExpiry] = useState("");
+  const [saving, setSaving] = useState(false);
 
+  const submit = async () => {
+    if (!name.trim() || !number.replace(/\D/g, "")) {
+      toast.error("اكتب اسم البطاقة ورقمها");
+      return;
+    }
+    setSaving(true);
+    try {
+      await onAdd({
+        id: crypto.randomUUID(),
+        name: name.trim(),
+        brand,
+        kind,
+        number: number.trim(),
+        expiry: expiry.trim(),
+      });
+      toast.success("تم إضافة الكرت");
+      setOpen(false);
+      setName("");
+      setNumber("");
+      setExpiry("");
+    } catch {
+      toast.error("تعذر حفظ الكرت");
+    } finally {
+      setSaving(false);
+    }
+  };
 
-
-
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <button
+          type="button"
+          className="flex min-h-[220px] flex-col items-center justify-center gap-2 rounded-2xl border border-dashed bg-background/40 p-4 text-sm text-muted-foreground transition-colors hover:border-amber-400 hover:text-amber-400"
+        >
+          <Plus className="size-6" />
+          إضافة كرت جديد
+        </button>
+      </DialogTrigger>
+      <DialogContent dir="rtl" className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>كرت جديد</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-3">
+          <div className="grid gap-1.5">
+            <Label htmlFor="mc-name">اسم البطاقة</Label>
+            <Input id="mc-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="مثال: بطاقة الإعلانات" />
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="mc-number">رقم البطاقة</Label>
+            <Input
+              id="mc-number"
+              dir="ltr"
+              value={number}
+              onChange={(e) => setNumber(e.target.value)}
+              placeholder="5596 1234 5678 4938"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-1.5">
+              <Label htmlFor="mc-expiry">تاريخ الانتهاء</Label>
+              <Input id="mc-expiry" dir="ltr" value={expiry} onChange={(e) => setExpiry(e.target.value)} placeholder="MM/YY" />
+            </div>
+            <div className="grid gap-1.5">
+              <Label>النوع</Label>
+              <div className="flex gap-2">
+                {(["virtual", "physical"] as const).map((k) => (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => setKind(k)}
+                    className={`flex-1 rounded-lg border px-2 py-2 text-xs font-bold ${
+                      kind === k ? "border-amber-400 text-amber-400" : "text-muted-foreground"
+                    }`}
+                  >
+                    {k === "virtual" ? "افتراضية" : "فعلية"}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="grid gap-1.5">
+            <Label>الأيقونة</Label>
+            <div className="flex gap-2">
+              {(["visa", "mastercard"] as const).map((b) => (
+                <button
+                  key={b}
+                  type="button"
+                  onClick={() => setBrand(b)}
+                  className={`flex flex-1 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold ${
+                    brand === b ? "border-amber-400 text-amber-400" : "text-muted-foreground"
+                  }`}
+                >
+                  <CardBrandIcon brand={b} last4="" />
+                  {b === "visa" ? "Visa" : "Mastercard"}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button onClick={submit} disabled={saving}>
+            {saving ? "جاري الحفظ..." : "إضافة"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 
 export function CardTransactionsTab() {
