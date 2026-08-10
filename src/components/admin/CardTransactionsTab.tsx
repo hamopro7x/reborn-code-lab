@@ -6,10 +6,9 @@ import { getBybitActivity, getBybitCardRewards, getBybitCardTransactions } from 
 import { OnChainTransfersSection } from "@/components/admin/OnChainTransfersSection";
 import { InternalTransfersSection } from "@/components/admin/InternalTransfersSection";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { dateLineAr, statusAr } from "@/lib/format-ar";
 
-import { RefreshCw, CreditCard, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { RefreshCw, CreditCard, AlertTriangle, CheckCircle2, ChevronDown } from "lucide-react";
 
 type Row = {
   id: string;
@@ -552,5 +551,67 @@ export function CardTransactionsTab() {
 
     </div>
 
+  );
+}
+
+function Field({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+  return (
+    <div className="space-y-1">
+      <div className="text-[11px] text-muted-foreground">{label}</div>
+      <div className={`break-all text-xs font-semibold tabular-nums ${accent ? "text-amber-500" : ""}`}>
+        {value || "—"}
+      </div>
+    </div>
+  );
+}
+
+function TxnDetails({ r }: { r: Row }) {
+  const refund = isRefund(r);
+  const st = statusAr(r.status);
+  const cur = r.currency || "USD";
+  const settle =
+    r.settleAmount && Number(r.settleAmount) > 0
+      ? `${r.settleCurrency || cur} ${Number(r.settleAmount).toLocaleString("en-US", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })}`
+      : "";
+  const mcc = r.mccDesc ? `${r.mccDesc}${r.mcc ? ` (${r.mcc})` : ""}` : r.mcc || "";
+  return (
+    <div dir="rtl" className="space-y-5 border-t border-border/40 px-4 py-5 sm:px-8">
+      <section>
+        <h4 className="mb-3 text-sm font-bold">تفصيل العملة والرسوم</h4>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <Field label="مبلغ المعاملة" value={`${refund ? "+" : "-"}${cur} ${money(r.amount)}`} />
+          <Field label="مبلغ التسوية" value={settle} />
+          <Field label="النقاط المكتسبة" value={r.points || ""} accent />
+          <Field label="Payment ID" value={r.paymentId || ""} />
+          <Field label="Transaction ID" value={r.id} />
+          <Field label="تاريخ التسوية" value={r.settlementDate || ""} />
+        </div>
+      </section>
+
+      <section className="border-t border-border/40 pt-4">
+        <h4 className="mb-3 text-sm font-bold">تفاصيل التاجر</h4>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <Field label="وصف التاجر" value={r.merchant || ""} />
+          <Field label="فئة التاجر (MCC)" value={mcc} />
+          <Field label="الموقع" value={r.location || ""} />
+          <Field label="البريد الإلكتروني للتواصل" value={r.merchantEmail || ""} />
+          <Field label="الموقع الإلكتروني للتواصل" value={r.merchantWebsite || ""} />
+        </div>
+      </section>
+
+      <section className="border-t border-border/40 pt-4">
+        <h4 className="mb-3 text-sm font-bold">بيانات البطاقة</h4>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <Field label="الحالة" value={st} />
+          <Field label="الوقت" value={dateLine(r.occurredAt)} />
+          <Field label="النوع" value={refund ? "مبلغ مسترد" : "شراء بالبطاقة"} />
+          <Field label="آخر 4 أرقام" value={r.last4 || "••••"} />
+          <Field label="نوع البطاقة" value={cardKindLabel(r.cardKind) || ""} />
+        </div>
+      </section>
+    </div>
   );
 }
