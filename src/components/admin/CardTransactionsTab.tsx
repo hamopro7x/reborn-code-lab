@@ -172,6 +172,8 @@ export function CardTransactionsTab() {
   const [tab, setTab] = useState<"all" | "purchase_ok" | "purchase_failed" | "refund">("all");
   const [section, setSection] = useState<"transactions" | "onchain" | "internal">("transactions");
   const [page, setPage] = useState(1);
+  const [detail, setDetail] = useState<Row | null>(null);
+
   const perPage = 50;
 
   const { data: rewards } = useQuery({
@@ -444,7 +446,14 @@ export function CardTransactionsTab() {
                 return (
                   <tr key={r.id} className="border-b border-border/40 hover:bg-muted/20">
                     <td className="px-4 py-4">
-                      <button className="font-medium text-amber-500 hover:underline">التفاصيل</button>
+                      <button
+                        type="button"
+                        onClick={() => setDetail(r)}
+                        className="font-semibold text-amber-500 hover:underline"
+                      >
+                        التفاصيل
+                      </button>
+
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-2">
