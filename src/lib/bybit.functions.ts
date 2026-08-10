@@ -558,6 +558,16 @@ export const getBybitCardTransactions = createServerFn({ method: "POST" })
         last4,
         brand: brandOf(r, last4),
         cardKind: kindOf(r, last4),
+        txnType: String(r.txnType ?? r.transactionType ?? r.bizType ?? (type === "SIDE_QUERY_REFUND" ? "Refund" : "Purchase")),
+        paymentId: String(r.paymentId ?? r.orderNo ?? r.payId ?? ""),
+        points: String(r.points ?? r.pointsEarned ?? r.rewardPoints ?? ""),
+        settlementDate: String(r.settleDate ?? r.settlementDate ?? r.settleTime ?? ""),
+        settleAmount: String(r.settleAmount ?? r.paidAmount ?? ""),
+        mcc: String(r.mcc ?? r.merchCategoryCode ?? ""),
+        mccDesc: String(r.merchCategoryDesc ?? r.mccDesc ?? ""),
+        location: String(r.merchCountry ?? r.merchantCountry ?? r.country ?? r.merchCity ?? ""),
+        merchantEmail: String(r.merchEmail ?? r.merchantEmail ?? ""),
+        merchantWebsite: String(r.merchWebsite ?? r.merchantWebsite ?? r.merchUrl ?? ""),
       };
     };
 
