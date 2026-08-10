@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getBybitActivity } from "@/lib/bybit.functions";
 import { Badge } from "@/components/ui/badge";
-import { CoinIcon } from "@/components/admin/CoinIcon";
+import { CoinIcon, ChainIcon } from "@/components/admin/CoinIcon";
 import { dateLineAr } from "@/lib/format-ar";
 import { ArrowDownToLine, ArrowUpFromLine, Layers } from "lucide-react";
 
@@ -89,7 +89,12 @@ export function OnChainTransfersSection() {
                       <span>{r.coin || "—"}</span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 font-semibold text-sky-400">{r.chain || "—"}</td>
+                  <td className="px-4 py-3 font-semibold text-sky-400">
+                    <div className="flex items-center gap-2">
+                      <ChainIcon chain={r.chain || ""} />
+                      <span>{r.chain || "—"}</span>
+                    </div>
+                  </td>
                   <td
                     className={`px-4 py-3 tabular-nums font-semibold ${
                       tab === "deposits" ? "text-emerald-500" : "text-destructive"
