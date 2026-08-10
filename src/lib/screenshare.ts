@@ -121,7 +121,9 @@ export function openSignaling(
         .eq("device_id", deviceId)
         .eq("sender", "host")
         .order("created_at", { ascending: false })
-        .limit(30);
+        // نستوعب رشقات offer/answer/ICE على الشبكات الضعيفة؛ حد 30 كان قد
+        // يُسقط الإجابة من نافذة الاستعلام قبل وصولها ويترك الشاشة معلقة.
+        .limit(150);
       if (opts?.viewerId) q = q.eq("viewer_id", opts.viewerId);
       const { data } = await q;
       for (const row of [...(data ?? [])].reverse()) {
