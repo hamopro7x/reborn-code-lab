@@ -4,6 +4,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { getBybitActivity, getBybitCardRewards, getBybitCardTransactions } from "@/lib/bybit.functions";
 import { getBybitCardTransactionDetail } from "@/lib/bybit-card-detail.functions";
+import { getBybitCards, type BybitCard } from "@/lib/bybit-cards.functions";
+
 import { OnChainTransfersSection } from "@/components/admin/OnChainTransfersSection";
 import { InternalTransfersSection } from "@/components/admin/InternalTransfersSection";
 import { Button } from "@/components/ui/button";
@@ -166,6 +168,57 @@ function CardBrandIcon({ last4, brand }: { last4?: string; brand?: string }) {
 const cardKindLabel = (kind?: string) =>
   kind === "virtual" ? "افتراضية" : kind === "physical" ? "فعلية" : "";
 
+/** بطاقة باي بت بنفس شكل صفحة إدارة البطاقات */
+function BybitCardVisual({
+  brand,
+  last4,
+  kind,
+  balance,
+  note,
+}: {
+  brand?: string;
+  last4?: string;
+  kind?: string;
+  balance: number;
+  note?: string;
+}) {
+  return (
+    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-800 via-slate-900 to-black p-5 text-white shadow-lg">
+      <div className="flex items-start justify-between">
+        <div>
+          {kind && (
+            <div className="text-[11px] font-medium text-white/70">
+              {kind === "virtual" ? "Virtual" : "Physical"}
+            </div>
+          )}
+          <div className="text-xl font-black tracking-tight">
+            BYB<span className="text-amber-400">I</span>T
+          </div>
+        </div>
+        <div className="text-[11px] font-semibold text-white/70">prepaid</div>
+      </div>
+
+      <div className="mt-8 flex items-end justify-between gap-3">
+        <div>
+          <div className="text-[11px] text-white/70">الرصيد المتاح</div>
+          <div className="text-2xl font-black tabular-nums" dir="ltr">
+            USD {money(balance)}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="rounded-full bg-white/10 px-3 py-1 text-sm font-bold tabular-nums" dir="ltr">
+            {last4 || "----"}****
+          </div>
+          <CardBrandIcon brand={brand} last4={last4 ?? ""} />
+        </div>
+      </div>
+      {note && <div className="mt-3 text-[11px] text-white/60">{note}</div>}
+    </div>
+  );
+}
+
+
+
 
 
 
@@ -178,6 +231,14 @@ export function CardTransactionsTab() {
   const [page, setPage] = useState(1);
   const [openId, setOpenId] = useState<string | null>(null);
   const [showCard, setShowCard] = useState(false);
+  const fetchCards = useServerFn(getBybitCards);
+  const { data: cardsData, isLoading: cardsLoading } = useQuery({
+    queryKey: ["bybit-cards"],
+    queryFn: () => fetchCards(),
+    enabled: showCard,
+    retry: false,
+  });
+
 
 
   const perPage = 50;
@@ -346,37 +407,56 @@ export function CardTransactionsTab() {
           </div>
 
           {showCard && (
-            <div className="mt-4 rounded-2xl border bg-background/70 p-4" dir="rtl">
-              <div className="flex items-center justify-between gap-3">
-                <div className="text-sm font-bold">بطاقتي</div>
-                <CardBrandIcon brand={myCard.brand} last4={myCard.last4} />
-              </div>
-              <div className="mt-3 rounded-xl bg-gradient-to-br from-foreground/90 to-foreground/70 p-4 text-background">
-                <div className="text-[11px] opacity-80">الرصيد المتاح</div>
-                <div className="text-2xl font-black tabular-nums" dir="ltr">
-                  USD {money(spendingPower)}
-                </div>
-                <div className="mt-4 text-lg font-bold tracking-[0.2em]" dir="ltr">
-                  •••• •••• •••• {myCard.last4 || "----"}
-                </div>
-              </div>
-              <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
-                <div>
-                  <div className="text-muted-foreground">نوع البطاقة</div>
-                  <div className="font-semibold">{cardKindLabel(myCard.cardKind) || "—"}</div>
-                </div>
-                <div>
-                  <div className="text-muted-foreground">آخر 4 أرقام</div>
-                  <div className="font-semibold tabular-nums" dir="ltr">{myCard.last4 || "—"}</div>
-                </div>
-              </div>
-              {!myCard.last4 && (
-                <div className="mt-3 text-[11px] text-muted-foreground">
-                  لا توجد بيانات بطاقة بعد — ستظهر بعد أول معاملة.
-                </div>
+            <div className="mt-4 space-y-3" dir="rtl">
+              {(cardsData?.cards ?? []).length === 0 ? (
+                <BybitCardVisual
+                  brand={myCard.brand}
+                  last4={myCard.last4}
+                  kind={myCard.cardKind}
+                  balance={spendingPower}
+                  note={
+                    cardsLoading
+                      ? "جاري جلب بيانات البطاقة..."
+                      : cardsData?.error
+                        ? "تعذر جلب قائمة البطاقات من باي بت — تظهر البيانات المستخرجة من المعاملات."
+                        : ""
+                  }
+                />
+              ) : (
+                ((cardsData?.cards ?? []) as BybitCard[]).map((c) => (
+                  <div key={c.id} className="rounded-2xl border bg-background/70 p-4">
+                    <BybitCardVisual
+                      brand={c.brand || myCard.brand}
+                      last4={c.last4 || myCard.last4}
+                      kind={c.kind || myCard.cardKind}
+                      balance={spendingPower}
+                    />
+                    <div className="mt-3 grid grid-cols-2 gap-3 text-xs sm:grid-cols-3">
+                      <Field label="نوع البطاقة" value={cardKindLabel(c.kind) || "—"} />
+                      <Field label="الحالة" value={c.status ? statusAr(c.status) : "—"} />
+                      <Field label="العملة" value={c.currency || "—"} />
+                      <Field label="تاريخ الانتهاء" value={c.expiry || "—"} />
+                      <Field label="حامل البطاقة" value={c.holder || "—"} />
+                      <Field label="آخر 4 أرقام" value={c.last4 || "—"} />
+                    </div>
+                    {c.fields.length > 0 && (
+                      <details className="mt-3">
+                        <summary className="cursor-pointer text-xs text-muted-foreground">
+                          كل بيانات البطاقة من باي بت
+                        </summary>
+                        <div className="mt-2 grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
+                          {c.fields.map((f) => (
+                            <Field key={f.key} label={f.key} value={f.value} />
+                          ))}
+                        </div>
+                      </details>
+                    )}
+                  </div>
+                ))
               )}
             </div>
           )}
+
 
 
           <div className="mt-5 grid grid-cols-2 gap-3">
