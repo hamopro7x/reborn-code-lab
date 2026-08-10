@@ -180,6 +180,7 @@ export function CardTransactionsTab() {
   const fetchRewards = useServerFn(getBybitCardRewards);
   const fetchActivity = useServerFn(getBybitActivity);
   const [tab, setTab] = useState<"all" | "purchase_ok" | "purchase_failed" | "refund">("all");
+  const [section, setSection] = useState<"transactions" | "onchain">("transactions");
   const [page, setPage] = useState(1);
   const perPage = 50;
 
