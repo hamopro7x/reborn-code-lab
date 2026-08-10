@@ -26,6 +26,8 @@ export const getBybitInternalTransfers = createServerFn({ method: "POST" })
       address: string;
       txId: string;
       at: number;
+      createdAt: number;
+      chain: string;
     };
     const empty = { configured: false as const, withdrawals: [] as Row[], deposits: [] as Row[], errors: [] as string[] };
 
