@@ -4,6 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 export type BybitCard = {
   id: string;
   last4: string;
+  pan: string;
   brand: string;
   kind: string;
   status: string;
