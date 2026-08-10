@@ -177,6 +177,8 @@ export function CardTransactionsTab() {
   const [section, setSection] = useState<"transactions" | "onchain" | "internal">("transactions");
   const [page, setPage] = useState(1);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [showCard, setShowCard] = useState(false);
+
 
   const perPage = 50;
 
