@@ -178,6 +178,8 @@ export function CardTransactionsTab() {
   const fetchRewards = useServerFn(getBybitCardRewards);
   const fetchActivity = useServerFn(getBybitActivity);
   const [tab, setTab] = useState<"all" | "purchase_ok" | "purchase_failed" | "refund">("all");
+  const [page, setPage] = useState(1);
+  const perPage = 50;
 
   const { data: rewards } = useQuery({
     queryKey: ["bybit-card-rewards"],
@@ -207,13 +209,20 @@ export function CardTransactionsTab() {
   const { data: stored } = useQuery({
     queryKey: ["card-transactions"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("card_transactions")
-        .select("id, occurred_at, amount, currency_code, merchant, status, card_last4, raw")
-        .order("occurred_at", { ascending: false })
-        .limit(500);
-      if (error) throw error;
-      return data ?? [];
+      // السجل دائم ولا يُحذف — نجلب كل الصفحات على دفعات
+      const all: any[] = [];
+      const chunk = 1000;
+      for (let from = 0; from < 20_000; from += chunk) {
+        const { data, error } = await supabase
+          .from("card_transactions")
+          .select("id, occurred_at, amount, currency_code, merchant, status, card_last4, raw")
+          .order("occurred_at", { ascending: false })
+          .range(from, from + chunk - 1);
+        if (error) throw error;
+        all.push(...(data ?? []));
+        if ((data?.length ?? 0) < chunk) break;
+      }
+      return all;
     },
     refetchInterval: 5_000,
   });
@@ -257,6 +266,10 @@ export function CardTransactionsTab() {
     if (tab === "purchase_failed") return !isRefund(r) && failed;
     return !isRefund(r) && !failed;
   });
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / perPage));
+  const currentPage = Math.min(page, pageCount);
+  const pageRows = filtered.slice((currentPage - 1) * perPage, currentPage * perPage);
 
   // الإنفاق الشهري (الشهر الحالي، المشتريات فقط)
   const monthStart = useMemo(() => {
@@ -366,7 +379,10 @@ export function CardTransactionsTab() {
             ).map(([key, label]) => (
               <button
                 key={key}
-                onClick={() => setTab(key)}
+                onClick={() => {
+                  setTab(key);
+                  setPage(1);
+                }}
                 className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
                   tab === key
                     ? "bg-foreground text-background"
@@ -392,14 +408,14 @@ export function CardTransactionsTab() {
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 && (
+              {pageRows.length === 0 && (
                 <tr>
                   <td colSpan={6} className="p-10 text-center text-sm text-muted-foreground">
                     {isLoading ? "جاري جلب المعاملات من باي بت…" : "لا توجد معاملات"}
                   </td>
                 </tr>
               )}
-              {filtered.map((r) => {
+              {pageRows.map((r) => {
                 const refund = isRefund(r);
                 const st = statusLabel(r.status);
                 const failed = st === "فاشلة";
@@ -451,6 +467,42 @@ export function CardTransactionsTab() {
               })}
             </tbody>
           </table>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t p-3">
+          <div className="text-[11px] text-muted-foreground tabular-nums">
+            إجمالي {filtered.length} معاملة · صفحة {currentPage} من {pageCount} · 50 لكل صفحة
+          </div>
+          <div className="flex flex-wrap items-center gap-1">
+            <Button size="sm" variant="outline" disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)}>
+              السابق
+            </Button>
+            {Array.from({ length: pageCount }, (_, i) => i + 1)
+              .filter((n) => n === 1 || n === pageCount || Math.abs(n - currentPage) <= 2)
+              .map((n, i, arr) => (
+                <span key={n} className="flex items-center gap-1">
+                  {i > 0 && arr[i - 1] !== n - 1 && <span className="px-1 text-muted-foreground">…</span>}
+                  <button
+                    onClick={() => setPage(n)}
+                    className={`min-w-8 rounded-md px-2 py-1 text-xs font-semibold tabular-nums transition ${
+                      n === currentPage
+                        ? "bg-foreground text-background"
+                        : "bg-muted/40 text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {n}
+                  </button>
+                </span>
+              ))}
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={currentPage >= pageCount}
+              onClick={() => setPage(currentPage + 1)}
+            >
+              التالي
+            </Button>
+          </div>
         </div>
       </div>
     </div>
