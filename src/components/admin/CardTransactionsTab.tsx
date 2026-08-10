@@ -678,7 +678,7 @@ function TxnDetails({ r }: { r: Row }) {
     "merchName", "status", "tradeStatus", "pan4", "last4", "cardLast4", "cardType", "txnCreate", "createTime",
   ]);
   const extras = (detailRes?.fields ?? []).filter(
-    (f) => !usedKeys.has(f.key) && !HIDDEN_FIELDS.has(f.key),
+    (f: { key: string; value: string }) => !usedKeys.has(f.key) && !HIDDEN_FIELDS.has(f.key),
   );
 
   return (
@@ -724,7 +724,7 @@ function TxnDetails({ r }: { r: Row }) {
         <section className="border-t border-border/40 pt-4">
           <h4 className="mb-3 text-sm font-bold">بيانات إضافية من باي بت</h4>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            {extras.map((f) => (
+            {extras.map((f: { key: string; value: string }) => (
               <Field key={f.key} label={FIELD_LABELS[f.key] ?? f.key} value={f.value} />
             ))}
           </div>
