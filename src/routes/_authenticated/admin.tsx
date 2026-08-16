@@ -30,7 +30,8 @@ import { getDeviceFingerprint } from "@/lib/device";
 import { ShieldAlert } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { ReportsTab } from "@/components/admin/ReportsTab";
-import { CardTransactionsTab } from "@/components/admin/CardTransactionsTab";
+import { BybitTab, ApiKeyPanel } from "@/components/admin/BybitTab";
+import { RedotPayPanel } from "@/components/admin/RedotPayPanel";
 import { FileBarChart, MonitorPlay, Image as ImageIcon, ChevronUp, ChevronDown, WalletCards } from "lucide-react";
 import { LessonUploader } from "@/components/admin/LessonUploader";
 import { DeviceMonitorGrid } from "@/components/admin/DeviceMonitorGrid";
@@ -39,11 +40,11 @@ import { EmployeeDevices } from "@/components/admin/DeviceMonitorGrid";
 
 type PanelKey =
   | "overview" | "orders" | "products" | "categories" | "customers" | "employees"
-  | "reviews" | "payments" | "currencies" | "timers" | "settings" | "courses" | "devices" | "reports" | "remote" | "cardtx";
+  | "reviews" | "payments" | "currencies" | "timers" | "settings" | "courses" | "devices" | "reports" | "remote" | "cardtx" | "apikey";
 
 const panelKeys: PanelKey[] = [
   "overview", "orders", "products", "categories", "customers", "employees",
-  "reviews", "payments", "currencies", "timers", "settings", "courses", "devices", "reports", "remote", "cardtx",
+  "reviews", "payments", "currencies", "timers", "settings", "courses", "devices", "reports", "remote", "cardtx", "apikey",
 ];
 
 
@@ -154,6 +155,7 @@ function Admin() {
         { key: "remote", label: "الوصول عن بُعد", icon: MonitorPlay, adminOnly: true },
         { key: "payments", label: "طرق الدفع", icon: CreditCard, adminOnly: true },
         { key: "currencies", label: "العملات", icon: Coins, adminOnly: true },
+        { key: "apikey", label: "مفتاح API", icon: KeyRound, adminOnly: true },
         { key: "settings", label: "الإعدادات", icon: Settings2, adminOnly: true },
       ],
     },
@@ -262,7 +264,7 @@ function Admin() {
             {panel === "customers" && canView("customers") && <CustomersTab />}
             {panel === "reviews" && canView("reviews") && <ReviewsTab />}
             {panel === "reports" && canView("reports") && <ReportsTab />}
-            {panel === "cardtx" && canView("cardtx") && <CardTransactionsTab />}
+            {panel === "cardtx" && canView("cardtx") && <BybitTab />}
 
             {panel === "products" && canView("products") && <ProductsTab />}
             {panel === "categories" && canView("categories") && <CategoriesTab />}
