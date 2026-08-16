@@ -32,7 +32,7 @@ import { Progress } from "@/components/ui/progress";
 import { ReportsTab } from "@/components/admin/ReportsTab";
 import { BybitTab, ApiKeyPanel } from "@/components/admin/BybitTab";
 import { RedotPayPanel } from "@/components/admin/RedotPayPanel";
-import { FileBarChart, MonitorPlay, Image as ImageIcon, ChevronUp, ChevronDown, WalletCards } from "lucide-react";
+import { FileBarChart, MonitorPlay, Image as ImageIcon, ChevronUp, ChevronDown, WalletCards, KeyRound } from "lucide-react";
 import { LessonUploader } from "@/components/admin/LessonUploader";
 import { DeviceMonitorGrid } from "@/components/admin/DeviceMonitorGrid";
 import { EmployeeDevices } from "@/components/admin/DeviceMonitorGrid";
@@ -264,7 +264,7 @@ function Admin() {
             {panel === "customers" && canView("customers") && <CustomersTab />}
             {panel === "reviews" && canView("reviews") && <ReviewsTab />}
             {panel === "reports" && canView("reports") && <ReportsTab />}
-            {panel === "cardtx" && canView("cardtx") && <BybitTab />}
+            {panel === "cardtx" && canView("cardtx") && <BybitTab isAdmin={adminOnly} />}
 
             {panel === "products" && canView("products") && <ProductsTab />}
             {panel === "categories" && canView("categories") && <CategoriesTab />}
