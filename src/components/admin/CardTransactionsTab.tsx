@@ -854,24 +854,28 @@ export function CardTransactionsTab() {
                       </div>
                     </td>
 
-                    <td className="px-4 py-4 text-muted-foreground tabular-nums">{dateLine(r.occurredAt)}</td>
-                    <td
-                      className={`px-4 py-4 ${failed ? "text-destructive" : "text-emerald-500"}`}
-                    >
-                      {st}
+                    <td className="px-4 py-4 text-center text-muted-foreground tabular-nums">
+                      {dateLine(r.occurredAt)}
+                    </td>
+                    <td className="px-4 py-4 text-center">
+                      <span
+                        className={`inline-flex rounded-md px-2 py-1 text-xs font-semibold ${
+                          failed ? "bg-destructive/15 text-destructive" : "bg-emerald-500/15 text-emerald-500"
+                        }`}
+                      >
+                        {st}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4 text-center tabular-nums text-muted-foreground">
+                      {/\d+/.exec(r.txnType ?? "")?.[0] ?? "1"}
                     </td>
                     <td
-                      className={`px-4 py-4 font-semibold tabular-nums ${
+                      className={`px-4 py-4 text-center font-semibold tabular-nums ${
                         failed ? "text-muted-foreground" : refund ? "text-emerald-500" : "text-destructive"
                       }`}
                     >
-                      <div className="flex items-center justify-end gap-2">
-                        <span>
-                          {refund ? "+" : "-"}
-                          {r.currency || "USD"} {money(r.amount)}
-                        </span>
-                        
-                      </div>
+                      {refund ? "+" : "-"}
+                      {r.currency || "USD"} {money(r.amount)}
                     </td>
 
                     <td className="px-4 py-4">
@@ -883,7 +887,7 @@ export function CardTransactionsTab() {
                   </tr>
                   {open && (
                     <tr className="bg-muted/10">
-                      <td colSpan={6} className="p-0">
+                      <td colSpan={7} className="p-0">
                         <TxnDetails r={r} />
                       </td>
                     </tr>
