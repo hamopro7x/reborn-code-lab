@@ -194,6 +194,192 @@ export type Database = {
         }
         Relationships: []
       }
+      bybit_account_info: {
+        Row: {
+          account_id: string | null
+          bonus: string | null
+          created_at: string
+          created_by: string | null
+          email: string | null
+          id: string
+          mfa_code: string | null
+          password: string | null
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id?: string | null
+          bonus?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          mfa_code?: string | null
+          password?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string | null
+          bonus?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          mfa_code?: string | null
+          password?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bybit_account_info_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "bybit_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bybit_accounts: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          email: string | null
+          id: string
+          name: string
+          sort_order: number
+          uid: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          sort_order?: number
+          uid?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          sort_order?: number
+          uid?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      bybit_card_txns: {
+        Row: {
+          account_id: string | null
+          amount: number | null
+          created_at: string
+          currency: string | null
+          detail: Json
+          merchant: string | null
+          pan4: string | null
+          status: string | null
+          txn_id: string
+          txn_time: number
+          txn_type: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          amount?: number | null
+          created_at?: string
+          currency?: string | null
+          detail?: Json
+          merchant?: string | null
+          pan4?: string | null
+          status?: string | null
+          txn_id: string
+          txn_time?: number
+          txn_type?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number | null
+          created_at?: string
+          currency?: string | null
+          detail?: Json
+          merchant?: string | null
+          pan4?: string | null
+          status?: string | null
+          txn_id?: string
+          txn_time?: number
+          txn_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bybit_card_txns_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "bybit_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bybit_cards: {
+        Row: {
+          account_id: string | null
+          brand: string
+          created_at: string
+          created_by: string
+          currency: string
+          cvv: string | null
+          expiry: string | null
+          full_number: string | null
+          id: string
+          name: string | null
+          pan4: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          account_id?: string | null
+          brand?: string
+          created_at?: string
+          created_by: string
+          currency?: string
+          cvv?: string | null
+          expiry?: string | null
+          full_number?: string | null
+          id?: string
+          name?: string | null
+          pan4: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string | null
+          brand?: string
+          created_at?: string
+          created_by?: string
+          currency?: string
+          cvv?: string | null
+          expiry?: string | null
+          full_number?: string | null
+          id?: string
+          name?: string | null
+          pan4?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bybit_cards_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "bybit_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       card_transactions: {
         Row: {
           amount: number
@@ -1117,7 +1303,51 @@ export type Database = {
         }
         Returns: boolean
       }
+      bybit_account_get_keys: {
+        Args: { p_account_id: string }
+        Returns: {
+          api_key: string
+          api_secret: string
+        }[]
+      }
+      bybit_account_set_keys: {
+        Args: {
+          p_account_id: string
+          p_by: string
+          p_key: string
+          p_secret: string
+        }
+        Returns: boolean
+      }
       gen_order_code: { Args: never; Returns: string }
+      integration_clear_bybit: { Args: never; Returns: boolean }
+      integration_clear_redotpay: { Args: never; Returns: boolean }
+      integration_get_bybit: {
+        Args: never
+        Returns: {
+          api_key: string
+          api_secret: string
+        }[]
+      }
+      integration_get_redotpay: {
+        Args: never
+        Returns: {
+          api_key: string
+          api_secret: string
+        }[]
+      }
+      integration_set_bybit: {
+        Args: { p_by: string; p_key: string; p_secret: string }
+        Returns: boolean
+      }
+      integration_set_redotpay: {
+        Args: { p_by: string; p_key: string; p_secret: string }
+        Returns: boolean
+      }
+      prune_bybit_card_txns: {
+        Args: { p_delete?: number; p_max?: number }
+        Returns: number
+      }
     }
     Enums: {
       app_role: "admin" | "employee" | "customer"
