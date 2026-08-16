@@ -808,16 +808,17 @@ export function CardTransactionsTab() {
               <tr className="border-y bg-muted/30 text-[11px] uppercase tracking-wide text-muted-foreground">
                 <th className="px-4 py-3 text-start font-semibold">الإجراء</th>
                 <th className="px-4 py-3 text-start font-semibold">آخر 4 أرقام للبطاقة</th>
-                <th className="px-4 py-3 text-start font-semibold">تاريخ ووقت المعاملة</th>
-                <th className="px-4 py-3 text-start font-semibold">الحالة</th>
-                <th className="px-4 py-3 text-end font-semibold">إجمالي المبلغ المصرّح</th>
+                <th className="px-4 py-3 text-center font-semibold">تاريخ ووقت المعاملة</th>
+                <th className="px-4 py-3 text-center font-semibold">الحالة</th>
+                <th className="px-4 py-3 text-center font-semibold">النوع</th>
+                <th className="px-4 py-3 text-center font-semibold">إجمالي المبلغ المخصم</th>
                 <th className="px-4 py-3 text-end font-semibold">اسم التاجر</th>
               </tr>
             </thead>
             <tbody>
               {pageRows.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-10 text-center text-sm text-muted-foreground">
+                  <td colSpan={7} className="p-10 text-center text-sm text-muted-foreground">
                     {isLoading ? "جاري جلب المعاملات من باي بت…" : "لا توجد معاملات"}
                   </td>
                 </tr>
