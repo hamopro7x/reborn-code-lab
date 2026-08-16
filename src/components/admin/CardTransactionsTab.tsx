@@ -734,23 +734,24 @@ export function CardTransactionsTab() {
         </div>
       )}
 
-      {/* Section nav — same style as the storefront nav */}
-      <nav className="flex flex-wrap items-center gap-1" dir="rtl">
+      {/* Section nav — pill tabs (reference layout) */}
+      <nav className="flex flex-wrap items-center justify-end gap-2" dir="rtl">
         {(
           [
             ["transactions", "المعاملات"],
-            ["onchain", "السحب والإيداع"],
-            ["internal", "السحب والتحويل الداخلي"],
+            ["onchain", "السحب والإيداع الخارجي"],
+            ["internal", "السحب والإيداع الداخلي"],
+            ["p2p", "طلبات P2P"],
           ] as const
         ).map(([key, label]) => (
           <button
             key={key}
             type="button"
             onClick={() => setSection(key)}
-            className={`rounded-lg px-4 py-2 text-sm transition-colors ${
+            className={`rounded-full px-5 py-2 text-sm font-semibold transition-colors ${
               section === key
-                ? "bg-primary/20 text-primary"
-                : "text-foreground/80 hover:bg-secondary hover:text-foreground"
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted/40 text-foreground/80 hover:bg-muted hover:text-foreground"
             }`}
           >
             {label}
@@ -760,14 +761,21 @@ export function CardTransactionsTab() {
 
       {section === "onchain" && <OnChainTransfersSection />}
       {section === "internal" && <InternalTransfersSection />}
+      {section === "p2p" && (
+        <div className="rounded-2xl border bg-card overflow-hidden" dir="rtl">
+          <div className="border-b p-4">
+            <h3 className="text-base font-bold">طلبات P2P</h3>
+          </div>
+          <p className="p-10 text-center text-sm text-muted-foreground">لا توجد طلبات P2P.</p>
+        </div>
+      )}
 
 
       {/* Transactions — Bybit table layout */}
 
       <div className={`rounded-2xl border bg-card overflow-hidden ${section === "transactions" ? "" : "hidden"}`}>
         <div className="flex flex-wrap items-center justify-between gap-2 p-4 pb-3">
-          <h3 className="text-base font-bold">المعاملات</h3>
-          <div className="flex gap-1">
+          <div className="flex flex-wrap gap-2">
             {(
               [
                 ["refund", "المبلغ المسترد"],
@@ -782,9 +790,9 @@ export function CardTransactionsTab() {
                   setTab(key);
                   setPage(1);
                 }}
-                className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
                   tab === key
-                    ? "bg-foreground text-background"
+                    ? "bg-primary text-primary-foreground"
                     : "bg-muted/40 text-muted-foreground hover:bg-muted"
                 }`}
               >
