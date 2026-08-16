@@ -32,7 +32,7 @@ import { Progress } from "@/components/ui/progress";
 import { ReportsTab } from "@/components/admin/ReportsTab";
 import { CardTransactionsTab } from "@/components/admin/CardTransactionsTab";
 import { BybitTab } from "@/components/admin/BybitTab";
-import { FileBarChart, MonitorPlay, Image as ImageIcon, ChevronUp, ChevronDown, WalletCards, ArrowDownUp } from "lucide-react";
+import { FileBarChart, MonitorPlay, Image as ImageIcon, ChevronUp, ChevronDown, WalletCards } from "lucide-react";
 import { LessonUploader } from "@/components/admin/LessonUploader";
 import { DeviceMonitorGrid } from "@/components/admin/DeviceMonitorGrid";
 import { EmployeeDevices } from "@/components/admin/DeviceMonitorGrid";
@@ -40,11 +40,11 @@ import { EmployeeDevices } from "@/components/admin/DeviceMonitorGrid";
 
 type PanelKey =
   | "overview" | "orders" | "products" | "categories" | "customers" | "employees"
-  | "reviews" | "payments" | "currencies" | "timers" | "settings" | "courses" | "devices" | "reports" | "remote" | "cardtx" | "bybit";
+  | "reviews" | "payments" | "currencies" | "timers" | "settings" | "courses" | "devices" | "reports" | "remote" | "cardtx";
 
 const panelKeys: PanelKey[] = [
   "overview", "orders", "products", "categories", "customers", "employees",
-  "reviews", "payments", "currencies", "timers", "settings", "courses", "devices", "reports", "remote", "cardtx", "bybit",
+  "reviews", "payments", "currencies", "timers", "settings", "courses", "devices", "reports", "remote", "cardtx",
 ];
 
 
@@ -135,7 +135,6 @@ function Admin() {
         { key: "reviews", label: "المراجعات", icon: Star },
         { key: "reports", label: "التقارير", icon: FileBarChart, adminOnly: true },
         { key: "cardtx", label: "معاملات الفيزا", icon: WalletCards, adminOnly: true },
-        { key: "bybit", label: "الإيداع والسحب", icon: ArrowDownUp, adminOnly: true },
 
       ],
     },
@@ -265,7 +264,6 @@ function Admin() {
             {panel === "reviews" && canView("reviews") && <ReviewsTab />}
             {panel === "reports" && canView("reports") && <ReportsTab />}
             {panel === "cardtx" && canView("cardtx") && <CardTransactionsTab />}
-            {panel === "bybit" && canView("bybit") && <BybitTab />}
 
             {panel === "products" && canView("products") && <ProductsTab />}
             {panel === "categories" && canView("categories") && <CategoriesTab />}
