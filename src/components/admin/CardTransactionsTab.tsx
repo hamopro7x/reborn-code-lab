@@ -395,7 +395,7 @@ export function CardTransactionsTab() {
   const fetchRewards = useServerFn(getBybitCardRewards);
   const fetchActivity = useServerFn(getBybitActivity);
   const [tab, setTab] = useState<"all" | "purchase_ok" | "purchase_failed" | "refund">("all");
-  const [section, setSection] = useState<"transactions" | "onchain" | "internal">("transactions");
+  const [section, setSection] = useState<"transactions" | "onchain" | "internal" | "p2p">("transactions");
   const [page, setPage] = useState(1);
   const [openId, setOpenId] = useState<string | null>(null);
   const [showCard, setShowCard] = useState(false);
@@ -532,18 +532,18 @@ export function CardTransactionsTab() {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1).getTime();
   }, []);
-  const monthlySpend = rows
-    .filter((r) => !isRefund(r) && r.occurredAt >= monthStart)
-    .reduce((s, r) => s + Math.abs(r.amount), 0);
+  const monthlyRows = rows.filter((r) => !isRefund(r) && r.occurredAt >= monthStart);
+  const monthlySpend = monthlyRows.reduce((s, r) => s + Math.abs(r.amount), 0);
+  const monthlyCount = monthlyRows.length;
 
   // الإنفاق اليومي (اليوم فقط، المشتريات فقط)
   const dayStart = useMemo(() => {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
   }, []);
-  const dailySpend = rows
-    .filter((r) => !isRefund(r) && r.occurredAt >= dayStart)
-    .reduce((s, r) => s + Math.abs(r.amount), 0);
+  const dailyRows = rows.filter((r) => !isRefund(r) && r.occurredAt >= dayStart);
+  const dailySpend = dailyRows.reduce((s, r) => s + Math.abs(r.amount), 0);
+  const dailyCount = dailyRows.length;
 
   // نسبة الاستراداد النقدي — تلقائي من المنصة، وإن لم تتوفر تُحسب من المعاملات
   const platformRate = rewards?.rate ?? null;
@@ -704,18 +704,22 @@ export function CardTransactionsTab() {
 
 
           <div className="mt-5 grid grid-cols-2 gap-3">
-            <div className="rounded-xl border bg-background/60 px-3 py-2">
+            <div className="rounded-xl border bg-background/60 px-4 py-3 text-center">
               <div className="text-[11px] text-muted-foreground">الإنفاق الشهري</div>
-              <div className="text-lg font-bold tabular-nums">${money(spendForRate)}</div>
-              <div className="text-[10px] text-muted-foreground">
-                {rows.length === 0 ? "يبدأ العد من أول معاملة جديدة" : "الشهر الحالي · المشتريات"}
+              <div className="text-2xl font-extrabold tabular-nums">${money(spendForRate)}</div>
+              <div className="text-[11px] text-muted-foreground tabular-nums">
+                {rows.length === 0
+                  ? "يبدأ العد من أول معاملة جديدة"
+                  : `الشهر الحالي · المشتريات · ${monthlyCount} معاملة`}
               </div>
             </div>
-            <div className="rounded-xl border bg-background/60 px-3 py-2">
+            <div className="rounded-xl border bg-background/60 px-4 py-3 text-center">
               <div className="text-[11px] text-muted-foreground">الإنفاق اليومي</div>
-              <div className="text-lg font-bold tabular-nums">${money(dailySpend)}</div>
-              <div className="text-[10px] text-muted-foreground">
-                {rows.length === 0 ? "يبدأ العد من أول معاملة جديدة" : "اليوم · المشتريات"}
+              <div className="text-2xl font-extrabold tabular-nums">${money(dailySpend)}</div>
+              <div className="text-[11px] text-muted-foreground tabular-nums">
+                {rows.length === 0
+                  ? "يبدأ العد من أول معاملة جديدة"
+                  : `اليوم · المشتريات · ${dailyCount} معاملة`}
               </div>
             </div>
           </div>
@@ -730,23 +734,24 @@ export function CardTransactionsTab() {
         </div>
       )}
 
-      {/* Section nav — same style as the storefront nav */}
-      <nav className="flex flex-wrap items-center gap-1" dir="rtl">
+      {/* Section nav — pill tabs (reference layout) */}
+      <nav className="flex flex-wrap items-center justify-end gap-2" dir="rtl">
         {(
           [
             ["transactions", "المعاملات"],
-            ["onchain", "السحب والإيداع"],
-            ["internal", "السحب والتحويل الداخلي"],
+            ["onchain", "السحب والإيداع الخارجي"],
+            ["internal", "السحب والإيداع الداخلي"],
+            ["p2p", "طلبات P2P"],
           ] as const
         ).map(([key, label]) => (
           <button
             key={key}
             type="button"
             onClick={() => setSection(key)}
-            className={`rounded-lg px-4 py-2 text-sm transition-colors ${
+            className={`rounded-full px-5 py-2 text-sm font-semibold transition-colors ${
               section === key
-                ? "bg-primary/20 text-primary"
-                : "text-foreground/80 hover:bg-secondary hover:text-foreground"
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted/40 text-foreground/80 hover:bg-muted hover:text-foreground"
             }`}
           >
             {label}
@@ -756,14 +761,21 @@ export function CardTransactionsTab() {
 
       {section === "onchain" && <OnChainTransfersSection />}
       {section === "internal" && <InternalTransfersSection />}
+      {section === "p2p" && (
+        <div className="rounded-2xl border bg-card overflow-hidden" dir="rtl">
+          <div className="border-b p-4">
+            <h3 className="text-base font-bold">طلبات P2P</h3>
+          </div>
+          <p className="p-10 text-center text-sm text-muted-foreground">لا توجد طلبات P2P.</p>
+        </div>
+      )}
 
 
       {/* Transactions — Bybit table layout */}
 
       <div className={`rounded-2xl border bg-card overflow-hidden ${section === "transactions" ? "" : "hidden"}`}>
         <div className="flex flex-wrap items-center justify-between gap-2 p-4 pb-3">
-          <h3 className="text-base font-bold">المعاملات</h3>
-          <div className="flex gap-1">
+          <div className="flex flex-wrap gap-2">
             {(
               [
                 ["refund", "المبلغ المسترد"],
@@ -778,9 +790,9 @@ export function CardTransactionsTab() {
                   setTab(key);
                   setPage(1);
                 }}
-                className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
                   tab === key
-                    ? "bg-foreground text-background"
+                    ? "bg-primary text-primary-foreground"
                     : "bg-muted/40 text-muted-foreground hover:bg-muted"
                 }`}
               >
@@ -796,16 +808,17 @@ export function CardTransactionsTab() {
               <tr className="border-y bg-muted/30 text-[11px] uppercase tracking-wide text-muted-foreground">
                 <th className="px-4 py-3 text-start font-semibold">الإجراء</th>
                 <th className="px-4 py-3 text-start font-semibold">آخر 4 أرقام للبطاقة</th>
-                <th className="px-4 py-3 text-start font-semibold">تاريخ ووقت المعاملة</th>
-                <th className="px-4 py-3 text-start font-semibold">الحالة</th>
-                <th className="px-4 py-3 text-end font-semibold">إجمالي المبلغ المصرّح</th>
+                <th className="px-4 py-3 text-center font-semibold">تاريخ ووقت المعاملة</th>
+                <th className="px-4 py-3 text-center font-semibold">الحالة</th>
+                <th className="px-4 py-3 text-center font-semibold">النوع</th>
+                <th className="px-4 py-3 text-center font-semibold">إجمالي المبلغ المخصم</th>
                 <th className="px-4 py-3 text-end font-semibold">اسم التاجر</th>
               </tr>
             </thead>
             <tbody>
               {pageRows.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-10 text-center text-sm text-muted-foreground">
+                  <td colSpan={7} className="p-10 text-center text-sm text-muted-foreground">
                     {isLoading ? "جاري جلب المعاملات من باي بت…" : "لا توجد معاملات"}
                   </td>
                 </tr>
@@ -841,24 +854,28 @@ export function CardTransactionsTab() {
                       </div>
                     </td>
 
-                    <td className="px-4 py-4 text-muted-foreground tabular-nums">{dateLine(r.occurredAt)}</td>
-                    <td
-                      className={`px-4 py-4 ${failed ? "text-destructive" : "text-emerald-500"}`}
-                    >
-                      {st}
+                    <td className="px-4 py-4 text-center text-muted-foreground tabular-nums">
+                      {dateLine(r.occurredAt)}
+                    </td>
+                    <td className="px-4 py-4 text-center">
+                      <span
+                        className={`inline-flex rounded-md px-2 py-1 text-xs font-semibold ${
+                          failed ? "bg-destructive/15 text-destructive" : "bg-emerald-500/15 text-emerald-500"
+                        }`}
+                      >
+                        {st}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4 text-center tabular-nums text-muted-foreground">
+                      {/\d+/.exec(r.txnType ?? "")?.[0] ?? "1"}
                     </td>
                     <td
-                      className={`px-4 py-4 font-semibold tabular-nums ${
+                      className={`px-4 py-4 text-center font-semibold tabular-nums ${
                         failed ? "text-muted-foreground" : refund ? "text-emerald-500" : "text-destructive"
                       }`}
                     >
-                      <div className="flex items-center justify-end gap-2">
-                        <span>
-                          {refund ? "+" : "-"}
-                          {r.currency || "USD"} {money(r.amount)}
-                        </span>
-                        
-                      </div>
+                      {refund ? "+" : "-"}
+                      {r.currency || "USD"} {money(r.amount)}
                     </td>
 
                     <td className="px-4 py-4">
@@ -870,7 +887,7 @@ export function CardTransactionsTab() {
                   </tr>
                   {open && (
                     <tr className="bg-muted/10">
-                      <td colSpan={6} className="p-0">
+                      <td colSpan={7} className="p-0">
                         <TxnDetails r={r} />
                       </td>
                     </tr>
