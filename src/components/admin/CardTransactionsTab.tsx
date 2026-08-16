@@ -395,7 +395,7 @@ export function CardTransactionsTab() {
   const fetchRewards = useServerFn(getBybitCardRewards);
   const fetchActivity = useServerFn(getBybitActivity);
   const [tab, setTab] = useState<"all" | "purchase_ok" | "purchase_failed" | "refund">("all");
-  const [section, setSection] = useState<"transactions" | "onchain" | "internal">("transactions");
+  const [section, setSection] = useState<"transactions" | "onchain" | "internal" | "p2p">("transactions");
   const [page, setPage] = useState(1);
   const [openId, setOpenId] = useState<string | null>(null);
   const [showCard, setShowCard] = useState(false);
@@ -532,18 +532,18 @@ export function CardTransactionsTab() {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1).getTime();
   }, []);
-  const monthlySpend = rows
-    .filter((r) => !isRefund(r) && r.occurredAt >= monthStart)
-    .reduce((s, r) => s + Math.abs(r.amount), 0);
+  const monthlyRows = rows.filter((r) => !isRefund(r) && r.occurredAt >= monthStart);
+  const monthlySpend = monthlyRows.reduce((s, r) => s + Math.abs(r.amount), 0);
+  const monthlyCount = monthlyRows.length;
 
   // الإنفاق اليومي (اليوم فقط، المشتريات فقط)
   const dayStart = useMemo(() => {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
   }, []);
-  const dailySpend = rows
-    .filter((r) => !isRefund(r) && r.occurredAt >= dayStart)
-    .reduce((s, r) => s + Math.abs(r.amount), 0);
+  const dailyRows = rows.filter((r) => !isRefund(r) && r.occurredAt >= dayStart);
+  const dailySpend = dailyRows.reduce((s, r) => s + Math.abs(r.amount), 0);
+  const dailyCount = dailyRows.length;
 
   // نسبة الاستراداد النقدي — تلقائي من المنصة، وإن لم تتوفر تُحسب من المعاملات
   const platformRate = rewards?.rate ?? null;
@@ -704,18 +704,22 @@ export function CardTransactionsTab() {
 
 
           <div className="mt-5 grid grid-cols-2 gap-3">
-            <div className="rounded-xl border bg-background/60 px-3 py-2">
+            <div className="rounded-xl border bg-background/60 px-4 py-3 text-center">
               <div className="text-[11px] text-muted-foreground">الإنفاق الشهري</div>
-              <div className="text-lg font-bold tabular-nums">${money(spendForRate)}</div>
-              <div className="text-[10px] text-muted-foreground">
-                {rows.length === 0 ? "يبدأ العد من أول معاملة جديدة" : "الشهر الحالي · المشتريات"}
+              <div className="text-2xl font-extrabold tabular-nums">${money(spendForRate)}</div>
+              <div className="text-[11px] text-muted-foreground tabular-nums">
+                {rows.length === 0
+                  ? "يبدأ العد من أول معاملة جديدة"
+                  : `الشهر الحالي · المشتريات · ${monthlyCount} معاملة`}
               </div>
             </div>
-            <div className="rounded-xl border bg-background/60 px-3 py-2">
+            <div className="rounded-xl border bg-background/60 px-4 py-3 text-center">
               <div className="text-[11px] text-muted-foreground">الإنفاق اليومي</div>
-              <div className="text-lg font-bold tabular-nums">${money(dailySpend)}</div>
-              <div className="text-[10px] text-muted-foreground">
-                {rows.length === 0 ? "يبدأ العد من أول معاملة جديدة" : "اليوم · المشتريات"}
+              <div className="text-2xl font-extrabold tabular-nums">${money(dailySpend)}</div>
+              <div className="text-[11px] text-muted-foreground tabular-nums">
+                {rows.length === 0
+                  ? "يبدأ العد من أول معاملة جديدة"
+                  : `اليوم · المشتريات · ${dailyCount} معاملة`}
               </div>
             </div>
           </div>
