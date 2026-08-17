@@ -1157,43 +1157,47 @@ export async function fetchCards(accountId?: string): Promise<BybitCard[]> {
   const stored = (storedRows ?? []) as any[];
 
   const rows = await storedCardTxns(10_000, accountId);
-  const spendMap = new Map<string, { txnCount: number; spend: number; lastUsed: number; brand: string; currency: string }>();
+  // Same engine as the account totals: one entry per purchase, USD amounts only.
+  const perCard = sumSpendByCard(
+    rows.map((t) => ({
+      txnId: String(t.id ?? ""),
+      amount: num(t.amount),
+      time: Number(t.time ?? 0),
+      status: t.status,
+      type: t.type,
+      currency: t.currency,
+      detail: (t.detail ?? {}) as Record<string, unknown>,
+      pan4: String(t.pan4 ?? ""),
+    })) as Array<SpendRow & { pan4: string }>,
+    (row) => (row as SpendRow & { pan4: string }).pan4,
+  );
+  const currencyByPan = new Map<string, string>();
   for (const t of rows) {
     const pan4 = String(t.pan4 ?? "").trim();
-    if (!pan4) continue;
-    const c = spendMap.get(pan4) ?? {
-      txnCount: 0,
-      spend: 0,
-      lastUsed: 0,
-      brand: "Visa",
-      currency: String(t.currency ?? "USD"),
-    };
-    c.txnCount += 1;
-    if (isCompletedSpend(t.status, t.type, t.amount)) c.spend += Math.abs(num(t.amount));
-    c.lastUsed = Math.max(c.lastUsed, Number(t.time ?? 0));
-    spendMap.set(pan4, c);
+    if (pan4 && !currencyByPan.has(pan4)) currencyByPan.set(pan4, String(t.currency ?? "USD"));
   }
 
   const result: BybitCard[] = stored.map((s) => {
     const pan4 = String(s.pan4 ?? "").trim();
-    const derived = spendMap.get(pan4);
+    const derived = perCard.get(pan4);
     const fromNumber = brandFromNumber(String(s.full_number ?? ""));
     return {
       id: s.id,
       pan4,
-      brand: fromNumber ?? String(s.brand ?? derived?.brand ?? "Visa"),
-      currency: String(s.currency ?? derived?.currency ?? "USD"),
+      brand: fromNumber ?? String(s.brand ?? "Visa"),
+      currency: String(s.currency ?? currencyByPan.get(pan4) ?? "USD"),
       status: String(s.status ?? "active"),
       name: s.name ?? undefined,
       fullNumber: s.full_number ?? undefined,
       cvv: s.cvv ?? undefined,
       expiry: s.expiry ?? undefined,
-      txnCount: derived?.txnCount ?? 0,
+      txnCount: derived?.totalTxns ?? 0,
       spend: derived?.spend ?? 0,
       lastUsed: derived?.lastUsed ?? 0,
       virtual: true,
     };
   });
+
 
   // Only cards explicitly added by the admin are shown.
   return result.sort((a, b) => b.lastUsed - a.lastUsed);
