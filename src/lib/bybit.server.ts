@@ -534,8 +534,8 @@ export function spendWindows(nowMs: number) {
  * every account and every caller produces the same total.
  */
 export async function computeSpend(accountId: string | undefined, dayStart: number, monthStart: number) {
-  const { sumSpend, type SpendRow } = { sumSpend: (await import("./bybit-spend")).sumSpend } as any;
-  const collected: any[] = [];
+  const collected: SpendRow[] = [];
+
   const seenRows = new Set<string>();
   try {
     const db = await admin();
