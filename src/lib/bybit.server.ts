@@ -895,17 +895,17 @@ async function backfillChunk(accountId: string | undefined, creds: Creds): Promi
 
   const collected: any[] = [];
   let { typeIndex, page } = cursor;
-  let pagesWalked = 0;
+  const deadline = Date.now() + BACKFILL_BUDGET_MS;
 
   try {
-    while (typeIndex < CARD_QUERY_TYPES.length && pagesWalked < CHUNK_PAGES) {
+    while (typeIndex < CARD_QUERY_TYPES.length && Date.now() < deadline) {
       const result = await callCardPage(
         { limit: 100, page, type: CARD_QUERY_TYPES[typeIndex] },
         creds,
       );
       const rows = Array.isArray(result?.data) ? result.data : [];
       collected.push(...rows);
-      pagesWalked++;
+
 
       const totalCount = Number(result?.totalCount ?? 0);
       const pageSize = Number(result?.pageSize ?? 100);
