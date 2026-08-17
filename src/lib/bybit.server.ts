@@ -745,24 +745,30 @@ async function persistCardTxns(rows: CardTxn[], accountId?: string) {
 
 }
 
-async function storedCardTxns(limit: number, accountId?: string): Promise<CardTxn[]> {
+async function storedCardTxns(_limit: number, accountId?: string): Promise<CardTxn[]> {
   try {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    // The backend caps a single response at 1000 rows. Fetch independent
-    // ranges concurrently so opening the transaction tab costs one round trip
-    // instead of waiting for ten sequential requests.
+    // The backend caps a single response at 1000 rows, so walk ranges in
+    // batches until a batch comes back short — that means the oldest stored
+    // record was reached. No row cap, no time filter.
     const CHUNK = 1000;
-    const requests: any[] = [];
-    for (let from = 0; from < limit; from += CHUNK) {
-      let query = (supabaseAdmin as any)
-        .from("bybit_card_txns")
-        .select("txn_id, merchant, amount, currency, status, txn_time, pan4, txn_type, detail");
-      if (accountId) query = query.eq("account_id", accountId);
-      const to = Math.min(from + CHUNK, limit) - 1;
-      requests.push(query.order("txn_time", { ascending: false }).range(from, to));
+    const BATCH = 10; // 10k rows per round trip group
+    const data: any[] = [];
+    for (let base = 0; ; base += CHUNK * BATCH) {
+      const requests: any[] = [];
+      for (let i = 0; i < BATCH; i++) {
+        const from = base + i * CHUNK;
+        let query = (supabaseAdmin as any)
+          .from("bybit_card_txns")
+          .select("txn_id, merchant, amount, currency, status, txn_time, pan4, txn_type, detail");
+        if (accountId) query = query.eq("account_id", accountId);
+        requests.push(query.order("txn_time", { ascending: false }).range(from, from + CHUNK - 1));
+      }
+      const chunks = await Promise.all(requests);
+      const rows = chunks.flatMap(({ data: chunk }) => chunk ?? []);
+      data.push(...rows);
+      if (rows.length < CHUNK * BATCH) break;
     }
-    const chunks = await Promise.all(requests);
-    const data = chunks.flatMap(({ data: chunk }) => chunk ?? []);
     return data.map((r: any) => {
       const detail = (r.detail ?? {}) as Record<string, string | number | null>;
       const tradeStatus = String(detail.tradeStatus ?? "");
