@@ -1,4 +1,5 @@
 import { createHmac } from "crypto";
+import { normalizeBybitError, type BybitError } from "./bybit-errors";
 
 const BASE = "https://api.bybit.com";
 const RECV = "5000";
