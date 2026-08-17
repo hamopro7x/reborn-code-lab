@@ -838,8 +838,11 @@ export async function syncAllCardTxns(): Promise<{ added: number; accounts: numb
 /* ---------- resumable deep backfill (back to account creation) ---------- */
 
 type BackfillCursor = { version: number; typeIndex: number; page: number; done: boolean };
-const BACKFILL_VERSION = 3;
-const CHUNK_PAGES = 25; // deeper slice so the full history since account creation is archived fast
+const BACKFILL_VERSION = 4;
+// No page cap: pagination continues until Bybit reports the last (oldest) page.
+// A wall-clock budget only decides when to pause and resume from the cursor.
+const BACKFILL_BUDGET_MS = 20_000;
+
 
 
 async function readCursor(key: string): Promise<BackfillCursor> {
