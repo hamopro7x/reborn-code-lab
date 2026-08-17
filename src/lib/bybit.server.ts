@@ -526,15 +526,17 @@ export function spendWindows(nowMs: number) {
 
 /**
  * Sums the account's own archived transactions for each window separately.
- * Rows are paged (the API caps a response at 1000 rows) and de-duplicated by
- * transaction id so a transaction is never counted twice.
+ *
+ * Rows are paged (the API caps a response at 1000 rows) and handed to the single
+ * shared spend engine in ./bybit-spend, which collapses the authorisation and
+ * settlement copies of the same purchase into one entry and reads a
+ * USD-denominated amount. That engine — not this loop — decides what counts, so
+ * every account and every caller produces the same total.
  */
 export async function computeSpend(accountId: string | undefined, dayStart: number, monthStart: number) {
-  const seen = new Set<string>();
-  let daySpend = 0;
-  let monthSpend = 0;
-  let txnCount = 0;
-  let lastTxnTime = 0;
+  const { sumSpend, type SpendRow } = { sumSpend: (await import("./bybit-spend")).sumSpend } as any;
+  const collected: any[] = [];
+  const seenRows = new Set<string>();
   try {
     const db = await admin();
     const from = Math.min(dayStart, monthStart);
@@ -542,32 +544,51 @@ export async function computeSpend(accountId: string | undefined, dayStart: numb
     for (let offset = 0; offset < 200_000; offset += CHUNK) {
       let query = (db as any)
         .from("bybit_card_txns")
-        .select("txn_id, amount, txn_time, status, txn_type, detail")
+        .select("txn_id, amount, currency, txn_time, status, txn_type, detail")
         .gte("txn_time", from)
         .order("txn_time", { ascending: false })
+        .order("txn_id", { ascending: true })
         .range(offset, offset + CHUNK - 1);
       if (accountId) query = query.eq("account_id", accountId);
       const { data } = await query;
       const rows: any[] = data ?? [];
       for (const row of rows) {
-        const key = String(row.txn_id ?? "");
-        if (key && seen.has(key)) continue;
-        if (key) seen.add(key);
-        const time = Number(row.txn_time ?? 0);
-        if (time > lastTxnTime) lastTxnTime = time;
-        if (!isCompletedSpend(row.status, row.txn_type, row.amount, row.detail)) continue;
-        const amount = Math.abs(num(row.amount));
-        txnCount += 1;
-        if (time >= monthStart) monthSpend += amount;
-        if (time >= dayStart) daySpend += amount;
+        // Guards against a row appearing in two pages when the archive grows
+        // between requests; the spend engine de-duplicates purchases separately.
+        const rowKey = `${row.txn_id ?? ""}|${row.txn_time ?? ""}`;
+        if (seenRows.has(rowKey)) continue;
+        seenRows.add(rowKey);
+        collected.push(row);
       }
       if (rows.length < CHUNK) break;
     }
   } catch {
     /* balances should still render if the archive is temporarily unavailable */
   }
-  return { daySpend, monthSpend, txnCount, lastTxnTime };
+
+  const totals = sumSpend(
+    collected.map((row: any) => ({
+      txnId: String(row.txn_id ?? ""),
+      amount: num(row.amount),
+      time: Number(row.txn_time ?? 0),
+      status: row.status,
+      type: row.txn_type,
+      currency: row.currency,
+      detail: (row.detail ?? {}) as Record<string, unknown>,
+    })),
+    dayStart,
+    monthStart,
+  );
+
+  return {
+    daySpend: totals.daySpend,
+    monthSpend: totals.monthSpend,
+    txnCount: totals.countedTxns,
+    lastTxnTime: totals.lastTxnTime,
+    skippedNonUsd: totals.skippedNonUsd,
+  };
 }
+
 
 async function spotPrices(): Promise<Record<string, number>> {
   try {
