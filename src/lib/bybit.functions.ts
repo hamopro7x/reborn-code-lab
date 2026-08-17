@@ -1,15 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-
-async function assertAccess(supabase: any, userId: string) {
-  const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId);
-  const roles = (data ?? []).map((r: any) => r.role);
-  if (roles.includes("admin")) return "admin" as const;
-  if (roles.includes("employee")) return "employee" as const;
-  throw new Error("Forbidden");
-}
-
-const accountInput = (input: any) => ({ accountId: input?.accountId ? String(input.accountId) : undefined });
+import { accountInput, assertAccess, assertAdmin, requiredId, validateApiCreds } from "./bybit-access";
 
 export const listBybitAccounts = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -21,38 +12,29 @@ export const listBybitAccounts = createServerFn({ method: "POST" })
 
 export const addBybitAccount = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { apiKey: string; apiSecret: string; name?: string; force?: boolean }) => {
-    const apiKey = String(input?.apiKey ?? "").trim();
-    const apiSecret = String(input?.apiSecret ?? "").trim();
-    const name = String(input?.name ?? "").trim().slice(0, 60);
-    if (apiKey.length < 8 || apiKey.length > 200) throw new Error("مفتاح API غير صالح");
-    if (apiSecret.length < 8 || apiSecret.length > 400) throw new Error("السر غير صالح");
-    return { apiKey, apiSecret, name, force: Boolean(input?.force) };
-  })
+  .inputValidator((input: { apiKey: string; apiSecret: string; name?: string; force?: boolean }) => ({
+    ...validateApiCreds(input),
+    force: Boolean(input?.force),
+  }))
   .handler(async ({ data, context }) => {
-    const role = await assertAccess(context.supabase, context.userId);
-    if (role !== "admin") throw new Error("Forbidden");
+    await assertAdmin(context.supabase, context.userId);
     const mod = await import("./bybit.server");
+    const errs = await import("./bybit-errors");
     try {
       const account = await mod.createAccount(data.apiKey, data.apiSecret, context.userId, data.name, data.force);
       return { ok: true as const, account };
-    } catch (e: any) {
-      const message = String(e?.message ?? e);
-      const ip = message.includes("IP") ? await mod.serverIp() : null;
-      return { ok: false as const, error: message, serverIp: ip };
+    } catch (e) {
+      const { code, message } = errs.normalizeBybitError(e);
+      const ip = code === "IP_RESTRICTED" ? await mod.serverIp() : null;
+      return { ok: false as const, error: message, errorCode: code, serverIp: ip };
     }
   });
 
 export const removeBybitAccount = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string }) => {
-    const id = String(input?.id ?? "").trim();
-    if (!id) throw new Error("معرف الحساب مطلوب");
-    return { id };
-  })
+  .inputValidator((input: { id: string }) => ({ id: requiredId(input, "معرف الحساب مطلوب") }))
   .handler(async ({ data, context }) => {
-    const role = await assertAccess(context.supabase, context.userId);
-    if (role !== "admin") throw new Error("Forbidden");
+    await assertAdmin(context.supabase, context.userId);
     const mod = await import("./bybit.server");
     await mod.deleteAccount(data.id);
     return { ok: true as const };
@@ -64,12 +46,7 @@ export const getBybitOverview = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAccess(context.supabase, context.userId);
     const mod = await import("./bybit.server");
-    if (!(await mod.bybitConfigured(data.accountId))) return { configured: false as const };
-    try {
-      return { configured: true as const, ...(await mod.fetchOverview(data.accountId)) };
-    } catch (e: any) {
-      return { configured: true as const, failed: String(e?.message ?? e) };
-    }
+    return mod.readOp(data.accountId, () => mod.fetchOverview(data.accountId), {} as any);
   });
 
 export const getBybitCardTxns = createServerFn({ method: "POST" })
@@ -78,12 +55,9 @@ export const getBybitCardTxns = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAccess(context.supabase, context.userId);
     const mod = await import("./bybit.server");
-    if (!(await mod.bybitConfigured(data.accountId))) return { configured: false as const, rows: [] };
-    try {
-      return { configured: true as const, rows: await mod.fetchCardTxns(10_000, data.accountId) };
-    } catch (e: any) {
-      return { configured: true as const, rows: [], failed: String(e?.message ?? e) };
-    }
+    return mod.readOp(data.accountId, async () => ({ rows: await mod.fetchCardTxns(10_000, data.accountId) }), {
+      rows: [] as Awaited<ReturnType<typeof mod.fetchCardTxns>>,
+    });
   });
 
 export const syncBybitCardTxns = createServerFn({ method: "POST" })
@@ -92,12 +66,7 @@ export const syncBybitCardTxns = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAccess(context.supabase, context.userId);
     const mod = await import("./bybit.server");
-    if (!(await mod.bybitConfigured(data.accountId))) return { configured: false as const, added: 0 };
-    try {
-      return { configured: true as const, ...(await mod.syncCardTxns(data.accountId)) };
-    } catch (e: any) {
-      return { configured: true as const, added: 0, failed: String(e?.message ?? e) };
-    }
+    return mod.readOp(data.accountId, () => mod.syncCardTxns(data.accountId), { added: 0 });
   });
 
 export const getBybitOnChain = createServerFn({ method: "POST" })
@@ -106,12 +75,10 @@ export const getBybitOnChain = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAccess(context.supabase, context.userId);
     const mod = await import("./bybit.server");
-    if (!(await mod.bybitConfigured(data.accountId))) return { configured: false as const, deposits: [], withdrawals: [] };
-    try {
-      return { configured: true as const, ...(await mod.fetchOnChain(data.accountId)) };
-    } catch (e: any) {
-      return { configured: true as const, deposits: [], withdrawals: [], failed: String(e?.message ?? e) };
-    }
+    return mod.readOp(data.accountId, () => mod.fetchOnChain(data.accountId), {
+      deposits: [] as Awaited<ReturnType<typeof mod.fetchOnChain>>["deposits"],
+      withdrawals: [] as Awaited<ReturnType<typeof mod.fetchOnChain>>["withdrawals"],
+    });
   });
 
 export const syncAllBybitCardTxns = createServerFn({ method: "POST" })
@@ -119,10 +86,12 @@ export const syncAllBybitCardTxns = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     await assertAccess(context.supabase, context.userId);
     const mod = await import("./bybit.server");
+    const errs = await import("./bybit-errors");
     try {
       return { ok: true as const, ...(await mod.syncAllCardTxns()) };
-    } catch (e: any) {
-      return { ok: false as const, added: 0, accounts: 0, error: String(e?.message ?? e) };
+    } catch (e) {
+      const { code, message } = errs.normalizeBybitError(e);
+      return { ok: false as const, added: 0, accounts: 0, error: message, errorCode: code };
     }
   });
 
@@ -132,19 +101,16 @@ export const getBybitInternal = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAccess(context.supabase, context.userId);
     const mod = await import("./bybit.server");
-    if (!(await mod.bybitConfigured(data.accountId))) return { configured: false as const, deposits: [], withdrawals: [] };
-    try {
-      return { configured: true as const, ...(await mod.fetchInternal(data.accountId)) };
-    } catch (e: any) {
-      return { configured: true as const, deposits: [], withdrawals: [], failed: String(e?.message ?? e) };
-    }
+    return mod.readOp(data.accountId, () => mod.fetchInternal(data.accountId), {
+      deposits: [] as Awaited<ReturnType<typeof mod.fetchInternal>>["deposits"],
+      withdrawals: [] as Awaited<ReturnType<typeof mod.fetchInternal>>["withdrawals"],
+    });
   });
 
 export const getBybitApiStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const role = await assertAccess(context.supabase, context.userId);
-    if (role !== "admin") throw new Error("Forbidden");
+    await assertAdmin(context.supabase, context.userId);
     const mod = await import("./bybit.server");
     if (!(await mod.bybitConfigured())) return { configured: false as const, maskedKey: "" };
     const { key } = await mod.getCreds();
@@ -157,32 +123,23 @@ export const getBybitP2P = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAccess(context.supabase, context.userId);
     const mod = await import("./bybit.server");
-    if (!(await mod.bybitConfigured(data.accountId))) return { configured: false as const, rows: [] };
-    try {
-      return { configured: true as const, rows: await mod.fetchP2P(data.accountId) };
-    } catch (e: any) {
-      return { configured: true as const, rows: [], failed: String(e?.message ?? e) };
-    }
+    return mod.readOp(data.accountId, async () => ({ rows: await mod.fetchP2P(data.accountId) }), {
+      rows: [] as Awaited<ReturnType<typeof mod.fetchP2P>>,
+    });
   });
 
 export const saveBybitApiKeys = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { apiKey: string; apiSecret: string; name?: string }) => {
-    const apiKey = String(input?.apiKey ?? "").trim();
-    const apiSecret = String(input?.apiSecret ?? "").trim();
-    const name = String(input?.name ?? "").trim().slice(0, 60);
-    if (apiKey.length < 8 || apiKey.length > 200) throw new Error("مفتاح API غير صالح");
-    if (apiSecret.length < 8 || apiSecret.length > 400) throw new Error("السر غير صالح");
-    return { apiKey, apiSecret, name };
-  })
+  .inputValidator((input: { apiKey: string; apiSecret: string; name?: string }) => validateApiCreds(input))
   .handler(async ({ data, context }) => {
-    const role = await assertAccess(context.supabase, context.userId);
-    if (role !== "admin") throw new Error("Forbidden");
+    await assertAdmin(context.supabase, context.userId);
     const mod = await import("./bybit.server");
+    const errs = await import("./bybit-errors");
     try {
       await mod.testCreds({ key: data.apiKey, secret: data.apiSecret });
-    } catch (e: any) {
-      return { ok: false as const, error: String(e?.message ?? e) };
+    } catch (e) {
+      const { code, message } = errs.normalizeBybitError(e);
+      return { ok: false as const, error: message, errorCode: code };
     }
     await mod.saveCreds(data.apiKey, data.apiSecret, context.userId);
     return { ok: true as const };
@@ -191,8 +148,7 @@ export const saveBybitApiKeys = createServerFn({ method: "POST" })
 export const deleteBybitApiKeys = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const role = await assertAccess(context.supabase, context.userId);
-    if (role !== "admin") throw new Error("Forbidden");
+    await assertAdmin(context.supabase, context.userId);
     const mod = await import("./bybit.server");
     await mod.clearCreds();
     return { ok: true as const };
@@ -204,12 +160,9 @@ export const getBybitCards = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAccess(context.supabase, context.userId);
     const mod = await import("./bybit.server");
-    if (!(await mod.bybitConfigured(data.accountId))) return { configured: false as const, cards: [] };
-    try {
-      return { configured: true as const, cards: await mod.fetchCards(data.accountId) };
-    } catch (e: any) {
-      return { configured: true as const, cards: [], failed: String(e?.message ?? e) };
-    }
+    return mod.readOp(data.accountId, async () => ({ cards: await mod.fetchCards(data.accountId) }), {
+      cards: [] as Awaited<ReturnType<typeof mod.fetchCards>>,
+    });
   });
 
 export const createBybitCard = createServerFn({ method: "POST" })
@@ -230,8 +183,7 @@ export const createBybitCard = createServerFn({ method: "POST" })
     };
   })
   .handler(async ({ data, context }) => {
-    const role = await assertAccess(context.supabase, context.userId);
-    if (role !== "admin") throw new Error("Forbidden");
+    await assertAdmin(context.supabase, context.userId);
     const mod = await import("./bybit.server");
     await mod.createCard({ ...data, userId: context.userId });
     return { ok: true as const };
@@ -239,14 +191,9 @@ export const createBybitCard = createServerFn({ method: "POST" })
 
 export const deleteBybitCard = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string }) => {
-    const id = String(input?.id ?? "").trim();
-    if (!id) throw new Error("معرف البطاقة مطلوب");
-    return { id };
-  })
+  .inputValidator((input: { id: string }) => ({ id: requiredId(input, "معرف البطاقة مطلوب") }))
   .handler(async ({ data, context }) => {
-    const role = await assertAccess(context.supabase, context.userId);
-    if (role !== "admin") throw new Error("Forbidden");
+    await assertAdmin(context.supabase, context.userId);
     const mod = await import("./bybit.server");
     await mod.deleteCard(data.id);
     return { ok: true as const };
@@ -254,24 +201,19 @@ export const deleteBybitCard = createServerFn({ method: "POST" })
 
 export const updateBybitCard = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string; pan4: string; brand: string; currency: string; status: string; name?: string; fullNumber?: string; cvv?: string; expiry?: string }) => {
-    const id = String(input?.id ?? "").trim();
-    if (!id) throw new Error("معرف البطاقة مطلوب");
-    return {
-      id,
-      pan4: String(input?.pan4 ?? "").trim(),
-      brand: String(input?.brand ?? "Visa").trim(),
-      currency: String(input?.currency ?? "USD").trim().toUpperCase(),
-      status: String(input?.status ?? "active").trim(),
-      name: input?.name ? String(input.name).trim() : undefined,
-      fullNumber: input?.fullNumber ? String(input.fullNumber).trim() : undefined,
-      cvv: input?.cvv ? String(input.cvv).trim() : undefined,
-      expiry: input?.expiry ? String(input.expiry).trim() : undefined,
-    };
-  })
+  .inputValidator((input: { id: string; pan4: string; brand: string; currency: string; status: string; name?: string; fullNumber?: string; cvv?: string; expiry?: string }) => ({
+    id: requiredId(input, "معرف البطاقة مطلوب"),
+    pan4: String(input?.pan4 ?? "").trim(),
+    brand: String(input?.brand ?? "Visa").trim(),
+    currency: String(input?.currency ?? "USD").trim().toUpperCase(),
+    status: String(input?.status ?? "active").trim(),
+    name: input?.name ? String(input.name).trim() : undefined,
+    fullNumber: input?.fullNumber ? String(input.fullNumber).trim() : undefined,
+    cvv: input?.cvv ? String(input.cvv).trim() : undefined,
+    expiry: input?.expiry ? String(input.expiry).trim() : undefined,
+  }))
   .handler(async ({ data, context }) => {
-    const role = await assertAccess(context.supabase, context.userId);
-    if (role !== "admin") throw new Error("Forbidden");
+    await assertAdmin(context.supabase, context.userId);
     const mod = await import("./bybit.server");
     await mod.updateCard(data);
     return { ok: true as const };
@@ -306,8 +248,7 @@ export const saveBybitAccountInfo = createServerFn({ method: "POST" })
     mfa_code: String(input?.mfa_code ?? "").trim(),
   }))
   .handler(async ({ data, context }) => {
-    const role = await assertAccess(context.supabase, context.userId);
-    if (role !== "admin") throw new Error("Forbidden");
+    await assertAdmin(context.supabase, context.userId);
     const payload = {
       email: data.email,
       phone: data.phone,
@@ -337,13 +278,14 @@ export const getBybitConvertCoins = createServerFn({ method: "POST" })
     coin: input?.coin ? String(input.coin).toUpperCase().slice(0, 20) : undefined,
   }))
   .handler(async ({ data, context }) => {
-    const role = await assertAccess(context.supabase, context.userId);
-    if (role !== "admin") throw new Error("Forbidden");
+    await assertAdmin(context.supabase, context.userId);
     const mod = await import("./bybit.server");
+    const errs = await import("./bybit-errors");
     try {
       return { ok: true as const, coins: await mod.convertCoinList(data.accountId, data.coin) };
-    } catch (e: any) {
-      return { ok: false as const, error: String(e?.message ?? e), coins: [] };
+    } catch (e) {
+      const { code, message } = errs.normalizeBybitError(e);
+      return { ok: false as const, error: message, errorCode: code, coins: [] };
     }
   });
 
@@ -359,13 +301,14 @@ export const createBybitConvertQuote = createServerFn({ method: "POST" })
     return { accountId: input?.accountId ? String(input.accountId) : undefined, fromCoin, toCoin, amount };
   })
   .handler(async ({ data, context }) => {
-    const role = await assertAccess(context.supabase, context.userId);
-    if (role !== "admin") throw new Error("Forbidden");
+    await assertAdmin(context.supabase, context.userId);
     const mod = await import("./bybit.server");
+    const errs = await import("./bybit-errors");
     try {
       return { ok: true as const, quote: await mod.convertQuote(data) };
-    } catch (e: any) {
-      return { ok: false as const, error: String(e?.message ?? e) };
+    } catch (e) {
+      const { code, message } = errs.normalizeBybitError(e);
+      return { ok: false as const, error: message, errorCode: code };
     }
   });
 
@@ -377,15 +320,16 @@ export const confirmBybitConvert = createServerFn({ method: "POST" })
     return { accountId: input?.accountId ? String(input.accountId) : undefined, quoteTxId };
   })
   .handler(async ({ data, context }) => {
-    const role = await assertAccess(context.supabase, context.userId);
-    if (role !== "admin") throw new Error("Forbidden");
+    await assertAdmin(context.supabase, context.userId);
     const mod = await import("./bybit.server");
+    const errs = await import("./bybit-errors");
     try {
       await mod.convertExecute(data.quoteTxId, data.accountId);
       await new Promise((r) => setTimeout(r, 1200));
       const status = await mod.convertStatus(data.quoteTxId, data.accountId);
       return { ok: true as const, ...status };
-    } catch (e: any) {
-      return { ok: false as const, error: String(e?.message ?? e) };
+    } catch (e) {
+      const { code, message } = errs.normalizeBybitError(e);
+      return { ok: false as const, error: message, errorCode: code };
     }
   });
