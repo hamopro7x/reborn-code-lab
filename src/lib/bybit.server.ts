@@ -832,8 +832,9 @@ export async function syncAllCardTxns(): Promise<{ added: number; accounts: numb
 /* ---------- resumable deep backfill (back to account creation) ---------- */
 
 type BackfillCursor = { version: number; typeIndex: number; page: number; done: boolean };
-const BACKFILL_VERSION = 2;
-const CHUNK_PAGES = 3; // small background slice; resumes automatically on the next sync
+const BACKFILL_VERSION = 3;
+const CHUNK_PAGES = 25; // deeper slice so the full history since account creation is archived fast
+
 
 async function readCursor(key: string): Promise<BackfillCursor> {
   try {
