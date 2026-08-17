@@ -799,7 +799,7 @@ async function storedCardTxns(limit: number, accountId?: string): Promise<CardTx
 export async function fetchCardTxns(limit = 100, accountId?: string): Promise<CardTxn[]> {
   // The visible request must never wait for Bybit or the historical backfill.
   // It returns the archive already stored in the database immediately.
-  return storedCardTxns(Math.max(limit, 10_000), accountId);
+  return storedCardTxns(Math.max(limit, 200_000), accountId);
 }
 
 /** Sync recent records and one resumable historical chunk outside the visible read. */
@@ -848,6 +848,8 @@ async function readCursor(key: string): Promise<BackfillCursor> {
     // Version 1 used JSON-body filters that Bybit ignored, so its cursors
     // cannot prove that financial/refund history was actually archived.
     if (Number(v.version ?? 0) !== BACKFILL_VERSION) {
+      // Older cursors may have stopped early, so restart from the first page to
+      // guarantee everything back to account creation is archived.
       return { version: BACKFILL_VERSION, typeIndex: 0, page: 1, done: false };
     }
     return {
@@ -905,7 +907,7 @@ async function backfillChunk(accountId: string | undefined, creds: Creds): Promi
       } else {
         page++;
       }
-      await sleep(200);
+      await sleep(120);
     }
   } catch {
     /* keep whatever this chunk managed to read; retry from the cursor later */
