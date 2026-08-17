@@ -394,24 +394,10 @@ async function callCard(limit: number, accountId?: string, creds?: Creds): Promi
 
 const STABLES = new Set(["USDT", "USDC", "USD", "DAI", "FDUSD", "TUSD", "BUSD"]);
 
-/**
- * Single source of truth for "this row is real spending".
- *
- * Applies identically to EVERY linked account (existing and future ones) and to
- * every consumer: daily spend, monthly spend and per-card spend. Bybit reports
- * a successful purchase either as status "success" or with a raw tradeStatus of
- * 0 (authorised) / 1 (settled); refunds and failures are excluded.
- */
-function isCompletedSpend(status: unknown, side: unknown, amount: unknown, detail?: any) {
-  const value = Math.abs(num(amount));
-  if (!(value > 0)) return false;
-  const stored = String(status ?? "").toLowerCase();
-  if (stored === "refund" || stored === "failed") return false;
-  const trade = String(detail?.tradeStatus ?? "");
-  const rawSide = String(detail?.side ?? side ?? "");
-  if (["3", "5", "6", "7", "10", "11"].includes(rawSide)) return false;
-  return stored === "success" || trade === "0" || trade === "1";
-}
+// "Is this row real spending?" now lives in ./bybit-spend (spendKind/spendUsd)
+// so daily spend, monthly spend and per-card spend cannot drift apart, and a
+// purchase archived as both an authorisation and a settlement is counted once.
+
 
 /* ---------- dynamic card-limit reset window ---------- */
 
