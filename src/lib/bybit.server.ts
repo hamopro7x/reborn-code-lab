@@ -1,5 +1,7 @@
 import { createHmac } from "crypto";
 import { normalizeBybitError, type BybitError } from "./bybit-errors";
+import { sumSpend, sumSpendByCard, type SpendRow } from "./bybit-spend";
+
 
 const BASE = "https://api.bybit.com";
 const RECV = "5000";
