@@ -648,6 +648,10 @@ export async function fetchOverview(accountId?: string) {
     monthStart,
     txnCount: archivedSpend.txnCount,
     lastTxnTime: archivedSpend.lastTxnTime,
+    // Purchases whose amount Bybit reported in a non-USD currency: reported, so
+    // they are never silently summed as dollars.
+    skippedNonUsd: archivedSpend.skippedNonUsd,
+
     coins: coins.sort((a, b) => b.usd - a.usd).slice(0, 12),
     errors: [unified, funding]
       .filter((r): r is PromiseRejectedResult => r.status === "rejected")
