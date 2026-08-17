@@ -507,18 +507,18 @@ async function spendWindow(accountId?: string, creds?: Creds) {
 /**
  * Fixed spend cycles, computed independently of each other:
  *  - daily  : today 03:00 Cairo (= 00:00 UTC) — unchanged, already correct
- *  - monthly: the 1st of the month at 03:00 UTC (previous month when earlier)
+ *  - monthly: the 1st of the month at 00:00 UTC (previous month when earlier)
  */
 export function spendWindows(nowMs: number) {
   const n = new Date(nowMs);
   const DAY = 24 * 3600_000;
   // Cairo is UTC+3, so 03:00 Cairo == 00:00 UTC
-  let dayStart = Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate(), 0);
+  let dayStart = Date.UTC(n.getUTCFullYear(), n.getUTCFullYear(), n.getUTCDate(), 0);
   if (nowMs < dayStart) dayStart -= DAY;
 
-  // Monthly cycle anchor: 1st day of the month at 03:00 UTC
-  let monthStart = Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), 1, 3);
-  if (nowMs < monthStart) monthStart = Date.UTC(n.getUTCFullYear(), n.getUTCMonth() - 1, 1, 3);
+  // Monthly cycle anchor: 1st day of the month at 00:00 UTC
+  let monthStart = Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), 1, 0);
+  if (nowMs < monthStart) monthStart = Date.UTC(n.getUTCFullYear(), n.getUTCMonth() - 1, 1, 0);
 
   return { dayStart, monthStart };
 }
