@@ -809,13 +809,13 @@ export async function fetchCardTxns(limit = 100, accountId?: string): Promise<Ca
 }
 
 /** Sync recent records and one resumable historical chunk outside the visible read. */
-export async function syncCardTxns(accountId?: string): Promise<{ added: number }> {
+export async function syncCardTxns(accountId?: string): Promise<{ added: number; backfillDone: boolean }> {
   const creds = await getCreds(accountId);
   const liveRows = await callCard(100, accountId, creds);
   const rows = liveRows.map(mapCardTxn);
   await persistCardTxns(rows, accountId);
-  const extra = await backfillChunk(accountId, creds);
-  return { added: rows.length + extra.length };
+  const backfill = await backfillChunk(accountId, creds);
+  return { added: rows.length + backfill.rows.length, backfillDone: backfill.done };
 }
 
 /** Runs the same sync for every linked Bybit account. */
@@ -838,7 +838,10 @@ export async function syncAllCardTxns(): Promise<{ added: number; accounts: numb
 /* ---------- resumable deep backfill (back to account creation) ---------- */
 
 type BackfillCursor = { version: number; typeIndex: number; page: number; done: boolean };
-const BACKFILL_VERSION = 4;
+// Version 5 restarts cursors that may have been marked complete while the UI
+// only executed one historical chunk. The new client keeps requesting chunks
+// until this cursor reaches the oldest page for every transaction type.
+const BACKFILL_VERSION = 5;
 // No page cap: pagination continues until Bybit reports the last (oldest) page.
 // A wall-clock budget only decides when to pause and resume from the cursor.
 const BACKFILL_BUDGET_MS = 20_000;
@@ -888,10 +891,13 @@ async function writeCursor(key: string, cursor: BackfillCursor) {
  * cursor so the next request resumes where this one stopped — until every page
  * back to account creation has been archived.
  */
-async function backfillChunk(accountId: string | undefined, creds: Creds): Promise<CardTxn[]> {
+async function backfillChunk(
+  accountId: string | undefined,
+  creds: Creds,
+): Promise<{ rows: CardTxn[]; done: boolean }> {
   const key = accountId ?? "default";
   const cursor = await readCursor(key);
-  if (cursor.done) return [];
+  if (cursor.done) return { rows: [], done: true };
 
   const collected: any[] = [];
   let { typeIndex, page } = cursor;
@@ -926,8 +932,9 @@ async function backfillChunk(accountId: string | undefined, creds: Creds): Promi
   for (let i = 0; i < mapped.length; i += 500) {
     await persistCardTxns(mapped.slice(i, i + 500), accountId);
   }
-  await writeCursor(key, { version: BACKFILL_VERSION, typeIndex, page, done: typeIndex >= CARD_QUERY_TYPES.length });
-  return mapped;
+  const done = typeIndex >= CARD_QUERY_TYPES.length;
+  await writeCursor(key, { version: BACKFILL_VERSION, typeIndex, page, done });
+  return { rows: mapped, done };
 }
 
 export type AssetRow = {

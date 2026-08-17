@@ -66,7 +66,10 @@ export const syncBybitCardTxns = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAccess(context.supabase, context.userId);
     const mod = await import("./bybit.server");
-    return mod.readOp(data.accountId, () => mod.syncCardTxns(data.accountId), { added: 0 });
+    return mod.readOp(data.accountId, () => mod.syncCardTxns(data.accountId), {
+      added: 0,
+      backfillDone: false,
+    });
   });
 
 export const getBybitOnChain = createServerFn({ method: "POST" })
