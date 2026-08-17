@@ -730,17 +730,19 @@ async function persistCardTxns(rows: CardTxn[], accountId?: string) {
         detail: r.detail,
     }));
     for (let i = 0; i < payload.length; i += 500) {
-      await (supabaseAdmin as any)
+      const { error } = await (supabaseAdmin as any)
         .from("bybit_card_txns")
         .upsert(payload.slice(i, i + 500), { onConflict: "account_id,txn_id" });
+      if (error) console.error("bybit_card_txns upsert failed:", error.message);
     }
     await (supabaseAdmin as any).rpc("prune_bybit_card_txns", {
       p_max: MAX_TXNS,
       p_delete: PRUNE_TO_DELETE,
     });
-  } catch {
-    /* storage is best-effort; live API data still renders */
+  } catch (e) {
+    console.error("bybit_card_txns persist failed:", (e as any)?.message ?? e);
   }
+
 }
 
 async function storedCardTxns(limit: number, accountId?: string): Promise<CardTxn[]> {
