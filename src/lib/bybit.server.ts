@@ -199,7 +199,7 @@ export async function testCreds(c: Creds) {
     }
   }
   // Report the most actionable failure using the shared error rules.
-  const normalized = errors.map(normalizeBybitError);
+  const normalized: BybitError[] = errors.map((e) => normalizeBybitError(e));
   const priority: Array<BybitError["code"]> = ["NO_PERMISSION", "IP_RESTRICTED", "BAD_KEY", "RATE_LIMITED", "NETWORK"];
   const pick = priority.map((c2) => normalized.find((n) => n.code === c2)).find(Boolean) ?? normalized[0];
   throw new Error(pick?.message ?? "تعذّر التحقق من المفتاح");
