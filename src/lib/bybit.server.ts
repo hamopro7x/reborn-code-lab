@@ -1,5 +1,7 @@
 import { createHmac } from "crypto";
 import { normalizeBybitError, type BybitError } from "./bybit-errors";
+import { sumSpend, sumSpendByCard, type SpendRow } from "./bybit-spend";
+
 
 const BASE = "https://api.bybit.com";
 const RECV = "5000";
@@ -392,24 +394,10 @@ async function callCard(limit: number, accountId?: string, creds?: Creds): Promi
 
 const STABLES = new Set(["USDT", "USDC", "USD", "DAI", "FDUSD", "TUSD", "BUSD"]);
 
-/**
- * Single source of truth for "this row is real spending".
- *
- * Applies identically to EVERY linked account (existing and future ones) and to
- * every consumer: daily spend, monthly spend and per-card spend. Bybit reports
- * a successful purchase either as status "success" or with a raw tradeStatus of
- * 0 (authorised) / 1 (settled); refunds and failures are excluded.
- */
-function isCompletedSpend(status: unknown, side: unknown, amount: unknown, detail?: any) {
-  const value = Math.abs(num(amount));
-  if (!(value > 0)) return false;
-  const stored = String(status ?? "").toLowerCase();
-  if (stored === "refund" || stored === "failed") return false;
-  const trade = String(detail?.tradeStatus ?? "");
-  const rawSide = String(detail?.side ?? side ?? "");
-  if (["3", "5", "6", "7", "10", "11"].includes(rawSide)) return false;
-  return stored === "success" || trade === "0" || trade === "1";
-}
+// "Is this row real spending?" now lives in ./bybit-spend (spendKind/spendUsd)
+// so daily spend, monthly spend and per-card spend cannot drift apart, and a
+// purchase archived as both an authorisation and a settlement is counted once.
+
 
 /* ---------- dynamic card-limit reset window ---------- */
 
@@ -526,15 +514,17 @@ export function spendWindows(nowMs: number) {
 
 /**
  * Sums the account's own archived transactions for each window separately.
- * Rows are paged (the API caps a response at 1000 rows) and de-duplicated by
- * transaction id so a transaction is never counted twice.
+ *
+ * Rows are paged (the API caps a response at 1000 rows) and handed to the single
+ * shared spend engine in ./bybit-spend, which collapses the authorisation and
+ * settlement copies of the same purchase into one entry and reads a
+ * USD-denominated amount. That engine — not this loop — decides what counts, so
+ * every account and every caller produces the same total.
  */
 export async function computeSpend(accountId: string | undefined, dayStart: number, monthStart: number) {
-  const seen = new Set<string>();
-  let daySpend = 0;
-  let monthSpend = 0;
-  let txnCount = 0;
-  let lastTxnTime = 0;
+  const collected: SpendRow[] = [];
+
+  const seenRows = new Set<string>();
   try {
     const db = await admin();
     const from = Math.min(dayStart, monthStart);
@@ -542,32 +532,51 @@ export async function computeSpend(accountId: string | undefined, dayStart: numb
     for (let offset = 0; offset < 200_000; offset += CHUNK) {
       let query = (db as any)
         .from("bybit_card_txns")
-        .select("txn_id, amount, txn_time, status, txn_type, detail")
+        .select("txn_id, amount, currency, txn_time, status, txn_type, detail")
         .gte("txn_time", from)
         .order("txn_time", { ascending: false })
+        .order("txn_id", { ascending: true })
         .range(offset, offset + CHUNK - 1);
       if (accountId) query = query.eq("account_id", accountId);
       const { data } = await query;
       const rows: any[] = data ?? [];
       for (const row of rows) {
-        const key = String(row.txn_id ?? "");
-        if (key && seen.has(key)) continue;
-        if (key) seen.add(key);
-        const time = Number(row.txn_time ?? 0);
-        if (time > lastTxnTime) lastTxnTime = time;
-        if (!isCompletedSpend(row.status, row.txn_type, row.amount, row.detail)) continue;
-        const amount = Math.abs(num(row.amount));
-        txnCount += 1;
-        if (time >= monthStart) monthSpend += amount;
-        if (time >= dayStart) daySpend += amount;
+        // Guards against a row appearing in two pages when the archive grows
+        // between requests; the spend engine de-duplicates purchases separately.
+        const rowKey = `${row.txn_id ?? ""}|${row.txn_time ?? ""}`;
+        if (seenRows.has(rowKey)) continue;
+        seenRows.add(rowKey);
+        collected.push(row);
       }
       if (rows.length < CHUNK) break;
     }
   } catch {
     /* balances should still render if the archive is temporarily unavailable */
   }
-  return { daySpend, monthSpend, txnCount, lastTxnTime };
+
+  const totals = sumSpend(
+    collected.map((row: any) => ({
+      txnId: String(row.txn_id ?? ""),
+      amount: num(row.amount),
+      time: Number(row.txn_time ?? 0),
+      status: row.status,
+      type: row.txn_type,
+      currency: row.currency,
+      detail: (row.detail ?? {}) as Record<string, unknown>,
+    })),
+    dayStart,
+    monthStart,
+  );
+
+  return {
+    daySpend: totals.daySpend,
+    monthSpend: totals.monthSpend,
+    txnCount: totals.countedTxns,
+    lastTxnTime: totals.lastTxnTime,
+    skippedNonUsd: totals.skippedNonUsd,
+  };
 }
+
 
 async function spotPrices(): Promise<Record<string, number>> {
   try {
@@ -639,6 +648,10 @@ export async function fetchOverview(accountId?: string) {
     monthStart,
     txnCount: archivedSpend.txnCount,
     lastTxnTime: archivedSpend.lastTxnTime,
+    // Purchases whose amount Bybit reported in a non-USD currency: reported, so
+    // they are never silently summed as dollars.
+    skippedNonUsd: archivedSpend.skippedNonUsd,
+
     coins: coins.sort((a, b) => b.usd - a.usd).slice(0, 12),
     errors: [unified, funding]
       .filter((r): r is PromiseRejectedResult => r.status === "rejected")
@@ -1134,43 +1147,47 @@ export async function fetchCards(accountId?: string): Promise<BybitCard[]> {
   const stored = (storedRows ?? []) as any[];
 
   const rows = await storedCardTxns(10_000, accountId);
-  const spendMap = new Map<string, { txnCount: number; spend: number; lastUsed: number; brand: string; currency: string }>();
+  // Same engine as the account totals: one entry per purchase, USD amounts only.
+  const perCard = sumSpendByCard(
+    rows.map((t) => ({
+      txnId: String(t.id ?? ""),
+      amount: num(t.amount),
+      time: Number(t.time ?? 0),
+      status: t.status,
+      type: t.type,
+      currency: t.currency,
+      detail: (t.detail ?? {}) as Record<string, unknown>,
+      pan4: String(t.pan4 ?? ""),
+    })) as Array<SpendRow & { pan4: string }>,
+    (row) => (row as SpendRow & { pan4: string }).pan4,
+  );
+  const currencyByPan = new Map<string, string>();
   for (const t of rows) {
     const pan4 = String(t.pan4 ?? "").trim();
-    if (!pan4) continue;
-    const c = spendMap.get(pan4) ?? {
-      txnCount: 0,
-      spend: 0,
-      lastUsed: 0,
-      brand: "Visa",
-      currency: String(t.currency ?? "USD"),
-    };
-    c.txnCount += 1;
-    if (isCompletedSpend(t.status, t.type, t.amount)) c.spend += Math.abs(num(t.amount));
-    c.lastUsed = Math.max(c.lastUsed, Number(t.time ?? 0));
-    spendMap.set(pan4, c);
+    if (pan4 && !currencyByPan.has(pan4)) currencyByPan.set(pan4, String(t.currency ?? "USD"));
   }
 
   const result: BybitCard[] = stored.map((s) => {
     const pan4 = String(s.pan4 ?? "").trim();
-    const derived = spendMap.get(pan4);
+    const derived = perCard.get(pan4);
     const fromNumber = brandFromNumber(String(s.full_number ?? ""));
     return {
       id: s.id,
       pan4,
-      brand: fromNumber ?? String(s.brand ?? derived?.brand ?? "Visa"),
-      currency: String(s.currency ?? derived?.currency ?? "USD"),
+      brand: fromNumber ?? String(s.brand ?? "Visa"),
+      currency: String(s.currency ?? currencyByPan.get(pan4) ?? "USD"),
       status: String(s.status ?? "active"),
       name: s.name ?? undefined,
       fullNumber: s.full_number ?? undefined,
       cvv: s.cvv ?? undefined,
       expiry: s.expiry ?? undefined,
-      txnCount: derived?.txnCount ?? 0,
+      txnCount: derived?.totalTxns ?? 0,
       spend: derived?.spend ?? 0,
       lastUsed: derived?.lastUsed ?? 0,
       virtual: true,
     };
   });
+
 
   // Only cards explicitly added by the admin are shown.
   return result.sort((a, b) => b.lastUsed - a.lastUsed);

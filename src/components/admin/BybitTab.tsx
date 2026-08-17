@@ -668,6 +668,8 @@ function BybitAccountView({ isAdmin, accountId, accountName, onBack }: { isAdmin
   const coinBalances = visibleCoins(((overview.data as any)?.coins ?? []) as CoinRow[]);
   const monthSpend = (overview.data as any)?.monthSpend ?? 0;
   const daySpend = (overview.data as any)?.daySpend ?? 0;
+  const skippedNonUsd = Number((overview.data as any)?.skippedNonUsd ?? 0);
+
 
   function refreshAll() {
     qc.invalidateQueries({ queryKey: ["bybit-overview", accountId] });
@@ -769,8 +771,14 @@ function BybitAccountView({ isAdmin, accountId, accountName, onBack }: { isAdmin
             <Stat label="الإنفاق الشهري" value={`$${monthSpend.toFixed(2)}`} hint="الشهر الحالي · المشتريات" />
             <Stat label="الإنفاق اليومي" value={`$${daySpend.toFixed(2)}`} hint="اليوم · المشتريات" />
           </div>
+          {skippedNonUsd > 0 && (
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              {skippedNonUsd} معاملة رجعت بعملة غير الدولار، فمش مضافة للإجمالي بدل تحويلها بتقدير.
+            </p>
+          )}
         </div>
       )}
+
 
       {/* Tabs */}
       <div className="flex items-center justify-start gap-2">
