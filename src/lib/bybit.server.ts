@@ -1,4 +1,5 @@
 import { createHmac } from "crypto";
+import { normalizeBybitError, type BybitError } from "./bybit-errors";
 
 const BASE = "https://api.bybit.com";
 const RECV = "5000";
@@ -113,10 +114,18 @@ async function dbCreds(): Promise<Creds | null> {
   return null;
 }
 
+/**
+ * Credential resolution is STRICTLY scoped:
+ * - with an accountId → only that account's own keys (never another account's,
+ *   never the legacy global key). This is what stops one broken/new account from
+ *   silently reading a different account's data.
+ * - without an accountId → the legacy single-key integration (DB, then env).
+ */
 export async function getCreds(accountId?: string): Promise<Creds> {
   if (accountId) {
     const perAccount = await accountCreds(accountId);
     if (perAccount) return perAccount;
+    throw new Error("BYBIT_ACCOUNT_KEYS_MISSING");
   }
   const fromDb = await dbCreds();
   if (fromDb) return fromDb;
@@ -127,9 +136,33 @@ export async function getCreds(accountId?: string): Promise<Creds> {
 }
 
 export async function bybitConfigured(accountId?: string) {
-  if (accountId && (await accountCreds(accountId))) return true;
+  if (accountId) return Boolean(await accountCreds(accountId));
   if (process.env["BYBIT_API_KEY"] && process.env["BYBIT_API_SECRET"]) return true;
   return Boolean(await dbCreds());
+}
+
+/**
+ * The one and only wrapper every read endpoint of "معاملات الفيزا" goes through:
+ * same configured-check, same credential scoping, same normalized error shape.
+ * New endpoints/accounts need no bespoke error handling.
+ */
+export async function readOp<T extends Record<string, unknown>>(
+  accountId: string | undefined,
+  run: () => Promise<T>,
+  fallback: T,
+): Promise<T & { configured: boolean; failed?: string; errorCode?: string }> {
+  if (!(await bybitConfigured(accountId))) {
+    const { code, message } = normalizeBybitError(
+      new Error(accountId ? "BYBIT_ACCOUNT_KEYS_MISSING" : "BYBIT_NOT_CONFIGURED"),
+    );
+    return { ...fallback, configured: false, failed: message, errorCode: code };
+  }
+  try {
+    return { ...(await run()), configured: true };
+  } catch (e) {
+    const { code, message } = normalizeBybitError(e);
+    return { ...fallback, configured: true, failed: message, errorCode: code };
+  }
 }
 
 export async function saveCreds(key: string, secret: string, userId: string) {
@@ -147,37 +180,31 @@ export async function clearCreds() {
   await (supabaseAdmin as any).rpc("integration_clear_bybit");
 }
 
+/** Validates a key/secret pair on its own — never touches stored accounts. */
 export async function testCreds(c: Creds) {
   // Different keys have different scopes; accept the key if ANY read endpoint works.
-  const attempts: Array<[string, () => Promise<unknown>]> = [
-    ["Wallet", () => call("GET", "/v5/account/wallet-balance", { accountType: "UNIFIED" }, c)],
-    ["Funding", () => call("GET", "/v5/asset/transfer/query-account-coins-balance", { accountType: "FUND" }, c)],
-    ["Assets", () => call("GET", "/v5/asset/deposit/query-record", { limit: 1 }, c)],
-    ["Account", () => call("GET", "/v5/user/query-api", {}, c)],
+  const attempts: Array<() => Promise<unknown>> = [
+    () => call("GET", "/v5/account/wallet-balance", { accountType: "UNIFIED" }, c),
+    () => call("GET", "/v5/asset/transfer/query-account-coins-balance", { accountType: "FUND" }, c),
+    () => call("GET", "/v5/asset/deposit/query-record", { limit: 1 }, c),
+    () => call("GET", "/v5/user/query-api", {}, c),
   ];
-  const errors: string[] = [];
-  for (const [name, run] of attempts) {
+  const errors: unknown[] = [];
+  for (const run of attempts) {
     try {
       await run();
       return true;
-    } catch (e: any) {
-      errors.push(`${name}: ${String(e?.message ?? e)}`);
+    } catch (e) {
+      errors.push(e);
     }
   }
-  const joined = errors.join(" | ");
-  if (joined.includes("10005")) {
-    throw new Error(
-      "المفتاح صحيح لكن بدون صلاحيات قراءة. من Bybit → API Management عدّل المفتاح وفعّل: Unified Trading (Read) + Assets (Read) + Wallet + Exchange/Card إن وُجد، واضبط IP على «Unrestricted».",
-    );
-  }
-  if (joined.includes("10003") || joined.includes("10004")) {
-    throw new Error("المفتاح أو السر غير صحيح (تأكد من نسخهما بالكامل بدون مسافات).");
-  }
-  if (joined.includes("10010")) {
-    throw new Error("المفتاح مقيّد بعنوان IP. اجعله Unrestricted من إعدادات المفتاح في Bybit.");
-  }
-  throw new Error(joined.slice(0, 300));
+  // Report the most actionable failure using the shared error rules.
+  const normalized: BybitError[] = errors.map((e) => normalizeBybitError(e));
+  const priority: Array<BybitError["code"]> = ["NO_PERMISSION", "IP_RESTRICTED", "BAD_KEY", "RATE_LIMITED", "NETWORK"];
+  const pick = priority.map((c2) => normalized.find((n) => n.code === c2)).find(Boolean) ?? normalized[0];
+  throw new Error(pick?.message ?? "تعذّر التحقق من المفتاح");
 }
+
 
 async function call(method: "GET" | "POST", path: string, params: Record<string, unknown> = {}, override?: Creds) {
   const { key, secret } = override ?? (await getCreds());
