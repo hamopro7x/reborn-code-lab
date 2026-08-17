@@ -607,18 +607,30 @@ function BybitAccountView({ isAdmin, accountId, accountName, onBack }: { isAdmin
   useEffect(() => {
     if (tab !== "card" || card.isLoading || card.isError) return;
     let active = true;
-    const timer = window.setTimeout(() => {
-      void syncCardFn({ data: { accountId } }).then(() => {
-        if (active) {
-          void qc.invalidateQueries({ queryKey: ["bybit-card", accountId] });
-          void qc.invalidateQueries({ queryKey: ["bybit-overview", accountId] });
-          void qc.invalidateQueries({ queryKey: ["bybit-cards", accountId] });
+    let timer: number | undefined;
+
+    const syncUntilOldestPage = async () => {
+      if (!active) return;
+      try {
+        const result = await syncCardFn({ data: { accountId } });
+        if (!active) return;
+        await Promise.all([
+          qc.invalidateQueries({ queryKey: ["bybit-card", accountId] }),
+          qc.invalidateQueries({ queryKey: ["bybit-overview", accountId] }),
+          qc.invalidateQueries({ queryKey: ["bybit-cards", accountId] }),
+        ]);
+        if (!(result as any)?.backfillDone) {
+          timer = window.setTimeout(() => void syncUntilOldestPage(), 1_000);
         }
-      }).catch(() => undefined);
-    }, 2_000);
+      } catch {
+        if (active) timer = window.setTimeout(() => void syncUntilOldestPage(), 5_000);
+      }
+    };
+
+    timer = window.setTimeout(() => void syncUntilOldestPage(), 2_000);
     return () => {
       active = false;
-      window.clearTimeout(timer);
+      if (timer !== undefined) window.clearTimeout(timer);
     };
   }, [accountId, card.isError, card.isLoading, qc, syncCardFn, tab]);
 
