@@ -668,6 +668,8 @@ function BybitAccountView({ isAdmin, accountId, accountName, onBack }: { isAdmin
   const coinBalances = visibleCoins(((overview.data as any)?.coins ?? []) as CoinRow[]);
   const monthSpend = (overview.data as any)?.monthSpend ?? 0;
   const daySpend = (overview.data as any)?.daySpend ?? 0;
+  const skippedNonUsd = Number((overview.data as any)?.skippedNonUsd ?? 0);
+
 
   function refreshAll() {
     qc.invalidateQueries({ queryKey: ["bybit-overview", accountId] });
