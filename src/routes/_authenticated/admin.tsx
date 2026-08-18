@@ -257,7 +257,7 @@ function Admin() {
                 </a>
               </div>
             )}
-            <ReadOnlyGuard active={readOnly}>
+            <div className="min-w-0">
             {panel === "overview" && canView("overview") && <OverviewTab />}
             {panel === "orders" && <OrdersTab isAdmin={adminOnly} />}
 
@@ -276,7 +276,7 @@ function Admin() {
             {panel === "payments" && canView("payments") && <PaymentsTab />}
             {panel === "currencies" && canView("currencies") && <CurrenciesTab />}
             {panel === "settings" && canView("settings") && <SettingsTab />}
-            </ReadOnlyGuard>
+            </div>
           </main>
 
         </div>
@@ -286,18 +286,6 @@ function Admin() {
 }
 
 // ============ READ ONLY WRAPPER ============
-function ReadOnlyGuard({ active, children }: { active: boolean; children: React.ReactNode }) {
-  if (!active) return <>{children}</>;
-  return (
-    <fieldset
-      disabled
-      className="min-w-0 [&_button:not([role=tab])]:pointer-events-none [&_[role=switch]]:pointer-events-none [&_input]:pointer-events-none [&_select]:pointer-events-none [&_textarea]:pointer-events-none"
-    >
-
-      {children}
-    </fieldset>
-  );
-}
 
 // ============ OVERVIEW ============
 
