@@ -261,7 +261,8 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
   const addFn = useServerFn(addBybitAccount);
   const removeFn = useServerFn(removeBybitAccount);
   const [selected, setSelected] = usePersistentState<string | null>("bybit_selected_account", null);
-  const [listOpen, setListOpen] = usePersistentState<boolean>("bybit_list_open", false);
+  // القسم يفتح على قائمة الحسابات مباشرة (أدمن أو موظف) بدون خطوة ضغط زيادة
+  const [listOpen, setListOpen] = usePersistentState<boolean>("bybit_list_open", true);
   const [addOpen, setAddOpen] = useState(false);
   const [addError, setAddError] = useState<{ message: string; serverIp?: string | null } | null>(null);
 
