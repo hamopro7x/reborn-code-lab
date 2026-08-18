@@ -506,10 +506,10 @@ function AccountSummaryCard({
           <div className="flex items-start gap-3 sm:gap-4">
             <div className="flex flex-col items-end gap-1 pt-1">
               <div className="flex items-center gap-2">
+                <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">استرداد بنسبة</span>
                 <span className="grid size-7 place-items-center rounded-full bg-teal-400/10 text-teal-300 shrink-0">
                   <PieChart className="size-4" />
                 </span>
-                <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">استرداد بنسبة</span>
               </div>
               <div className="text-2xl sm:text-3xl font-black text-teal-300 tabular-nums leading-none" dir="ltr">
                 {cashback.toLocaleString("en-US", { maximumFractionDigits: 2 })}%
