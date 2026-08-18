@@ -249,6 +249,38 @@ function CoinLogo({ coin }: { coin: string }) {
   return <CryptoLogo name={coin} iconUrl={coinIconUrl(coin)} />;
 }
 
+
+function CoinBalanceCard({ coin }: { coin: CoinRow }) {
+  const isUsdt = String(coin.coin).toUpperCase() === "USDT";
+  return (
+    <div dir="ltr" className="relative overflow-hidden rounded-3xl border border-[oklch(0.65_0.12_170/0.22)] bg-[oklch(0.11_0.02_190)] p-5 shadow-[0_0_0_1px_oklch(0.65_0.12_170/0.06),0_12px_30px_-16px_oklch(0.4_0.14_170/0.35)]">
+      <div className="flex items-center justify-between gap-4">
+        <div className="min-w-0 text-left">
+          <div className="text-[11px] sm:text-xs text-muted-foreground mb-1">{coin.coin}</div>
+          <div className="text-[34px] sm:text-[42px] font-black tracking-tight tabular-nums text-foreground leading-none">
+            {coin.balance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </div>
+          <div className="mt-1.5 text-[11px] sm:text-xs text-muted-foreground" dir="ltr">USD {coin.usd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ≈</div>
+        </div>
+        <div className="shrink-0">
+          {isUsdt ? (
+            <span className="relative grid size-12 sm:size-14 shrink-0 place-items-center rounded-full bg-[oklch(0.52_0.18_160)] shadow-[0_0_0_2px_oklch(0.65_0.14_170/0.45),inset_0_-6px_12px_-4px_oklch(0.35_0.12_170)]" aria-label="USDT">
+              <span className="text-[22px] sm:text-[26px] font-black text-white leading-none" dir="ltr">T</span>
+              <span className="pointer-events-none absolute inset-0 grid place-items-center" aria-hidden>
+                <span className="h-3.5 sm:h-4 w-[68%] rounded-[50%] border-[2.5px] border-white/90" />
+              </span>
+            </span>
+          ) : (
+            <span className="grid size-12 sm:size-14 place-items-center rounded-full bg-[oklch(0.18_0.03_285)] border border-border/50">
+              <CoinLogo coin={coin.coin} />
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ChainLogo({ chain }: { chain: string }) {
   return <CryptoLogo name={chain} iconUrl={chainIconUrl(chain)} />;
 }
@@ -550,21 +582,7 @@ function AccountSummaryCard({
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {coins.map((c) => (
-              <div
-                key={c.coin}
-                className="rounded-2xl border border-teal-400/15 bg-[oklch(0.12_0.03_190)] p-3"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="text-[11px] text-muted-foreground mb-0.5">{c.coin}</div>
-                    <div className="text-2xl font-black tracking-tight tabular-nums">
-                      {c.balance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </div>
-                  </div>
-                  <span className="shrink-0"><CoinLogo coin={c.coin} /></span>
-                </div>
-                <div className="mt-1 text-[11px] text-muted-foreground" dir="ltr">{money(c.usd)} ≈</div>
-              </div>
+              <CoinBalanceCard key={c.coin} coin={c} />
             ))}
           </div>
         )}
