@@ -759,18 +759,29 @@ function BybitAccountView({ isAdmin, accountId, accountName, onBack }: { isAdmin
       {/* Spending stats inside account detail */}
 
       {show("spend") && (
-        <div className="rounded-2xl border border-border/60 bg-card/70 p-3">
-          <div className="grid gap-3 md:grid-cols-2">
-            <Stat label="الإنفاق الشهري" value={`$${monthSpend.toFixed(2)}`} hint="الشهر الحالي · المشتريات" />
-            <Stat label="الإنفاق اليومي" value={`$${daySpend.toFixed(2)}`} hint="اليوم · المشتريات" />
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="rounded-2xl border border-border/60 bg-card/70 p-3">
+            <div className="text-xs font-bold text-muted-foreground mb-2 px-1">الإنفاق</div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Stat label="الإنفاق الشهري" value={`$${monthSpend.toFixed(2)}`} hint="الشهر الحالي · المشتريات" />
+              <Stat label="الإنفاق اليومي" value={`$${daySpend.toFixed(2)}`} hint="اليوم · المشتريات" />
+            </div>
+            {skippedNonUsd > 0 && (
+              <p className="mt-2 text-[11px] text-muted-foreground">
+                {skippedNonUsd} معاملة رجعت بعملة غير الدولار، فمش مضافة للإجمالي بدل تحويلها بتقدير.
+              </p>
+            )}
           </div>
-          {skippedNonUsd > 0 && (
-            <p className="mt-2 text-[11px] text-muted-foreground">
-              {skippedNonUsd} معاملة رجعت بعملة غير الدولار، فمش مضافة للإجمالي بدل تحويلها بتقدير.
-            </p>
-          )}
+          <div className="rounded-2xl border border-border/60 bg-card/70 p-3">
+            <div className="text-xs font-bold text-muted-foreground mb-2 px-1">رسوم الفيزا</div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Stat label="رسوم الفيزا الشهرية" value={`$${monthFees.toFixed(2)}`} hint="الشهر الحالي · الرسوم فقط" />
+              <Stat label="رسوم الفيزا اليومية" value={`$${dayFees.toFixed(2)}`} hint="اليوم · الرسوم فقط" />
+            </div>
+          </div>
         </div>
       )}
+
 
 
       {/* Tabs */}
