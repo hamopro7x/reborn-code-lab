@@ -42,7 +42,7 @@ export const removeBybitAccount = createServerFn({ method: "POST" })
 
 export const updateBybitAccount = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string; name?: string; monthlyCashback?: number }) => {
+  .inputValidator((input: { id: string; name?: string; monthlyCashback?: number; sortOrder?: number }) => {
     const id = requiredId(input, "معرف الحساب مطلوب");
     const name = input?.name !== undefined ? String(input.name).trim().slice(0, 60) : undefined;
     if (name !== undefined && !name) throw new Error("اسم الحساب مطلوب");
@@ -52,7 +52,13 @@ export const updateBybitAccount = createServerFn({ method: "POST" })
       if (!Number.isFinite(n) || n < 0 || n > 100) throw new Error("نسبة الاسترداد لازم تكون بين 0 و 100");
       monthlyCashback = Math.round(n * 100) / 100;
     }
-    return { id, name, monthlyCashback };
+    let sortOrder: number | undefined;
+    if (input?.sortOrder !== undefined && input.sortOrder !== null) {
+      const n = Math.trunc(Number(input.sortOrder));
+      if (!Number.isFinite(n) || n < 1 || n > 9999) throw new Error("رقم الفيزا لازم يكون بين 1 و 9999");
+      sortOrder = n;
+    }
+    return { id, name, monthlyCashback, sortOrder };
   })
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
