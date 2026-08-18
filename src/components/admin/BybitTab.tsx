@@ -449,7 +449,9 @@ function AccountSummaryCard({
             <Wallet className="size-4" />
           </span>
           <div>
-            
+            {account.sortOrder ? (
+              <div className="text-[11px] font-bold text-blue-400" dir="ltr">Visa #{account.sortOrder}</div>
+            ) : null}
             <div className="text-sm font-bold">{account.name}</div>
             {account.uid && <div className="text-[11px] text-muted-foreground">UID {account.uid}</div>}
             <div className="text-[11px] text-muted-foreground">
