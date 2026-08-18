@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, CreditCard, Layers, ArrowUp, ArrowDown, ChevronDown, Loader2, Trash2, Plus, Download, Copy, Pencil, ChevronLeft, Wallet, ArrowDownUp, Search, PieChart, BarChart3 } from "lucide-react";
+import { RefreshCw, CreditCard, Layers, ArrowUp, ArrowDown, ChevronDown, Loader2, Trash2, Plus, Download, Copy, Pencil, ChevronLeft, Wallet, ArrowDownUp, Search, BarChart3, Clock } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -503,25 +503,29 @@ function AccountSummaryCard({
           </div>
 
           {/* right cluster: number + cashback */}
-          <div className="flex items-start gap-3 sm:gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="flex items-center shrink-0">
+              <div className="relative grid size-16 sm:size-[70px] place-items-center rounded-full border border-teal-400/40 bg-teal-400/5 shadow-[0_0_24px_-6px_oklch(0.7_0.15_190_/_0.7),inset_0_0_18px_-8px_oklch(0.7_0.15_190_/_0.8)]">
+                <span className="text-2xl sm:text-3xl font-black text-teal-300 tabular-nums" dir="ltr">{visaNo}</span>
+              </div>
+            </div>
+
+            {/* vertical divider */}
+            <div className="h-12 sm:h-14 w-px bg-gradient-to-b from-transparent via-teal-400/50 to-transparent" aria-hidden />
+
             <div className="flex flex-col items-end gap-1 pt-1">
               <div className="flex items-center gap-2">
                 <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">استرداد بنسبة</span>
                 <span className="grid size-7 place-items-center rounded-full bg-teal-400/10 text-teal-300 shrink-0">
-                  <PieChart className="size-4" />
+                  <Clock className="size-4" />
                 </span>
               </div>
               <div className="text-2xl sm:text-3xl font-black text-teal-300 tabular-nums leading-none" dir="ltr">
                 {cashback.toLocaleString("en-US", { maximumFractionDigits: 2 })}%
               </div>
             </div>
-
-            <div className="flex items-center shrink-0">
-              <div className="relative grid size-16 sm:size-[70px] place-items-center rounded-full border border-teal-400/40 bg-teal-400/5 shadow-[0_0_24px_-6px_oklch(0.7_0.15_190_/_0.7),inset_0_0_18px_-8px_oklch(0.7_0.15_190_/_0.8)]">
-                <span className="text-2xl sm:text-3xl font-black text-teal-300 tabular-nums" dir="ltr">{visaNo}</span>
-              </div>
-            </div>
           </div>
+
         </div>
 
         {/* Balances */}
