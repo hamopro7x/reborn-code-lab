@@ -258,14 +258,18 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
   const listFn = useServerFn(listBybitAccounts);
   const addFn = useServerFn(addBybitAccount);
   const removeFn = useServerFn(removeBybitAccount);
+  const updateFn = useServerFn(updateBybitAccount);
+  const reorderFn = useServerFn(reorderBybitAccounts);
   const [selected, setSelected] = usePersistentState<string | null>("bybit_selected_account", null);
   // القسم يفتح على قائمة الحسابات مباشرة (أدمن أو موظف) بدون خطوة ضغط زيادة
   const [listOpen, setListOpen] = usePersistentState<boolean>("bybit_list_open", true);
   const [addOpen, setAddOpen] = useState(false);
   const [addError, setAddError] = useState<{ message: string; serverIp?: string | null } | null>(null);
+  const [editAccount, setEditAccount] = useState<BybitAccountRow | null>(null);
 
   const accounts = useQuery({ queryKey: ["bybit-accounts"], queryFn: () => listFn() });
-  const list = ((accounts.data as any)?.accounts ?? []) as Array<{ id: string; name: string; uid: string | null }>;
+  const list = ((accounts.data as any)?.accounts ?? []) as BybitAccountRow[];
+
 
   // مزامنة معاملات كل الحسابات في الخلفية (مش الحساب المفتوح بس)
   const syncAllFn = useServerFn(syncAllBybitCardTxns);
