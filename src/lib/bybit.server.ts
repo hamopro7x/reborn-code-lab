@@ -879,16 +879,18 @@ async function persistCardTxns(rows: CardTxn[], accountId?: string) {
 
 }
 
-async function storedCardTxns(_limit: number, accountId?: string): Promise<CardTxn[]> {
+/**
+ * Full archive read, server-side only (per-card spend aggregation).
+ * Never returned to the browser: the whole archive is too large for one
+ * response, which is why the visible table pages through it instead.
+ */
+async function storedCardTxns(limit: number, accountId?: string): Promise<CardTxn[]> {
   try {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    // The backend caps a single response at 1000 rows, so walk ranges in
-    // batches until a batch comes back short — that means the oldest stored
-    // record was reached. No row cap, no time filter.
     const CHUNK = 1000;
-    const BATCH = 10; // 10k rows per round trip group
+    const BATCH = 10;
     const data: any[] = [];
-    for (let base = 0; ; base += CHUNK * BATCH) {
+    for (let base = 0; base < limit; base += CHUNK * BATCH) {
       const requests: any[] = [];
       for (let i = 0; i < BATCH; i++) {
         const from = base + i * CHUNK;
@@ -899,58 +901,112 @@ async function storedCardTxns(_limit: number, accountId?: string): Promise<CardT
         requests.push(query.order("txn_time", { ascending: false }).range(from, from + CHUNK - 1));
       }
       const chunks = await Promise.all(requests);
-      const rows = chunks.flatMap(({ data: chunk }) => chunk ?? []);
+      const rows = chunks.flatMap(({ data: chunk }: any) => chunk ?? []);
       data.push(...rows);
       if (rows.length < CHUNK * BATCH) break;
     }
-    return data.map((r: any) => {
-      const detail = (r.detail ?? {}) as Record<string, string | number | null>;
-      const tradeStatus = String(detail.tradeStatus ?? "");
-      const upper = tradeStatus.toUpperCase();
-      const side = String(detail.side ?? r.txn_type ?? "");
-      const isRefund =
-        ["3", "5", "6", "7", "10", "11"].includes(side) ||
-        tradeStatus === "3" ||
-        /REFUND|REVERS|CHARGEBACK/.test(upper);
-      // Fall back to the status persisted at ingest time whenever the raw
-      // tradeStatus is missing or unrecognised, so successful purchases are
-      // never silently downgraded to "pending" and dropped from the tab.
-      const stored: CardTxn["status"] =
-        r.status === "success" || r.status === "failed" || r.status === "refund" || r.status === "pending"
-          ? r.status
-          : "pending";
-      const status: CardTxn["status"] = isRefund
-        ? "refund"
-        : tradeStatus === "2" || /FAIL|DECLIN|REJECT|CANCEL/.test(upper)
-          ? "failed"
-          : tradeStatus === "1" || /SUCCESS|COMPLETE|SETTLE|APPROVED|DONE/.test(upper)
-            ? "success"
-            : tradeStatus === "0" || /PENDING|AUTH|HOLD|PROCESS/.test(upper)
-              ? "pending"
-              : stored;
-
-
-      return {
-        id: r.txn_id,
-        merchant: r.merchant ?? "—",
-        amount: num(r.amount),
-        currency: r.currency ?? "USD",
-        status,
-        time: Number(r.txn_time ?? 0),
-        pan4: r.pan4 ?? "",
-        type: r.txn_type ?? "",
-        detail,
-      };
-    });
+    return data.map(mapStoredRow);
   } catch {
     return [];
   }
 }
 
-export async function fetchCardTxns(limit = 100, accountId?: string): Promise<CardTxn[]> {
-  // The visible request must never wait for Bybit or the historical backfill.
-  // It returns the archive already stored in the database immediately.
-  return storedCardTxns(Math.max(limit, 200_000), accountId);
+/** Maps one archived row to the shape the UI reads. */
+function mapStoredRow(r: any): CardTxn {
+  const detail = (r.detail ?? {}) as Record<string, string | number | null>;
+  const tradeStatus = String(detail.tradeStatus ?? "");
+  const upper = tradeStatus.toUpperCase();
+  const side = String(detail.side ?? r.txn_type ?? "");
+  const isRefund =
+    ["3", "5", "6", "7", "10", "11"].includes(side) ||
+    tradeStatus === "3" ||
+    /REFUND|REVERS|CHARGEBACK/.test(upper);
+  // Fall back to the status persisted at ingest time whenever the raw
+  // tradeStatus is missing or unrecognised, so successful purchases are
+  // never silently downgraded to "pending" and dropped from the tab.
+  const stored: CardTxn["status"] =
+    r.status === "success" || r.status === "failed" || r.status === "refund" || r.status === "pending"
+      ? r.status
+      : "pending";
+  const status: CardTxn["status"] = isRefund
+    ? "refund"
+    : tradeStatus === "2" || /FAIL|DECLIN|REJECT|CANCEL/.test(upper)
+      ? "failed"
+      : tradeStatus === "1" || /SUCCESS|COMPLETE|SETTLE|APPROVED|DONE/.test(upper)
+        ? "success"
+        : tradeStatus === "0" || /PENDING|AUTH|HOLD|PROCESS/.test(upper)
+          ? "pending"
+          : stored;
+
+  return {
+    id: r.txn_id,
+    merchant: r.merchant ?? "—",
+    amount: num(r.amount),
+    currency: r.currency ?? "USD",
+    status,
+    time: Number(r.txn_time ?? 0),
+    pan4: r.pan4 ?? "",
+    type: r.txn_type ?? "",
+    detail,
+  };
+}
+
+export type CardTxnPage = {
+  rows: CardTxn[];
+  total: number;
+  counts: Record<"all" | "success" | "failed" | "refund", number>;
+};
+
+/**
+ * One page of the archive, filtered and counted in the database.
+ * The whole archive is far too large to ship in a single response — that is why
+ * the table reads it page by page instead of loading every stored row at once.
+ */
+export async function fetchCardTxnsPage(opts: {
+  accountId?: string;
+  status?: "all" | "success" | "failed" | "refund";
+  page?: number;
+  pageSize?: number;
+}): Promise<CardTxnPage> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const status = opts.status ?? "all";
+  const pageSize = Math.min(Math.max(opts.pageSize ?? 150, 10), 500);
+  const page = Math.max(opts.page ?? 1, 1);
+  const from = (page - 1) * pageSize;
+
+  const base = () => {
+    let q = (supabaseAdmin as any).from("bybit_card_txns");
+    return { q };
+  };
+
+  const scoped = (q: any) => (opts.accountId ? q.eq("account_id", opts.accountId) : q);
+
+  const countFor = async (s: "all" | "success" | "failed" | "refund") => {
+    let q = scoped(base().q.select("txn_id", { count: "exact", head: true }));
+    if (s !== "all") q = q.eq("status", s);
+    const { count } = await q;
+    return Number(count ?? 0);
+  };
+
+  let rowsQuery = scoped(
+    base().q.select("txn_id, merchant, amount, currency, status, txn_time, pan4, txn_type, detail"),
+  );
+  if (status !== "all") rowsQuery = rowsQuery.eq("status", status);
+  const [{ data, error }, all, success, failed, refund] = await Promise.all([
+    rowsQuery.order("txn_time", { ascending: false }).range(from, from + pageSize - 1),
+    countFor("all"),
+    countFor("success"),
+    countFor("failed"),
+    countFor("refund"),
+  ]);
+  if (error) throw new Error(error.message);
+
+  const counts = { all, success, failed, refund };
+  return {
+    rows: (data ?? []).map(mapStoredRow),
+    total: status === "all" ? all : counts[status],
+    counts,
+  };
 }
 
 /** Sync recent records and one resumable historical chunk outside the visible read. */

@@ -815,7 +815,7 @@ function BybitAccountView({ isAdmin, accountId, accountName, onBack }: { isAdmin
   const overview = useQuery({ queryKey: ["bybit-overview", accountId], queryFn: () => overviewFn({ data: { accountId } }) });
   const card = useQuery({
     queryKey: ["bybit-card", accountId],
-    queryFn: () => cardFn({ data: { accountId } }),
+    queryFn: () => cardFn({ data: { accountId, page: 1, pageSize: 10 } }),
     enabled: tab === "card",
     staleTime: 30_000,
   });
@@ -1522,7 +1522,7 @@ function CardTable({ q, accountId }: { q: any; accountId?: string }) {
     if (!pan4) continue;
     brandByPan4[pan4] = detectBrand(String(c?.fullNumber ?? "")) || String(c?.brand ?? "Visa");
   }
-  return <CardTableInner q={q} brandByPan4={brandByPan4} />;
+  return <CardTableInner brandByPan4={brandByPan4} accountId={accountId} />;
 }
 
 function P2PTable({ q }: { q: any }) {
@@ -1585,17 +1585,34 @@ function P2PTable({ q }: { q: any }) {
   );
 }
 
-function CardTableInner({ q, brandByPan4 = {} }: { q: any; brandByPan4?: Record<string, string> }) {
+function CardTableInner({
+  brandByPan4 = {},
+  accountId,
+}: {
+  q?: any;
+  brandByPan4?: Record<string, string>;
+  accountId?: string;
+}) {
   const [filter, setFilter] = usePersistentState<"all" | "success" | "failed" | "refund">("bybit.card.filter", "all");
   const [openId, setOpenId] = usePersistentState<string | null>("bybit.card.open", null);
-  const rows: any[] = q.data?.rows ?? [];
-  const all = rows.filter((r) => (filter === "all" ? true : r.status === filter));
   const PAGE_SIZE = 150;
   const [page, setPage] = useState(1);
-  const pageCount = Math.max(1, Math.ceil(all.length / PAGE_SIZE));
-  const current = Math.min(page, pageCount);
   useEffect(() => { setPage(1); }, [filter]);
-  const shown = all.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE);
+
+  // The archive is read one page at a time: the full stored history is far too
+  // large to travel in a single response, which is what left the table empty.
+  const txnsFn = useServerFn(getBybitCardTxns);
+  const q = useQuery({
+    queryKey: ["bybit-card", accountId, filter, page],
+    queryFn: () => txnsFn({ data: { accountId, status: filter, page, pageSize: PAGE_SIZE } }),
+    placeholderData: (prev: any) => prev,
+    staleTime: 30_000,
+  });
+
+  const shown: any[] = (q.data as any)?.rows ?? [];
+  const total = Number((q.data as any)?.total ?? 0);
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const current = Math.min(page, pageCount);
 
   return (
     <div className="rounded-3xl border border-border/60 bg-card/70 overflow-hidden">
