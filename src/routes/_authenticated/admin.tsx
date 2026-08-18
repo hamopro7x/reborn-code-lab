@@ -257,7 +257,7 @@ function Admin() {
                 </a>
               </div>
             )}
-            <ReadOnlyGuard active={readOnly}>
+            <div className="min-w-0">
             {panel === "overview" && canView("overview") && <OverviewTab />}
             {panel === "orders" && <OrdersTab isAdmin={adminOnly} />}
 
