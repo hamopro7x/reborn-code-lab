@@ -247,6 +247,7 @@ export type Database = {
           created_by: string | null
           email: string | null
           id: string
+          monthly_cashback: number
           name: string
           sort_order: number
           uid: string | null
@@ -257,6 +258,7 @@ export type Database = {
           created_by?: string | null
           email?: string | null
           id?: string
+          monthly_cashback?: number
           name?: string
           sort_order?: number
           uid?: string | null
@@ -267,6 +269,7 @@ export type Database = {
           created_by?: string | null
           email?: string | null
           id?: string
+          monthly_cashback?: number
           name?: string
           sort_order?: number
           uid?: string | null

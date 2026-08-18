@@ -7,7 +7,7 @@ import {
   getBybitOverview, getBybitCardTxns, syncBybitCardTxns, syncAllBybitCardTxns, getBybitOnChain, getBybitInternal, getBybitP2P,
   getBybitCards,
   createBybitCard, deleteBybitCard, updateBybitCard, getBybitAccountInfo, saveBybitAccountInfo,
-  listBybitAccounts, addBybitAccount, removeBybitAccount,
+  listBybitAccounts, addBybitAccount, removeBybitAccount, updateBybitAccount, reorderBybitAccounts,
 } from "@/lib/bybit.functions";
 import { formatDateTime } from "@/lib/format";
 import { BybitDocsCard } from "@/components/admin/BybitDocs";
@@ -253,19 +253,32 @@ function ChainLogo({ chain }: { chain: string }) {
   return <CryptoLogo name={chain} iconUrl={chainIconUrl(chain)} />;
 }
 
+type BybitAccountRow = {
+  id: string;
+  name: string;
+  uid: string | null;
+  sortOrder?: number;
+  monthlyCashback?: number;
+};
+
 export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
+
   const qc = useQueryClient();
   const listFn = useServerFn(listBybitAccounts);
   const addFn = useServerFn(addBybitAccount);
   const removeFn = useServerFn(removeBybitAccount);
+  const updateFn = useServerFn(updateBybitAccount);
+  const reorderFn = useServerFn(reorderBybitAccounts);
   const [selected, setSelected] = usePersistentState<string | null>("bybit_selected_account", null);
   // القسم يفتح على قائمة الحسابات مباشرة (أدمن أو موظف) بدون خطوة ضغط زيادة
   const [listOpen, setListOpen] = usePersistentState<boolean>("bybit_list_open", true);
   const [addOpen, setAddOpen] = useState(false);
   const [addError, setAddError] = useState<{ message: string; serverIp?: string | null } | null>(null);
+  const [editAccount, setEditAccount] = useState<BybitAccountRow | null>(null);
 
   const accounts = useQuery({ queryKey: ["bybit-accounts"], queryFn: () => listFn() });
-  const list = ((accounts.data as any)?.accounts ?? []) as Array<{ id: string; name: string; uid: string | null }>;
+  const list = ((accounts.data as any)?.accounts ?? []) as BybitAccountRow[];
+
 
   // مزامنة معاملات كل الحسابات في الخلفية (مش الحساب المفتوح بس)
   const syncAllFn = useServerFn(syncAllBybitCardTxns);
@@ -304,6 +317,30 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
     },
     onError: (e: any) => toast.error(e?.message || "فشل حذف الحساب"),
   });
+  const saveAccount = useMutation({
+    mutationFn: (data: { id: string; name: string; monthlyCashback: number }) => updateFn({ data }),
+    onSuccess: () => {
+      toast.success("تم حفظ بيانات الحساب");
+      setEditAccount(null);
+      qc.invalidateQueries({ queryKey: ["bybit-accounts"] });
+    },
+    onError: (e: any) => toast.error(e?.message || "فشل حفظ البيانات"),
+  });
+  const reorder = useMutation({
+    mutationFn: (data: { ids: string[] }) => reorderFn({ data }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["bybit-accounts"] }),
+    onError: (e: any) => toast.error(e?.message || "فشل تغيير الترتيب"),
+  });
+
+  function move(index: number, dir: -1 | 1) {
+    const target = index + dir;
+    if (target < 0 || target >= list.length) return;
+    const ids = list.map((a) => a.id);
+    const [id] = ids.splice(index, 1);
+    ids.splice(target, 0, id);
+    reorder.mutate({ ids });
+  }
+
 
   const current = list.find((a) => a.id === selected) ?? null;
 
@@ -369,13 +406,18 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 overflow-hidden rounded-2xl border border-border/60 bg-card/40 [&>*]:border-b [&>*]:border-border/60 md:[&>*:nth-child(odd)]:border-l md:[&>*:nth-child(odd)]:border-border/60">
-          {list.map((a) => (
+          {list.map((a, i) => (
             <AccountSummaryCard
               key={a.id}
               account={a}
+              index={i}
+              total={list.length}
               isAdmin={isAdmin}
+              reordering={reorder.isPending}
               onOpen={() => setSelected(a.id)}
               onDelete={() => removeAccount.mutate({ id: a.id })}
+              onEdit={() => setEditAccount(a)}
+              onMove={(dir) => move(i, dir)}
             />
           ))}
         </div>
@@ -388,13 +430,31 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
         onClose={() => { setAddOpen(false); setAddError(null); }}
         onSubmit={(d) => addAccount.mutate(d)}
       />
+
+      <EditAccountDialog
+        account={editAccount}
+        busy={saveAccount.isPending}
+        onClose={() => setEditAccount(null)}
+        onSubmit={(d) => saveAccount.mutate(d)}
+      />
+
     </div>
   );
 }
 
 function AccountSummaryCard({
-  account, isAdmin, onOpen, onDelete,
-}: { account: { id: string; name: string; uid: string | null }; isAdmin: boolean; onOpen: () => void; onDelete: () => void }) {
+  account, index, total, isAdmin, reordering, onOpen, onDelete, onEdit, onMove,
+}: {
+  account: BybitAccountRow;
+  index: number;
+  total: number;
+  isAdmin: boolean;
+  reordering: boolean;
+  onOpen: () => void;
+  onDelete: () => void;
+  onEdit: () => void;
+  onMove: (dir: -1 | 1) => void;
+}) {
   const overviewFn = useServerFn(getBybitOverview);
   const q = useQuery({
     queryKey: ["bybit-overview", account.id],
@@ -402,25 +462,58 @@ function AccountSummaryCard({
   });
   const d = (q.data as any) ?? {};
   const coins = visibleCoins((d.coins ?? []) as CoinRow[]);
+  const cashback = Number(account.monthlyCashback ?? 0);
 
   return (
     <div className="bg-card/70 p-4 space-y-3 flex flex-col min-h-[232px]">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2">
           <span className="size-8 rounded-lg bg-blue-500/15 text-blue-400 grid place-items-center">
             <Wallet className="size-4" />
           </span>
           <div>
+            <div className="text-[11px] font-bold text-blue-400" dir="ltr">Visa #{index + 1}</div>
             <div className="text-sm font-bold">{account.name}</div>
             {account.uid && <div className="text-[11px] text-muted-foreground">UID {account.uid}</div>}
+            <div className="text-[11px] text-muted-foreground">
+              الاسترداد الشهري: <span className="tabular-nums">{cashback.toLocaleString("en-US", { maximumFractionDigits: 2 })}%</span>
+            </div>
           </div>
         </div>
         {isAdmin && (
-          <Button variant="ghost" size="icon" className="rounded-lg text-destructive" onClick={onDelete}>
-            <Trash2 className="size-4" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <div className="flex flex-col">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-6 rounded-md"
+                disabled={index === 0 || reordering}
+                onClick={() => onMove(-1)}
+                title="تحريك لأعلى"
+              >
+                <ArrowUp className="size-3.5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-6 rounded-md"
+                disabled={index === total - 1 || reordering}
+                onClick={() => onMove(1)}
+                title="تحريك لأسفل"
+              >
+                <ArrowDown className="size-3.5" />
+              </Button>
+            </div>
+            <Button variant="ghost" size="icon" className="rounded-lg" onClick={onEdit} title="تعديل">
+              <Pencil className="size-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="rounded-lg text-destructive" onClick={onDelete} title="حذف">
+              <Trash2 className="size-4" />
+            </Button>
+          </div>
         )}
       </div>
+
 
       {q.isLoading ? (
         <div className="flex-1 min-h-[104px] flex flex-wrap items-stretch gap-3">
@@ -556,6 +649,71 @@ function AddAccountDialog({
     </Dialog>
   );
 }
+
+function EditAccountDialog({
+  account, onClose, onSubmit, busy,
+}: {
+  account: BybitAccountRow | null;
+  onClose: () => void;
+  onSubmit: (d: { id: string; name: string; monthlyCashback: number }) => void;
+  busy: boolean;
+}) {
+  const [name, setName] = useState("");
+  const [cashback, setCashback] = useState("0");
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (account) {
+      setName(account.name ?? "");
+      setCashback(String(account.monthlyCashback ?? 0));
+      setError(null);
+    }
+  }, [account]);
+
+  function submit() {
+    if (!account) return;
+    const n = name.trim();
+    if (!n) return setError("اسم الحساب مطلوب");
+    const c = Number(cashback);
+    if (!Number.isFinite(c) || c < 0 || c > 100) return setError("نسبة الاسترداد لازم تكون بين 0 و 100");
+    setError(null);
+    onSubmit({ id: account.id, name: n.slice(0, 60), monthlyCashback: c });
+  }
+
+  return (
+    <Dialog open={!!account} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md text-right" dir="rtl">
+        <DialogHeader>
+          <DialogTitle>تعديل بيانات الفيزا</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <Field label="اسم الحساب">
+            <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={60} />
+          </Field>
+          <Field label="الاسترداد الشهري (%)">
+            <Input
+              dir="ltr"
+              type="number"
+              min={0}
+              max={100}
+              step="0.01"
+              value={cashback}
+              onChange={(e) => setCashback(e.target.value)}
+            />
+          </Field>
+          {account?.uid && (
+            <p className="text-[11px] text-muted-foreground" dir="ltr">UID {account.uid}</p>
+          )}
+          {error && <p className="text-[11px] text-destructive">{error}</p>}
+          <Button className="w-full rounded-xl" disabled={busy} onClick={submit}>
+            {busy ? <Loader2 className="size-4 ml-1 animate-spin" /> : null} حفظ التعديلات
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 
 function BybitAccountView({ isAdmin, accountId, accountName, onBack }: { isAdmin: boolean; accountId: string; accountName: string; onBack: () => void }) {
   const qc = useQueryClient();

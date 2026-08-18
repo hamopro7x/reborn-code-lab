@@ -1,0 +1,1 @@
+ALTER TABLE public.bybit_accounts ADD COLUMN IF NOT EXISTS monthly_cashback numeric NOT NULL DEFAULT 0;

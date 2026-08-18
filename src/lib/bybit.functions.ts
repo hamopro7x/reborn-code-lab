@@ -40,6 +40,42 @@ export const removeBybitAccount = createServerFn({ method: "POST" })
     return { ok: true as const };
   });
 
+export const updateBybitAccount = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { id: string; name?: string; monthlyCashback?: number }) => {
+    const id = requiredId(input, "معرف الحساب مطلوب");
+    const name = input?.name !== undefined ? String(input.name).trim().slice(0, 60) : undefined;
+    if (name !== undefined && !name) throw new Error("اسم الحساب مطلوب");
+    let monthlyCashback: number | undefined;
+    if (input?.monthlyCashback !== undefined && input.monthlyCashback !== null) {
+      const n = Number(input.monthlyCashback);
+      if (!Number.isFinite(n) || n < 0 || n > 100) throw new Error("نسبة الاسترداد لازم تكون بين 0 و 100");
+      monthlyCashback = Math.round(n * 100) / 100;
+    }
+    return { id, name, monthlyCashback };
+  })
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const mod = await import("./bybit.server");
+    await mod.updateAccount(data);
+    return { ok: true as const };
+  });
+
+export const reorderBybitAccounts = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { ids: string[] }) => {
+    const ids = Array.isArray(input?.ids) ? input.ids.map((x) => String(x)).filter(Boolean) : [];
+    if (!ids.length) throw new Error("ترتيب غير صالح");
+    return { ids };
+  })
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const mod = await import("./bybit.server");
+    await mod.reorderAccounts(data.ids);
+    return { ok: true as const };
+  });
+
+
 export const getBybitOverview = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(accountInput)
