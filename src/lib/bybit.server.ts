@@ -981,17 +981,23 @@ export async function fetchCardTxnsPage(opts: {
 
   const scoped = (q: any) => (opts.accountId ? q.eq("account_id", opts.accountId) : q);
 
+  // The table renders anything that is neither failed nor refunded as "ناجحة",
+  // so the success filter must match that exact rule. Bybit stores freshly
+  // authorised purchases with tradeStatus 0 ("pending"), which is why the newest
+  // successful purchases used to be missing from this tab.
+  const applyStatus = (q: any, s: "all" | "success" | "failed" | "refund") =>
+    s === "all" ? q : s === "success" ? q.in("status", ["success", "pending"]) : q.eq("status", s);
+
   const countFor = async (s: "all" | "success" | "failed" | "refund") => {
-    let q = scoped(base().q.select("txn_id", { count: "exact", head: true }));
-    if (s !== "all") q = q.eq("status", s);
-    const { count } = await q;
+    const { count } = await applyStatus(scoped(base().q.select("txn_id", { count: "exact", head: true })), s);
     return Number(count ?? 0);
   };
 
-  let rowsQuery = scoped(
-    base().q.select("txn_id, merchant, amount, currency, status, txn_time, pan4, txn_type, detail"),
+  let rowsQuery = applyStatus(
+    scoped(base().q.select("txn_id, merchant, amount, currency, status, txn_time, pan4, txn_type, detail")),
+    status,
   );
-  if (status !== "all") rowsQuery = rowsQuery.eq("status", status);
+
   const [{ data, error }, all, success, failed, refund] = await Promise.all([
     rowsQuery.order("txn_time", { ascending: false }).range(from, from + pageSize - 1),
     countFor("all"),
