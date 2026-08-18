@@ -486,7 +486,8 @@ function AccountSummaryCard({
                 )}
               </div>
               {account.uid && (
-                <div className="mt-0.5 flex items-center justify-end gap-1 text-[11px] text-muted-foreground">
+                <div className="flex items-center justify-end gap-1 text-[11px] text-muted-foreground">
+                  <span dir="ltr" className="tabular-nums">UID {account.uid}</span>
                   <button
                     type="button"
                     className="grid size-5 place-items-center rounded-md hover:bg-teal-400/10 hover:text-teal-300"
@@ -495,7 +496,6 @@ function AccountSummaryCard({
                   >
                     <Copy className="size-3" />
                   </button>
-                  <span dir="ltr" className="tabular-nums">UID {account.uid}</span>
                 </div>
               )}
             </div>
@@ -514,11 +514,10 @@ function AccountSummaryCard({
                 </div>
               </div>
             </div>
-            <div className="flex flex-col items-center gap-1.5 shrink-0">
+            <div className="flex items-center shrink-0">
               <div className="relative grid size-16 sm:size-[70px] place-items-center rounded-full border border-teal-400/40 bg-teal-400/5 shadow-[0_0_24px_-6px_oklch(0.7_0.15_190_/_0.7),inset_0_0_18px_-8px_oklch(0.7_0.15_190_/_0.8)]">
                 <span className="text-2xl sm:text-3xl font-black text-teal-300 tabular-nums" dir="ltr">{visaNo}</span>
               </div>
-              <span className="text-[10px] text-muted-foreground">رقم الحساب</span>
             </div>
           </div>
         </div>
