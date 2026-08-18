@@ -879,6 +879,38 @@ async function persistCardTxns(rows: CardTxn[], accountId?: string) {
 
 }
 
+/**
+ * Full archive read, server-side only (per-card spend aggregation).
+ * Never returned to the browser: the whole archive is too large for one
+ * response, which is why the visible table pages through it instead.
+ */
+async function storedCardTxns(limit: number, accountId?: string): Promise<CardTxn[]> {
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const CHUNK = 1000;
+    const BATCH = 10;
+    const data: any[] = [];
+    for (let base = 0; base < limit; base += CHUNK * BATCH) {
+      const requests: any[] = [];
+      for (let i = 0; i < BATCH; i++) {
+        const from = base + i * CHUNK;
+        let query = (supabaseAdmin as any)
+          .from("bybit_card_txns")
+          .select("txn_id, merchant, amount, currency, status, txn_time, pan4, txn_type, detail");
+        if (accountId) query = query.eq("account_id", accountId);
+        requests.push(query.order("txn_time", { ascending: false }).range(from, from + CHUNK - 1));
+      }
+      const chunks = await Promise.all(requests);
+      const rows = chunks.flatMap(({ data: chunk }: any) => chunk ?? []);
+      data.push(...rows);
+      if (rows.length < CHUNK * BATCH) break;
+    }
+    return data.map(mapStoredRow);
+  } catch {
+    return [];
+  }
+}
+
 /** Maps one archived row to the shape the UI reads. */
 function mapStoredRow(r: any): CardTxn {
   const detail = (r.detail ?? {}) as Record<string, string | number | null>;
