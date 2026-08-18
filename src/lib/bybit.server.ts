@@ -755,6 +755,7 @@ function mapCardTxn(t: any): CardTxn {
         netAmount: pick(t, ["netAmount", "settleAmount"]),
         foreignTxnFee: t.foreignTxnFee ?? t.fee ?? null,
         feeAmount: pick(t, ["feeAmount", "fee", "handlingFee"]),
+        feeCurrency: pick(t, ["feeCurrency", "foreignTxnFeeCurrency"]),
         tax: pick(t, ["tax", "taxAmount"]),
         shipping: pick(t, ["shipping", "shippingAmount"]),
         paidWithCrypto: t.cryptoAmount ?? null,

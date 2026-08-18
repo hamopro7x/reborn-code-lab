@@ -139,7 +139,8 @@ export function spendUsd(row: SpendRow): number | null {
   if (base === null) return null;
 
   const fee = spendFeeUsd(row);
-  if (fee <= 0) return base;
+  // No fee on this transaction (or nonsense data) → the full amount counts.
+  if (fee <= 0 || fee >= base) return base;
 
   const close = (a: number, b: number) => Math.abs(a - b) < 0.005;
 
