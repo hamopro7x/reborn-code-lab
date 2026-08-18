@@ -766,15 +766,15 @@ function BybitAccountView({ isAdmin, accountId, accountName, onBack }: { isAdmin
           <div className="rounded-2xl border border-border/60 bg-card/70 p-3">
             <div className="text-xs font-bold text-muted-foreground mb-2 px-1">الإنفاق</div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <Stat label="الإنفاق الشهري" value={`$${monthSpend.toFixed(2)}`} hint="الشهر الحالي · المشتريات" />
-              <Stat label="الإنفاق اليومي" value={`$${daySpend.toFixed(2)}`} hint="اليوم · المشتريات" />
+              <Stat label="الإنفاق الشهري" value={`$${monthSpend.toFixed(2)}`} />
+              <Stat label="الإنفاق اليومي" value={`$${daySpend.toFixed(2)}`} />
             </div>
           </div>
           <div className="rounded-2xl border border-border/60 bg-card/70 p-3">
             <div className="text-xs font-bold text-muted-foreground mb-2 px-1">رسوم الفيزا</div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <Stat label="رسوم الفيزا الشهرية" value={`$${monthFees.toFixed(2)}`} hint="الشهر الحالي · الرسوم فقط" />
-              <Stat label="رسوم الفيزا اليومية" value={`$${dayFees.toFixed(2)}`} hint="اليوم · الرسوم فقط" />
+              <Stat label="رسوم الفيزا الشهرية" value={`$${monthFees.toFixed(2)}`} />
+              <Stat label="رسوم الفيزا اليومية" value={`$${dayFees.toFixed(2)}`} />
             </div>
           </div>
         </div>
