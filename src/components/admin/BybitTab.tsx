@@ -426,17 +426,14 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
 }
 
 function AccountSummaryCard({
-  account, index, total, isAdmin, reordering, onOpen, onDelete, onEdit, onMove,
+  account, index, isAdmin, onOpen, onDelete, onEdit,
 }: {
   account: BybitAccountRow;
   index: number;
-  total: number;
   isAdmin: boolean;
-  reordering: boolean;
   onOpen: () => void;
   onDelete: () => void;
   onEdit: () => void;
-  onMove: (dir: -1 | 1) => void;
 }) {
   const overviewFn = useServerFn(getBybitOverview);
   const q = useQuery({
@@ -465,28 +462,6 @@ function AccountSummaryCard({
         </div>
         {isAdmin && (
           <div className="flex items-center gap-1">
-            <div className="flex flex-col">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-6 rounded-md"
-                disabled={index === 0 || reordering}
-                onClick={() => onMove(-1)}
-                title="تحريك لأعلى"
-              >
-                <ArrowUp className="size-3.5" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-6 rounded-md"
-                disabled={index === total - 1 || reordering}
-                onClick={() => onMove(1)}
-                title="تحريك لأسفل"
-              >
-                <ArrowDown className="size-3.5" />
-              </Button>
-            </div>
             <Button variant="ghost" size="icon" className="rounded-lg" onClick={onEdit} title="تعديل">
               <Pencil className="size-4" />
             </Button>
