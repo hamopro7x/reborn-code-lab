@@ -610,17 +610,19 @@ function EditAccountDialog({
 }: {
   account: BybitAccountRow | null;
   onClose: () => void;
-  onSubmit: (d: { id: string; name: string; monthlyCashback: number }) => void;
+  onSubmit: (d: { id: string; name: string; monthlyCashback: number; sortOrder: number }) => void;
   busy: boolean;
 }) {
   const [name, setName] = useState("");
   const [cashback, setCashback] = useState("0");
+  const [order, setOrder] = useState("1");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (account) {
       setName(account.name ?? "");
       setCashback(String(account.monthlyCashback ?? 0));
+      setOrder(String(account.sortOrder ?? 1));
       setError(null);
     }
   }, [account]);
@@ -631,8 +633,10 @@ function EditAccountDialog({
     if (!n) return setError("اسم الحساب مطلوب");
     const c = Number(cashback);
     if (!Number.isFinite(c) || c < 0 || c > 100) return setError("نسبة الاسترداد لازم تكون بين 0 و 100");
+    const o = Math.trunc(Number(order));
+    if (!Number.isFinite(o) || o < 1 || o > 9999) return setError("رقم الفيزا لازم يكون بين 1 و 9999");
     setError(null);
-    onSubmit({ id: account.id, name: n.slice(0, 60), monthlyCashback: c });
+    onSubmit({ id: account.id, name: n.slice(0, 60), monthlyCashback: c, sortOrder: o });
   }
 
   return (
@@ -642,6 +646,17 @@ function EditAccountDialog({
           <DialogTitle>تعديل بيانات الفيزا</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
+          <Field label="رقم الفيزا">
+            <Input
+              dir="ltr"
+              type="number"
+              min={1}
+              max={9999}
+              step="1"
+              value={order}
+              onChange={(e) => setOrder(e.target.value)}
+            />
+          </Field>
           <Field label="اسم الحساب">
             <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={60} />
           </Field>
