@@ -114,6 +114,10 @@ export function spendUsd(row: SpendRow): number | null {
     [d["basicAmount"], d["basicCurrency"]],
     [d["transactionAmount"], d["transactionCurrency"]],
     [row.amount, row.currency],
+    // Bybit's own USD conversion of a foreign-currency purchase. Used only when
+    // the fields above are not USD-denominated, so the rate is always Bybit's.
+    [d["settleAmount"], d["settleCurrency"]],
+    [d["usdAmount"], "USD"],
     [d["localAmount"], d["localCurrency"]],
   ];
 

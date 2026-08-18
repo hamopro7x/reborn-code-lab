@@ -753,6 +753,11 @@ function mapCardTxn(t: any): CardTxn {
         localCurrency: t.localCurrency ?? t.originalCurrency ?? null,
         grossAmount: pick(t, ["grossAmount", "totalAmount"]),
         netAmount: pick(t, ["netAmount", "settleAmount"]),
+        // Bybit's own USD valuation of a foreign-currency purchase, kept verbatim
+        // so spend never needs an exchange rate of our own.
+        settleAmount: pick(t, ["settleAmount", "settlementAmount"]),
+        settleCurrency: pick(t, ["settleCurrency", "settlementCurrency"]),
+        usdAmount: pick(t, ["usdAmount", "amountUsd", "usdValue", "convertUsdAmount"]),
         foreignTxnFee: t.foreignTxnFee ?? t.fee ?? null,
         feeAmount: pick(t, ["feeAmount", "fee", "handlingFee"]),
         feeCurrency: pick(t, ["feeCurrency", "foreignTxnFeeCurrency"]),
