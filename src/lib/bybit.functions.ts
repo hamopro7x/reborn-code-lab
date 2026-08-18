@@ -93,13 +93,33 @@ export const getBybitOverview = createServerFn({ method: "POST" })
 
 export const getBybitCardTxns = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(accountInput)
+  .inputValidator((input: { accountId?: string; status?: string; page?: number; pageSize?: number }) => ({
+    ...accountInput(input),
+    status:
+      input?.status === "success" || input?.status === "failed" || input?.status === "refund"
+        ? (input.status as "success" | "failed" | "refund")
+        : ("all" as const),
+    page: Math.max(Number(input?.page ?? 1) || 1, 1),
+    pageSize: Math.min(Math.max(Number(input?.pageSize ?? 150) || 150, 10), 500),
+  }))
   .handler(async ({ data, context }) => {
     await assertAccess(context.supabase, context.userId);
     const mod = await import("./bybit.server");
-    return mod.readOp(data.accountId, async () => ({ rows: await mod.fetchCardTxns(10_000, data.accountId) }), {
-      rows: [] as Awaited<ReturnType<typeof mod.fetchCardTxns>>,
-    });
+    return mod.readOp(
+      data.accountId,
+      () =>
+        mod.fetchCardTxnsPage({
+          accountId: data.accountId,
+          status: data.status,
+          page: data.page,
+          pageSize: data.pageSize,
+        }),
+      {
+        rows: [] as Awaited<ReturnType<typeof mod.fetchCardTxnsPage>>["rows"],
+        total: 0,
+        counts: { all: 0, success: 0, failed: 0, refund: 0 },
+      },
+    );
   });
 
 export const syncBybitCardTxns = createServerFn({ method: "POST" })
