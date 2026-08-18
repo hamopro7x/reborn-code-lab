@@ -130,6 +130,33 @@ describe("monthly spend engine", () => {
 
 
 
+  it("counts the full amount when the transaction has no fee", () => {
+    const totals = sumSpend(
+      [
+        row({ txnId: "nf1", amount: 25, detail: { tradeStatus: "1", side: "1", paymentId: "N1", basicAmount: 25, basicCurrency: "USD" } }),
+        row({ txnId: "nf2", amount: 12.4, detail: { tradeStatus: "1", side: "1", paymentId: "N2", basicAmount: 12.4, basicCurrency: "USD", foreignTxnFee: 0 } }),
+      ],
+      DAY_START,
+      MONTH_START,
+    );
+    expect(totals.monthSpend).toBeCloseTo(37.4, 10);
+  });
+
+  it("ignores a fee reported in a non-USD currency", () => {
+    const totals = sumSpend(
+      [
+        row({
+          txnId: "nf3",
+          amount: 20,
+          detail: { tradeStatus: "1", side: "1", paymentId: "N3", basicAmount: 20, basicCurrency: "USD", foreignTxnFee: 5, feeCurrency: "EGP" },
+        }),
+      ],
+      DAY_START,
+      MONTH_START,
+    );
+    expect(totals.monthSpend).toBeCloseTo(20, 10);
+  });
+
   it("per-card spend uses the same collapsing rules", () => {
     const perCard = sumSpendByCard(
       [

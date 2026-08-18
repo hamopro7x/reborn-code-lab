@@ -85,6 +85,11 @@ export function spendKind(row: SpendRow): Kind {
  */
 export function spendFeeUsd(row: SpendRow): number {
   const d = row.detail ?? {};
+  // Some accounts report the fee in the local (non-USD) currency. Deducting it
+  // from a USD amount would corrupt the total, so it is ignored there.
+  const feeCurrency = text(d["feeCurrency"] ?? d["foreignTxnFeeCurrency"]).toUpperCase();
+  if (feeCurrency && !STABLE_USD.has(feeCurrency)) return 0;
+
   const seen = new Set<number>();
   for (const key of ["foreignTxnFee", "feeAmount", "fee", "handlingFee"]) {
     const n = numeric(d[key]);
@@ -134,7 +139,8 @@ export function spendUsd(row: SpendRow): number | null {
   if (base === null) return null;
 
   const fee = spendFeeUsd(row);
-  if (fee <= 0) return base;
+  // No fee on this transaction (or nonsense data) → the full amount counts.
+  if (fee <= 0 || fee >= base) return base;
 
   const close = (a: number, b: number) => Math.abs(a - b) < 0.005;
 
