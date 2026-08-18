@@ -80,9 +80,28 @@ export function spendKind(row: SpendRow): Kind {
 }
 
 /**
- * USD amount of a purchase, taken from the USD-denominated field Bybit returns.
- * Returns null when no field is USD-denominated, so a foreign-currency figure is
- * never summed as if it were dollars.
+ * Fees embedded in a purchase (foreign transaction fee, handling fee, ...).
+ * Duplicated fee fields (the same number under two names) count once.
+ */
+export function spendFeeUsd(row: SpendRow): number {
+  const d = row.detail ?? {};
+  const seen = new Set<number>();
+  for (const key of ["foreignTxnFee", "feeAmount", "fee", "handlingFee"]) {
+    const n = numeric(d[key]);
+    if (n === null || n === 0) continue;
+    seen.add(Math.abs(n));
+  }
+  let total = 0;
+  for (const n of seen) total += n;
+  return total;
+}
+
+/**
+ * Actual purchase value in USD, excluding every fee charged inside it.
+ * Bybit sometimes reports a fee-inclusive total (16.54 with a 0.32 fee) and
+ * sometimes the net amount already separated from the fee (16.22 + 0.32).
+ * The fee is only subtracted when the chosen figure is fee-inclusive, so no
+ * amount is ever deducted twice. Returns null when no field is USD-denominated.
  */
 export function spendUsd(row: SpendRow): number | null {
   const d = row.detail ?? {};
@@ -92,15 +111,44 @@ export function spendUsd(row: SpendRow): number | null {
     [row.amount, row.currency],
     [d["localAmount"], d["localCurrency"]],
   ];
+
+  const usdAmounts: number[] = [];
+  let base: number | null = null;
   for (const [rawAmount, rawCurrency] of candidates) {
     const amount = numeric(rawAmount);
     if (amount === null || amount === 0) continue;
     const currency = text(rawCurrency).toUpperCase();
     if (!currency || !STABLE_USD.has(currency)) continue;
-    return Math.abs(amount);
+    const abs = Math.abs(amount);
+    usdAmounts.push(abs);
+    if (base === null) base = abs;
   }
-  return null;
+  // Gross/total fields are fee-inclusive by definition; keep them as comparison
+  // points only, never as the preferred base.
+  const usdCurrency = usdAmounts.length > 0;
+  for (const key of ["grossAmount", "netAmount"]) {
+    const n = numeric(d[key]);
+    if (n !== null && n !== 0 && usdCurrency) usdAmounts.push(Math.abs(n));
+  }
+
+  if (base === null) return null;
+
+  const fee = spendFeeUsd(row);
+  if (fee <= 0) return base;
+
+  const close = (a: number, b: number) => Math.abs(a - b) < 0.005;
+
+  // The API already separated the purchase from its fee: base + fee equals a
+  // reported total, so base is the real purchase value — do not deduct again.
+  if (usdAmounts.some((a) => close(a, base! + fee))) return base;
+  // Some other field already equals base - fee → that is the fee-free amount.
+  const net = usdAmounts.find((a) => close(a, base! - fee));
+  if (net !== undefined) return net;
+  // Otherwise base is the fee-inclusive total: strip the fees out of it.
+  const stripped = base - fee;
+  return stripped > 0 ? stripped : base;
 }
+
 
 export type SpendTotals = {
   daySpend: number;
