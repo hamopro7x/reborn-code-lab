@@ -502,8 +502,21 @@ function AccountSummaryCard({
 
           </div>
 
-          {/* right cluster: number + cashback */}
+          {/* right cluster: cashback + number (swapped — circle on left visually) */}
           <div className="flex items-center gap-3 sm:gap-4">
+            <div className="flex flex-col items-end gap-1.5 pt-1">
+              <div className="flex items-center gap-2">
+                <span className="text-sm sm:text-base text-foreground/90 whitespace-nowrap">استرداد بنسبة</span>
+                <PieChart className="size-5 text-teal-400 shrink-0" />
+              </div>
+              <div className="text-2xl sm:text-3xl font-black text-teal-300 tabular-nums leading-none" dir="ltr">
+                {cashback.toLocaleString("en-US", { maximumFractionDigits: 2 })}%
+              </div>
+            </div>
+
+            {/* vertical dashed divider */}
+            <div className="h-16 sm:h-20 w-0 border-r border-dashed border-teal-400/45" aria-hidden />
+
             <div className="flex items-center shrink-0">
               <div className="relative grid size-[92px] sm:size-[104px] place-items-center">
                 {/* outer tick ring */}
@@ -524,21 +537,8 @@ function AccountSummaryCard({
                 <span className="relative text-3xl sm:text-4xl font-black text-teal-300 tabular-nums" dir="ltr">{visaNo}</span>
               </div>
             </div>
-
-            {/* vertical dashed divider */}
-            <div className="h-16 sm:h-20 w-0 border-r border-dashed border-teal-400/45" aria-hidden />
-
-            <div className="flex flex-col items-end gap-1.5 pt-1">
-              <div className="flex items-center gap-2">
-                <span className="text-sm sm:text-base text-foreground/90 whitespace-nowrap">استرداد بنسبة</span>
-                <PieChart className="size-5 text-teal-400 shrink-0" />
-              </div>
-              <div className="text-2xl sm:text-3xl font-black text-teal-300 tabular-nums leading-none" dir="ltr">
-                {cashback.toLocaleString("en-US", { maximumFractionDigits: 2 })}%
-              </div>
-            </div>
-
           </div>
+
 
         </div>
 
