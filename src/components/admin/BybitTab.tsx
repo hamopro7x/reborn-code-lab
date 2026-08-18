@@ -1569,8 +1569,37 @@ function fmtValue(key: string, value: string | number | null): string {
   return s;
 }
 
+/**
+ * Fee breakdown per transaction, read from the transaction's own data.
+ * A fee is only shown when the provider actually reports one — either as an
+ * explicit fee field, or as the gap between the charged total and the
+ * transaction amount. Fee-free transactions show the full amount instead.
+ */
+function feeBreakdown(txn: any) {
+  const d = (txn?.detail ?? {}) as Record<string, any>;
+  const num = (v: any) => {
+    const n = Number(v ?? NaN);
+    return Number.isFinite(n) ? Math.abs(n) : null;
+  };
+  const total = num(txn?.amount) ?? num(d["basicAmount"]) ?? num(d["grossAmount"]);
+  const net = num(d["transactionAmount"]) ?? num(d["basicAmount"]);
+
+  let fee: number | null = null;
+  for (const k of ["foreignTxnFee", "feeAmount", "fee", "handlingFee"]) {
+    const n = num(d[k]);
+    if (n) { fee = n; break; }
+  }
+  if (fee === null && total !== null && net !== null && total - net > 0.0049) fee = total - net;
+
+  const spend = fee !== null && total !== null ? total - fee : (net ?? total);
+  return { total, fee, spend };
+}
+
 function TxnDetails({ txn }: { txn: any }) {
   const d = (txn?.detail ?? {}) as Record<string, string | number | null>;
+  const { total, fee, spend } = feeBreakdown(txn);
+  const cur = String(txn?.currency || "USD");
+  const money = (n: number) => `${cur} ${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const sections = [
     { defs: CORE_FIELDS, title: "بيانات المعاملة الأساسية" },
     { defs: AMOUNT_FIELDS, title: "تفصيل العملة والرسوم" },
@@ -1598,6 +1627,21 @@ function TxnDetails({ txn }: { txn: any }) {
             </div>
           </div>
         ))}
+        <div>
+          <div className="mb-3 text-sm font-black">الرسوم والمبلغ المحتسب</div>
+          <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              ["إجمالي المعاملة", total !== null ? money(total) : "—"],
+              ["الرسوم", fee !== null && fee > 0 ? money(fee) : "بدون رسوم"],
+              ["المحتسب في الصرف الشهري", spend !== null ? money(spend) : "—"],
+            ].map(([label, value]) => (
+              <div key={label} className="flex items-start justify-between gap-3 border-b border-border/30 pb-2">
+                <div className="shrink-0 text-[11px] text-muted-foreground">{label}</div>
+                <div className="break-all text-left text-sm font-semibold" dir="auto">{value}</div>
+              </div>
+            ))}
+          </div>
+        </div>
         {!sections.length && (
           <div className="text-xs text-muted-foreground">لا توجد تفاصيل إضافية لهذه المعاملة.</div>
         )}
