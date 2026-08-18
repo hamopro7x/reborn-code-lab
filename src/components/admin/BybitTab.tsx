@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, CreditCard, Layers, ArrowUp, ArrowDown, ChevronDown, Loader2, Trash2, Plus, Download, Copy, Pencil, ChevronLeft, Wallet, ArrowDownUp, Search, BarChart3, Clock } from "lucide-react";
+import { RefreshCw, CreditCard, Layers, ArrowUp, ArrowDown, ChevronDown, Loader2, Trash2, Plus, Download, Copy, Pencil, ChevronLeft, Wallet, ArrowDownUp, Search, BarChart3, Clock, PieChart } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -505,25 +505,39 @@ function AccountSummaryCard({
           {/* right cluster: number + cashback */}
           <div className="flex items-center gap-3 sm:gap-4">
             <div className="flex items-center shrink-0">
-              <div className="relative grid size-16 sm:size-[70px] place-items-center rounded-full border border-teal-400/40 bg-teal-400/5 shadow-[0_0_24px_-6px_oklch(0.7_0.15_190_/_0.7),inset_0_0_18px_-8px_oklch(0.7_0.15_190_/_0.8)]">
-                <span className="text-2xl sm:text-3xl font-black text-teal-300 tabular-nums" dir="ltr">{visaNo}</span>
+              <div className="relative grid size-[92px] sm:size-[104px] place-items-center">
+                {/* outer tick ring */}
+                <div
+                  className="absolute inset-0 rounded-full opacity-80"
+                  aria-hidden
+                  style={{
+                    background:
+                      "repeating-conic-gradient(from 0deg, oklch(0.78 0.14 190) 0deg 1.2deg, transparent 1.2deg 12deg)",
+                    WebkitMask: "radial-gradient(closest-side, transparent 78%, #000 79%, #000 92%, transparent 93%)",
+                    mask: "radial-gradient(closest-side, transparent 78%, #000 79%, #000 92%, transparent 93%)",
+                  }}
+                />
+                {/* thin outer circle */}
+                <div className="absolute inset-[6px] rounded-full border border-teal-400/25" aria-hidden />
+                {/* glowing main ring */}
+                <div className="absolute inset-[13px] rounded-full border-[3px] border-teal-400 shadow-[0_0_26px_-2px_oklch(0.75_0.15_190_/_0.85),inset_0_0_22px_-6px_oklch(0.75_0.15_190_/_0.9)]" aria-hidden />
+                <span className="relative text-3xl sm:text-4xl font-black text-teal-300 tabular-nums" dir="ltr">{visaNo}</span>
               </div>
             </div>
 
-            {/* vertical divider */}
-            <div className="h-12 sm:h-14 w-px bg-gradient-to-b from-transparent via-teal-400/50 to-transparent" aria-hidden />
+            {/* vertical dashed divider */}
+            <div className="h-16 sm:h-20 w-0 border-r border-dashed border-teal-400/45" aria-hidden />
 
-            <div className="flex flex-col items-end gap-1 pt-1">
+            <div className="flex flex-col items-end gap-1.5 pt-1">
               <div className="flex items-center gap-2">
-                <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">استرداد بنسبة</span>
-                <span className="grid size-7 place-items-center rounded-full bg-teal-400/10 text-teal-300 shrink-0">
-                  <Clock className="size-4" />
-                </span>
+                <span className="text-sm sm:text-base text-foreground/90 whitespace-nowrap">استرداد بنسبة</span>
+                <PieChart className="size-5 text-teal-400 shrink-0" />
               </div>
               <div className="text-2xl sm:text-3xl font-black text-teal-300 tabular-nums leading-none" dir="ltr">
                 {cashback.toLocaleString("en-US", { maximumFractionDigits: 2 })}%
               </div>
             </div>
+
           </div>
 
         </div>
