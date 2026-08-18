@@ -751,15 +751,20 @@ function stageOf(t: any): string | null {
 
 function mapCardTxn(t: any): CardTxn {
     const tradeStatus = String(t.tradeStatus ?? t.status ?? "");
+    const upper = tradeStatus.toUpperCase();
     const side = String(t.side ?? "");
-    const isRefund = ["3", "5", "6", "7", "10", "11"].includes(side) || tradeStatus === "3";
+    const isRefund =
+      ["3", "5", "6", "7", "10", "11"].includes(side) ||
+      tradeStatus === "3" ||
+      /REFUND|REVERS|CHARGEBACK/.test(upper);
     const status: CardTxn["status"] = isRefund
       ? "refund"
-      : tradeStatus === "1"
+      : tradeStatus === "1" || /SUCCESS|COMPLETE|SETTLE|APPROVED|DONE/.test(upper)
         ? "success"
-        : tradeStatus === "2"
+        : tradeStatus === "2" || /FAIL|DECLIN|REJECT|CANCEL/.test(upper)
           ? "failed"
           : "pending";
+
     return {
       id: cardRowKey(t),
       merchant: String(t.merchName ?? "—"),
