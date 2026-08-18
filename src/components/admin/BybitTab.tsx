@@ -249,16 +249,6 @@ function CoinLogo({ coin }: { coin: string }) {
   return <CryptoLogo name={coin} iconUrl={coinIconUrl(coin)} />;
 }
 
-function UsdtLogo() {
-  return (
-    <span className="relative grid size-12 sm:size-14 shrink-0 place-items-center rounded-full bg-[oklch(0.52_0.18_160)] shadow-[0_0_0_2px_oklch(0.65_0.14_170/0.45),inset_0_-6px_12px_-4px_oklch(0.35_0.12_170)]" aria-label="USDT">
-      <span className="text-[22px] sm:text-[26px] font-black text-white leading-none" dir="ltr">T</span>
-      <span className="pointer-events-none absolute inset-0 grid place-items-center" aria-hidden>
-        <span className="h-3.5 sm:h-4 w-[68%] rounded-[50%] border-[2.5px] border-white/90" />
-      </span>
-    </span>
-  );
-}
 
 function CoinBalanceCard({ coin }: { coin: CoinRow }) {
   const isUsdt = String(coin.coin).toUpperCase() === "USDT";
