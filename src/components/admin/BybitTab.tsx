@@ -1540,12 +1540,33 @@ const MERCHANT_FIELDS: FieldDef[] = [
   ["storeId", "معرّف المتجر"],
 ];
 
-const KNOWN_KEYS = new Set(
-  [...CORE_FIELDS, ...AMOUNT_FIELDS, ...PROCESSOR_FIELDS, ...MERCHANT_FIELDS].map(([k]) => k),
-);
 
 function has(d: Record<string, string | number | null>, k: string) {
   return d[k] !== null && d[k] !== undefined && d[k] !== "";
+}
+
+const DATE_KEYS = new Set(["createdAt", "updatedAt", "txnCreate"]);
+
+function fmtValue(key: string, value: string | number | null): string {
+  const s = String(value ?? "").trim();
+  if (!s) return "—";
+  if (DATE_KEYS.has(key)) {
+    const n = Number(s);
+    if (Number.isFinite(n) && n > 1_000_000_000) return dt(n < 1e12 ? n * 1000 : n);
+  }
+  if (/^-?\d+(\.\d+)?$/.test(s) && s.includes(".")) {
+    const n = Number(s);
+    if (Number.isFinite(n)) {
+      const abs = Math.abs(n);
+      const digits = abs > 0 && abs < 0.01 ? 6 : 2;
+      return n.toLocaleString("en-US", { maximumFractionDigits: digits });
+    }
+  }
+  if (/^-?\d+(\.\d+)?[eE][-+]?\d+$/.test(s)) {
+    const n = Number(s);
+    if (Number.isFinite(n)) return n === 0 ? "0" : n.toLocaleString("en-US", { maximumFractionDigits: 6 });
+  }
+  return s;
 }
 
 function FieldGrid({
@@ -1554,14 +1575,14 @@ function FieldGrid({
   const fields = defs.filter(([k]) => has(d, k));
   if (!fields.length) return null;
   return (
-    <div>
-      <div className="text-sm font-black mb-3">{title}</div>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="rounded-2xl border border-border/50 bg-muted/10 p-4">
+      <div className="mb-3 text-sm font-black">{title}</div>
+      <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
         {fields.map(([k, label]) => (
-          <div key={k}>
-            <div className="text-[11px] text-muted-foreground">{label}</div>
-            <div className="text-sm font-semibold break-all" dir="auto">
-              {String(d[k])}
+          <div key={k} className="flex items-start justify-between gap-3 border-b border-border/30 pb-2">
+            <div className="shrink-0 text-[11px] text-muted-foreground">{label}</div>
+            <div className="break-all text-left text-sm font-semibold" dir="auto">
+              {fmtValue(k, d[k])}
             </div>
           </div>
         ))}
@@ -1572,62 +1593,17 @@ function FieldGrid({
 
 function TxnDetails({ txn }: { txn: any }) {
   const d = (txn?.detail ?? {}) as Record<string, string | number | null>;
-  const [showRaw, setShowRaw] = useState(false);
-
-  let raw: Record<string, unknown> = {};
-  try {
-    raw = d.raw ? (JSON.parse(String(d.raw)) as Record<string, unknown>) : {};
-  } catch {
-    raw = {};
-  }
-  const extras = Object.entries(raw).filter(
-    ([k, v]) => !KNOWN_KEYS.has(k) && v !== null && v !== undefined && v !== "",
-  );
   const hasAny =
     [...CORE_FIELDS, ...AMOUNT_FIELDS, ...PROCESSOR_FIELDS, ...MERCHANT_FIELDS].some(([k]) => has(d, k));
 
   return (
-    <div className="grid gap-5" dir="rtl">
+    <div className="grid gap-4" dir="rtl">
       <FieldGrid d={d} defs={CORE_FIELDS} title="بيانات المعاملة الأساسية" />
       <FieldGrid d={d} defs={AMOUNT_FIELDS} title="تفصيل العملة والرسوم" />
       <FieldGrid d={d} defs={PROCESSOR_FIELDS} title="بيانات المعالج وسبب الرفض" />
       <FieldGrid d={d} defs={MERCHANT_FIELDS} title="تفاصيل التاجر" />
       {!hasAny && (
         <div className="text-xs text-muted-foreground">لا توجد تفاصيل إضافية لهذه المعاملة.</div>
-      )}
-      {(extras.length > 0 || d.raw) && (
-        <div>
-          <button
-            onClick={() => setShowRaw((v) => !v)}
-            className="text-xs text-amber-400 hover:underline"
-          >
-            {showRaw ? "إخفاء البيانات الخام" : "عرض البيانات الخام من المزوّد"}
-          </button>
-          {showRaw && (
-            <div className="mt-3 grid gap-3">
-              {extras.length > 0 && (
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                  {extras.map(([k, v]) => (
-                    <div key={k}>
-                      <div className="text-[11px] text-muted-foreground" dir="ltr">{k}</div>
-                      <div className="text-sm font-semibold break-all" dir="auto">
-                        {typeof v === "object" ? JSON.stringify(v) : String(v)}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {d.raw && (
-                <pre
-                  dir="ltr"
-                  className="max-h-72 overflow-auto rounded-xl bg-muted/30 p-3 text-[11px] leading-5"
-                >
-                  {JSON.stringify(raw, null, 2)}
-                </pre>
-              )}
-            </div>
-          )}
-        </div>
       )}
       <div className="text-[11px] text-muted-foreground">
         العملة: {txn.currency} · آخر 4 أرقام: {txn.pan4 || "—"} · {dt(txn.time)}
