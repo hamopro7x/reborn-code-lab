@@ -276,7 +276,7 @@ function Admin() {
             {panel === "payments" && canView("payments") && <PaymentsTab />}
             {panel === "currencies" && canView("currencies") && <CurrenciesTab />}
             {panel === "settings" && canView("settings") && <SettingsTab />}
-            </ReadOnlyGuard>
+            </div>
           </main>
 
         </div>
