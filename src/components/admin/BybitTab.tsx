@@ -396,7 +396,6 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
               key={a.id}
               account={a}
               index={i}
-              total={list.length}
               isAdmin={isAdmin}
               onOpen={() => setSelected(a.id)}
               onDelete={() => removeAccount.mutate({ id: a.id })}
