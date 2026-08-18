@@ -751,15 +751,20 @@ function stageOf(t: any): string | null {
 
 function mapCardTxn(t: any): CardTxn {
     const tradeStatus = String(t.tradeStatus ?? t.status ?? "");
+    const upper = tradeStatus.toUpperCase();
     const side = String(t.side ?? "");
-    const isRefund = ["3", "5", "6", "7", "10", "11"].includes(side) || tradeStatus === "3";
+    const isRefund =
+      ["3", "5", "6", "7", "10", "11"].includes(side) ||
+      tradeStatus === "3" ||
+      /REFUND|REVERS|CHARGEBACK/.test(upper);
     const status: CardTxn["status"] = isRefund
       ? "refund"
-      : tradeStatus === "1"
+      : tradeStatus === "1" || /SUCCESS|COMPLETE|SETTLE|APPROVED|DONE/.test(upper)
         ? "success"
-        : tradeStatus === "2"
+        : tradeStatus === "2" || /FAIL|DECLIN|REJECT|CANCEL/.test(upper)
           ? "failed"
           : "pending";
+
     return {
       id: cardRowKey(t),
       merchant: String(t.merchName ?? "—"),
@@ -901,19 +906,30 @@ async function storedCardTxns(_limit: number, accountId?: string): Promise<CardT
     return data.map((r: any) => {
       const detail = (r.detail ?? {}) as Record<string, string | number | null>;
       const tradeStatus = String(detail.tradeStatus ?? "");
+      const upper = tradeStatus.toUpperCase();
       const side = String(detail.side ?? r.txn_type ?? "");
-      const isRefund = ["3", "5", "6", "7", "10", "11"].includes(side) || tradeStatus === "3";
+      const isRefund =
+        ["3", "5", "6", "7", "10", "11"].includes(side) ||
+        tradeStatus === "3" ||
+        /REFUND|REVERS|CHARGEBACK/.test(upper);
+      // Fall back to the status persisted at ingest time whenever the raw
+      // tradeStatus is missing or unrecognised, so successful purchases are
+      // never silently downgraded to "pending" and dropped from the tab.
+      const stored: CardTxn["status"] =
+        r.status === "success" || r.status === "failed" || r.status === "refund" || r.status === "pending"
+          ? r.status
+          : "pending";
       const status: CardTxn["status"] = isRefund
         ? "refund"
-        : tradeStatus === "2"
+        : tradeStatus === "2" || /FAIL|DECLIN|REJECT|CANCEL/.test(upper)
           ? "failed"
-          : tradeStatus === "1"
+          : tradeStatus === "1" || /SUCCESS|COMPLETE|SETTLE|APPROVED|DONE/.test(upper)
             ? "success"
-            : tradeStatus === "0"
+            : tradeStatus === "0" || /PENDING|AUTH|HOLD|PROCESS/.test(upper)
               ? "pending"
-            : r.status === "refund" || r.status === "failed"
-              ? r.status
-              : "pending";
+              : stored;
+
+
       return {
         id: r.txn_id,
         merchant: r.merchant ?? "—",
