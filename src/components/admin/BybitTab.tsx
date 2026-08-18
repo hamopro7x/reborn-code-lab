@@ -253,7 +253,16 @@ function ChainLogo({ chain }: { chain: string }) {
   return <CryptoLogo name={chain} iconUrl={chainIconUrl(chain)} />;
 }
 
+type BybitAccountRow = {
+  id: string;
+  name: string;
+  uid: string | null;
+  sortOrder?: number;
+  monthlyCashback?: number;
+};
+
 export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
+
   const qc = useQueryClient();
   const listFn = useServerFn(listBybitAccounts);
   const addFn = useServerFn(addBybitAccount);
