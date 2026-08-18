@@ -1575,7 +1575,7 @@ function FieldGrid({
   const fields = defs.filter(([k]) => has(d, k));
   if (!fields.length) return null;
   return (
-    <div className="rounded-2xl border border-border/50 bg-muted/10 p-4">
+    <div>
       <div className="mb-3 text-sm font-black">{title}</div>
       <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
         {fields.map(([k, label]) => (
@@ -1597,20 +1597,23 @@ function TxnDetails({ txn }: { txn: any }) {
     [...CORE_FIELDS, ...AMOUNT_FIELDS, ...PROCESSOR_FIELDS, ...MERCHANT_FIELDS].some(([k]) => has(d, k));
 
   return (
-    <div className="grid gap-4" dir="rtl">
-      <FieldGrid d={d} defs={CORE_FIELDS} title="بيانات المعاملة الأساسية" />
-      <FieldGrid d={d} defs={AMOUNT_FIELDS} title="تفصيل العملة والرسوم" />
-      <FieldGrid d={d} defs={PROCESSOR_FIELDS} title="بيانات المعالج وسبب الرفض" />
-      <FieldGrid d={d} defs={MERCHANT_FIELDS} title="تفاصيل التاجر" />
-      {!hasAny && (
-        <div className="text-xs text-muted-foreground">لا توجد تفاصيل إضافية لهذه المعاملة.</div>
-      )}
-      <div className="text-[11px] text-muted-foreground">
-        العملة: {txn.currency} · آخر 4 أرقام: {txn.pan4 || "—"} · {dt(txn.time)}
+    <div className="rounded-2xl border border-border/50 bg-muted/10 p-4" dir="rtl">
+      <div className="grid gap-5 divide-y divide-border/40 [&>*+*]:pt-5">
+        <FieldGrid d={d} defs={CORE_FIELDS} title="بيانات المعاملة الأساسية" />
+        <FieldGrid d={d} defs={AMOUNT_FIELDS} title="تفصيل العملة والرسوم" />
+        <FieldGrid d={d} defs={PROCESSOR_FIELDS} title="بيانات المعالج وسبب الرفض" />
+        <FieldGrid d={d} defs={MERCHANT_FIELDS} title="تفاصيل التاجر" />
+        {!hasAny && (
+          <div className="text-xs text-muted-foreground">لا توجد تفاصيل إضافية لهذه المعاملة.</div>
+        )}
+        <div className="text-[11px] text-muted-foreground">
+          العملة: {txn.currency} · آخر 4 أرقام: {txn.pan4 || "—"} · {dt(txn.time)}
+        </div>
       </div>
     </div>
   );
 }
+
 
 
 function AssetTable({
