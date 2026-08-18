@@ -286,18 +286,6 @@ function Admin() {
 }
 
 // ============ READ ONLY WRAPPER ============
-function ReadOnlyGuard({ active, children }: { active: boolean; children: React.ReactNode }) {
-  if (!active) return <>{children}</>;
-  return (
-    <fieldset
-      disabled
-      className="min-w-0 [&_button:not([role=tab])]:pointer-events-none [&_[role=switch]]:pointer-events-none [&_input]:pointer-events-none [&_select]:pointer-events-none [&_textarea]:pointer-events-none"
-    >
-
-      {children}
-    </fieldset>
-  );
-}
 
 // ============ OVERVIEW ============
 
