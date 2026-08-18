@@ -662,6 +662,9 @@ function BybitAccountView({ isAdmin, accountId, accountName, onBack }: { isAdmin
   const coinBalances = visibleCoins(((overview.data as any)?.coins ?? []) as CoinRow[]);
   const monthSpend = (overview.data as any)?.monthSpend ?? 0;
   const daySpend = (overview.data as any)?.daySpend ?? 0;
+  const monthFees = Number((overview.data as any)?.monthFees ?? 0);
+  const dayFees = Number((overview.data as any)?.dayFees ?? 0);
+
   const skippedNonUsd = Number((overview.data as any)?.skippedNonUsd ?? 0);
 
 
