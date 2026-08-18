@@ -550,21 +550,7 @@ function AccountSummaryCard({
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {coins.map((c) => (
-              <div
-                key={c.coin}
-                className="rounded-2xl border border-teal-400/15 bg-[oklch(0.12_0.03_190)] p-3"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="text-[11px] text-muted-foreground mb-0.5">{c.coin}</div>
-                    <div className="text-2xl font-black tracking-tight tabular-nums">
-                      {c.balance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </div>
-                  </div>
-                  <span className="shrink-0"><CoinLogo coin={c.coin} /></span>
-                </div>
-                <div className="mt-1 text-[11px] text-muted-foreground" dir="ltr">{money(c.usd)} ≈</div>
-              </div>
+              <CoinBalanceCard key={c.coin} coin={c} />
             ))}
           </div>
         )}
