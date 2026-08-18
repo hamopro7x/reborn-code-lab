@@ -264,20 +264,24 @@ function CoinBalanceCard({ coin }: { coin: CoinRow }) {
 
         <div className="shrink-0">
           {isUsdt ? (
-            <span className="relative grid size-12 sm:size-14 shrink-0 place-items-center rounded-full bg-[oklch(0.52_0.18_160)] shadow-[0_0_0_2px_oklch(0.65_0.14_170/0.45),inset_0_-6px_12px_-4px_oklch(0.35_0.12_170)]" aria-label="USDT">
-              <span className="text-[22px] sm:text-[26px] font-black text-white leading-none" dir="ltr">T</span>
+            <span className="relative grid size-11 shrink-0 place-items-center rounded-full bg-[oklch(0.6_0.15_165)] shadow-[0_0_0_3px_oklch(0.09_0.012_190),0_0_0_4px_oklch(0.6_0.15_165/0.35)]" aria-label="USDT">
+              <span className="text-[19px] font-black text-white leading-none" dir="ltr">T</span>
               <span className="pointer-events-none absolute inset-0 grid place-items-center" aria-hidden>
-                <span className="h-3.5 sm:h-4 w-[68%] rounded-[50%] border-[2.5px] border-white/90" />
+                <span className="h-3 w-[62%] rounded-[50%] border-[2.5px] border-white/90" />
               </span>
             </span>
           ) : (
-            <span className="grid size-12 sm:size-14 place-items-center rounded-full bg-[oklch(0.18_0.03_285)] border border-border/50">
+            <span className="grid size-11 place-items-center rounded-full bg-[oklch(0.18_0.03_285)] border border-border/50">
               <CoinLogo coin={coin.coin} />
             </span>
           )}
         </div>
       </div>
+      <div className="mt-2 text-left text-[12px] text-[oklch(0.72_0.09_175)]" dir="ltr">
+        USD {coin.usd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ≈
+      </div>
     </div>
+
   );
 }
 
