@@ -108,7 +108,7 @@ export function spendFeeUsd(row: SpendRow): number {
  * The fee is only subtracted when the chosen figure is fee-inclusive, so no
  * amount is ever deducted twice. Returns null when no field is USD-denominated.
  */
-export function spendUsd(row: SpendRow): number | null {
+function usdCandidates(row: SpendRow): { base: number | null; amounts: number[] } {
   const d = row.detail ?? {};
   const candidates: Array<[unknown, unknown]> = [
     [d["basicAmount"], d["basicCurrency"]],
@@ -139,6 +139,43 @@ export function spendUsd(row: SpendRow): number | null {
     const n = numeric(d[key]);
     if (n !== null && n !== 0 && usdCurrency) usdAmounts.push(Math.abs(n));
   }
+  return { base, amounts: usdAmounts };
+}
+
+/**
+ * Fee actually charged inside this purchase, in USD.
+ * Reads the provider's own fee field when present; otherwise derives it from the
+ * fee-sized gap between the charged total and the transaction amount. Returns 0
+ * when the purchase genuinely carries no fee — never the purchase value itself.
+ */
+export function spendFeeChargedUsd(row: SpendRow): number {
+  const { base } = usdCandidates(row);
+  if (base === null) return 0;
+
+  const explicit = spendFeeUsd(row);
+  if (explicit > 0) return explicit >= base ? 0 : explicit;
+
+  const d = row.detail ?? {};
+  const net = numeric(d["transactionAmount"]);
+  const netCur = text(d["transactionCurrency"]).toUpperCase();
+  if (net !== null && net !== 0 && STABLE_USD.has(netCur)) {
+    const gap = base - Math.abs(net);
+    if (gap > 0.0049 && gap <= base * 0.15) return gap;
+  }
+  return 0;
+}
+
+/**
+ * Actual purchase value in USD, excluding every fee charged inside it.
+ * Bybit sometimes reports a fee-inclusive total (16.54 with a 0.32 fee) and
+ * sometimes the net amount already separated from the fee (16.22 + 0.32).
+ * The fee is only subtracted when the chosen figure is fee-inclusive, so no
+ * amount is ever deducted twice. Returns null when no field is USD-denominated.
+ */
+export function spendUsd(row: SpendRow): number | null {
+  const d = row.detail ?? {};
+  const { base, amounts: usdAmounts } = usdCandidates(row);
+
 
   if (base === null) return null;
 
