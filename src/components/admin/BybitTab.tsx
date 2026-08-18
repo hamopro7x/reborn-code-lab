@@ -406,13 +406,18 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 overflow-hidden rounded-2xl border border-border/60 bg-card/40 [&>*]:border-b [&>*]:border-border/60 md:[&>*:nth-child(odd)]:border-l md:[&>*:nth-child(odd)]:border-border/60">
-          {list.map((a) => (
+          {list.map((a, i) => (
             <AccountSummaryCard
               key={a.id}
               account={a}
+              index={i}
+              total={list.length}
               isAdmin={isAdmin}
+              reordering={reorder.isPending}
               onOpen={() => setSelected(a.id)}
               onDelete={() => removeAccount.mutate({ id: a.id })}
+              onEdit={() => setEditAccount(a)}
+              onMove={(dir) => move(i, dir)}
             />
           ))}
         </div>
@@ -425,6 +430,14 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
         onClose={() => { setAddOpen(false); setAddError(null); }}
         onSubmit={(d) => addAccount.mutate(d)}
       />
+
+      <EditAccountDialog
+        account={editAccount}
+        busy={saveAccount.isPending}
+        onClose={() => setEditAccount(null)}
+        onSubmit={(d) => saveAccount.mutate(d)}
+      />
+
     </div>
   );
 }
