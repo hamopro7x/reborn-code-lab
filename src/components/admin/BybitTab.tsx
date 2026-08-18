@@ -317,6 +317,30 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
     },
     onError: (e: any) => toast.error(e?.message || "فشل حذف الحساب"),
   });
+  const saveAccount = useMutation({
+    mutationFn: (data: { id: string; name: string; monthlyCashback: number }) => updateFn({ data }),
+    onSuccess: () => {
+      toast.success("تم حفظ بيانات الحساب");
+      setEditAccount(null);
+      qc.invalidateQueries({ queryKey: ["bybit-accounts"] });
+    },
+    onError: (e: any) => toast.error(e?.message || "فشل حفظ البيانات"),
+  });
+  const reorder = useMutation({
+    mutationFn: (data: { ids: string[] }) => reorderFn({ data }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["bybit-accounts"] }),
+    onError: (e: any) => toast.error(e?.message || "فشل تغيير الترتيب"),
+  });
+
+  function move(index: number, dir: -1 | 1) {
+    const target = index + dir;
+    if (target < 0 || target >= list.length) return;
+    const ids = list.map((a) => a.id);
+    const [id] = ids.splice(index, 1);
+    ids.splice(target, 0, id);
+    reorder.mutate({ ids });
+  }
+
 
   const current = list.find((a) => a.id === selected) ?? null;
 
