@@ -390,11 +390,12 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
           لا توجد حسابات مربوطة بعد{isAdmin ? " — أضف حساباً بمفتاح API (قراءة فقط)." : "."}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 overflow-hidden rounded-2xl border border-border/60 bg-card/40 [&>*]:border-b [&>*]:border-border/60 md:[&>*:nth-child(odd)]:border-l md:[&>*:nth-child(odd)]:border-border/60">
-          {list.map((a) => (
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          {list.map((a, i) => (
             <AccountSummaryCard
               key={a.id}
               account={a}
+              index={i}
               isAdmin={isAdmin}
               onOpen={() => setSelected(a.id)}
               onDelete={() => removeAccount.mutate({ id: a.id })}
@@ -402,6 +403,7 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
             />
           ))}
         </div>
+
       )}
 
       <AddAccountDialog
