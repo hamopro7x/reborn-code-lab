@@ -317,7 +317,7 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
     onError: (e: any) => toast.error(e?.message || "فشل حذف الحساب"),
   });
   const saveAccount = useMutation({
-    mutationFn: (data: { id: string; name: string; monthlyCashback: number }) => updateFn({ data }),
+    mutationFn: (data: { id: string; name: string; monthlyCashback: number; sortOrder: number }) => updateFn({ data }),
     onSuccess: () => {
       toast.success("تم حفظ بيانات الحساب");
       setEditAccount(null);
