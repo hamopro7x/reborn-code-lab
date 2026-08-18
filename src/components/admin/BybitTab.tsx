@@ -276,7 +276,14 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
   const [editAccount, setEditAccount] = useState<BybitAccountRow | null>(null);
 
   const accounts = useQuery({ queryKey: ["bybit-accounts"], queryFn: () => listFn() });
-  const list = ((accounts.data as any)?.accounts ?? []) as BybitAccountRow[];
+  const list = (((accounts.data as any)?.accounts ?? []) as BybitAccountRow[])
+    .slice()
+    .sort((a, b) => {
+      const ao = a.sortOrder && a.sortOrder > 0 ? a.sortOrder : Number.MAX_SAFE_INTEGER;
+      const bo = b.sortOrder && b.sortOrder > 0 ? b.sortOrder : Number.MAX_SAFE_INTEGER;
+      if (ao !== bo) return ao - bo;
+      return a.name.localeCompare(b.name, "ar");
+    });
 
 
   // مزامنة معاملات كل الحسابات في الخلفية (مش الحساب المفتوح بس)
