@@ -650,6 +650,71 @@ function AddAccountDialog({
   );
 }
 
+function EditAccountDialog({
+  account, onClose, onSubmit, busy,
+}: {
+  account: BybitAccountRow | null;
+  onClose: () => void;
+  onSubmit: (d: { id: string; name: string; monthlyCashback: number }) => void;
+  busy: boolean;
+}) {
+  const [name, setName] = useState("");
+  const [cashback, setCashback] = useState("0");
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (account) {
+      setName(account.name ?? "");
+      setCashback(String(account.monthlyCashback ?? 0));
+      setError(null);
+    }
+  }, [account]);
+
+  function submit() {
+    if (!account) return;
+    const n = name.trim();
+    if (!n) return setError("اسم الحساب مطلوب");
+    const c = Number(cashback);
+    if (!Number.isFinite(c) || c < 0 || c > 100) return setError("نسبة الاسترداد لازم تكون بين 0 و 100");
+    setError(null);
+    onSubmit({ id: account.id, name: n.slice(0, 60), monthlyCashback: c });
+  }
+
+  return (
+    <Dialog open={!!account} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md text-right" dir="rtl">
+        <DialogHeader>
+          <DialogTitle>تعديل بيانات الفيزا</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <Field label="اسم الحساب">
+            <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={60} />
+          </Field>
+          <Field label="الاسترداد الشهري (%)">
+            <Input
+              dir="ltr"
+              type="number"
+              min={0}
+              max={100}
+              step="0.01"
+              value={cashback}
+              onChange={(e) => setCashback(e.target.value)}
+            />
+          </Field>
+          {account?.uid && (
+            <p className="text-[11px] text-muted-foreground" dir="ltr">UID {account.uid}</p>
+          )}
+          {error && <p className="text-[11px] text-destructive">{error}</p>}
+          <Button className="w-full rounded-xl" disabled={busy} onClick={submit}>
+            {busy ? <Loader2 className="size-4 ml-1 animate-spin" /> : null} حفظ التعديلات
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
 function BybitAccountView({ isAdmin, accountId, accountName, onBack }: { isAdmin: boolean; accountId: string; accountName: string; onBack: () => void }) {
   const qc = useQueryClient();
   // الموظف يشاهد كل بيانات القسم (قراءة فقط). الأدوات الخاصة بالأدمن
