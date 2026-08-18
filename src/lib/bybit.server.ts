@@ -107,11 +107,19 @@ export async function createAccount(key: string, secret: string, userId: string,
   const name =
     (customName ?? "").trim() ||
     (uid ? `Bybit · UID ${uid}` : `Bybit · ${key.slice(0, 4)}${key.slice(-4)}`);
+  const { data: last } = await db
+    .from("bybit_accounts")
+    .select("sort_order")
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const nextOrder = Number(last?.sort_order ?? 0) + 1;
   const { data, error } = await db
     .from("bybit_accounts")
-    .insert({ name, uid, created_by: userId })
+    .insert({ name, uid, created_by: userId, sort_order: nextOrder })
     .select("id")
     .single();
+
   if (error) throw new Error(error.message);
   const { error: kErr } = await db.rpc("bybit_account_set_keys", {
     p_account_id: data.id,
