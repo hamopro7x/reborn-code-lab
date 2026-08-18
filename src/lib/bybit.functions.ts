@@ -105,21 +105,16 @@ export const getBybitCardTxns = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAccess(context.supabase, context.userId);
     const mod = await import("./bybit.server");
-    return mod.readOp(
-      data.accountId,
-      () =>
-        mod.fetchCardTxnsPage({
-          accountId: data.accountId,
-          status: data.status,
-          page: data.page,
-          pageSize: data.pageSize,
-        }),
-      {
-        rows: [] as Awaited<ReturnType<typeof mod.fetchCardTxnsPage>>["rows"],
-        total: 0,
-        counts: { all: 0, success: 0, failed: 0, refund: 0 },
-      },
-    );
+    // The visible table is a database archive, so reading it must not depend on
+    // the account's current API key. A missing/restricted Bybit key previously
+    // made readOp return an empty fallback even while thousands of archived
+    // successful purchases were present.
+    return mod.fetchCardTxnsPage({
+      accountId: data.accountId,
+      status: data.status,
+      page: data.page,
+      pageSize: data.pageSize,
+    });
   });
 
 export const syncBybitCardTxns = createServerFn({ method: "POST" })
