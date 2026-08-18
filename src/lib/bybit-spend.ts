@@ -138,9 +138,24 @@ export function spendUsd(row: SpendRow): number | null {
 
   if (base === null) return null;
 
-  const fee = spendFeeUsd(row);
-  // No fee on this transaction (or nonsense data) → the full amount counts.
-  if (fee <= 0 || fee >= base) return base;
+  let fee = spendFeeUsd(row);
+  if (fee <= 0) {
+    // No explicit fee field. Bybit still charges a fee inside the total on some
+    // rows: the charged total sits a few cents above the transaction amount.
+    // That gap IS the fee, so the smaller (fee-free) figure is the purchase.
+    const net = numeric(d["transactionAmount"]);
+    const netCur = text(d["transactionCurrency"]).toUpperCase();
+    if (net !== null && net !== 0 && STABLE_USD.has(netCur)) {
+      const netAbs = Math.abs(net);
+      const gap = base - netAbs;
+      // Only a fee-sized gap counts (never a different purchase or a rounding
+      // artefact), so nothing is deducted when the two figures agree.
+      if (gap > 0.0049 && gap <= base * 0.15) return netAbs;
+    }
+    return base;
+  }
+  // Nonsense fee (>= the amount itself) is ignored rather than trusted.
+  if (fee >= base) return base;
 
   const close = (a: number, b: number) => Math.abs(a - b) < 0.005;
 
