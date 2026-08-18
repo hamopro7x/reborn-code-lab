@@ -95,6 +95,41 @@ describe("monthly spend engine", () => {
     expect(totals.monthSpend).toBe(1246);
   });
 
+  it("subtracts a fee that is included inside the total amount", () => {
+    const totals = sumSpend(
+      [row({ txnId: "fee1", amount: 16.54, detail: { tradeStatus: "1", side: "1", paymentId: "F1", basicAmount: 16.54, basicCurrency: "USD", foreignTxnFee: 0.32 } })],
+      DAY_START,
+      MONTH_START,
+    );
+    expect(totals.monthSpend).toBeCloseTo(16.22, 10);
+  });
+
+  it("does not subtract the fee twice when the API already separates it", () => {
+    const totals = sumSpend(
+      [
+        row({
+          txnId: "fee2",
+          amount: 16.54,
+          detail: { tradeStatus: "1", side: "1", paymentId: "F2", basicAmount: 16.22, basicCurrency: "USD", transactionAmount: 16.54, transactionCurrency: "USD", foreignTxnFee: 0.32 },
+        }),
+      ],
+      DAY_START,
+      MONTH_START,
+    );
+    expect(totals.monthSpend).toBeCloseTo(16.22, 10);
+  });
+
+  it("counts duplicated fee field names once", () => {
+    const totals = sumSpend(
+      [row({ txnId: "fee3", amount: 10.5, detail: { tradeStatus: "1", side: "1", paymentId: "F3", basicAmount: 10.5, basicCurrency: "USD", foreignTxnFee: 0.5, feeAmount: 0.5 } })],
+      DAY_START,
+      MONTH_START,
+    );
+    expect(totals.monthSpend).toBeCloseTo(10, 10);
+  });
+
+
+
   it("per-card spend uses the same collapsing rules", () => {
     const perCard = sumSpendByCard(
       [
