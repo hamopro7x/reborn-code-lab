@@ -903,6 +903,13 @@ async function storedCardTxns(_limit: number, accountId?: string): Promise<CardT
       const tradeStatus = String(detail.tradeStatus ?? "");
       const side = String(detail.side ?? r.txn_type ?? "");
       const isRefund = ["3", "5", "6", "7", "10", "11"].includes(side) || tradeStatus === "3";
+      // Fall back to the status persisted at ingest time whenever the raw
+      // tradeStatus is missing or unrecognised, so successful purchases are
+      // never silently downgraded to "pending" and dropped from the tab.
+      const stored: CardTxn["status"] =
+        r.status === "success" || r.status === "failed" || r.status === "refund" || r.status === "pending"
+          ? r.status
+          : "pending";
       const status: CardTxn["status"] = isRefund
         ? "refund"
         : tradeStatus === "2"
@@ -911,9 +918,8 @@ async function storedCardTxns(_limit: number, accountId?: string): Promise<CardT
             ? "success"
             : tradeStatus === "0"
               ? "pending"
-            : r.status === "refund" || r.status === "failed"
-              ? r.status
-              : "pending";
+              : stored;
+
       return {
         id: r.txn_id,
         merchant: r.merchant ?? "—",
