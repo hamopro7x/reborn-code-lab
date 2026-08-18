@@ -503,16 +503,13 @@ function AccountSummaryCard({
 
           {/* right cluster: number + cashback */}
           <div className="flex items-start gap-3 sm:gap-4">
-            <div className="flex items-center gap-2 pt-2">
+            <div className="flex flex-col items-end gap-1 pt-2">
+              <div className="text-lg sm:text-xl font-black text-teal-300 tabular-nums" dir="ltr">
+                {cashback.toLocaleString("en-US", { maximumFractionDigits: 2 })}%
+              </div>
               <span className="grid size-7 place-items-center rounded-full bg-teal-400/10 text-teal-300 shrink-0">
                 <PieChart className="size-4" />
               </span>
-              <div className="min-w-0">
-                <div className="text-[11px] text-muted-foreground whitespace-nowrap">استرداد بنسبة</div>
-                <div className="text-lg sm:text-xl font-black text-teal-300 tabular-nums" dir="ltr">
-                  {cashback.toLocaleString("en-US", { maximumFractionDigits: 2 })}%
-                </div>
-              </div>
             </div>
             <div className="flex items-center shrink-0">
               <div className="relative grid size-16 sm:size-[70px] place-items-center rounded-full border border-teal-400/40 bg-teal-400/5 shadow-[0_0_24px_-6px_oklch(0.7_0.15_190_/_0.7),inset_0_0_18px_-8px_oklch(0.7_0.15_190_/_0.8)]">
