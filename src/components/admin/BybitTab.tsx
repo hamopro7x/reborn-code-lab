@@ -472,19 +472,6 @@ function AccountSummaryCard({
               <Wallet className="size-5" />
             </span>
             <div className="min-w-0 text-right pt-1">
-              {account.uid && (
-                <div className="flex items-center justify-end gap-1 text-[11px] text-muted-foreground">
-                  <span dir="ltr" className="tabular-nums">UID {account.uid}</span>
-                  <button
-                    type="button"
-                    className="grid size-5 place-items-center rounded-md hover:bg-teal-400/10 hover:text-teal-300"
-                    title="نسخ UID"
-                    onClick={() => { navigator.clipboard?.writeText(account.uid ?? ""); toast.success("تم نسخ UID"); }}
-                  >
-                    <Copy className="size-3" />
-                  </button>
-                </div>
-              )}
               <div className="flex items-center justify-end gap-1">
                 <div className="truncate text-sm sm:text-base font-black">حساب {account.name}</div>
                 {isAdmin && (
@@ -498,7 +485,21 @@ function AccountSummaryCard({
                   </div>
                 )}
               </div>
+              {account.uid && (
+                <div className="flex items-center justify-end gap-1 text-[11px] text-muted-foreground">
+                  <span dir="ltr" className="tabular-nums">UID {account.uid}</span>
+                  <button
+                    type="button"
+                    className="grid size-5 place-items-center rounded-md hover:bg-teal-400/10 hover:text-teal-300"
+                    title="نسخ UID"
+                    onClick={() => { navigator.clipboard?.writeText(account.uid ?? ""); toast.success("تم نسخ UID"); }}
+                  >
+                    <Copy className="size-3" />
+                  </button>
+                </div>
+              )}
             </div>
+
           </div>
 
           {/* right cluster: number + cashback */}
