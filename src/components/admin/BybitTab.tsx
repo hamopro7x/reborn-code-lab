@@ -815,7 +815,7 @@ function BybitAccountView({ isAdmin, accountId, accountName, onBack }: { isAdmin
   const overview = useQuery({ queryKey: ["bybit-overview", accountId], queryFn: () => overviewFn({ data: { accountId } }) });
   const card = useQuery({
     queryKey: ["bybit-card", accountId],
-    queryFn: () => cardFn({ data: { accountId } }),
+    queryFn: () => cardFn({ data: { accountId, page: 1, pageSize: 10 } }),
     enabled: tab === "card",
     staleTime: 30_000,
   });
@@ -1522,7 +1522,7 @@ function CardTable({ q, accountId }: { q: any; accountId?: string }) {
     if (!pan4) continue;
     brandByPan4[pan4] = detectBrand(String(c?.fullNumber ?? "")) || String(c?.brand ?? "Visa");
   }
-  return <CardTableInner q={q} brandByPan4={brandByPan4} />;
+  return <CardTableInner brandByPan4={brandByPan4} accountId={accountId} />;
 }
 
 function P2PTable({ q }: { q: any }) {
