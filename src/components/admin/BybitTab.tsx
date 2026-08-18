@@ -464,9 +464,21 @@ function AccountSummaryCard({
       </div>
 
       <div className="relative space-y-4">
+        {/* Actions above the section */}
+        {isAdmin && (
+          <div className="flex items-center justify-start gap-1">
+            <Button variant="ghost" size="icon" className="size-7 rounded-lg" onClick={onEdit} title="تعديل">
+              <Pencil className="size-3.5" />
+            </Button>
+            <Button variant="ghost" size="icon" className="size-7 rounded-lg text-destructive" onClick={onDelete} title="حذف">
+              <Trash2 className="size-3.5" />
+            </Button>
+          </div>
+        )}
+
         {/* Top row — mirrored: identity on left, number on right */}
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
-          {/* left cluster: identity + actions */}
+          {/* left cluster: identity */}
           <div className="flex items-start justify-start gap-2 sm:gap-3">
             <span className="grid size-11 shrink-0 place-items-center rounded-full border border-teal-400/30 bg-teal-400/10 text-teal-300">
               <Wallet className="size-5" />
@@ -484,16 +496,6 @@ function AccountSummaryCard({
                     <Copy className="size-3" />
                   </button>
                   <span dir="ltr" className="tabular-nums">UID {account.uid}</span>
-                </div>
-              )}
-              {isAdmin && (
-                <div className="mt-1 flex items-center justify-end gap-1">
-                  <Button variant="ghost" size="icon" className="size-7 rounded-lg" onClick={onEdit} title="تعديل">
-                    <Pencil className="size-3.5" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="size-7 rounded-lg text-destructive" onClick={onDelete} title="حذف">
-                    <Trash2 className="size-3.5" />
-                  </Button>
                 </div>
               )}
             </div>
