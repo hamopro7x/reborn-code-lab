@@ -561,9 +561,10 @@ function AddAccountDialog({
 
 function BybitAccountView({ isAdmin, accountId, accountName, onBack }: { isAdmin: boolean; accountId: string; accountName: string; onBack: () => void }) {
   const qc = useQueryClient();
-  const { vis } = useBybitVisibility();
-  const show = (k: "balance" | "spend" | "txns" | "onchain" | "internal" | "cards" | "account" | "docs") =>
-    isAdmin || Boolean(vis[k]);
+  // الموظف يشاهد كل بيانات القسم (قراءة فقط). الأدوات الخاصة بالأدمن
+  // (إضافة/حذف حساب، مفاتيح API، التحويل، تعديل البطاقات وبيانات الحساب)
+  // محكومة بـ isAdmin في مكانها.
+  const show = (_k: "balance" | "spend" | "txns" | "onchain" | "internal" | "cards" | "account" | "docs") => true;
   const [tab, setTab] = useState<"card" | "onchain" | "internal" | "p2p">("card");
   useEffect(() => {
     const saved = typeof window !== "undefined" ? window.localStorage.getItem(TAB_KEY) : null;
