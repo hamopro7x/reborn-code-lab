@@ -101,13 +101,8 @@ export function spendFeeUsd(row: SpendRow): number {
   return total;
 }
 
-/**
- * Actual purchase value in USD, excluding every fee charged inside it.
- * Bybit sometimes reports a fee-inclusive total (16.54 with a 0.32 fee) and
- * sometimes the net amount already separated from the fee (16.22 + 0.32).
- * The fee is only subtracted when the chosen figure is fee-inclusive, so no
- * amount is ever deducted twice. Returns null when no field is USD-denominated.
- */
+/** USD-denominated amounts reported for a purchase; `base` is the preferred one. */
+
 function usdCandidates(row: SpendRow): { base: number | null; amounts: number[] } {
   const d = row.detail ?? {};
   const candidates: Array<[unknown, unknown]> = [
