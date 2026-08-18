@@ -126,6 +126,9 @@ describe("monthly spend engine", () => {
       MONTH_START,
     );
     expect(totals.monthSpend).toBeCloseTo(10, 10);
+  });
+
+
 
   it("per-card spend uses the same collapsing rules", () => {
     const perCard = sumSpendByCard(
