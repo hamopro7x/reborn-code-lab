@@ -268,7 +268,6 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
   const addFn = useServerFn(addBybitAccount);
   const removeFn = useServerFn(removeBybitAccount);
   const updateFn = useServerFn(updateBybitAccount);
-  const reorderFn = useServerFn(reorderBybitAccounts);
   const [selected, setSelected] = usePersistentState<string | null>("bybit_selected_account", null);
   // القسم يفتح على قائمة الحسابات مباشرة (أدمن أو موظف) بدون خطوة ضغط زيادة
   const [listOpen, setListOpen] = usePersistentState<boolean>("bybit_list_open", true);
@@ -326,20 +325,6 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
     },
     onError: (e: any) => toast.error(e?.message || "فشل حفظ البيانات"),
   });
-  const reorder = useMutation({
-    mutationFn: (data: { ids: string[] }) => reorderFn({ data }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["bybit-accounts"] }),
-    onError: (e: any) => toast.error(e?.message || "فشل تغيير الترتيب"),
-  });
-
-  function move(index: number, dir: -1 | 1) {
-    const target = index + dir;
-    if (target < 0 || target >= list.length) return;
-    const ids = list.map((a) => a.id);
-    const [id] = ids.splice(index, 1);
-    ids.splice(target, 0, id);
-    reorder.mutate({ ids });
-  }
 
 
   const current = list.find((a) => a.id === selected) ?? null;
@@ -411,13 +396,10 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
               key={a.id}
               account={a}
               index={i}
-              total={list.length}
               isAdmin={isAdmin}
-              reordering={reorder.isPending}
               onOpen={() => setSelected(a.id)}
               onDelete={() => removeAccount.mutate({ id: a.id })}
               onEdit={() => setEditAccount(a)}
-              onMove={(dir) => move(i, dir)}
             />
           ))}
         </div>
@@ -443,17 +425,14 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
 }
 
 function AccountSummaryCard({
-  account, index, total, isAdmin, reordering, onOpen, onDelete, onEdit, onMove,
+  account, index, isAdmin, onOpen, onDelete, onEdit,
 }: {
   account: BybitAccountRow;
   index: number;
-  total: number;
   isAdmin: boolean;
-  reordering: boolean;
   onOpen: () => void;
   onDelete: () => void;
   onEdit: () => void;
-  onMove: (dir: -1 | 1) => void;
 }) {
   const overviewFn = useServerFn(getBybitOverview);
   const q = useQuery({
@@ -482,28 +461,6 @@ function AccountSummaryCard({
         </div>
         {isAdmin && (
           <div className="flex items-center gap-1">
-            <div className="flex flex-col">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-6 rounded-md"
-                disabled={index === 0 || reordering}
-                onClick={() => onMove(-1)}
-                title="تحريك لأعلى"
-              >
-                <ArrowUp className="size-3.5" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-6 rounded-md"
-                disabled={index === total - 1 || reordering}
-                onClick={() => onMove(1)}
-                title="تحريك لأسفل"
-              >
-                <ArrowDown className="size-3.5" />
-              </Button>
-            </div>
             <Button variant="ghost" size="icon" className="rounded-lg" onClick={onEdit} title="تعديل">
               <Pencil className="size-4" />
             </Button>
