@@ -210,6 +210,9 @@ export function spendUsd(row: SpendRow): number | null {
 export type SpendTotals = {
   daySpend: number;
   monthSpend: number;
+  /** Fees charged inside the purchases of each window (fees only, never the purchase value). */
+  dayFees: number;
+  monthFees: number;
   /** Purchases that actually contributed to the totals. */
   countedTxns: number;
   /** Rows whose currency is not USD-denominated, so they are reported instead of guessed. */
@@ -247,6 +250,8 @@ export function sumSpend(rows: Iterable<SpendRow>, dayStart: number, monthStart:
 
   let daySpend = 0;
   let monthSpend = 0;
+  let dayFees = 0;
+  let monthFees = 0;
   let countedTxns = 0;
   let skippedNonUsd = 0;
 
@@ -258,13 +263,21 @@ export function sumSpend(rows: Iterable<SpendRow>, dayStart: number, monthStart:
     }
     if (usd <= 0) continue;
     const time = Number(row.time ?? 0);
+    const fee = spendFeeChargedUsd(row);
     countedTxns += 1;
-    if (time >= monthStart) monthSpend += usd;
-    if (time >= dayStart) daySpend += usd;
+    if (time >= monthStart) {
+      monthSpend += usd;
+      monthFees += fee;
+    }
+    if (time >= dayStart) {
+      daySpend += usd;
+      dayFees += fee;
+    }
   }
 
-  return { daySpend, monthSpend, countedTxns, skippedNonUsd, lastTxnTime };
+  return { daySpend, monthSpend, dayFees, monthFees, countedTxns, skippedNonUsd, lastTxnTime };
 }
+
 
 /** Per-card spend uses the very same engine, so card and account totals agree. */
 export function sumSpendByCard(rows: Iterable<SpendRow>, pan4Of: (row: SpendRow) => string) {
