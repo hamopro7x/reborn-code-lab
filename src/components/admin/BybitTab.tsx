@@ -1643,9 +1643,6 @@ function TxnDetails({ txn }: { txn: any }) {
         {!sections.length && (
           <div className="text-xs text-muted-foreground">لا توجد تفاصيل إضافية لهذه المعاملة.</div>
         )}
-        <div className="border-t border-border/30 pt-3 text-[11px] text-muted-foreground">
-          العملة: {txn.currency} · آخر 4 أرقام: {txn.pan4 || "—"} · {dt(txn.time)}
-        </div>
       </div>
     </div>
   );
