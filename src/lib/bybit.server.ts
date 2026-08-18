@@ -571,6 +571,8 @@ export async function computeSpend(accountId: string | undefined, dayStart: numb
   return {
     daySpend: totals.daySpend,
     monthSpend: totals.monthSpend,
+    dayFees: totals.dayFees,
+    monthFees: totals.monthFees,
     txnCount: totals.countedTxns,
     lastTxnTime: totals.lastTxnTime,
     skippedNonUsd: totals.skippedNonUsd,
@@ -644,6 +646,8 @@ export async function fetchOverview(accountId?: string) {
     totalUsd: total,
     monthSpend: archivedSpend.monthSpend,
     daySpend,
+    monthFees: archivedSpend.monthFees,
+    dayFees: archivedSpend.dayFees,
     dayStart,
     monthStart,
     txnCount: archivedSpend.txnCount,
