@@ -573,12 +573,6 @@ function BybitAccountView({ isAdmin, accountId, accountName, onBack }: { isAdmin
   useEffect(() => {
     if (typeof window !== "undefined") window.localStorage.setItem(TAB_KEY, tab);
   }, [tab]);
-  useEffect(() => {
-    if (tab === "card" && !show("txns")) setTab(show("onchain") ? "onchain" : "internal");
-    if (tab === "onchain" && !show("onchain")) setTab(show("txns") ? "card" : "internal");
-    if (tab === "internal" && !show("internal")) setTab(show("txns") ? "card" : "onchain");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vis, isAdmin, tab]);
 
   const overviewFn = useServerFn(getBybitOverview);
   const cardFn = useServerFn(getBybitCardTxns);
