@@ -41,12 +41,13 @@ export async function listAccounts(): Promise<BybitAccount[]> {
   }));
 }
 
-/** Renames an account / updates its monthly cashback percentage. */
-export async function updateAccount(input: { id: string; name?: string; monthlyCashback?: number }) {
+/** Renames an account / updates its monthly cashback percentage / visa number. */
+export async function updateAccount(input: { id: string; name?: string; monthlyCashback?: number; sortOrder?: number }) {
   const db = await admin();
   const patch: Record<string, unknown> = {};
   if (input.name !== undefined) patch.name = input.name;
   if (input.monthlyCashback !== undefined) patch.monthly_cashback = input.monthlyCashback;
+  if (input.sortOrder !== undefined) patch.sort_order = input.sortOrder;
   if (!Object.keys(patch).length) return;
   const { error } = await db.from("bybit_accounts").update(patch).eq("id", input.id);
   if (error) throw new Error(error.message);
