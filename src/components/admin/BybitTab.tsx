@@ -464,18 +464,6 @@ function AccountSummaryCard({
       </div>
 
       <div className="relative space-y-4">
-        {/* Actions above the section */}
-        {isAdmin && (
-          <div className="flex items-center justify-start gap-1">
-            <Button variant="ghost" size="icon" className="size-7 rounded-lg" onClick={onEdit} title="تعديل">
-              <Pencil className="size-3.5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="size-7 rounded-lg text-destructive" onClick={onDelete} title="حذف">
-              <Trash2 className="size-3.5" />
-            </Button>
-          </div>
-        )}
-
         {/* Top row — mirrored: identity on left, number on right */}
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
           {/* left cluster: identity */}
@@ -484,7 +472,19 @@ function AccountSummaryCard({
               <Wallet className="size-5" />
             </span>
             <div className="min-w-0 text-right pt-1">
-              <div className="truncate text-sm sm:text-base font-black">حساب {account.name}</div>
+              <div className="flex items-center justify-end gap-1">
+                <div className="truncate text-sm sm:text-base font-black">حساب {account.name}</div>
+                {isAdmin && (
+                  <div className="flex items-center gap-0.5">
+                    <Button variant="ghost" size="icon" className="size-7 rounded-lg" onClick={onEdit} title="تعديل">
+                      <Pencil className="size-3.5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="size-7 rounded-lg text-destructive" onClick={onDelete} title="حذف">
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  </div>
+                )}
+              </div>
               {account.uid && (
                 <div className="mt-0.5 flex items-center justify-end gap-1 text-[11px] text-muted-foreground">
                   <button
