@@ -14,6 +14,8 @@ export type BybitAccount = {
   uid: string | null;
   email: string | null;
   createdAt: string;
+  sortOrder: number;
+  monthlyCashback: number;
 };
 
 async function admin() {
@@ -25,7 +27,7 @@ export async function listAccounts(): Promise<BybitAccount[]> {
   const db = await admin();
   const { data } = await db
     .from("bybit_accounts")
-    .select("id, name, uid, email, created_at")
+    .select("id, name, uid, email, created_at, sort_order, monthly_cashback")
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true });
   return (data ?? []).map((r: any) => ({
@@ -34,8 +36,31 @@ export async function listAccounts(): Promise<BybitAccount[]> {
     uid: r.uid ?? null,
     email: r.email ?? null,
     createdAt: r.created_at,
+    sortOrder: Number(r.sort_order ?? 0),
+    monthlyCashback: Number(r.monthly_cashback ?? 0),
   }));
 }
+
+/** Renames an account / updates its monthly cashback percentage. */
+export async function updateAccount(input: { id: string; name?: string; monthlyCashback?: number }) {
+  const db = await admin();
+  const patch: Record<string, unknown> = {};
+  if (input.name !== undefined) patch.name = input.name;
+  if (input.monthlyCashback !== undefined) patch.monthly_cashback = input.monthlyCashback;
+  if (!Object.keys(patch).length) return;
+  const { error } = await db.from("bybit_accounts").update(patch).eq("id", input.id);
+  if (error) throw new Error(error.message);
+}
+
+/** Persists a new display order: ids[0] becomes Visa #1. */
+export async function reorderAccounts(ids: string[]) {
+  const db = await admin();
+  for (let i = 0; i < ids.length; i++) {
+    const { error } = await db.from("bybit_accounts").update({ sort_order: i + 1 }).eq("id", ids[i]);
+    if (error) throw new Error(error.message);
+  }
+}
+
 
 async function accountCreds(accountId: string): Promise<Creds | null> {
   try {
