@@ -28,12 +28,12 @@ const money = (n: number, c = "USD") =>
 
 const dt = (ms: number) => formatDateTime(ms);
 
-function Stat({ label, value, hint }: { label: string; value: string; hint: string }) {
+function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div className="rounded-2xl border border-border/60 bg-background/60 p-4">
       <div className="text-xs text-muted-foreground mb-1">{label}</div>
       <div className="text-2xl font-black">{value}</div>
-      <div className="text-[11px] text-muted-foreground mt-1">{hint}</div>
+      {hint ? <div className="text-[11px] text-muted-foreground mt-1">{hint}</div> : null}
     </div>
   );
 }
