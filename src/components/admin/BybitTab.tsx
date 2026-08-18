@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, CreditCard, Layers, ArrowUp, ArrowDown, ChevronDown, Loader2, Trash2, Plus, Download, Copy, Pencil, ChevronLeft, Wallet, ArrowDownUp, Search } from "lucide-react";
+import { RefreshCw, CreditCard, Layers, ArrowUp, ArrowDown, ChevronDown, Loader2, Trash2, Plus, Download, Copy, Pencil, ChevronLeft, Wallet, ArrowDownUp, Search, PieChart, BarChart3 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -390,11 +390,12 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
           لا توجد حسابات مربوطة بعد{isAdmin ? " — أضف حساباً بمفتاح API (قراءة فقط)." : "."}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 overflow-hidden rounded-2xl border border-border/60 bg-card/40 [&>*]:border-b [&>*]:border-border/60 md:[&>*:nth-child(odd)]:border-l md:[&>*:nth-child(odd)]:border-border/60">
-          {list.map((a) => (
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          {list.map((a, i) => (
             <AccountSummaryCard
               key={a.id}
               account={a}
+              index={i}
               isAdmin={isAdmin}
               onOpen={() => setSelected(a.id)}
               onDelete={() => removeAccount.mutate({ id: a.id })}
@@ -402,6 +403,7 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
             />
           ))}
         </div>
+
       )}
 
       <AddAccountDialog
@@ -424,9 +426,10 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
 }
 
 function AccountSummaryCard({
-  account, isAdmin, onOpen, onDelete, onEdit,
+  account, index, isAdmin, onOpen, onDelete, onEdit,
 }: {
   account: BybitAccountRow;
+  index: number;
   isAdmin: boolean;
   onOpen: () => void;
   onDelete: () => void;
@@ -440,76 +443,123 @@ function AccountSummaryCard({
   const d = (q.data as any) ?? {};
   const coins = visibleCoins((d.coins ?? []) as CoinRow[]);
   const cashback = Number(account.monthlyCashback ?? 0);
+  const visaNo = account.sortOrder && account.sortOrder > 0 ? account.sortOrder : index + 1;
 
   return (
-    <div className="bg-card/70 p-4 space-y-3 flex flex-col min-h-[232px]">
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <span className="size-8 rounded-lg bg-blue-500/15 text-blue-400 grid place-items-center">
-            <Wallet className="size-4" />
-          </span>
-          <div>
-            {account.sortOrder ? (
-              <div className="text-[11px] font-bold text-blue-400" dir="ltr">Visa #{account.sortOrder}</div>
-            ) : null}
-            <div className="text-sm font-bold">{account.name}</div>
-            {account.uid && <div className="text-[11px] text-muted-foreground">UID {account.uid}</div>}
-            <div className="text-[11px] text-muted-foreground">
-              الاسترداد الشهري: <span className="tabular-nums">{cashback.toLocaleString("en-US", { maximumFractionDigits: 2 })}%</span>
-            </div>
-          </div>
-        </div>
-        {isAdmin && (
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="rounded-lg" onClick={onEdit} title="تعديل">
-              <Pencil className="size-4" />
-            </Button>
-            <Button variant="ghost" size="icon" className="rounded-lg text-destructive" onClick={onDelete} title="حذف">
-              <Trash2 className="size-4" />
-            </Button>
-          </div>
-        )}
+    <div className="relative overflow-hidden rounded-[28px] border border-teal-400/25 bg-[oklch(0.16_0.03_190)] p-4 sm:p-5 shadow-[0_0_0_1px_oklch(0.7_0.13_190_/_0.08),0_18px_50px_-24px_oklch(0.6_0.15_190_/_0.45)] transition-shadow hover:shadow-[0_0_0_1px_oklch(0.7_0.13_190_/_0.2),0_22px_60px_-20px_oklch(0.65_0.16_190_/_0.6)]">
+      {/* Decorative glow + wave */}
+      <div aria-hidden className="pointer-events-none absolute inset-0">
+        <div className="absolute -top-20 right-1/4 h-56 w-56 rounded-full bg-teal-400/10 blur-3xl" />
+        <svg viewBox="0 0 400 120" preserveAspectRatio="none" className="absolute inset-x-0 top-14 h-24 w-full opacity-60">
+          <path d="M0 80 C 60 20, 120 110, 200 60 S 340 10, 400 70" fill="none" stroke="oklch(0.75 0.14 190)" strokeOpacity="0.35" strokeWidth="1.5" />
+          <path d="M0 95 C 70 45, 140 120, 210 75 S 350 30, 400 88" fill="none" stroke="oklch(0.75 0.14 190)" strokeOpacity="0.18" strokeWidth="1.5" />
+        </svg>
       </div>
 
+      <div className="relative space-y-4">
+        {/* Top row */}
+        <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3">
+          {/* left cluster: number + cashback */}
+          <div className="flex items-start gap-3 sm:gap-4">
+            <div className="flex flex-col items-center gap-1.5 shrink-0">
+              <div className="relative grid size-16 sm:size-[70px] place-items-center rounded-full border border-teal-400/40 bg-teal-400/5 shadow-[0_0_24px_-6px_oklch(0.7_0.15_190_/_0.7),inset_0_0_18px_-8px_oklch(0.7_0.15_190_/_0.8)]">
+                <span className="text-2xl sm:text-3xl font-black text-teal-300 tabular-nums" dir="ltr">{visaNo}</span>
+              </div>
+              <span className="text-[10px] text-muted-foreground">رقم الحساب</span>
+            </div>
+            <div className="flex items-center gap-2 pt-2">
+              <span className="grid size-7 place-items-center rounded-full bg-teal-400/10 text-teal-300 shrink-0">
+                <PieChart className="size-4" />
+              </span>
+              <div className="min-w-0">
+                <div className="text-[11px] text-muted-foreground whitespace-nowrap">استرداد بنسبة</div>
+                <div className="text-lg sm:text-xl font-black text-teal-300 tabular-nums" dir="ltr">
+                  {cashback.toLocaleString("en-US", { maximumFractionDigits: 2 })}%
+                </div>
+              </div>
+            </div>
+          </div>
 
-      {q.isLoading ? (
-        <div className="flex-1 min-h-[104px] flex flex-wrap items-stretch gap-3">
-          <div className="rounded-xl border border-border/60 bg-background/60 p-3 inline-flex min-w-[150px] items-center justify-center gap-3">
-            <Loader2 className="size-5 animate-spin" />
+          {/* right cluster: identity + actions */}
+          <div className="flex items-start justify-end gap-2 sm:gap-3">
+            <div className="min-w-0 text-right pt-1">
+              <div className="truncate text-sm sm:text-base font-black">حساب {account.name}</div>
+              {account.uid && (
+                <div className="mt-0.5 flex items-center justify-end gap-1 text-[11px] text-muted-foreground">
+                  <button
+                    type="button"
+                    className="grid size-5 place-items-center rounded-md hover:bg-teal-400/10 hover:text-teal-300"
+                    title="نسخ UID"
+                    onClick={() => { navigator.clipboard?.writeText(account.uid ?? ""); toast.success("تم نسخ UID"); }}
+                  >
+                    <Copy className="size-3" />
+                  </button>
+                  <span dir="ltr" className="tabular-nums">UID {account.uid}</span>
+                </div>
+              )}
+              {isAdmin && (
+                <div className="mt-1 flex items-center justify-end gap-1">
+                  <Button variant="ghost" size="icon" className="size-7 rounded-lg" onClick={onEdit} title="تعديل">
+                    <Pencil className="size-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="size-7 rounded-lg text-destructive" onClick={onDelete} title="حذف">
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                </div>
+              )}
+            </div>
+            <span className="grid size-11 shrink-0 place-items-center rounded-full border border-teal-400/30 bg-teal-400/10 text-teal-300">
+              <Wallet className="size-5" />
+            </span>
           </div>
         </div>
-      ) : (
-        <div className="flex-1 min-h-[104px] flex flex-wrap items-stretch gap-3">
-          {coins.map((c) => (
-            <div
-              key={c.coin}
-              className="rounded-xl border border-border/60 bg-background/60 p-3 inline-flex items-center gap-3"
-            >
-              <CoinLogo coin={c.coin} />
-                <div>
-                  <div className="text-[11px] text-muted-foreground mb-0.5">{c.coin}</div>
-                  <div className="text-3xl font-black tracking-tight tabular-nums">
-                    {c.balance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+
+        {/* Balances */}
+        {q.isLoading ? (
+          <div className="grid min-h-[104px] place-items-center rounded-2xl border border-teal-400/15 bg-[oklch(0.12_0.03_190)]">
+            <Loader2 className="size-5 animate-spin" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {coins.map((c) => (
+              <div
+                key={c.coin}
+                className="rounded-2xl border border-teal-400/15 bg-[oklch(0.12_0.03_190)] p-3"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="text-[11px] text-muted-foreground mb-0.5">{c.coin}</div>
+                    <div className="text-2xl font-black tracking-tight tabular-nums">
+                      {c.balance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
                   </div>
-                  <div className="text-[11px] text-muted-foreground mt-0.5">≈ {money(c.usd)}</div>
+                  <span className="shrink-0"><CoinLogo coin={c.coin} /></span>
                 </div>
-            </div>
-          ))}
-        </div>
-      )}
+                <div className="mt-1 text-[11px] text-muted-foreground" dir="ltr">{money(c.usd)} ≈</div>
+              </div>
+            ))}
+          </div>
+        )}
 
-      {d.failed && (
-        <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-2 text-[11px] text-destructive-foreground">
-          تعذّر جلب البيانات: {String(d.failed)}
-        </div>
-      )}
+        {d.failed && (
+          <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-2 text-[11px] text-destructive-foreground">
+            تعذّر جلب البيانات: {String(d.failed)}
+          </div>
+        )}
 
-      <Button className="mt-auto w-full rounded-xl" onClick={onOpen}>
-        عرض بيانات الحساب
-      </Button>
+        <button
+          type="button"
+          onClick={onOpen}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-teal-400/35 bg-[linear-gradient(135deg,oklch(0.32_0.08_190),oklch(0.22_0.06_190))] px-4 py-3 text-sm font-bold text-teal-100 shadow-[0_0_20px_-10px_oklch(0.7_0.15_190_/_0.8)] transition-all hover:border-teal-300/60 hover:brightness-125 hover:shadow-[0_0_28px_-8px_oklch(0.72_0.16_190_/_0.9)]"
+        >
+          <BarChart3 className="size-4 text-teal-300" />
+          عرض بيانات الحساب
+        </button>
+      </div>
     </div>
   );
 }
+
 
 function validateBybitCreds({ name, apiKey, apiSecret }: { name: string; apiKey: string; apiSecret: string }) {
   const e: { name?: string; apiKey?: string; apiSecret?: string } = {};
