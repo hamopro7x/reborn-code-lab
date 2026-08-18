@@ -443,8 +443,18 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
 }
 
 function AccountSummaryCard({
-  account, isAdmin, onOpen, onDelete,
-}: { account: { id: string; name: string; uid: string | null }; isAdmin: boolean; onOpen: () => void; onDelete: () => void }) {
+  account, index, total, isAdmin, reordering, onOpen, onDelete, onEdit, onMove,
+}: {
+  account: BybitAccountRow;
+  index: number;
+  total: number;
+  isAdmin: boolean;
+  reordering: boolean;
+  onOpen: () => void;
+  onDelete: () => void;
+  onEdit: () => void;
+  onMove: (dir: -1 | 1) => void;
+}) {
   const overviewFn = useServerFn(getBybitOverview);
   const q = useQuery({
     queryKey: ["bybit-overview", account.id],
@@ -452,25 +462,58 @@ function AccountSummaryCard({
   });
   const d = (q.data as any) ?? {};
   const coins = visibleCoins((d.coins ?? []) as CoinRow[]);
+  const cashback = Number(account.monthlyCashback ?? 0);
 
   return (
     <div className="bg-card/70 p-4 space-y-3 flex flex-col min-h-[232px]">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2">
           <span className="size-8 rounded-lg bg-blue-500/15 text-blue-400 grid place-items-center">
             <Wallet className="size-4" />
           </span>
           <div>
+            <div className="text-[11px] font-bold text-blue-400" dir="ltr">Visa #{index + 1}</div>
             <div className="text-sm font-bold">{account.name}</div>
             {account.uid && <div className="text-[11px] text-muted-foreground">UID {account.uid}</div>}
+            <div className="text-[11px] text-muted-foreground">
+              الاسترداد الشهري: <span className="tabular-nums">{cashback.toLocaleString("en-US", { maximumFractionDigits: 2 })}%</span>
+            </div>
           </div>
         </div>
         {isAdmin && (
-          <Button variant="ghost" size="icon" className="rounded-lg text-destructive" onClick={onDelete}>
-            <Trash2 className="size-4" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <div className="flex flex-col">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-6 rounded-md"
+                disabled={index === 0 || reordering}
+                onClick={() => onMove(-1)}
+                title="تحريك لأعلى"
+              >
+                <ArrowUp className="size-3.5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-6 rounded-md"
+                disabled={index === total - 1 || reordering}
+                onClick={() => onMove(1)}
+                title="تحريك لأسفل"
+              >
+                <ArrowDown className="size-3.5" />
+              </Button>
+            </div>
+            <Button variant="ghost" size="icon" className="rounded-lg" onClick={onEdit} title="تعديل">
+              <Pencil className="size-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="rounded-lg text-destructive" onClick={onDelete} title="حذف">
+              <Trash2 className="size-4" />
+            </Button>
+          </div>
         )}
       </div>
+
 
       {q.isLoading ? (
         <div className="flex-1 min-h-[104px] flex flex-wrap items-stretch gap-3">
