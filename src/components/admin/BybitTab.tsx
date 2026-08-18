@@ -472,19 +472,6 @@ function AccountSummaryCard({
               <Wallet className="size-5" />
             </span>
             <div className="min-w-0 text-right pt-1">
-              <div className="flex items-center justify-end gap-1">
-                <div className="truncate text-sm sm:text-base font-black">حساب {account.name}</div>
-                {isAdmin && (
-                  <div className="flex items-center gap-0.5">
-                    <Button variant="ghost" size="icon" className="size-7 rounded-lg" onClick={onEdit} title="تعديل">
-                      <Pencil className="size-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="size-7 rounded-lg text-destructive" onClick={onDelete} title="حذف">
-                      <Trash2 className="size-3.5" />
-                    </Button>
-                  </div>
-                )}
-              </div>
               {account.uid && (
                 <div className="flex items-center justify-end gap-1 text-[11px] text-muted-foreground">
                   <span dir="ltr" className="tabular-nums">UID {account.uid}</span>
@@ -498,6 +485,19 @@ function AccountSummaryCard({
                   </button>
                 </div>
               )}
+              <div className="flex items-center justify-end gap-1">
+                <div className="truncate text-sm sm:text-base font-black">حساب {account.name}</div>
+                {isAdmin && (
+                  <div className="flex items-center gap-0.5">
+                    <Button variant="ghost" size="icon" className="size-7 rounded-lg" onClick={onEdit} title="تعديل">
+                      <Pencil className="size-3.5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="size-7 rounded-lg text-destructive" onClick={onDelete} title="حذف">
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
