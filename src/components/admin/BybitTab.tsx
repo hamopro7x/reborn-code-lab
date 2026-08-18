@@ -7,7 +7,7 @@ import {
   getBybitOverview, getBybitCardTxns, syncBybitCardTxns, syncAllBybitCardTxns, getBybitOnChain, getBybitInternal, getBybitP2P,
   getBybitCards,
   createBybitCard, deleteBybitCard, updateBybitCard, getBybitAccountInfo, saveBybitAccountInfo,
-  listBybitAccounts, addBybitAccount, removeBybitAccount,
+  listBybitAccounts, addBybitAccount, removeBybitAccount, updateBybitAccount, reorderBybitAccounts,
 } from "@/lib/bybit.functions";
 import { formatDateTime } from "@/lib/format";
 import { BybitDocsCard } from "@/components/admin/BybitDocs";
