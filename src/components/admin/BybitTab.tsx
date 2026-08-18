@@ -1495,48 +1495,152 @@ function CardTableInner({ q, brandByPan4 = {} }: { q: any; brandByPan4?: Record<
   );
 }
 
-const DETAIL_LABELS: Array<[string, string]> = [
+type FieldDef = [string, string];
 
+const CORE_FIELDS: FieldDef[] = [
+  ["txnId", "معرّف المعاملة"],
+  ["orderId", "معرّف الطلب / المرجع"],
+  ["paymentId", "معرّف الدفع"],
+  ["authCode", "كود التفويض"],
+  ["stage", "مرحلة المعاملة"],
+  ["eventCode", "كود الحدث"],
+  ["createdAt", "تاريخ الإنشاء"],
+  ["updatedAt", "آخر تحديث"],
+];
+
+const AMOUNT_FIELDS: FieldDef[] = [
   ["transactionAmount", "مبلغ المعاملة"],
+  ["transactionCurrency", "عملة المعاملة"],
+  ["localAmount", "المبلغ بالعملة المحلية"],
+  ["localCurrency", "العملة المحلية"],
+  ["grossAmount", "المبلغ الإجمالي"],
+  ["netAmount", "الصافي"],
+  ["feeAmount", "الرسوم"],
   ["foreignTxnFee", "رسوم المعاملة الأجنبية"],
+  ["tax", "الضريبة"],
+  ["shipping", "الشحن"],
   ["paidWithCrypto", "المدفوع بالعملة الرقمية"],
   ["paidWithFiat", "المدفوع نقدًا"],
-  ["localAmount", "المبلغ بالعملة المحلية"],
-  ["paymentId", "معرّف الدفع"],
-  ["txnId", "معرّف المعاملة"],
+  ["protectionEligibility", "أهلية الحماية"],
+];
+
+const PROCESSOR_FIELDS: FieldDef[] = [
+  ["responseCode", "كود استجابة المعالج"],
+  ["declineCode", "كود الرفض"],
+  ["declineReason", "سبب الرفض"],
+  ["avsCode", "نتيجة AVS"],
+  ["cvvCode", "نتيجة CVV"],
+  ["paymentAdviceCode", "Payment Advice Code"],
+  ["apiErrorCode", "كود خطأ الـ API"],
+];
+
+const MERCHANT_FIELDS: FieldDef[] = [
+  ["merchantName", "اسم التاجر"],
   ["mcc", "فئة التاجر (MCC)"],
   ["merchantLocation", "الموقع"],
-  ["merchantName", "اسم التاجر"],
+  ["merchantWebsite", "الموقع الإلكتروني"],
+  ["merchantEmail", "البريد الإلكتروني"],
+  ["merchantDescription", "وصف التاجر"],
+  ["terminalId", "معرّف الطرفية"],
+  ["storeId", "معرّف المتجر"],
 ];
+
+const KNOWN_KEYS = new Set(
+  [...CORE_FIELDS, ...AMOUNT_FIELDS, ...PROCESSOR_FIELDS, ...MERCHANT_FIELDS].map(([k]) => k),
+);
+
+function has(d: Record<string, string | number | null>, k: string) {
+  return d[k] !== null && d[k] !== undefined && d[k] !== "";
+}
+
+function FieldGrid({
+  d, defs, title,
+}: { d: Record<string, string | number | null>; defs: FieldDef[]; title: string }) {
+  const fields = defs.filter(([k]) => has(d, k));
+  if (!fields.length) return null;
+  return (
+    <div>
+      <div className="text-sm font-black mb-3">{title}</div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {fields.map(([k, label]) => (
+          <div key={k}>
+            <div className="text-[11px] text-muted-foreground">{label}</div>
+            <div className="text-sm font-semibold break-all" dir="auto">
+              {String(d[k])}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function TxnDetails({ txn }: { txn: any }) {
   const d = (txn?.detail ?? {}) as Record<string, string | number | null>;
-  const fields = DETAIL_LABELS.filter(([k]) => d[k] !== null && d[k] !== undefined && d[k] !== "");
+  const [showRaw, setShowRaw] = useState(false);
+
+  let raw: Record<string, unknown> = {};
+  try {
+    raw = d.raw ? (JSON.parse(String(d.raw)) as Record<string, unknown>) : {};
+  } catch {
+    raw = {};
+  }
+  const extras = Object.entries(raw).filter(
+    ([k, v]) => !KNOWN_KEYS.has(k) && v !== null && v !== undefined && v !== "",
+  );
+  const hasAny =
+    [...CORE_FIELDS, ...AMOUNT_FIELDS, ...PROCESSOR_FIELDS, ...MERCHANT_FIELDS].some(([k]) => has(d, k));
+
   return (
-    <div className="grid gap-4">
-      <div>
-        <div className="text-sm font-black mb-3">تفصيل العملة والرسوم</div>
-        {fields.length ? (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {fields.map(([k, label]) => (
-              <div key={k}>
-                <div className="text-[11px] text-muted-foreground">{label}</div>
-                <div className="text-sm font-semibold break-all" dir="ltr">
-                  {String(d[k])}
+    <div className="grid gap-5" dir="rtl">
+      <FieldGrid d={d} defs={CORE_FIELDS} title="بيانات المعاملة الأساسية" />
+      <FieldGrid d={d} defs={AMOUNT_FIELDS} title="تفصيل العملة والرسوم" />
+      <FieldGrid d={d} defs={PROCESSOR_FIELDS} title="بيانات المعالج وسبب الرفض" />
+      <FieldGrid d={d} defs={MERCHANT_FIELDS} title="تفاصيل التاجر" />
+      {!hasAny && (
+        <div className="text-xs text-muted-foreground">لا توجد تفاصيل إضافية لهذه المعاملة.</div>
+      )}
+      {(extras.length > 0 || d.raw) && (
+        <div>
+          <button
+            onClick={() => setShowRaw((v) => !v)}
+            className="text-xs text-amber-400 hover:underline"
+          >
+            {showRaw ? "إخفاء البيانات الخام" : "عرض البيانات الخام من المزوّد"}
+          </button>
+          {showRaw && (
+            <div className="mt-3 grid gap-3">
+              {extras.length > 0 && (
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  {extras.map(([k, v]) => (
+                    <div key={k}>
+                      <div className="text-[11px] text-muted-foreground" dir="ltr">{k}</div>
+                      <div className="text-sm font-semibold break-all" dir="auto">
+                        {typeof v === "object" ? JSON.stringify(v) : String(v)}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-xs text-muted-foreground">لا توجد تفاصيل إضافية لهذه المعاملة.</div>
-        )}
-      </div>
+              )}
+              {d.raw && (
+                <pre
+                  dir="ltr"
+                  className="max-h-72 overflow-auto rounded-xl bg-muted/30 p-3 text-[11px] leading-5"
+                >
+                  {JSON.stringify(raw, null, 2)}
+                </pre>
+              )}
+            </div>
+          )}
+        </div>
+      )}
       <div className="text-[11px] text-muted-foreground">
         العملة: {txn.currency} · آخر 4 أرقام: {txn.pan4 || "—"} · {dt(txn.time)}
       </div>
     </div>
   );
 }
+
 
 function AssetTable({
   q, title, inChip, outChip, showAddress, icon, hideFeeOnDeposit, hideChain,

@@ -681,6 +681,36 @@ function sanitize(o: Record<string, unknown>): Record<string, string | number | 
   return out;
 }
 
+/** First non-empty value among the given raw keys, otherwise null. */
+function pick(t: any, keys: string[]): string | number | null {
+  for (const k of keys) {
+    const v = t?.[k];
+    if (v === null || v === undefined || v === "") continue;
+    if (typeof v === "number" || typeof v === "string") return v;
+    return JSON.stringify(v);
+  }
+  return null;
+}
+
+/**
+ * Full transaction stage, derived ONLY from values the provider returned.
+ * Never inferred when the provider gives nothing.
+ */
+function stageOf(t: any): string | null {
+  const explicit = pick(t, ["eventCode", "transactionEventCode", "txnEventCode", "transactionType", "txnType"]);
+  if (explicit !== null) return String(explicit);
+  const ts = String(t?.tradeStatus ?? t?.status ?? "");
+  const map: Record<string, string> = {
+    "0": "PENDING",
+    "1": "COMPLETED",
+    "2": "DECLINED",
+    "3": "REFUNDED",
+    "4": "REVERSED",
+    "5": "REFUNDED",
+  };
+  return map[ts] ?? null;
+}
+
 function mapCardTxn(t: any): CardTxn {
     const tradeStatus = String(t.tradeStatus ?? t.status ?? "");
     const side = String(t.side ?? "");
@@ -702,25 +732,67 @@ function mapCardTxn(t: any): CardTxn {
       pan4: String(t.pan4 ?? ""),
       type: side,
       detail: sanitize({
+        // ---- core identifiers ----
+        txnId: pick(t, ["txnId", "transactionId", "id"]),
+        orderId: pick(t, ["orderNo", "orderId", "referenceId", "refId"]),
+        paymentId: pick(t, ["paymentId", "orderNo"]),
+        authCode: pick(t, ["authCode", "authorizationCode"]),
+        // ---- status ----
+        stage: stageOf(t),
+        eventCode: pick(t, ["eventCode", "transactionEventCode", "txnEventCode"]),
+        tradeStatus: t.tradeStatus ?? t.status ?? null,
+        side: t.side ?? null,
+        createdAt: pick(t, ["txnCreate", "createTime", "createdTime"]),
+        updatedAt: pick(t, ["txnUpdate", "updateTime", "updatedTime", "settleTime"]),
+        // ---- amounts & fees ----
         transactionAmount: t.transactionAmount ?? null,
         transactionCurrency: t.transactionCurrency ?? null,
         basicAmount: t.basicAmount ?? null,
         basicCurrency: t.basicCurrency ?? null,
         localAmount: t.localAmount ?? t.originalAmount ?? null,
         localCurrency: t.localCurrency ?? t.originalCurrency ?? null,
+        grossAmount: pick(t, ["grossAmount", "totalAmount"]),
+        netAmount: pick(t, ["netAmount", "settleAmount"]),
         foreignTxnFee: t.foreignTxnFee ?? t.fee ?? null,
+        feeAmount: pick(t, ["feeAmount", "fee", "handlingFee"]),
+        tax: pick(t, ["tax", "taxAmount"]),
+        shipping: pick(t, ["shipping", "shippingAmount"]),
         paidWithCrypto: t.cryptoAmount ?? null,
         paidWithFiat: t.fiatAmount ?? null,
-        txnId: t.txnId ?? null,
-        paymentId: t.paymentId ?? t.orderNo ?? null,
+        protectionEligibility: pick(t, ["protectionEligibility", "protectionEligibilityType"]),
+        // ---- processor / decline data ----
+        responseCode: pick(t, ["responseCode", "processorResponseCode", "respCode"]),
+        avsCode: pick(t, ["avsCode", "avsResponseCode", "avsResult"]),
+        cvvCode: pick(t, ["cvvCode", "cvv2Code", "cvvResult"]),
+        paymentAdviceCode: pick(t, ["paymentAdviceCode", "adviceCode"]),
+        declineCode: pick(t, ["declineCode", "failCode", "rejectCode", "errorCode"]),
+        declineReason: pick(t, [
+          "declineReason",
+          "failReason",
+          "rejectReason",
+          "reason",
+          "statusReason",
+          "errorMsg",
+          "errorMessage",
+          "retMsg",
+          "msg",
+        ]),
+        apiErrorCode: pick(t, ["retCode", "httpCode", "statusCode"]),
+        // ---- merchant ----
+        merchantName: t.merchName ?? null,
+        merchantWebsite: pick(t, ["merchWebsite", "merchUrl", "merchantUrl", "website"]),
+        merchantEmail: pick(t, ["merchEmail", "merchantEmail", "supportEmail"]),
+        merchantDescription: pick(t, ["merchDesc", "merchantDescription", "description", "remark"]),
         mcc: t.mcc ?? t.merchCategory ?? null,
         merchantLocation: [t.merchCity, t.merchCountry].filter(Boolean).join(", ") || null,
-        merchantName: t.merchName ?? null,
-        tradeStatus: t.tradeStatus ?? t.status ?? null,
-        side: t.side ?? null,
+        terminalId: pick(t, ["terminalId", "terminalNo"]),
+        storeId: pick(t, ["storeId", "storeNo", "merchId", "merchantId"]),
+        // ---- raw provider payload, stored verbatim ----
+        raw: JSON.stringify(t),
       }),
     };
 }
+
 
 const MAX_TXNS = 10_000_000;
 const PRUNE_TO_DELETE = 3_000_000;
