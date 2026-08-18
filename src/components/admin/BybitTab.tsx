@@ -15,7 +15,6 @@ import { BybitDocsCard } from "@/components/admin/BybitDocs";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { useBybitVisibility } from "@/components/admin/BybitVisibility";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, CreditCard, Layers, ArrowUp, ArrowDown, ChevronDown, Loader2, Trash2, Plus, Download, Copy, Pencil, ChevronLeft, Wallet, ArrowDownUp, Search } from "lucide-react";
@@ -261,7 +260,8 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
   const addFn = useServerFn(addBybitAccount);
   const removeFn = useServerFn(removeBybitAccount);
   const [selected, setSelected] = usePersistentState<string | null>("bybit_selected_account", null);
-  const [listOpen, setListOpen] = usePersistentState<boolean>("bybit_list_open", false);
+  // القسم يفتح على قائمة الحسابات مباشرة (أدمن أو موظف) بدون خطوة ضغط زيادة
+  const [listOpen, setListOpen] = usePersistentState<boolean>("bybit_list_open", true);
   const [addOpen, setAddOpen] = useState(false);
   const [addError, setAddError] = useState<{ message: string; serverIp?: string | null } | null>(null);
 
@@ -560,9 +560,10 @@ function AddAccountDialog({
 
 function BybitAccountView({ isAdmin, accountId, accountName, onBack }: { isAdmin: boolean; accountId: string; accountName: string; onBack: () => void }) {
   const qc = useQueryClient();
-  const { vis } = useBybitVisibility();
-  const show = (k: "balance" | "spend" | "txns" | "onchain" | "internal" | "cards" | "account" | "docs") =>
-    isAdmin || Boolean(vis[k]);
+  // الموظف يشاهد كل بيانات القسم (قراءة فقط). الأدوات الخاصة بالأدمن
+  // (إضافة/حذف حساب، مفاتيح API، التحويل، تعديل البطاقات وبيانات الحساب)
+  // محكومة بـ isAdmin في مكانها.
+  const show = (_k: "balance" | "spend" | "txns" | "onchain" | "internal" | "cards" | "account" | "docs") => true;
   const [tab, setTab] = useState<"card" | "onchain" | "internal" | "p2p">("card");
   useEffect(() => {
     const saved = typeof window !== "undefined" ? window.localStorage.getItem(TAB_KEY) : null;
@@ -571,12 +572,6 @@ function BybitAccountView({ isAdmin, accountId, accountName, onBack }: { isAdmin
   useEffect(() => {
     if (typeof window !== "undefined") window.localStorage.setItem(TAB_KEY, tab);
   }, [tab]);
-  useEffect(() => {
-    if (tab === "card" && !show("txns")) setTab(show("onchain") ? "onchain" : "internal");
-    if (tab === "onchain" && !show("onchain")) setTab(show("txns") ? "card" : "internal");
-    if (tab === "internal" && !show("internal")) setTab(show("txns") ? "card" : "onchain");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vis, isAdmin, tab]);
 
   const overviewFn = useServerFn(getBybitOverview);
   const cardFn = useServerFn(getBybitCardTxns);
