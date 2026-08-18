@@ -1540,9 +1540,6 @@ const MERCHANT_FIELDS: FieldDef[] = [
   ["storeId", "معرّف المتجر"],
 ];
 
-const KNOWN_KEYS = new Set(
-  [...CORE_FIELDS, ...AMOUNT_FIELDS, ...PROCESSOR_FIELDS, ...MERCHANT_FIELDS].map(([k]) => k),
-);
 
 function has(d: Record<string, string | number | null>, k: string) {
   return d[k] !== null && d[k] !== undefined && d[k] !== "";
