@@ -665,7 +665,7 @@ function BybitAccountView({ isAdmin, accountId, accountName, onBack }: { isAdmin
   const monthFees = Number((overview.data as any)?.monthFees ?? 0);
   const dayFees = Number((overview.data as any)?.dayFees ?? 0);
 
-  const skippedNonUsd = Number((overview.data as any)?.skippedNonUsd ?? 0);
+  
 
 
   function refreshAll() {
