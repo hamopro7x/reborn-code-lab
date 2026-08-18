@@ -464,14 +464,18 @@ function AccountSummaryCard({
       </div>
 
       <div className="relative space-y-4">
-        {/* Top row — mirrored: identity on left, number on right */}
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
-          {/* left cluster: identity */}
-          <div className="flex items-start justify-start gap-2 sm:gap-3">
+        {/* Header: physical right-to-left order using row-reverse. */}
+        {/* Children are declared in this order so they render right-to-left: */}
+        {/* [1] Avatar + name + UID  -> far right */}
+        {/* [2] Cashback              -> center */}
+        {/* [3] Account number badge  -> far left */}
+        <div className="flex flex-row-reverse items-start justify-between gap-3">
+          {/* Identity cluster — far right */}
+          <div className="flex items-start gap-2 sm:gap-3 min-w-0">
             <span className="grid size-11 shrink-0 place-items-center rounded-full border border-teal-400/30 bg-teal-400/10 text-teal-300">
               <Wallet className="size-5" />
             </span>
-            <div className="min-w-0 text-right pt-1">
+            <div className="min-w-0 text-right pt-0.5" dir="rtl">
               <div className="flex items-center justify-end gap-1">
                 <div className="truncate text-sm sm:text-base font-black">حساب {account.name}</div>
                 {isAdmin && (
@@ -486,7 +490,7 @@ function AccountSummaryCard({
                 )}
               </div>
               {account.uid && (
-                <div className="flex items-center justify-end gap-1 text-[11px] text-muted-foreground">
+                <div className="flex items-center justify-end gap-1 text-[11px] text-muted-foreground mt-0.5">
                   <span dir="ltr" className="tabular-nums">UID {account.uid}</span>
                   <button
                     type="button"
@@ -499,23 +503,20 @@ function AccountSummaryCard({
                 </div>
               )}
             </div>
-
           </div>
 
-          {/* right cluster: number + cashback */}
-          <div className="flex items-start gap-3 sm:gap-4">
-            <div className="flex flex-col items-end gap-1 pt-2">
-              <div className="text-lg sm:text-xl font-black text-teal-300 tabular-nums" dir="ltr">
-                {cashback.toLocaleString("en-US", { maximumFractionDigits: 2 })}%
-              </div>
-              <span className="grid size-7 place-items-center rounded-full bg-teal-400/10 text-teal-300 shrink-0">
-                <PieChart className="size-4" />
-              </span>
+          {/* Cashback cluster — center */}
+          <div className="flex flex-col items-center gap-1 pt-2 px-2">
+            <div className="text-[11px] text-muted-foreground">استرداد</div>
+            <div className="text-lg sm:text-xl font-black text-teal-300 tabular-nums" dir="ltr">
+              {cashback.toLocaleString("en-US", { maximumFractionDigits: 2 })}%
             </div>
-            <div className="flex items-center shrink-0">
-              <div className="relative grid size-16 sm:size-[70px] place-items-center rounded-full border border-teal-400/40 bg-teal-400/5 shadow-[0_0_24px_-6px_oklch(0.7_0.15_190_/_0.7),inset_0_0_18px_-8px_oklch(0.7_0.15_190_/_0.8)]">
-                <span className="text-2xl sm:text-3xl font-black text-teal-300 tabular-nums" dir="ltr">{visaNo}</span>
-              </div>
+          </div>
+
+          {/* Account number badge — far left */}
+          <div className="flex items-center shrink-0">
+            <div className="relative grid size-16 sm:size-[70px] place-items-center rounded-full border border-teal-400/40 bg-teal-400/5 shadow-[0_0_24px_-6px_oklch(0.7_0.15_190_/_0.7),inset_0_0_18px_-8px_oklch(0.7_0.15_190_/_0.8)]">
+              <span className="text-2xl sm:text-3xl font-black text-teal-300 tabular-nums" dir="ltr">{visaNo}</span>
             </div>
           </div>
         </div>
