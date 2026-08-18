@@ -1626,10 +1626,6 @@ function CardTableInner({
       </div>
       {q.isLoading ? (
         <Empty text="جارٍ التحميل…" />
-      ) : q.data?.failed ? (
-        <div className="p-6 text-center text-xs text-destructive" dir="ltr">
-          {String(q.data.failed)}
-        </div>
       ) : !shown.length ? (
         <Empty text="لا توجد معاملات" />
       ) : (
