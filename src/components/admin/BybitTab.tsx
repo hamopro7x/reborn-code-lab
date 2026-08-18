@@ -325,20 +325,6 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
     },
     onError: (e: any) => toast.error(e?.message || "فشل حفظ البيانات"),
   });
-  const reorder = useMutation({
-    mutationFn: (data: { ids: string[] }) => reorderFn({ data }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["bybit-accounts"] }),
-    onError: (e: any) => toast.error(e?.message || "فشل تغيير الترتيب"),
-  });
-
-  function move(index: number, dir: -1 | 1) {
-    const target = index + dir;
-    if (target < 0 || target >= list.length) return;
-    const ids = list.map((a) => a.id);
-    const [id] = ids.splice(index, 1);
-    ids.splice(target, 0, id);
-    reorder.mutate({ ids });
-  }
 
 
   const current = list.find((a) => a.id === selected) ?? null;
@@ -412,11 +398,9 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
               index={i}
               total={list.length}
               isAdmin={isAdmin}
-              reordering={reorder.isPending}
               onOpen={() => setSelected(a.id)}
               onDelete={() => removeAccount.mutate({ id: a.id })}
               onEdit={() => setEditAccount(a)}
-              onMove={(dir) => move(i, dir)}
             />
           ))}
         </div>
