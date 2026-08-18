@@ -1569,50 +1569,46 @@ function fmtValue(key: string, value: string | number | null): string {
   return s;
 }
 
-function FieldGrid({
-  d, defs, title,
-}: { d: Record<string, string | number | null>; defs: FieldDef[]; title: string }) {
-  const fields = defs.filter(([k]) => has(d, k));
-  if (!fields.length) return null;
-  return (
-    <div>
-      <div className="mb-3 text-sm font-black">{title}</div>
-      <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
-        {fields.map(([k, label]) => (
-          <div key={k} className="flex items-start justify-between gap-3 border-b border-border/30 pb-2">
-            <div className="shrink-0 text-[11px] text-muted-foreground">{label}</div>
-            <div className="break-all text-left text-sm font-semibold" dir="auto">
-              {fmtValue(k, d[k])}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function TxnDetails({ txn }: { txn: any }) {
   const d = (txn?.detail ?? {}) as Record<string, string | number | null>;
-  const hasAny =
-    [...CORE_FIELDS, ...AMOUNT_FIELDS, ...PROCESSOR_FIELDS, ...MERCHANT_FIELDS].some(([k]) => has(d, k));
+  const sections = [
+    { defs: CORE_FIELDS, title: "بيانات المعاملة الأساسية" },
+    { defs: AMOUNT_FIELDS, title: "تفصيل العملة والرسوم" },
+    { defs: PROCESSOR_FIELDS, title: "بيانات المعالج وسبب الرفض" },
+    { defs: MERCHANT_FIELDS, title: "تفاصيل التاجر" },
+  ]
+    .map((s) => ({ ...s, fields: s.defs.filter(([k]) => has(d, k)) }))
+    .filter((s) => s.fields.length);
 
   return (
     <div className="rounded-2xl border border-border/50 bg-muted/10 p-4" dir="rtl">
-      <div className="grid gap-5 divide-y divide-border/40 [&>*+*]:pt-5">
-        <FieldGrid d={d} defs={CORE_FIELDS} title="بيانات المعاملة الأساسية" />
-        <FieldGrid d={d} defs={AMOUNT_FIELDS} title="تفصيل العملة والرسوم" />
-        <FieldGrid d={d} defs={PROCESSOR_FIELDS} title="بيانات المعالج وسبب الرفض" />
-        <FieldGrid d={d} defs={MERCHANT_FIELDS} title="تفاصيل التاجر" />
-        {!hasAny && (
+      <div className="flex flex-col gap-5">
+        {sections.map((s) => (
+          <div key={s.title}>
+            <div className="mb-3 text-sm font-black">{s.title}</div>
+            <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
+              {s.fields.map(([k, label]) => (
+                <div key={k} className="flex items-start justify-between gap-3 border-b border-border/30 pb-2">
+                  <div className="shrink-0 text-[11px] text-muted-foreground">{label}</div>
+                  <div className="break-all text-left text-sm font-semibold" dir="auto">
+                    {fmtValue(k, d[k])}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+        {!sections.length && (
           <div className="text-xs text-muted-foreground">لا توجد تفاصيل إضافية لهذه المعاملة.</div>
         )}
-        <div className="text-[11px] text-muted-foreground">
+        <div className="border-t border-border/30 pt-3 text-[11px] text-muted-foreground">
           العملة: {txn.currency} · آخر 4 أرقام: {txn.pan4 || "—"} · {dt(txn.time)}
         </div>
       </div>
     </div>
   );
 }
+
 
 
 
