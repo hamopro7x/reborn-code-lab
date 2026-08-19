@@ -21,6 +21,7 @@ const STATUSES: { key: string; label: string }[] = [
 
 const KIND_LABEL: Record<string, string> = {
   card: "شراء",
+  "1": "شراء",
   refund: "استرداد",
   deposit: "إيداع خارجي",
   withdraw: "سحب خارجي",
@@ -29,6 +30,7 @@ const KIND_LABEL: Record<string, string> = {
   p2p_buy: "شراء P2P",
   p2p_sell: "بيع P2P",
 };
+
 
 function Chip({ active, children, onClick }: { active?: boolean; children: React.ReactNode; onClick?: () => void }) {
   return (
@@ -75,14 +77,45 @@ function VisaBadge() {
   );
 }
 
+const OK_STATUS = new Set([
+  "success",
+  "successful",
+  "completed",
+  "complete",
+  "finished",
+  "done",
+  "filled",
+  "ok",
+  "2",
+  "3",
+  "ناجحة",
+  "اكتملت",
+  "مكتملة",
+  "تمت",
+  "منجزة",
+]);
+const BAD_STATUS = new Set([
+  "failed",
+  "fail",
+  "failure",
+  "cancelled",
+  "canceled",
+  "rejected",
+  "expired",
+  "ملغاة",
+  "فاشلة",
+  "مرفوضة",
+  "منتهية",
+]);
+
 function statusBadge(kind: string, status: string) {
   const s = String(status || "").trim().toLowerCase();
   if (kind === "refund" || s === "refund" || s === "مسترد") return { cls: "bg-muted text-muted-foreground", text: "مسترد" };
-  if (s === "failed" || s === "fail" || s === "cancelled" || s === "ملغاة" || s === "فاشلة" || s === "قيد التنفيذ")
-    return { cls: "bg-red-500/15 text-red-400", text: "فاشلة" };
-  if (s === "success" || s === "completed" || s === "ناجحة") return { cls: "bg-emerald-500/15 text-emerald-400", text: "ناجحة" };
+  if (OK_STATUS.has(s)) return { cls: "bg-emerald-500/15 text-emerald-400", text: "ناجحة" };
+  if (BAD_STATUS.has(s)) return { cls: "bg-red-500/15 text-red-400", text: "فاشلة" };
   return { cls: "bg-red-500/15 text-red-400", text: "فاشلة" };
 }
+
 
 function amt(n: number) {
   return Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 8 });
