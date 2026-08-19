@@ -27,6 +27,7 @@ import {
   getMyShiftTxns,
 } from "@/lib/work.functions";
 import { adminListEmployees } from "@/lib/courses.functions";
+import { EmployeeWorkView } from "@/components/admin/EmployeeWorkView";
 import { biometricSupported, registerBiometric, assertBiometric, captureFace } from "@/lib/work-client";
 
 type TabKey = "now" | "shifts" | "table" | "productivity" | "p2p" | "faces";
@@ -94,90 +95,6 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
       {tab === "productivity" && <ProductivityTab />}
       {tab === "p2p" && <P2PTab />}
       {tab === "faces" && <FacesTab />}
-    </div>
-  );
-}
-
-/* ------------------------- واجهة الموظف (تنفيذ فقط) ------------------------- */
-
-function EmployeeWork() {
-  const qc = useQueryClient();
-  const stateFn = useServerFn(getMyWorkState);
-  const txnsFn = useServerFn(getMyShiftTxns);
-
-  const st = useQuery({
-    queryKey: ["my-work-state"],
-    queryFn: () => stateFn({ data: undefined as any }),
-    refetchInterval: 20_000,
-  });
-  const holding = (st.data as any)?.holding === true;
-
-  const txns = useQuery({
-    queryKey: ["my-shift-txns"],
-    queryFn: () => txnsFn({ data: { page: 1 } }),
-    enabled: holding,
-    refetchInterval: 20_000,
-  });
-  const rows: any[] = (txns.data as any)?.rows ?? [];
-
-  return (
-    <div className="space-y-4" dir="rtl">
-      <div className="rounded-2xl border border-border/60 bg-card/70 p-4">
-        <div className="mb-2 flex items-center gap-2 text-sm font-black">
-          <UserCheck className="size-4 text-primary" />
-          حالة شغلك
-        </div>
-        {st.isLoading ? (
-          <Loader2 className="size-5 animate-spin text-primary" />
-        ) : holding ? (
-          <p className="text-sm text-emerald-400 font-bold">أنت ماسك الشغل الآن.</p>
-        ) : (
-          <p className="text-sm text-muted-foreground">أنت غير ماسك الشغل حاليًا. اضغط «استلام الشغل» للبدء.</p>
-        )}
-      </div>
-
-      <ClaimCard
-        onClaimed={() => {
-          qc.invalidateQueries({ queryKey: ["my-work-state"] });
-          qc.invalidateQueries({ queryKey: ["my-shift-txns"] });
-        }}
-      />
-
-      <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/70">
-        <div className="border-b border-border/60 p-3 text-sm font-black">معاملات شغلك الحالي</div>
-        {!holding ? (
-          <p className="p-4 text-sm text-muted-foreground">لا توجد معاملات — أنت غير ماسك الشغل حاليًا.</p>
-        ) : txns.isLoading ? (
-          <div className="p-4"><Loader2 className="size-5 animate-spin text-primary" /></div>
-        ) : rows.length === 0 ? (
-          <p className="p-4 text-sm text-muted-foreground">لا توجد معاملات في شفتك حتى الآن.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-right text-xs">
-              <thead className="bg-background/60 text-muted-foreground">
-                <tr>
-                  <th className="p-2">الوقت</th>
-                  <th className="p-2">النوع</th>
-                  <th className="p-2">البيان</th>
-                  <th className="p-2">المبلغ</th>
-                  <th className="p-2">الحالة</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr key={r.id ?? r.ledgerId} className="border-t border-border/40">
-                    <td className="p-2 whitespace-nowrap">{formatDateTime(r.occurredAt)}</td>
-                    <td className="p-2">{r.kind}</td>
-                    <td className="p-2">{r.title}</td>
-                    <td className="p-2 font-mono">{r.amount} {r.currency}</td>
-                    <td className="p-2">{r.status}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
     </div>
   );
 }
