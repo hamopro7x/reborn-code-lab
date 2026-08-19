@@ -367,7 +367,7 @@ function useAgentDevices() {
   return useQuery({
     queryKey: ["agent-devices"],
     refetchInterval: 5_000,
-    refetchIntervalInBackground: true,
+    refetchIntervalInBackground: false,
     staleTime: 0,
     queryFn: async () => {
       const { data, error } = await supabase

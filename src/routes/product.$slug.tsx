@@ -17,7 +17,7 @@ export const Route = createFileRoute("/product/$slug")({
   loader: async ({ params }) => {
     const { data } = await supabase
       .from("products")
-      .select("name, short_description, description, main_image, base_price_egp, discount_percent, slug")
+      .select("*, category:categories(id,slug,name,icon)")
       .eq("slug", params.slug)
       .eq("active", true)
       .maybeSingle();
@@ -68,6 +68,7 @@ export const Route = createFileRoute("/product/$slug")({
 
 function ProductPage() {
   const { slug } = Route.useParams();
+  const { product: initialProduct } = Route.useLoaderData();
   const navigate = useNavigate();
   const { currency, rates } = useCurrency();
   const { add } = useCart();
@@ -75,6 +76,8 @@ function ProductPage() {
   const productQ = useQuery({
     queryKey: ["product", slug],
     queryFn: async () => (await supabase.from("products").select("*, category:categories(id,slug,name,icon)").eq("slug", slug).eq("active", true).maybeSingle()).data,
+    initialData: initialProduct,
+    staleTime: 60_000,
   });
   const reviewsQ = useQuery({
     queryKey: ["reviews", productQ.data?.id],
