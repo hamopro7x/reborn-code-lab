@@ -38,8 +38,9 @@ export function useGlobalAutoSave() {
       }
     };
 
-    const restore = () => {
-      document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>("input, textarea").forEach((el) => {
+    const restoreElement = (el: HTMLInputElement | HTMLTextAreaElement) => {
+        if (el.dataset["autosaveChecked"] !== undefined) return;
+        el.dataset["autosaveChecked"] = "";
         if (!isSaveable(el) || el.value) return;
         const key = keyOf(el);
         if (!key) return;
@@ -48,7 +49,14 @@ export function useGlobalAutoSave() {
         el.value = saved;
         el.dispatchEvent(new Event("input", { bubbles: true }));
         el.dispatchEvent(new Event("change", { bubbles: true }));
-      });
+    };
+
+    const restoreWithin = (node: Node) => {
+      if (node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement) {
+        restoreElement(node);
+      }
+      if (!(node instanceof Element)) return;
+      node.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>("input, textarea").forEach(restoreElement);
     };
 
     const onSubmit = (e: Event) => {
@@ -62,8 +70,12 @@ export function useGlobalAutoSave() {
 
     document.addEventListener("input", onInput, true);
     document.addEventListener("submit", onSubmit, true);
-    const t = window.setTimeout(restore, 400);
-    const observer = new MutationObserver(() => restore());
+    const t = window.setTimeout(() => restoreWithin(document.body), 400);
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        mutation.addedNodes.forEach(restoreWithin);
+      }
+    });
     observer.observe(document.body, { childList: true, subtree: true });
 
     return () => {
