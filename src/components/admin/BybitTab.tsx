@@ -479,6 +479,10 @@ function AccountSummaryCard({
   const q = useQuery({
     queryKey: ["bybit-overview", account.id],
     queryFn: () => overviewFn({ data: { accountId: account.id } }),
+    // Balances hit the provider API per card; reuse them for a minute so
+    // switching sections does not re-fetch every account each time.
+    staleTime: 60_000,
+    gcTime: 10 * 60_000,
   });
   const d = (q.data as any) ?? {};
   const coins = visibleCoins((d.coins ?? []) as CoinRow[]);
