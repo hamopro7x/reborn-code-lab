@@ -29,13 +29,14 @@ import { biometricSupported, registerBiometric, assertBiometric, captureFace } f
 
 type TabKey = "now" | "shifts" | "table" | "productivity" | "p2p" | "faces";
 
-const TABS: { key: TabKey; label: string; adminOnly?: boolean }[] = [
+/** All management tabs are admin-only. Employees get a dedicated work view. */
+const TABS: { key: TabKey; label: string }[] = [
   { key: "now", label: "الشغل الآن" },
   { key: "shifts", label: "الشفتات" },
   { key: "table", label: "جدول المعاملات" },
   { key: "productivity", label: "الإنتاجية" },
-  { key: "p2p", label: "ربط P2P بالشفت", adminOnly: true },
-  { key: "faces", label: "تسجيل الوجه", adminOnly: true },
+  { key: "p2p", label: "ربط P2P بالشفت" },
+  { key: "faces", label: "تسجيل الوجه" },
 ];
 
 function Chip({ active, children, onClick }: { active?: boolean; children: React.ReactNode; onClick?: () => void }) {
