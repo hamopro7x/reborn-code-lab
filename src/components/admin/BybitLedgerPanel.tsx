@@ -202,13 +202,12 @@ export function BybitLedgerPanel() {
               active={group === g.key}
               onClick={() => {
                 setGroup(g.key);
-                setStatus("all");
+                setStatus((SUB_FILTERS[g.key]?.[0]?.key) ?? "all");
                 setPage(1);
                 setOpenId(null);
               }}
             >
               {g.label}
-              {counts[g.key] !== undefined ? ` (${counts[g.key]!.toLocaleString("en-US")})` : ""}
             </Chip>
           ))}
         </div>
