@@ -1820,7 +1820,7 @@ export async function fetchLedgerPage(opts: {
   // previous version issued ~15 extra exact-count scans per request (one per
   // group and sub-filter) even though the UI shows no counters — that alone
   // made every ledger read scan the whole table more than a dozen times.
-  const { data, error, count } = (await applyScope(base().select("*", { count: "planned" }), group, status)
+  const { data, error, count } = (await applyScope(base().select("*", { count: "exact" }), group, status)
     .order("occurred_at", { ascending: false })
     .range(from, from + pageSize - 1)) as {
     data: any[] | null;
