@@ -581,11 +581,11 @@ function AccountSummaryCard({
           </div>
         </div>
 
-        {/* Balances — bottom right aligned, fixed height */}
-        <div className="ml-auto h-[88px] min-h-[88px] max-h-[88px] w-full max-w-[174px] shrink-0 overflow-hidden">
+        {/* Balances — bottom right aligned, lowered and slightly larger */}
+        <div className="ml-auto mt-auto h-[96px] min-h-[96px] max-h-[96px] w-full max-w-[190px] shrink-0 overflow-hidden">
           {q.isLoading ? (
-            <div className="relative h-full w-full rounded-[17px] p-[3px] bg-[radial-gradient(120%_120%_at_50%_0%,oklch(0.55_0.13_170/0.28),transparent_70%)]">
-              <div className="grid h-full w-full place-items-center rounded-[14px] bg-[oklch(0.055_0.008_190)] shadow-[0_0_28px_-10px_oklch(0.6_0.14_170/0.35)]">
+            <div className="relative h-full w-full rounded-[18px] p-[3px] bg-[radial-gradient(120%_120%_at_50%_0%,oklch(0.55_0.13_170/0.28),transparent_70%)]">
+              <div className="grid h-full w-full place-items-center rounded-[15px] bg-[oklch(0.055_0.008_190)] shadow-[0_0_28px_-10px_oklch(0.6_0.14_170/0.35)]">
                 <Loader2 className="size-5 animate-spin" />
               </div>
             </div>
