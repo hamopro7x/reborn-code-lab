@@ -4,7 +4,6 @@ import { useServerFn } from "@tanstack/react-start";
 import { ChevronDown } from "lucide-react";
 import { getBybitLedger, syncBybitLedger } from "@/lib/bybit.functions";
 import { formatDateTime } from "@/lib/format";
-import { TXN_SECTIONS, fmtFieldValue, hasField, txnFeeBreakdown } from "@/lib/bybit-txn-fields";
 
 const GROUPS: { key: string; label: string }[] = [
   { key: "txns", label: "المعاملات" },
