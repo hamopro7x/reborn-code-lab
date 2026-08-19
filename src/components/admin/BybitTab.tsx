@@ -17,6 +17,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { FintechBackdrop } from "@/components/admin/FintechBackdrop";
+
 import { RefreshCw, CreditCard, Layers, ArrowUp, ArrowDown, ChevronDown, Loader2, Trash2, Plus, Download, Copy, Pencil, ChevronLeft, Wallet, ArrowDownUp, Search, BarChart3, Clock, PieChart } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -432,19 +434,23 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
           لا توجد حسابات مربوطة بعد{isAdmin ? " — أضف حساباً بمفتاح API (قراءة فقط)." : "."}
         </div>
       ) : (
-        <div className="grid auto-rows-[320px] grid-cols-1 gap-4 xl:grid-cols-2">
-          {list.map((a, i) => (
-            <AccountSummaryCard
-              key={a.id}
-              account={a}
-              index={i}
-              isAdmin={isAdmin}
-              onOpen={() => setSelected(a.id)}
-              onDelete={() => removeAccount.mutate({ id: a.id })}
-              onEdit={() => setEditAccount(a)}
-            />
-          ))}
+        <div className="relative isolate overflow-hidden rounded-3xl border border-teal-400/10 p-3 sm:p-5">
+          <FintechBackdrop />
+          <div className="relative z-10 grid auto-rows-[320px] grid-cols-1 gap-4 xl:grid-cols-2">
+            {list.map((a, i) => (
+              <AccountSummaryCard
+                key={a.id}
+                account={a}
+                index={i}
+                isAdmin={isAdmin}
+                onOpen={() => setSelected(a.id)}
+                onDelete={() => removeAccount.mutate({ id: a.id })}
+                onEdit={() => setEditAccount(a)}
+              />
+            ))}
+          </div>
         </div>
+
 
       )}
 
