@@ -1,0 +1,265 @@
+/**
+ * Employee execution view — visual design is fixed by the approved reference:
+ * black surface, one header row (identity → claim button → live clock → tabs),
+ * then a single bordered panel holding the transactions grid. Data is real:
+ * it comes from the employee's own open shift only.
+ */
+import { useEffect, useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { Loader2, User, Clock, ScanFace } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { getMyWorkState, getMyShiftTxns } from "@/lib/work.functions";
+import { useClaimWork } from "@/lib/use-claim-work";
+
+type TabKey = "p2p" | "transfers" | "wrong" | "week" | "all";
+
+/** DOM order = right-to-left order in the reference. */
+const TABS: { key: TabKey; label: string }[] = [
+  { key: "p2p", label: "طلبات P2P" },
+  { key: "transfers", label: "الاستلم من والتحويل الي" },
+  { key: "wrong", label: "المعاملات الغلط" },
+  { key: "week", label: "المعاملات علي مدار الاسبوع" },
+  { key: "all", label: "المعاملات" },
+];
+
+const COLUMNS = [
+  "اسم التاجر",
+  "إجمالي المبلغ",
+  "جنيه",
+  "الكمية",
+  "تاريخ وقت المعاملة",
+  "آخر 4 أرقام للبطاقة",
+  "الإجراء",
+];
+
+function useNow() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  return now;
+}
+
+const AR_MONTHS = [
+  "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
+  "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر",
+];
+const AR_DAYS = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+
+function clockParts(d: Date) {
+  const h24 = d.getHours();
+  const h = ((h24 + 11) % 12) + 1;
+  const p = (n: number) => String(n).padStart(2, "0");
+  return {
+    time: `${p(h)}:${p(d.getMinutes())}:${p(d.getSeconds())}`,
+    ampm: h24 < 12 ? "صباح" : "مساء",
+    date: `${AR_DAYS[d.getDay()]} ${d.getDate()} ${AR_MONTHS[d.getMonth()]} ${d.getFullYear()}`,
+  };
+}
+
+function txnTime(ms: number) {
+  const d = new Date(ms);
+  const p = (n: number) => String(n).padStart(2, "0");
+  const h24 = d.getHours();
+  const h = ((h24 + 11) % 12) + 1;
+  return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(h)}:${p(d.getMinutes())} ${h24 < 12 ? "ص" : "م"}`;
+}
+
+const num = (n: number, digits = 2) =>
+  Number(n || 0).toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits });
+
+function last4(detail: Record<string, unknown>) {
+  const raw = String(
+    detail["cardNo"] ?? detail["cardNumber"] ?? detail["maskedCardNo"] ?? detail["pan"] ?? "",
+  ).replace(/\D/g, "");
+  return raw ? raw.slice(-4) : "—";
+}
+
+export function EmployeeWorkView() {
+  const qc = useQueryClient();
+  const stateFn = useServerFn(getMyWorkState);
+  const txnsFn = useServerFn(getMyShiftTxns);
+  const [tab, setTab] = useState<TabKey>("all");
+  const now = useNow();
+  const clock = clockParts(now);
+
+  const [name, setName] = useState("موظف");
+  useEffect(() => {
+    void (async () => {
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth.user) return;
+      const { data } = await supabase.from("profiles").select("full_name").eq("id", auth.user.id).maybeSingle();
+      setName((data?.full_name as string) || auth.user.email?.split("@")[0] || "موظف");
+    })();
+  }, []);
+
+  const st = useQuery({
+    queryKey: ["my-work-state"],
+    queryFn: () => stateFn({ data: undefined as any }),
+    refetchInterval: 20_000,
+  });
+  const holding = (st.data as any)?.holding === true;
+
+  const txns = useQuery({
+    queryKey: ["my-shift-txns"],
+    queryFn: () => txnsFn({ data: { page: 1 } }),
+    enabled: holding,
+    refetchInterval: 20_000,
+  });
+
+  const { busy, claim } = useClaimWork(() => {
+    qc.invalidateQueries({ queryKey: ["my-work-state"] });
+    qc.invalidateQueries({ queryKey: ["my-shift-txns"] });
+  });
+
+  const allRows: any[] = (txns.data as any)?.rows ?? [];
+  const rows = useMemo(() => {
+    const weekAgo = Date.now() - 7 * 86400_000;
+    switch (tab) {
+      case "wrong":
+        return allRows.filter((r) => /fail|reject|decline|cancel/i.test(String(r.status)));
+      case "transfers":
+        return allRows.filter((r) => /transfer|deposit|withdraw/i.test(String(r.kind)));
+      case "p2p":
+        return allRows.filter((r) => /p2p/i.test(String(r.kind)));
+      case "week":
+        return allRows.filter((r) => Number(r.time) >= weekAgo);
+      default:
+        return allRows;
+    }
+  }, [allRows, tab]);
+
+  const emptyRows = Math.max(12 - rows.length, 0);
+
+  return (
+    <div dir="rtl" className="space-y-5">
+      {/* ---------------------------- Header ---------------------------- */}
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 lg:flex lg:flex-wrap lg:justify-between">
+        <div className="flex min-w-0 flex-wrap items-center gap-4">
+          {/* identity */}
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="grid size-16 shrink-0 place-items-center rounded-full bg-secondary/80 text-muted-foreground">
+              <User className="size-8" />
+            </div>
+            <div className="min-w-0">
+              <div className="truncate text-lg font-black">{name}</div>
+              <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                <span>موظف</span>
+                <span className="size-1.5 rounded-full bg-emerald-500" />
+                <span className="text-emerald-500">{holding ? "متصل" : "متصل"}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* claim work */}
+          <button
+            type="button"
+            onClick={() => void claim()}
+            disabled={busy !== null}
+            className="flex w-[112px] shrink-0 flex-col items-center gap-1.5 rounded-2xl border border-[oklch(0.62_0.18_250)] bg-card/70 px-3 py-3 text-[11px] font-bold transition hover:bg-card disabled:opacity-60"
+          >
+            {busy === "claim" ? (
+              <Loader2 className="size-6 animate-spin text-foreground" />
+            ) : (
+              <ScanFace className="size-6" />
+            )}
+            <span>استلم الشغل</span>
+          </button>
+
+          {/* live clock */}
+          <div className="flex shrink-0 items-center gap-3">
+            <div className="text-left leading-tight">
+              <div className="text-sm font-black tabular-nums">
+                {clock.ampm} {clock.time}
+              </div>
+              <div className="mt-1 text-[11px] text-muted-foreground">{clock.date}</div>
+            </div>
+            <Clock className="size-6 text-muted-foreground" />
+          </div>
+        </div>
+
+        {/* tabs */}
+        <div className="col-span-2 flex flex-wrap items-center gap-3 lg:col-auto">
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setTab(t.key)}
+              className={`rounded-full border px-5 py-2.5 text-xs font-bold transition ${
+                tab === t.key
+                  ? "border-[oklch(0.62_0.18_250)] bg-card/60 text-[oklch(0.72_0.16_250)]"
+                  : "border-border/70 bg-card/50 text-foreground/85 hover:text-foreground"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ------------------------- Transactions ------------------------- */}
+      <div className="rounded-3xl border border-border/70 bg-card/40 p-5">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-center text-xs">
+            <thead>
+              <tr>
+                {COLUMNS.map((c) => (
+                  <th
+                    key={c}
+                    className="border border-border/50 bg-background/40 px-4 py-5 font-bold text-foreground/90 whitespace-nowrap"
+                  >
+                    {c}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {holding && txns.isLoading ? (
+                <tr>
+                  <td colSpan={COLUMNS.length} className="border border-border/40 px-4 py-10">
+                    <Loader2 className="mx-auto size-5 animate-spin text-muted-foreground" />
+                  </td>
+                </tr>
+              ) : (
+                rows.map((r) => (
+                  <tr key={r.assignmentId ?? r.ledgerId}>
+                    <td className="border border-border/40 px-4 py-4 whitespace-nowrap">
+                      {String(r.detail?.merchantName ?? r.title ?? "—")}
+                    </td>
+                    <td className="border border-border/40 px-4 py-4 tabular-nums whitespace-nowrap">
+                      {num(Math.abs(Number(r.amount)))} {r.currency}
+                    </td>
+                    <td className="border border-border/40 px-4 py-4 tabular-nums whitespace-nowrap">
+                      {r.detail?.paidWithFiat ? String(r.detail.paidWithFiat) : "—"}
+                    </td>
+                    <td className="border border-border/40 px-4 py-4 tabular-nums whitespace-nowrap">
+                      {r.detail?.quantity ? String(r.detail.quantity) : num(Math.abs(Number(r.amount)), 4)}
+                    </td>
+                    <td className="border border-border/40 px-4 py-4 whitespace-nowrap">{txnTime(Number(r.time))}</td>
+                    <td className="border border-border/40 px-4 py-4 tabular-nums whitespace-nowrap">
+                      {last4((r.detail ?? {}) as Record<string, unknown>)}
+                    </td>
+                    <td className="border border-border/40 px-4 py-4 whitespace-nowrap text-muted-foreground">
+                      {String(r.status || "—")}
+                    </td>
+                  </tr>
+                ))
+              )}
+              {Array.from({ length: emptyRows }).map((_, i) => (
+                <tr key={`empty-${i}`}>
+                  {COLUMNS.map((c) => (
+                    <td key={c} className="border border-border/40 px-4 py-4">
+                      &nbsp;
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
