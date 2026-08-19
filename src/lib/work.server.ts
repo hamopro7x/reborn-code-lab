@@ -547,7 +547,12 @@ export async function myShiftRows(userId: string, page = 1, pageSize = 50) {
   const state = await myWorkState(userId);
   if (!state.holding) return { page: 1, pageSize, total: 0, rows: [] as any[], holding: false as const };
   const res = await workTable({ userId, shiftId: state.shiftId, page, pageSize });
-  return { ...res, holding: true as const };
+  const entries = await myEntries(res.rows.map((r: any) => r.ledgerId));
+  const rows = res.rows.map((r: any) => {
+    const e = entries.get(r.ledgerId);
+    return { ...r, egp: e?.egp ?? null, quantity: e?.quantity ?? null };
+  });
+  return { ...res, rows, holding: true as const };
 }
 
 /* ------------------ employee-entered values (جنيه / الكمية) ------------------ */
