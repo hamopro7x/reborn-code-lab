@@ -19,7 +19,7 @@ import {
   LayoutDashboard, Package, Layers, ShoppingCart, CreditCard, Coins, Clock, Settings2,
   Plus, Trash2, Edit, ExternalLink, Check, X, TrendingUp, DollarSign, Users, Bell, Loader2,
   Star, UserCog, LogOut, Repeat, ArrowUpRight, GraduationCap, MonitorSmartphone, Upload, PlayCircle,
-  Lock, Camera, Download,
+  Lock, Camera, Download, ChevronRight,
 } from "lucide-react";
 
 import { useServerFn } from "@tanstack/react-start";
