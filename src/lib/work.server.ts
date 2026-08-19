@@ -518,3 +518,34 @@ export async function verifyDeviceAssertion(
   }
   return ok ? { ok: true } : { ok: false, reason: "فشلت مصادقة الجهاز" };
 }
+
+/* ---------------------- employee-scoped (non-admin) ---------------------- */
+
+/**
+ * What an employee is allowed to know: only whether HE is currently holding the
+ * work, and only for his own open shift. No other employee's name, shift
+ * history, duration or productivity ever leaves the server for this call.
+ */
+export async function myWorkState(userId: string) {
+  const db = await admin();
+  const { data } = await db.from("work_shifts").select("id,user_id,started_at").is("ended_at", null).maybeSingle();
+  if (!data || data.user_id !== userId) return { holding: false as const };
+  const { count } = await db
+    .from("work_txn_assignments")
+    .select("id", { count: "exact", head: true })
+    .eq("shift_id", data.id);
+  return {
+    holding: true as const,
+    shiftId: data.id as string,
+    startedAt: new Date(data.started_at).getTime(),
+    txns: Number(count ?? 0),
+  };
+}
+
+/** Transactions of the caller's own OPEN shift only. Empty when he holds none. */
+export async function myShiftRows(userId: string, page = 1, pageSize = 50) {
+  const state = await myWorkState(userId);
+  if (!state.holding) return { page: 1, pageSize, total: 0, rows: [] as any[], holding: false as const };
+  const res = await workTable({ userId, shiftId: state.shiftId, page, pageSize });
+  return { ...res, holding: true as const };
+}
