@@ -498,30 +498,36 @@ function AccountSummaryCard({
         </svg>
       </div>
 
-      <div className="relative flex min-h-0 flex-1 flex-col gap-4">
-        {/* Top row — identity on right, number on left (RTL) */}
+      <div className="relative flex min-h-0 flex-1 flex-col gap-3">
+        {/* Top row — identity on right (RTL), gauge on left (visual) */}
         <div className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
-          {/* left cluster: identity */}
+          {/* right cluster (visually): identity + action icons */}
           <div className="flex items-start justify-start gap-2 sm:gap-3">
-            <span className="grid size-10 shrink-0 place-items-center rounded-full border border-teal-400/30 bg-teal-400/10 text-teal-300">
-              <Wallet className="size-4" />
-            </span>
             <div className="min-w-0 text-right pt-1">
               <div className="flex items-center justify-end gap-1">
-                <div className="truncate text-sm font-black">حساب {account.name}</div>
                 {isAdmin && (
-                  <div className="flex items-center gap-0.5">
-                    <Button variant="ghost" size="icon" className="size-7 rounded-lg" onClick={onEdit} title="تعديل">
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-8 rounded-full border border-teal-400/25 bg-teal-400/5 text-teal-300 hover:bg-teal-400/15 hover:text-teal-200"
+                      onClick={() => { navigator.clipboard?.writeText(account.uid ?? ""); toast.success("تم نسخ UID"); }}
+                      title="نسخ UID"
+                    >
+                      <Copy className="size-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="size-8 rounded-lg text-muted-foreground hover:text-foreground" onClick={onEdit} title="تعديل">
                       <Pencil className="size-3.5" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="size-7 rounded-lg text-destructive" onClick={onDelete} title="حذف">
+                    <Button variant="ghost" size="icon" className="size-8 rounded-lg text-destructive" onClick={onDelete} title="حذف">
                       <Trash2 className="size-3.5" />
                     </Button>
                   </div>
                 )}
+                <div className="truncate text-sm font-black">حساب {account.name}</div>
               </div>
               {account.uid && (
-                <div className="flex items-center justify-end gap-1 text-[10px] text-muted-foreground">
+                <div className="flex items-center justify-end gap-1 text-[11px] text-muted-foreground mt-1">
                   <span dir="ltr" className="tabular-nums">UID {account.uid}</span>
                   <button
                     type="button"
@@ -534,11 +540,34 @@ function AccountSummaryCard({
                 </div>
               )}
             </div>
-
           </div>
 
-          {/* right cluster: cashback + number (swapped — circle on left visually) */}
+          {/* left cluster (visually): gauge + cashback */}
           <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex items-center shrink-0">
+              <div className="relative grid size-[80px] sm:size-[92px] place-items-center">
+                {/* outer tick ring */}
+                <div
+                  className="absolute inset-0 rounded-full opacity-80"
+                  aria-hidden
+                  style={{
+                    background:
+                      "repeating-conic-gradient(from 0deg, oklch(0.78 0.14 190) 0deg 0.8deg, transparent 0.8deg 10deg)",
+                    WebkitMask: "radial-gradient(closest-side, transparent 78%, #000 79%, #000 92%, transparent 93%)",
+                    mask: "radial-gradient(closest-side, transparent 78%, #000 79%, #000 92%, transparent 93%)",
+                  }}
+                />
+                {/* thin outer circle */}
+                <div className="absolute inset-[4px] rounded-full border border-teal-400/25" aria-hidden />
+                {/* glowing main ring */}
+                <div className="absolute inset-[10px] rounded-full border-[3px] border-teal-400 shadow-[0_0_26px_-2px_oklch(0.75_0.15_190_/_0.85),inset_0_0_22px_-6px_oklch(0.75_0.15_190_/_0.9)]" aria-hidden />
+                <span className="relative text-3xl sm:text-4xl font-black text-teal-300 tabular-nums" dir="ltr">{visaNo}</span>
+              </div>
+            </div>
+
+            {/* vertical dashed divider */}
+            <div className="h-14 sm:h-16 w-0 border-r border-dashed border-teal-400/45" aria-hidden />
+
             <div className="flex flex-col items-end gap-1 pt-1">
               <div className="flex items-center gap-2">
                 <span className="text-sm text-foreground/90 whitespace-nowrap">استرداد بنسبة</span>
@@ -548,37 +577,11 @@ function AccountSummaryCard({
                 {cashback.toLocaleString("en-US", { maximumFractionDigits: 2 })}%
               </div>
             </div>
-
-            {/* vertical dashed divider */}
-            <div className="h-14 sm:h-16 w-0 border-r border-dashed border-teal-400/45" aria-hidden />
-
-            <div className="flex items-center shrink-0">
-              <div className="relative grid size-[82px] sm:size-[92px] place-items-center">
-                {/* outer tick ring */}
-                <div
-                  className="absolute inset-0 rounded-full opacity-80"
-                  aria-hidden
-                  style={{
-                    background:
-                      "repeating-conic-gradient(from 0deg, oklch(0.78 0.14 190) 0deg 1.2deg, transparent 1.2deg 12deg)",
-                    WebkitMask: "radial-gradient(closest-side, transparent 78%, #000 79%, #000 92%, transparent 93%)",
-                    mask: "radial-gradient(closest-side, transparent 78%, #000 79%, #000 92%, transparent 93%)",
-                  }}
-                />
-                {/* thin outer circle */}
-                <div className="absolute inset-[5px] rounded-full border border-teal-400/25" aria-hidden />
-                {/* glowing main ring */}
-                <div className="absolute inset-[11px] rounded-full border-[3px] border-teal-400 shadow-[0_0_26px_-2px_oklch(0.75_0.15_190_/_0.85),inset_0_0_22px_-6px_oklch(0.75_0.15_190_/_0.9)]" aria-hidden />
-                <span className="relative text-3xl sm:text-4xl font-black text-teal-300 tabular-nums" dir="ltr">{visaNo}</span>
-              </div>
-            </div>
           </div>
-
-
         </div>
 
-        {/* Balances — ارتفاع ثابت في كل الحالات */}
-        <div className="mx-auto h-[120px] min-h-[120px] max-h-[120px] w-full max-w-[240px] shrink-0 overflow-hidden">
+        {/* Balances — bottom right aligned, fixed height */}
+        <div className="ml-auto h-[120px] min-h-[120px] max-h-[120px] w-full max-w-[240px] shrink-0 overflow-hidden">
           {q.isLoading ? (
             <div className="relative h-full w-full rounded-[24px] p-[5px] bg-[radial-gradient(120%_120%_at_50%_0%,oklch(0.55_0.13_170/0.28),transparent_70%)]">
               <div className="grid h-full w-full place-items-center rounded-[20px] bg-[oklch(0.055_0.008_190)] shadow-[0_0_28px_-10px_oklch(0.6_0.14_170/0.35)]">
