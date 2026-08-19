@@ -439,6 +439,30 @@ export type Database = {
           },
         ]
       }
+      bybit_sync_state: {
+        Row: {
+          id: string
+          last_result: Json
+          last_run_at: string | null
+          lease_until: string | null
+          paused: boolean
+        }
+        Insert: {
+          id: string
+          last_result?: Json
+          last_run_at?: string | null
+          lease_until?: string | null
+          paused?: boolean
+        }
+        Update: {
+          id?: string
+          last_result?: Json
+          last_run_at?: string | null
+          lease_until?: string | null
+          paused?: boolean
+        }
+        Relationships: []
+      }
       card_transactions: {
         Row: {
           amount: number
