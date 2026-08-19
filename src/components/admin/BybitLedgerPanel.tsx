@@ -2,7 +2,7 @@ import { Fragment, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ChevronDown } from "lucide-react";
-import { getBybitLedger, getBybitSpendTotals } from "@/lib/bybit.functions";
+import { getBybitCardBrands, getBybitLedger, getBybitSpendTotals } from "@/lib/bybit.functions";
 import { formatDateTime } from "@/lib/format";
 import usdtOfficial from "@/assets/usdt-official.png.asset.json";
 
@@ -179,11 +179,53 @@ function MerchantLogo({ name }: { name: string }) {
   );
 }
 
-function VisaBadge() {
+/** Card brand mark. The brand itself always comes from the card record of the
+ * main account (or the original transaction detail) — never chosen by hand. */
+function BrandBadge({ brand }: { brand: string }) {
+  const b = String(brand ?? "").toLowerCase().replace(/\s+/g, "");
+  if (b.includes("master")) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-md bg-[#0b0b0b] px-1.5 py-1">
+        <span className="relative inline-flex h-3 w-[22px] items-center">
+          <span className="absolute left-0 size-3 rounded-full bg-[#eb001b]" />
+          <span className="absolute left-[9px] size-3 rounded-full bg-[#f79e1b] mix-blend-multiply" />
+        </span>
+      </span>
+    );
+  }
+  const label =
+    b.includes("visa") || !b
+      ? "VISA"
+      : b.includes("amex") || b.includes("express")
+        ? "AMEX"
+        : b.includes("union")
+          ? "UNIONPAY"
+          : b.includes("jcb")
+            ? "JCB"
+            : b.includes("discover")
+              ? "DISCOVER"
+              : b.includes("maestro")
+                ? "MAESTRO"
+                : b.includes("diners")
+                  ? "DINERS"
+                  : brand.toUpperCase();
+  const bg =
+    label === "VISA"
+      ? "bg-[#1434cb]"
+      : label === "AMEX"
+        ? "bg-[#2e77bc]"
+        : label === "UNIONPAY"
+          ? "bg-[#005b9a]"
+          : label === "DISCOVER"
+            ? "bg-[#f76b1c]"
+            : "bg-muted-foreground/70";
   return (
-    <span className="rounded-md bg-[#1434cb] px-2 py-1 text-[8px] font-black italic tracking-wider text-white">VISA</span>
+    <span className={`rounded-md ${bg} px-2 py-1 text-[8px] font-black italic tracking-wider text-white`}>
+      {label}
+    </span>
   );
 }
+
 
 const OK_STATUS = new Set([
   "success",
@@ -265,6 +307,14 @@ export function BybitLedgerPanel() {
     refetchInterval: 120_000,
     refetchIntervalInBackground: false,
   });
+  const brandsFn = useServerFn(getBybitCardBrands);
+  const brandsQ = useQuery({
+    queryKey: ["bybit-card-brands"],
+    queryFn: () => brandsFn({ data: undefined as any }),
+    staleTime: 300_000,
+  });
+  const brands = (brandsQ.data?.brands ?? {}) as Record<string, string>;
+
   const t = totalsQ.data;
   const money = (n: unknown) => `$${Number(n ?? 0).toFixed(2)}`;
 
@@ -350,6 +400,9 @@ export function BybitLedgerPanel() {
                   const badge = statusBadge(r.kind, r.status);
                   const d = (r.detail ?? {}) as Record<string, unknown>;
                   const pan4 = String(d["pan4"] ?? "").trim();
+                  const brand = String(
+                    brands[pan4] ?? d["cardBrand"] ?? d["brand"] ?? d["cardType"] ?? "",
+                  );
                   const StatusCell = (
                     <td className="p-4">
                       <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold ${badge.cls}`}>
@@ -412,7 +465,7 @@ export function BybitLedgerPanel() {
                             <td className="p-4">
                               {pan4 ? (
                                 <span className="inline-flex items-center gap-2">
-                                  <VisaBadge />
+                                  <BrandBadge brand={brand} />
                                   <span className="font-bold tabular-nums">{pan4}</span>
                                 </span>
                               ) : (

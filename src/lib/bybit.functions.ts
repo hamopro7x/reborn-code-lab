@@ -432,3 +432,12 @@ export const getBybitSpendTotals = createServerFn({ method: "POST" })
     const mod = await import("./bybit.server");
     return mod.computeSpendAllAccounts();
   });
+
+/** Reference map pan4 -> card brand, read straight from the main account cards. */
+export const getBybitCardBrands = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAccess(context.supabase, context.userId);
+    const mod = await import("./bybit.server");
+    return { brands: await mod.cardBrandsByPan() };
+  });

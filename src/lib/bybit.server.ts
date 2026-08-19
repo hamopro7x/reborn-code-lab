@@ -1895,3 +1895,23 @@ export async function computeSpendAllAccounts() {
   }
   return { ...totals, accounts: accounts.length, dayStart, monthStart };
 }
+
+/**
+ * Automatic card-brand reference: the brand of every pan4 is derived from the
+ * card records of the main account (full number IIN first, then the stored
+ * brand). No manual per-row choice anywhere in the UI.
+ */
+export async function cardBrandsByPan(): Promise<Record<string, string>> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data } = await (supabaseAdmin as any)
+    .from("bybit_cards")
+    .select("pan4,brand,full_number");
+  const out: Record<string, string> = {};
+  for (const c of (data ?? []) as any[]) {
+    const pan4 = String(c.pan4 ?? "").trim();
+    if (!pan4) continue;
+    const brand = brandFromNumber(String(c.full_number ?? "")) ?? String(c.brand ?? "").trim();
+    if (brand) out[pan4] = brand;
+  }
+  return out;
+}
