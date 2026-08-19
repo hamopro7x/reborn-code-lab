@@ -262,9 +262,13 @@ export function EmployeeWorkView() {
       case "week":
         return allRows.filter((r) => Number(r.time) >= weekAgo);
       default:
-        return allRows;
+        // «المعاملات» = card (visa) transactions only.
+        return allRows.filter((r) => isCardTxn(r.kind));
     }
   }, [allRows, tab]);
+
+  const [detailRow, setDetailRow] = useState<any | null>(null);
+  const refetchRows = () => void qc.invalidateQueries({ queryKey: ["my-shift-txns"] });
 
   const emptyRows = Math.max(12 - rows.length, 0);
 
