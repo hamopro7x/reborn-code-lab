@@ -33,6 +33,22 @@ const SUB_FILTERS: Record<string, { key: string; label: string }[]> = {
   ],
 };
 
+/** أعمدة كل قسم كما يعرضها الحساب الأصلي في موقع الفيزا. */
+const COLUMNS: Record<string, string[]> = {
+  txns: [
+    "اسم التاجر",
+    "إجمالي المبلغ المصحح",
+    "النوع",
+    "الحالة",
+    "تاريخ ووقت المعاملة",
+    "آخر 4 أرقام للبطاقة",
+    "الإجراء",
+  ],
+  onchain: ["عملة", "نوع السلسلة", "الكمية", "الرسوم", "التاريخ والوقت", "الحالة", "الإجراء"],
+  internal: ["عملة", "الكمية", "العنوان", "الحالة", "التاريخ والوقت", "الإجراء"],
+  p2p: ["النوع / التاريخ", "رقم الطلب", "السعر", "المبلغ / الكمية", "الطرف المقابل", "الحالة", "الإجراء"],
+};
+
 
 const KIND_LABEL: Record<string, string> = {
   card: "شراء",
@@ -243,71 +259,143 @@ export function BybitLedgerPanel() {
             <table className="w-full min-w-[900px] text-sm border-collapse [&_th]:border [&_th]:border-border/40 [&_td]:border [&_td]:border-border/40">
               <thead className="text-[12px] text-muted-foreground border border-border/40">
                 <tr>
-                  <th className="p-4 text-right font-normal">اسم التاجر</th>
-                  <th className="p-4 text-center font-normal">إجمالي المبلغ المصحح</th>
-                  <th className="p-4 text-right font-normal">النوع</th>
-                  <th className="p-4 text-right font-normal">الحالة</th>
-                  <th className="p-4 text-right font-normal">تاريخ ووقت المعاملة</th>
-                  <th className="p-4 text-right font-normal">آخر 4 أرقام للبطاقة</th>
-                  <th className="p-4 text-right font-normal">الإجراء</th>
+                  {COLUMNS[group].map((c) => (
+                    <th key={c} className="p-4 text-right font-normal">
+                      {c}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
                 {rows.map((r) => {
                   const badge = statusBadge(r.kind, r.status);
-                  const pan4 = String((r.detail as Record<string, unknown>)?.["pan4"] ?? "").trim();
+                  const d = (r.detail ?? {}) as Record<string, unknown>;
+                  const pan4 = String(d["pan4"] ?? "").trim();
+                  const StatusCell = (
+                    <td className="p-4">
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold ${badge.cls}`}>
+                        {badge.text}
+                      </span>
+                    </td>
+                  );
+                  const TimeCell = (
+                    <td className="p-4 text-xs text-muted-foreground tabular-nums">{formatDateTime(r.time)}</td>
+                  );
+                  const AmountCell = (
+                    <td
+                      className={`p-4 font-bold tabular-nums ${
+                        r.direction === "in" ? "text-emerald-400" : "text-destructive"
+                      }`}
+                      dir="ltr"
+                    >
+                      {r.direction === "in" ? "+" : "-"}
+                      {amt(r.amount)}
+                    </td>
+                  );
+                  const ActionCell = (
+                    <td className="p-4">
+                      <button
+                        type="button"
+                        onClick={() => setOpenId((v) => (v === r.id ? null : r.id))}
+                        className="inline-flex items-center gap-1 text-sm text-amber-400 hover:underline"
+                      >
+                        التفاصيل
+                        <ChevronDown className={`size-3.5 transition-transform ${openId === r.id ? "rotate-180" : ""}`} />
+                      </button>
+                    </td>
+                  );
                   return (
                     <Fragment key={r.id}>
                       <tr className="border-b border-border/40 hover:bg-muted/10 transition-colors">
-                        <td className="p-4">
-                          <div className="flex items-center justify-start gap-3">
-                            <MerchantLogo name={r.title} />
-                            <div className="min-w-0">
-                              <div className="truncate font-semibold">{r.title}</div>
-                              <div className="truncate text-[11px] text-muted-foreground">{r.accountName}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td
-                          className={`p-4 text-center font-bold tabular-nums ${
-                            r.direction === "in" ? "text-emerald-400" : "text-destructive"
-                          }`}
-                          dir="ltr"
-                        >
-                          {r.direction === "in" ? "+" : "-"}
-                          {r.currency} {amt(r.amount)}
-                        </td>
-                        <td className="p-4 text-xs text-muted-foreground">{KIND_LABEL[r.kind] ?? r.kind}</td>
-                        <td className="p-4">
-                          <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold ${badge.cls}`}>
-                            {badge.text}
-                          </span>
-                        </td>
-                        <td className="p-4 text-xs text-muted-foreground tabular-nums">{formatDateTime(r.time)}</td>
-                        <td className="p-4">
-                          {pan4 ? (
-                            <span className="inline-flex items-center gap-2">
-                              <VisaBadge />
-                              <span className="font-bold tabular-nums">{pan4}</span>
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </td>
-                        <td className="p-4">
-                          <button
-                            type="button"
-                            onClick={() => setOpenId((v) => (v === r.id ? null : r.id))}
-                            className="inline-flex items-center gap-1 text-sm text-amber-400 hover:underline"
-                          >
-                            التفاصيل
-                            <ChevronDown className={`size-3.5 transition-transform ${openId === r.id ? "rotate-180" : ""}`} />
-                          </button>
-                        </td>
+                        {group === "txns" ? (
+                          <>
+                            <td className="p-4">
+                              <div className="flex items-center justify-start gap-3">
+                                <MerchantLogo name={r.title} />
+                                <div className="min-w-0">
+                                  <div className="truncate font-semibold">{r.title}</div>
+                                  <div className="truncate text-[11px] text-muted-foreground">{r.accountName}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td
+                              className={`p-4 text-center font-bold tabular-nums ${
+                                r.direction === "in" ? "text-emerald-400" : "text-destructive"
+                              }`}
+                              dir="ltr"
+                            >
+                              {r.direction === "in" ? "+" : "-"}
+                              {r.currency} {amt(r.amount)}
+                            </td>
+                            <td className="p-4 text-xs text-muted-foreground">{KIND_LABEL[r.kind] ?? r.kind}</td>
+                            {StatusCell}
+                            {TimeCell}
+                            <td className="p-4">
+                              {pan4 ? (
+                                <span className="inline-flex items-center gap-2">
+                                  <VisaBadge />
+                                  <span className="font-bold tabular-nums">{pan4}</span>
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
+                            </td>
+                            {ActionCell}
+                          </>
+                        ) : group === "onchain" ? (
+                          <>
+                            <td className="p-4 font-bold">{r.currency}</td>
+                            <td className="p-4 text-xs font-bold text-blue-400">{String(d["chain"] ?? "—") || "—"}</td>
+                            {AmountCell}
+                            <td className="p-4 text-xs text-muted-foreground tabular-nums" dir="ltr">
+                              {r.fee ? `${r.currency} ${amt(r.fee)}` : "—"}
+                            </td>
+                            {TimeCell}
+                            {StatusCell}
+                            {ActionCell}
+                          </>
+                        ) : group === "internal" ? (
+                          <>
+                            <td className="p-4 font-bold">{r.currency}</td>
+                            {AmountCell}
+                            <td className="p-4 text-xs text-muted-foreground" dir="ltr">
+                              {String(d["address"] ?? "—") || "—"}
+                            </td>
+                            {StatusCell}
+                            {TimeCell}
+                            {ActionCell}
+                          </>
+                        ) : (
+                          <>
+                            <td className="p-4">
+                              <div className="text-xs font-bold">
+                                {KIND_LABEL[r.kind] ?? r.kind} {r.currency}
+                              </div>
+                              <div className="text-[11px] text-muted-foreground tabular-nums">{formatDateTime(r.time)}</div>
+                            </td>
+                            <td className="p-4 text-xs tabular-nums" dir="ltr">
+                              {r.refId}
+                            </td>
+                            <td className="p-4 text-xs tabular-nums" dir="ltr">
+                              {d["price"] ? `${String(d["fiat"] ?? "")} ${d["price"]}` : "—"}
+                            </td>
+                            <td className="p-4 tabular-nums" dir="ltr">
+                              <div className="font-bold">
+                                {d["fiatAmount"] ? `${String(d["fiat"] ?? "")} ${d["fiatAmount"]}` : "—"}
+                              </div>
+                              <div className="text-[11px] text-muted-foreground">
+                                {r.currency} {amt(r.amount)}
+                              </div>
+                            </td>
+                            <td className="p-4 text-xs">{String(d["counterparty"] ?? "—") || "—"}</td>
+                            {StatusCell}
+                            {ActionCell}
+                          </>
+                        )}
                       </tr>
                       {openId === r.id && (
                         <tr className="border-b border-border/40 bg-muted/20">
-                          <td colSpan={7} className="p-4">
+                          <td colSpan={COLUMNS[group]?.length ?? 7} className="p-4">
                             <LedgerRowDetails row={r} badgeText={badge.text} />
                           </td>
                         </tr>
@@ -355,19 +443,47 @@ export function BybitLedgerPanel() {
 function LedgerRowDetails({ row, badgeText }: { row: any; badgeText: string }) {
   const d = (row.detail ?? {}) as Record<string, unknown>;
   const cur = String(row.currency || "USD");
+  const val = (k: string) => {
+    const v = d[k];
+    return v === null || v === undefined || v === "" ? null : String(v);
+  };
 
-  const summary: [string, string][] = [
+  // Only fields the source account actually provides for this movement type.
+  const base: [string, string][] = [
     ["الحساب / الفيزا", row.accountName || "—"],
-    ["حالة المعاملة", String(row.status || "—")],
     ["نوع المعاملة", KIND_LABEL[row.kind] ?? row.kind],
     ["الحالة", badgeText],
     ["تاريخ ووقت المعاملة", formatDateTime(row.time)],
-    ["مرحلة المعاملة", String(d["stage"] ?? "—")],
-    ["حالة المزوّد", String(d["tradeStatus"] ?? d["status"] ?? row.status ?? "—")],
     ["معرّف المعاملة", row.refId],
-    ["آخر 4 أرقام للبطاقة", String(d["pan4"] ?? "—") || "—"],
     ["العملة", cur],
   ];
+
+  const extra: [string, string][] = [];
+  const add = (label: string, v: string | null) => {
+    if (v) extra.push([label, v]);
+  };
+
+  if (row.kind === "card" || row.kind === "refund") {
+    add("حالة المعاملة", String(row.status || "") || null);
+    add("مرحلة المعاملة", val("stage"));
+    add("آخر 4 أرقام للبطاقة", val("pan4"));
+  } else if (row.kind === "deposit" || row.kind === "withdraw") {
+    add("نوع السلسلة", val("chain"));
+    add("العنوان", val("address"));
+    add("الرسوم", row.fee ? `${cur} ${amt(row.fee)}` : null);
+    add("الحالة عند المزوّد", String(row.status || "") || null);
+  } else if (row.kind === "internal_in" || row.kind === "internal_out") {
+    add("العنوان", val("address"));
+    add("الحالة عند المزوّد", String(row.status || "") || null);
+  } else {
+    add("الطرف المقابل", val("counterparty"));
+    add("السعر", val("price"));
+    add("المبلغ", val("fiatAmount"));
+    add("العملة النقدية", val("fiat"));
+    add("الحالة عند المزوّد", String(row.status || "") || null);
+  }
+
+  const summary = [...base, ...extra];
 
   return (
     <div className="rounded-2xl border border-border/50 bg-muted/10 p-4" dir="rtl">
