@@ -23,19 +23,22 @@ import {
   assignWorkTxn,
   saveEmployeeFace,
   listEmployeeFaces,
+  getMyWorkState,
+  getMyShiftTxns,
 } from "@/lib/work.functions";
 import { adminListEmployees } from "@/lib/courses.functions";
 import { biometricSupported, registerBiometric, assertBiometric, captureFace } from "@/lib/work-client";
 
 type TabKey = "now" | "shifts" | "table" | "productivity" | "p2p" | "faces";
 
-const TABS: { key: TabKey; label: string; adminOnly?: boolean }[] = [
+/** All management tabs are admin-only. Employees get a dedicated work view. */
+const TABS: { key: TabKey; label: string }[] = [
   { key: "now", label: "الشغل الآن" },
   { key: "shifts", label: "الشفتات" },
   { key: "table", label: "جدول المعاملات" },
   { key: "productivity", label: "الإنتاجية" },
-  { key: "p2p", label: "ربط P2P بالشفت", adminOnly: true },
-  { key: "faces", label: "تسجيل الوجه", adminOnly: true },
+  { key: "p2p", label: "ربط P2P بالشفت" },
+  { key: "faces", label: "تسجيل الوجه" },
 ];
 
 function Chip({ active, children, onClick }: { active?: boolean; children: React.ReactNode; onClick?: () => void }) {
@@ -69,45 +72,123 @@ const dur = (from: number, to: number) => {
 
 export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
   const [tab, setTab] = useState<TabKey>("now");
-  const tabs = TABS.filter((t) => isAdmin || !t.adminOnly);
+
+  // Employee = execution view only. No shifts history, no productivity,
+  // no full work table, no other employees' data.
+  if (!isAdmin) return <EmployeeWork />;
 
   return (
     <div className="space-y-4" dir="rtl">
       <div className="flex flex-wrap items-center gap-2">
-        {tabs.map((t) => (
+        {TABS.map((t) => (
           <Chip key={t.key} active={tab === t.key} onClick={() => setTab(t.key)}>
             {t.label}
           </Chip>
         ))}
       </div>
 
-      {tab === "now" && <NowTab isAdmin={isAdmin} />}
+      {tab === "now" && <NowTab />}
       {tab === "shifts" && <ShiftsTab />}
       {tab === "table" && <TableTab />}
       {tab === "productivity" && <ProductivityTab />}
-      {tab === "p2p" && isAdmin && <P2PTab />}
-      {tab === "faces" && isAdmin && <FacesTab />}
+      {tab === "p2p" && <P2PTab />}
+      {tab === "faces" && <FacesTab />}
+    </div>
+  );
+}
+
+/* ------------------------- واجهة الموظف (تنفيذ فقط) ------------------------- */
+
+function EmployeeWork() {
+  const qc = useQueryClient();
+  const stateFn = useServerFn(getMyWorkState);
+  const txnsFn = useServerFn(getMyShiftTxns);
+
+  const st = useQuery({
+    queryKey: ["my-work-state"],
+    queryFn: () => stateFn({ data: undefined as any }),
+    refetchInterval: 20_000,
+  });
+  const holding = (st.data as any)?.holding === true;
+
+  const txns = useQuery({
+    queryKey: ["my-shift-txns"],
+    queryFn: () => txnsFn({ data: { page: 1 } }),
+    enabled: holding,
+    refetchInterval: 20_000,
+  });
+  const rows: any[] = (txns.data as any)?.rows ?? [];
+
+  return (
+    <div className="space-y-4" dir="rtl">
+      <div className="rounded-2xl border border-border/60 bg-card/70 p-4">
+        <div className="mb-2 flex items-center gap-2 text-sm font-black">
+          <UserCheck className="size-4 text-primary" />
+          حالة شغلك
+        </div>
+        {st.isLoading ? (
+          <Loader2 className="size-5 animate-spin text-primary" />
+        ) : holding ? (
+          <p className="text-sm text-emerald-400 font-bold">أنت ماسك الشغل الآن.</p>
+        ) : (
+          <p className="text-sm text-muted-foreground">أنت غير ماسك الشغل حاليًا. اضغط «استلام الشغل» للبدء.</p>
+        )}
+      </div>
+
+      <ClaimCard
+        onClaimed={() => {
+          qc.invalidateQueries({ queryKey: ["my-work-state"] });
+          qc.invalidateQueries({ queryKey: ["my-shift-txns"] });
+        }}
+      />
+
+      <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/70">
+        <div className="border-b border-border/60 p-3 text-sm font-black">معاملات شغلك الحالي</div>
+        {!holding ? (
+          <p className="p-4 text-sm text-muted-foreground">لا توجد معاملات — أنت غير ماسك الشغل حاليًا.</p>
+        ) : txns.isLoading ? (
+          <div className="p-4"><Loader2 className="size-5 animate-spin text-primary" /></div>
+        ) : rows.length === 0 ? (
+          <p className="p-4 text-sm text-muted-foreground">لا توجد معاملات في شفتك حتى الآن.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-right text-xs">
+              <thead className="bg-background/60 text-muted-foreground">
+                <tr>
+                  <th className="p-2">الوقت</th>
+                  <th className="p-2">النوع</th>
+                  <th className="p-2">البيان</th>
+                  <th className="p-2">المبلغ</th>
+                  <th className="p-2">الحالة</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r.id ?? r.ledgerId} className="border-t border-border/40">
+                    <td className="p-2 whitespace-nowrap">{formatDateTime(r.occurredAt)}</td>
+                    <td className="p-2">{r.kind}</td>
+                    <td className="p-2">{r.title}</td>
+                    <td className="p-2 font-mono">{r.amount} {r.currency}</td>
+                    <td className="p-2">{r.status}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 /* ------------------------------- الشغل الآن ------------------------------- */
 
-function NowTab({ isAdmin }: { isAdmin: boolean }) {
-  const qc = useQueryClient();
-  const currentFn = useServerFn(getWorkCurrent);
+/** Shared claim card (face + device biometric). Contains no management data. */
+function ClaimCard({ adminHint, onClaimed }: { adminHint?: boolean; onClaimed: () => void }) {
   const challengeFn = useServerFn(getWorkAuthChallenge);
   const registerFn = useServerFn(registerWorkDevice);
   const claimFn = useServerFn(claimWorkShift);
   const [busy, setBusy] = useState<string | null>(null);
-
-  const q = useQuery({
-    queryKey: ["work-current"],
-    queryFn: () => currentFn({ data: undefined as any }),
-    refetchInterval: 20_000,
-  });
-  const cur = q.data?.current ?? null;
-  const me = q.data?.me;
 
   const enrollDevice = async () => {
     if (!biometricSupported()) return toast.error("هذا الجهاز/المتصفح لا يدعم المصادقة البيومترية");
@@ -140,14 +221,55 @@ function NowTab({ isAdmin }: { isAdmin: boolean }) {
         return;
       }
       toast.success("تم استلام الشغل");
-      qc.invalidateQueries({ queryKey: ["work-current"] });
-      qc.invalidateQueries({ queryKey: ["work-shifts"] });
+      onClaimed();
     } catch (e) {
       toast.error((e as Error).message || "فشل استلام الشغل");
     } finally {
       setBusy(null);
     }
   };
+
+  return (
+    <div className="rounded-2xl border border-border/60 bg-card/70 p-4 space-y-3">
+      <div className="flex items-center gap-2 text-sm font-black">
+        <ShieldCheck className="size-4 text-primary" />
+        استلام الشغل (تحقق الوجه + مصادقة الجهاز)
+      </div>
+      <p className="text-xs leading-6 text-muted-foreground">
+        استلام الشغل يحتاج تحقق الوجه بالكاميرا ثم مصادقة الجهاز (Face ID / Touch ID / بصمة أندرويد).
+        بعد النجاح ينتهي الشفت السابق تلقائيًا ويبدأ شفتك في نفس اللحظة. لا يتم تخزين أي بصمة.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <Button onClick={() => void claim()} disabled={busy !== null}>
+          {busy === "claim" ? <Loader2 className="size-4 animate-spin" /> : <Camera className="size-4" />}
+          استلام الشغل
+        </Button>
+        <Button variant="outline" onClick={() => void enrollDevice()} disabled={busy !== null}>
+          {busy === "device" ? <Loader2 className="size-4 animate-spin" /> : null}
+          تسجيل مصادقة هذا الجهاز
+        </Button>
+      </div>
+      {adminHint ? (
+        <p className="text-[11px] text-muted-foreground">
+          لا بد من تسجيل صورة الوجه المرجعية للموظف من تبويب «تسجيل الوجه» قبل أول استلام.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/** Admin-only overview of who is holding the work now. */
+function NowTab() {
+  const qc = useQueryClient();
+  const currentFn = useServerFn(getWorkCurrent);
+
+  const q = useQuery({
+    queryKey: ["work-current"],
+    queryFn: () => currentFn({ data: undefined as any }),
+    refetchInterval: 20_000,
+  });
+  const cur = q.data?.current ?? null;
+  const me = q.data?.me;
 
   return (
     <div className="space-y-4">
@@ -170,31 +292,13 @@ function NowTab({ isAdmin }: { isAdmin: boolean }) {
         )}
       </div>
 
-      <div className="rounded-2xl border border-border/60 bg-card/70 p-4 space-y-3">
-        <div className="flex items-center gap-2 text-sm font-black">
-          <ShieldCheck className="size-4 text-primary" />
-          استلام الشغل (تحقق الوجه + مصادقة الجهاز)
-        </div>
-        <p className="text-xs leading-6 text-muted-foreground">
-          استلام الشغل يحتاج تحقق الوجه بالكاميرا ثم مصادقة الجهاز (Face ID / Touch ID / بصمة أندرويد).
-          بعد النجاح ينتهي شفت الموظف السابق تلقائيًا ويبدأ شفتك في نفس اللحظة. لا يتم تخزين أي بصمة.
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={() => void claim()} disabled={busy !== null}>
-            {busy === "claim" ? <Loader2 className="size-4 animate-spin" /> : <Camera className="size-4" />}
-            استلام الشغل
-          </Button>
-          <Button variant="outline" onClick={() => void enrollDevice()} disabled={busy !== null}>
-            {busy === "device" ? <Loader2 className="size-4 animate-spin" /> : null}
-            تسجيل مصادقة هذا الجهاز
-          </Button>
-        </div>
-        {isAdmin ? (
-          <p className="text-[11px] text-muted-foreground">
-            لا بد من تسجيل صورة الوجه المرجعية للموظف من تبويب «تسجيل الوجه» قبل أول استلام.
-          </p>
-        ) : null}
-      </div>
+      <ClaimCard
+        adminHint
+        onClaimed={() => {
+          qc.invalidateQueries({ queryKey: ["work-current"] });
+          qc.invalidateQueries({ queryKey: ["work-shifts"] });
+        }}
+      />
     </div>
   );
 }
