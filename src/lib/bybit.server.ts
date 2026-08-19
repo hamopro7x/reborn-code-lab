@@ -1634,32 +1634,52 @@ export async function syncAccountLedger(accountId: string): Promise<number> {
 
   // 1) card movements (purchases / refunds / fees) from the archive.
   // READ-ONLY: never refresh/modify the account's own archive from here.
-
-  const { data: cards } = await db
-    .from("bybit_card_txns")
-    .select("txn_id, merchant, amount, currency, status, txn_time, pan4, txn_type, detail")
-    .eq("account_id", accountId)
-    .order("txn_time", { ascending: false })
-    .limit(2000);
-  for (const c of cards ?? []) {
-    const t = mapStoredRow(c);
-    // This is the exact normalized row shown by the account's internal log.
-    // Do not derive a second status specifically for the central ledger.
-    const status = t.status;
-    const isRefund = status === "refund";
-    rows.push({
-      account_id: accountId,
-      kind: isRefund ? "refund" : "card",
-      direction: isRefund ? "in" : "out",
-      ref_id: String(t.id),
-      title: t.merchant,
-      amount: isRefund ? Math.abs(t.amount) : -Math.abs(t.amount),
-      currency: t.currency,
-      fee: num((t.detail as any)?.feeAmount),
-      status,
-      occurred_at: iso(t.time),
-      detail: { pan4: t.pan4 ?? null, type: t.type ?? null },
-    });
+  // Every archived page is walked, so no transaction of the account is skipped,
+  // and the row is mirrored verbatim — same ids, amounts, merchant, status and
+  // stage as the account's own internal log.
+  const CHUNK = 1000;
+  const HARD_CAP = 200_000;
+  for (let from = 0; from < HARD_CAP; from += CHUNK) {
+    const { data: cards } = await db
+      .from("bybit_card_txns")
+      .select("txn_id, merchant, amount, currency, status, txn_time, pan4, txn_type, detail")
+      .eq("account_id", accountId)
+      .order("txn_time", { ascending: false })
+      .range(from, from + CHUNK - 1);
+    const batch = cards ?? [];
+    for (const c of batch) {
+      const t = mapStoredRow(c);
+      // This is the exact normalized row shown by the account's internal log.
+      // Do not derive a second status specifically for the central ledger.
+      const status = t.status;
+      const isRefund = status === "refund";
+      const src = (t.detail ?? {}) as Record<string, any>;
+      const { raw: _raw, ...original } = src;
+      const feeVal = num(src["feeAmount"] ?? src["foreignTxnFee"] ?? src["fee"]);
+      rows.push({
+        account_id: accountId,
+        kind: isRefund ? "refund" : "card",
+        direction: isRefund ? "in" : "out",
+        ref_id: String(t.id),
+        title: t.merchant,
+        amount: isRefund ? Math.abs(t.amount) : -Math.abs(t.amount),
+        currency: t.currency,
+        fee: feeVal,
+        status,
+        occurred_at: iso(t.time),
+        // Full original payload (minus the oversized raw blob) so the central
+        // ledger can render exactly the same fields as the source account.
+        detail: sanitize({
+          ...original,
+          pan4: t.pan4 ?? null,
+          type: t.type ?? null,
+          merchantName: src["merchantName"] ?? t.merchant ?? null,
+          basicAmount: src["basicAmount"] ?? t.amount,
+          basicCurrency: src["basicCurrency"] ?? t.currency,
+        }),
+      });
+    }
+    if (batch.length < CHUNK) break;
   }
 
 
