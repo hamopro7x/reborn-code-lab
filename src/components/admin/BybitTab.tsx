@@ -401,9 +401,6 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
                 <div className="text-[11px] text-muted-foreground">
                   {accounts.isLoading ? "جاري التحميل…" : `${list.length} حساب مرتبط`}
                 </div>
-                  {accounts.isLoading ? "جاري التحميل…" : `${list.length} حساب مربوط`}
-                </div>
-              </div>
             </div>
             <span className="text-xs text-muted-foreground">فتح ›</span>
           </div>
