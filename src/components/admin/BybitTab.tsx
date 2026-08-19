@@ -253,37 +253,36 @@ function CoinLogo({ coin }: { coin: string }) {
 function CoinBalanceCard({ coin }: { coin: CoinRow }) {
   const isUsdt = String(coin.coin).toUpperCase() === "USDT";
   return (
-    <div dir="ltr" className="relative mx-auto w-full max-w-[230px] overflow-hidden rounded-[26px] border border-[oklch(0.65_0.12_170/0.14)] bg-[oklch(0.09_0.012_190)] px-4 py-4 shadow-[0_10px_28px_-18px_oklch(0.2_0.05_190/0.9)]">
-      <div className="text-center text-[13px] font-semibold text-[oklch(0.78_0.11_175)] mb-2">{coin.coin}</div>
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0 text-left">
-          <div className="text-[30px] font-black tracking-tight tabular-nums text-foreground leading-none">
+    <div dir="ltr" className="relative mx-auto w-full max-w-[240px] rounded-[28px] p-[6px] bg-[radial-gradient(120%_120%_at_50%_0%,oklch(0.55_0.13_170/0.28),transparent_70%)]">
+      <div className="relative overflow-hidden rounded-[24px] bg-[oklch(0.055_0.008_190)] px-5 pt-4 pb-4 shadow-[0_0_28px_-10px_oklch(0.6_0.14_170/0.35)]">
+        <div className="text-center text-[15px] font-bold tracking-wide text-[oklch(0.75_0.14_170)]">{coin.coin}</div>
+
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <div className="text-[34px] font-black leading-none tracking-tight tabular-nums text-white">
             {coin.balance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
-        </div>
 
-        <div className="shrink-0">
           {isUsdt ? (
-            <span className="relative grid size-11 shrink-0 place-items-center rounded-full bg-[oklch(0.6_0.15_165)] shadow-[0_0_0_3px_oklch(0.09_0.012_190),0_0_0_4px_oklch(0.6_0.15_165/0.35)]" aria-label="USDT">
-              <span className="text-[19px] font-black text-white leading-none" dir="ltr">T</span>
-              <span className="pointer-events-none absolute inset-0 grid place-items-center" aria-hidden>
-                <span className="h-3 w-[62%] rounded-[50%] border-[2.5px] border-white/90" />
+            <span className="relative grid size-[52px] shrink-0 place-items-center rounded-full bg-[oklch(0.62_0.15_167)]" aria-label="USDT">
+              <span className="grid size-[26px] place-items-center rounded-[50%] border-[3px] border-white">
+                <span className="h-[18px] w-[3px] rounded-full bg-white" />
               </span>
             </span>
           ) : (
-            <span className="grid size-11 place-items-center rounded-full bg-[oklch(0.18_0.03_285)] border border-border/50">
+            <span className="grid size-[52px] shrink-0 place-items-center rounded-full bg-[oklch(0.18_0.03_285)] border border-border/50">
               <CoinLogo coin={coin.coin} />
             </span>
           )}
         </div>
-      </div>
-      <div className="mt-2 text-left text-[12px] text-[oklch(0.72_0.09_175)]" dir="ltr">
-        USD {coin.usd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ≈
+
+        <div className="mt-3 text-left text-[12.5px] font-medium text-[oklch(0.72_0.12_170)]">
+          USD {coin.usd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ≈
+        </div>
       </div>
     </div>
-
   );
 }
+
 
 function ChainLogo({ chain }: { chain: string }) {
   return <CryptoLogo name={chain} iconUrl={chainIconUrl(chain)} />;
