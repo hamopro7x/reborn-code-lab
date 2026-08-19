@@ -218,14 +218,17 @@ export function BybitLedgerPanel() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px] text-sm border-collapse [&_th]:border [&_th]:border-border/40 [&_td]:border [&_td]:border-border/40">
+            <table className="w-full min-w-[1180px] text-sm border-collapse [&_th]:border [&_th]:border-border/40 [&_td]:border [&_td]:border-border/40">
               <thead className="text-[12px] text-muted-foreground border border-border/40">
                 <tr>
+                  <th className="p-4 text-right font-normal">الحساب / الفيزا</th>
                   <th className="p-4 text-right font-normal">اسم التاجر</th>
-                  <th className="p-4 text-center font-normal">إجمالي المبلغ المصحح</th>
                   <th className="p-4 text-right font-normal">النوع</th>
+                  <th className="p-4 text-center font-normal">المبلغ</th>
+                  <th className="p-4 text-center font-normal">العملة</th>
                   <th className="p-4 text-right font-normal">الحالة</th>
                   <th className="p-4 text-right font-normal">تاريخ ووقت المعاملة</th>
+                  <th className="p-4 text-right font-normal">معرّف المعاملة</th>
                   <th className="p-4 text-right font-normal">آخر 4 أرقام للبطاقة</th>
                   <th className="p-4 text-right font-normal">الإجراء</th>
                 </tr>
@@ -237,15 +240,16 @@ export function BybitLedgerPanel() {
                   return (
                     <Fragment key={r.id}>
                       <tr className="border-b border-border/40 hover:bg-muted/10 transition-colors">
+                        <td className="p-4 text-xs">
+                          <span className="truncate font-semibold">{r.accountName}</span>
+                        </td>
                         <td className="p-4">
                           <div className="flex items-center justify-start gap-3">
                             <MerchantLogo name={r.title} />
-                            <div className="min-w-0">
-                              <div className="truncate font-semibold">{r.title}</div>
-                              <div className="truncate text-[11px] text-muted-foreground">{r.accountName}</div>
-                            </div>
+                            <div className="min-w-0 truncate font-semibold">{r.title}</div>
                           </div>
                         </td>
+                        <td className="p-4 text-xs text-muted-foreground">{KIND_LABEL[r.kind] ?? r.kind}</td>
                         <td
                           className={`p-4 text-center font-bold tabular-nums ${
                             r.direction === "in" ? "text-emerald-400" : "text-destructive"
@@ -253,15 +257,20 @@ export function BybitLedgerPanel() {
                           dir="ltr"
                         >
                           {r.direction === "in" ? "+" : "-"}
-                          {r.currency} {amt(r.amount)}
+                          {amt(r.amount)}
                         </td>
-                        <td className="p-4 text-xs text-muted-foreground">{KIND_LABEL[r.kind] ?? r.kind}</td>
+                        <td className="p-4 text-center text-xs font-semibold" dir="ltr">
+                          {r.currency || "—"}
+                        </td>
                         <td className="p-4">
                           <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold ${badge.cls}`}>
                             {badge.text}
                           </span>
                         </td>
                         <td className="p-4 text-xs text-muted-foreground tabular-nums">{formatDateTime(r.time)}</td>
+                        <td className="p-4 font-mono text-[11px] text-muted-foreground" dir="ltr">
+                          {r.refId || "—"}
+                        </td>
                         <td className="p-4">
                           {pan4 ? (
                             <span className="inline-flex items-center gap-2">
@@ -285,7 +294,7 @@ export function BybitLedgerPanel() {
                       </tr>
                       {openId === r.id && (
                         <tr className="border-b border-border/40 bg-muted/20">
-                          <td colSpan={7} className="p-4">
+                          <td colSpan={10} className="p-4">
                             <div className="grid gap-3 text-xs sm:grid-cols-2 lg:grid-cols-4">
                               <Detail label="الحساب" value={r.accountName} />
                               <Detail label="النوع" value={KIND_LABEL[r.kind] ?? r.kind} />
