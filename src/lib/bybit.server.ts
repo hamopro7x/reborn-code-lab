@@ -1027,6 +1027,9 @@ export async function fetchCardTxnsPage(opts: {
 /** Sync recent records and one resumable historical chunk outside the visible read. */
 export async function syncCardTxns(accountId?: string): Promise<{ added: number; backfillDone: boolean }> {
   const creds = await getCreds(accountId);
+  // An explicit sync must ask the provider again; cached authorisation rows can
+  // still say pending after the account history has already settled them.
+  cardCache.delete(accountId ?? "default");
   const liveRows = await callCard(100, accountId, creds);
   const rows = liveRows.map(mapCardTxn);
   await persistCardTxns(rows, accountId);
