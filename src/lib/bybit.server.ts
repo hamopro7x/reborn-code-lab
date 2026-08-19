@@ -934,22 +934,22 @@ function mapStoredRow(r: any): CardTxn {
     ["3", "5", "6", "7", "10", "11"].includes(side) ||
     tradeStatus === "3" ||
     /REFUND|REVERS|CHARGEBACK/.test(upper);
-  // Fall back to the status persisted at ingest time whenever the raw
-  // tradeStatus is missing or unrecognised, so successful purchases are
-  // never silently downgraded to "pending" and dropped from the tab.
-  const stored: CardTxn["status"] =
+  // The status persisted at ingest time is the source of truth. Only when it is
+  // missing/unknown (or still pending) do we derive one from the raw tradeStatus.
+  const stored: CardTxn["status"] | null =
     r.status === "success" || r.status === "failed" || r.status === "refund" || r.status === "pending"
       ? r.status
-      : "pending";
-  const status: CardTxn["status"] = isRefund
+      : null;
+  const derived: CardTxn["status"] = isRefund
     ? "refund"
     : tradeStatus === "2" || /FAIL|DECLIN|REJECT|CANCEL/.test(upper)
       ? "failed"
       : tradeStatus === "1" || /SUCCESS|COMPLETE|SETTLE|APPROVED|DONE/.test(upper)
         ? "success"
-        : tradeStatus === "0" || /PENDING|AUTH|HOLD|PROCESS/.test(upper)
-          ? "pending"
-          : stored;
+        : "pending";
+  const status: CardTxn["status"] =
+    isRefund ? "refund" : stored && stored !== "pending" ? stored : derived;
+
 
   return {
     id: r.txn_id,
@@ -1632,10 +1632,9 @@ export async function syncAccountLedger(accountId: string): Promise<number> {
   const db = await admin();
   const rows: LedgerInsert[] = [];
 
-  // 1) card movements (purchases / refunds / fees) from the archive
-  // Refresh the account's own transaction archive first. The central ledger
-  // must mirror that source, not a stale pending snapshot from an earlier sync.
-  await syncCardTxns(accountId);
+  // 1) card movements (purchases / refunds / fees) from the archive.
+  // READ-ONLY: never refresh/modify the account's own archive from here.
+
   const { data: cards } = await db
     .from("bybit_card_txns")
     .select("txn_id, merchant, amount, currency, status, txn_time, pan4, txn_type, detail")
