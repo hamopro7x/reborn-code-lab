@@ -3,14 +3,24 @@
  * black surface, one header row (identity → claim button → live clock → tabs),
  * then a single bordered panel holding the transactions grid. Data is real:
  * it comes from the employee's own open shift only.
+ *
+ * Column ownership is strict:
+ *  - "آخر 4 أرقام للبطاقة" and "الإجراء" (details) come from the ORIGINAL
+ *    transaction row in the central ledger, matched by its ledger id.
+ *  - "جنيه" and "الكمية" are entered by the employee, saved automatically on
+ *    blur, then locked for good (enforced on the server).
  */
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, User, Clock, ScanFace } from "lucide-react";
+import { Loader2, User, Clock, ScanFace, Eye } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { getMyWorkState, getMyShiftTxns } from "@/lib/work.functions";
+import { getMyWorkState, getMyShiftTxns, saveMyTxnEntry } from "@/lib/work.functions";
 import { useClaimWork } from "@/lib/use-claim-work";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { TXN_SECTIONS, fmtFieldValue, hasField } from "@/lib/bybit-txn-fields";
+import { formatDateTime } from "@/lib/format";
 
 type TabKey = "p2p" | "transfers" | "wrong" | "week" | "all";
 
