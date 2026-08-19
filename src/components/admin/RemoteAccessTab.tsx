@@ -136,6 +136,8 @@ export function RemoteAccessTab() {
     toast.success("تم نسخ كود الوصول");
   };
 
+  useAdminBack(session ? () => setSession(null) : null, [session?.id]);
+
   if (session) {
     return (
       <div className="space-y-3">
