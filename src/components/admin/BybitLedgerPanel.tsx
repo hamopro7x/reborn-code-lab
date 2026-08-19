@@ -443,19 +443,47 @@ export function BybitLedgerPanel() {
 function LedgerRowDetails({ row, badgeText }: { row: any; badgeText: string }) {
   const d = (row.detail ?? {}) as Record<string, unknown>;
   const cur = String(row.currency || "USD");
+  const val = (k: string) => {
+    const v = d[k];
+    return v === null || v === undefined || v === "" ? null : String(v);
+  };
 
-  const summary: [string, string][] = [
+  // Only fields the source account actually provides for this movement type.
+  const base: [string, string][] = [
     ["الحساب / الفيزا", row.accountName || "—"],
-    ["حالة المعاملة", String(row.status || "—")],
     ["نوع المعاملة", KIND_LABEL[row.kind] ?? row.kind],
     ["الحالة", badgeText],
     ["تاريخ ووقت المعاملة", formatDateTime(row.time)],
-    ["مرحلة المعاملة", String(d["stage"] ?? "—")],
-    ["حالة المزوّد", String(d["tradeStatus"] ?? d["status"] ?? row.status ?? "—")],
     ["معرّف المعاملة", row.refId],
-    ["آخر 4 أرقام للبطاقة", String(d["pan4"] ?? "—") || "—"],
     ["العملة", cur],
   ];
+
+  const extra: [string, string][] = [];
+  const add = (label: string, v: string | null) => {
+    if (v) extra.push([label, v]);
+  };
+
+  if (row.kind === "card" || row.kind === "refund") {
+    add("حالة المعاملة", String(row.status || "") || null);
+    add("مرحلة المعاملة", val("stage"));
+    add("آخر 4 أرقام للبطاقة", val("pan4"));
+  } else if (row.kind === "deposit" || row.kind === "withdraw") {
+    add("نوع السلسلة", val("chain"));
+    add("العنوان", val("address"));
+    add("الرسوم", row.fee ? `${cur} ${amt(row.fee)}` : null);
+    add("الحالة عند المزوّد", String(row.status || "") || null);
+  } else if (row.kind === "internal_in" || row.kind === "internal_out") {
+    add("العنوان", val("address"));
+    add("الحالة عند المزوّد", String(row.status || "") || null);
+  } else {
+    add("الطرف المقابل", val("counterparty"));
+    add("السعر", val("price"));
+    add("المبلغ", val("fiatAmount"));
+    add("العملة النقدية", val("fiat"));
+    add("الحالة عند المزوّد", String(row.status || "") || null);
+  }
+
+  const summary = [...base, ...extra];
 
   return (
     <div className="rounded-2xl border border-border/50 bg-muted/10 p-4" dir="rtl">
