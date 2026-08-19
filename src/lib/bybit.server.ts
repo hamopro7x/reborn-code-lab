@@ -1629,7 +1629,11 @@ export async function syncAccountLedger(accountId: string): Promise<number> {
     .limit(2000);
   for (const c of cards ?? []) {
     const t = mapStoredRow(c);
-    const isRefund = t.status === "refund";
+    // Source of truth = the status persisted in the account's own card archive
+    // (the internal log). Never re-interpret it here.
+    const raw = String((c as { status?: string }).status ?? "").trim().toLowerCase();
+    const status = raw === "success" || raw === "failed" || raw === "refund" || raw === "pending" ? raw : t.status;
+    const isRefund = status === "refund";
     rows.push({
       account_id: accountId,
       kind: isRefund ? "refund" : "card",
@@ -1639,11 +1643,12 @@ export async function syncAccountLedger(accountId: string): Promise<number> {
       amount: isRefund ? Math.abs(t.amount) : -Math.abs(t.amount),
       currency: t.currency,
       fee: num((t.detail as any)?.feeAmount),
-      status: t.status,
+      status,
       occurred_at: iso(t.time),
       detail: { pan4: t.pan4 ?? null, type: t.type ?? null },
     });
   }
+
 
   // 2) on-chain + internal transfers + P2P (live from Bybit)
   const [onchain, internal, p2p] = await Promise.allSettled([
