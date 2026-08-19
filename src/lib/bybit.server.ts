@@ -770,13 +770,15 @@ function mapCardTxn(t: any): CardTxn {
       ["3", "5", "6", "7", "10", "11"].includes(side) ||
       tradeStatus === "3" ||
       /REFUND|REVERS|CHARGEBACK/.test(upper);
+    // Bybit only returns card rows that already reached a financial outcome.
+    // Anything that is not explicitly a refund or a decline is a real purchase,
+    // so we never surface "pending" for card transactions.
     const status: CardTxn["status"] = isRefund
       ? "refund"
-      : tradeStatus === "1" || /SUCCESS|COMPLETE|SETTLE|APPROVED|DONE/.test(upper)
-        ? "success"
-        : tradeStatus === "2" || /FAIL|DECLIN|REJECT|CANCEL/.test(upper)
-          ? "failed"
-          : "pending";
+      : tradeStatus === "2" || /FAIL|DECLIN|REJECT|CANCEL/.test(upper)
+        ? "failed"
+        : "success";
+
 
     return {
       id: cardRowKey(t),
