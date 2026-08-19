@@ -95,7 +95,7 @@ function Admin() {
     refetchIntervalInBackground: false,
   });
   const shared = sharedQ.data ?? [];
-  const basePanels: PanelKey[] = ["orders", "courses"];
+  const basePanels: PanelKey[] = ["orders", "courses", "worksheet"];
   const employeeAllowed = (key: PanelKey) => basePanels.includes(key) || shared.includes(key);
   const canView = (key: PanelKey) => adminOnly || employeeAllowed(key);
   const readOnly = isEmployee && !basePanels.includes(panel);
