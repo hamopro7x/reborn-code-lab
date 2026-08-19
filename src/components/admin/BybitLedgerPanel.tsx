@@ -4,6 +4,24 @@ import { useServerFn } from "@tanstack/react-start";
 import { ChevronDown } from "lucide-react";
 import { getBybitLedger, syncBybitLedger } from "@/lib/bybit.functions";
 import { formatDateTime } from "@/lib/format";
+import usdtOfficial from "@/assets/usdt-official.png.asset.json";
+
+/** Coin cell with the official token icon, matching the source account layout. */
+function CoinCell({ coin }: { coin: string }) {
+  const c = String(coin || "").toUpperCase();
+  return (
+    <span className="inline-flex items-center gap-2">
+      {c === "USDT" ? (
+        <img src={usdtOfficial.url} alt="USDT" className="size-5 shrink-0 rounded-full" loading="lazy" />
+      ) : (
+        <span className="grid size-5 shrink-0 place-items-center rounded-full bg-muted text-[9px] font-black">
+          {c.slice(0, 2)}
+        </span>
+      )}
+      <span className="font-bold">{c || "—"}</span>
+    </span>
+  );
+}
 
 const GROUPS: { key: string; label: string }[] = [
   { key: "txns", label: "المعاملات" },
@@ -344,7 +362,7 @@ export function BybitLedgerPanel() {
                           </>
                         ) : group === "onchain" ? (
                           <>
-                            <td className="p-4 font-bold">{r.currency}</td>
+                            <td className="p-4"><CoinCell coin={r.currency} /></td>
                             <td className="p-4 text-xs font-bold text-blue-400">{String(d["chain"] ?? "—") || "—"}</td>
                             {AmountCell}
                             <td className="p-4 text-xs text-muted-foreground tabular-nums" dir="ltr">
@@ -356,7 +374,7 @@ export function BybitLedgerPanel() {
                           </>
                         ) : group === "internal" ? (
                           <>
-                            <td className="p-4 font-bold">{r.currency}</td>
+                            <td className="p-4"><CoinCell coin={r.currency} /></td>
                             {AmountCell}
                             <td className="p-4 text-xs text-muted-foreground" dir="ltr">
                               {String(d["address"] ?? "—") || "—"}
