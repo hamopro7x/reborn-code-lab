@@ -416,15 +416,6 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
   return (
     <div className="relative space-y-4 text-right" dir="rtl">
       <FintechBackdrop fullscreen />
-      <div className="relative z-10 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2" />
-        {isAdmin && (
-          <Button size="sm" className="rounded-xl" onClick={() => { setAddError(null); setAddOpen(true); }}>
-            <Plus className="size-4 ml-1" /> إضافة حساب
-          </Button>
-        )}
-      </div>
-
       {accounts.isLoading ? (
         <div className="relative z-10 flex justify-center p-10"><Loader2 className="size-6 animate-spin" /></div>
       ) : !list.length ? (

@@ -156,7 +156,7 @@ function Admin() {
         { key: "remote", label: "الوصول عن بُعد", icon: MonitorPlay, adminOnly: true },
         { key: "payments", label: "طرق الدفع", icon: CreditCard, adminOnly: true },
         { key: "currencies", label: "العملات", icon: Coins, adminOnly: true },
-        { key: "apikey", label: "مفتاح API", icon: KeyRound, adminOnly: true },
+        { key: "apikey", label: "مفاتيح API (Bybit)", icon: KeyRound, adminOnly: true },
         { key: "settings", label: "الإعدادات", icon: Settings2, adminOnly: true },
       ],
     },
@@ -278,6 +278,17 @@ function Admin() {
             {panel === "remote" && canView("remote") && <DeviceMonitorGrid screensOnly />}
             {panel === "payments" && canView("payments") && <PaymentsTab />}
             {panel === "currencies" && canView("currencies") && <CurrenciesTab />}
+            {panel === "apikey" && adminOnly && (
+              <div className="space-y-4 text-right" dir="rtl">
+                <div className="rounded-2xl border border-border/60 bg-card/50 p-4">
+                  <h2 className="text-sm font-black">مفاتيح API — حسابات Bybit</h2>
+                  <p className="mt-1 text-[12px] text-muted-foreground leading-6">
+                    من هنا تربط حسابات Bybit بمفتاح API (قراءة فقط). الحسابات المضافة تظهر تلقائياً في قسم معاملات الفيزا.
+                  </p>
+                </div>
+                <ApiKeyPanel />
+              </div>
+            )}
             {panel === "settings" && canView("settings") && <SettingsTab />}
             </div>
           </main>
