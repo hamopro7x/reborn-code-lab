@@ -7,20 +7,35 @@ import { formatDateTime } from "@/lib/format";
 
 const GROUPS: { key: string; label: string }[] = [
   { key: "txns", label: "المعاملات" },
-  { key: "deposit", label: "الإيداع الخارجي" },
-  { key: "withdraw", label: "السحب الخارجي" },
-  { key: "internal_in", label: "الإيداع الداخلي" },
-  { key: "internal_out", label: "التحويل الداخلي" },
-  { key: "p2p_buy", label: "شراء P2P" },
-  { key: "p2p_sell", label: "بيع P2P" },
+  { key: "onchain", label: "السحب والإيداع الخارجي" },
+  { key: "internal", label: "السحب والإيداع الداخلي" },
+  { key: "p2p", label: "طلبات P2P" },
 ];
 
-const STATUSES: { key: string; label: string }[] = [
-  { key: "all", label: "الكل" },
-  { key: "success", label: "المشتريات الناجحة" },
-  { key: "failed", label: "المشتريات الفاشلة" },
-  { key: "refund", label: "المبلغ المسترد" },
-];
+const SUB_FILTERS: Record<string, { key: string; label: string }[]> = {
+  txns: [
+    { key: "all", label: "الكل" },
+    { key: "success", label: "المشتريات الناجحة" },
+    { key: "failed", label: "المشتريات الفاشلة" },
+    { key: "refund", label: "المبلغ المسترد" },
+  ],
+  onchain: [
+    { key: "withdraw", label: "التحويل على السلسلة" },
+    { key: "deposit", label: "الاستلام" },
+    { key: "all", label: "الجميع" },
+  ],
+  internal: [
+    { key: "internal_out", label: "سحب" },
+    { key: "internal_in", label: "إيداع" },
+    { key: "all", label: "الجميع" },
+  ],
+  p2p: [
+    { key: "p2p_buy", label: "شراء" },
+    { key: "p2p_sell", label: "بيع" },
+    { key: "all", label: "الجميع" },
+  ],
+};
+
 
 const KIND_LABEL: Record<string, string> = {
   card: "شراء",
@@ -204,23 +219,23 @@ export function BybitLedgerPanel() {
 
 
       <div className="rounded-3xl border border-border/60 bg-card/70 overflow-hidden">
-        {group === "txns" && (
-          <div className="flex flex-wrap items-center justify-start gap-1 p-4">
-            {STATUSES.map((s) => (
-              <Chip
-                key={s.key}
-                active={status === s.key}
-                onClick={() => {
-                  setStatus(s.key);
-                  setPage(1);
-                  setOpenId(null);
-                }}
-              >
-                {s.label}
-              </Chip>
-            ))}
-          </div>
-        )}
+        <div className="flex flex-wrap items-center justify-start gap-1 p-4">
+          {(SUB_FILTERS[group] ?? []).map((s) => (
+            <Chip
+              key={s.key}
+              active={status === s.key}
+              onClick={() => {
+                setStatus(s.key);
+                setPage(1);
+                setOpenId(null);
+              }}
+            >
+              {s.label}
+              {s.key !== "all" && counts[s.key] !== undefined ? ` (${counts[s.key]!.toLocaleString("en-US")})` : ""}
+            </Chip>
+          ))}
+        </div>
+
 
         {q.isLoading ? (
           <div className="py-10 text-center text-sm text-muted-foreground">جارٍ التحميل…</div>
