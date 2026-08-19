@@ -576,18 +576,21 @@ function AccountSummaryCard({
 
         </div>
 
-        {/* Balances */}
-        {q.isLoading ? (
-          <div className="grid min-h-[90px] place-items-center rounded-2xl border border-teal-400/15 bg-[oklch(0.12_0.03_190)]">
-            <Loader2 className="size-4 animate-spin" />
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {coins.map((c) => (
-              <CoinBalanceCard key={c.coin} coin={c} />
-            ))}
-          </div>
-        )}
+        {/* Balances — ارتفاع ثابت في كل الحالات */}
+        <div className="h-[104px] overflow-hidden">
+          {q.isLoading ? (
+            <div className="grid h-full place-items-center rounded-2xl border border-teal-400/15 bg-[oklch(0.12_0.03_190)]">
+              <Loader2 className="size-4 animate-spin" />
+            </div>
+          ) : (
+            <div className="grid h-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 overflow-y-auto">
+              {coins.map((c) => (
+                <CoinBalanceCard key={c.coin} coin={c} />
+              ))}
+            </div>
+          )}
+        </div>
+
 
         {d.failed && (
           <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-2 text-[11px] text-destructive-foreground">
