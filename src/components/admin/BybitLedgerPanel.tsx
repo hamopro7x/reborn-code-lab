@@ -362,7 +362,7 @@ export function BybitLedgerPanel() {
                           </>
                         ) : group === "onchain" ? (
                           <>
-                            <td className="p-4 font-bold">{r.currency}</td>
+                            <td className="p-4"><CoinCell coin={r.currency} /></td>
                             <td className="p-4 text-xs font-bold text-blue-400">{String(d["chain"] ?? "—") || "—"}</td>
                             {AmountCell}
                             <td className="p-4 text-xs text-muted-foreground tabular-nums" dir="ltr">
@@ -374,7 +374,7 @@ export function BybitLedgerPanel() {
                           </>
                         ) : group === "internal" ? (
                           <>
-                            <td className="p-4 font-bold">{r.currency}</td>
+                            <td className="p-4"><CoinCell coin={r.currency} /></td>
                             {AmountCell}
                             <td className="p-4 text-xs text-muted-foreground" dir="ltr">
                               {String(d["address"] ?? "—") || "—"}
