@@ -398,9 +398,8 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
                 <Wallet className="size-5" />
               </span>
               <div>
-                <div className="text-sm font-bold">حسابات بي بت</div>
                 <div className="text-[11px] text-muted-foreground">
-                  {accounts.isLoading ? "جاري التحميل…" : `${list.length} حساب مربوط`}
+                  {accounts.isLoading ? "جاري التحميل…" : `${list.length} حساب مرتبط`}
                 </div>
               </div>
             </div>
@@ -419,7 +418,7 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
           <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setListOpen(false)}>
             رجوع
           </Button>
-          <h2 className="text-sm font-bold">حسابات بي بت</h2>
+          
         </div>
         {isAdmin && (
           <Button size="sm" className="rounded-xl" onClick={() => { setAddError(null); setAddOpen(true); }}>
