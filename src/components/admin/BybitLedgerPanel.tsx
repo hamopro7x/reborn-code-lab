@@ -22,17 +22,14 @@ const SUB_FILTERS: Record<string, { key: string; label: string }[]> = {
   onchain: [
     { key: "withdraw", label: "التحويل على السلسلة" },
     { key: "deposit", label: "الاستلام" },
-    { key: "all", label: "الجميع" },
   ],
   internal: [
     { key: "internal_out", label: "سحب" },
     { key: "internal_in", label: "إيداع" },
-    { key: "all", label: "الجميع" },
   ],
   p2p: [
     { key: "p2p_buy", label: "شراء" },
     { key: "p2p_sell", label: "بيع" },
-    { key: "all", label: "الجميع" },
   ],
 };
 
