@@ -417,7 +417,7 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
           <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setListOpen(false)}>
             رجوع
           </Button>
-          <h2 className="text-sm font-bold">حسابات بي بت</h2>
+          
         </div>
         {isAdmin && (
           <Button size="sm" className="rounded-xl" onClick={() => { setAddError(null); setAddOpen(true); }}>
