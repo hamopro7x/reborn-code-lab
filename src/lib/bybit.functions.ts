@@ -424,3 +424,11 @@ export const syncBybitLedger = createServerFn({ method: "POST" })
       return { ok: false as const, saved: 0, accounts: 0, error: message, errorCode: code };
     }
   });
+
+export const getBybitSpendTotals = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAccess(context.supabase, context.userId);
+    const mod = await import("./bybit.server");
+    return mod.computeSpendAllAccounts();
+  });

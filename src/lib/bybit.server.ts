@@ -1867,3 +1867,23 @@ export async function fetchLedgerPage(opts: {
   };
 }
 
+
+/**
+ * Same spend/fee rules as a single visa account, aggregated over every account
+ * currently present in the system. Each account is summed with the shared spend
+ * engine (identical to its own card), then the results are added together, so a
+ * newly added account is included automatically and a removed one drops out.
+ */
+export async function computeSpendAllAccounts() {
+  const { dayStart, monthStart } = spendWindows(await bybitNow().catch(() => Date.now()));
+  const accounts = await listAccounts();
+  const totals = { daySpend: 0, monthSpend: 0, dayFees: 0, monthFees: 0 };
+  for (const acc of accounts) {
+    const t = await computeSpend(acc.id, dayStart, monthStart);
+    totals.daySpend += t.daySpend;
+    totals.monthSpend += t.monthSpend;
+    totals.dayFees += t.dayFees;
+    totals.monthFees += t.monthFees;
+  }
+  return { ...totals, accounts: accounts.length, dayStart, monthStart };
+}
