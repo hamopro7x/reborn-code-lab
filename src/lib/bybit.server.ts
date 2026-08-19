@@ -1779,6 +1779,8 @@ export async function fetchLedgerPage(opts: {
     if (opts.accountId) out = out.eq("account_id", opts.accountId);
     if (g === "txns" && st === "refund") out = out.eq("kind", "refund");
     else if (g === "txns" && (st === "success" || st === "failed")) out = out.eq("kind", "card").eq("status", st);
+    else if (g !== "txns" && SUB_KIND[st] && (GROUP_KINDS[g] as string[]).includes(SUB_KIND[st]!))
+      out = out.eq("kind", SUB_KIND[st]!);
     else out = out.in("kind", GROUP_KINDS[g] as string[]);
     return out;
   };
@@ -1789,12 +1791,19 @@ export async function fetchLedgerPage(opts: {
   };
 
   const groupKeys = Object.keys(GROUP_KINDS);
-  const [listRes, groupCounts, cAll, cSuccess, cFailed, cRefund] = await Promise.all([
+  const subKeys = Object.keys(SUB_KIND);
+  const [listRes, groupCounts, subCounts, cScoped, cSuccess, cFailed, cRefund] = await Promise.all([
     applyScope(base().select("*"), group, status)
       .order("occurred_at", { ascending: false })
       .range(from, from + pageSize - 1),
     Promise.all(groupKeys.map((g) => countFor(g, "all"))),
-    countFor(group, "all"),
+    Promise.all(
+      subKeys.map((s) => {
+        const g = groupKeys.find((k) => (GROUP_KINDS[k] as string[]).includes(SUB_KIND[s]!));
+        return g ? countFor(g, s) : Promise.resolve(0);
+      }),
+    ),
+    countFor(group, status),
     countFor("txns", "success"),
     countFor("txns", "failed"),
     countFor("txns", "refund"),
@@ -1803,7 +1812,7 @@ export async function fetchLedgerPage(opts: {
   if (error) throw new Error(error.message);
 
   const counts: Record<string, number> = {
-    all: cAll,
+    all: cScoped,
     success: cSuccess,
     failed: cFailed,
     refund: cRefund,
@@ -1811,17 +1820,11 @@ export async function fetchLedgerPage(opts: {
   groupKeys.forEach((g, i) => {
     counts[g] = (groupCounts as number[])[i] ?? 0;
   });
+  subKeys.forEach((s, i) => {
+    counts[s] = (subCounts as number[])[i] ?? 0;
+  });
 
-  const total =
-    group === "txns"
-      ? status === "success"
-        ? cSuccess
-        : status === "failed"
-          ? cFailed
-          : status === "refund"
-            ? cRefund
-            : counts["txns"]!
-      : cAll;
+  const total = cScoped;
 
   return {
     rows: (data ?? []).map((r: any) => ({
