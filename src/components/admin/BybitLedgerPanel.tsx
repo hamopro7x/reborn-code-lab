@@ -20,8 +20,8 @@ const SUB_FILTERS: Record<string, { key: string; label: string }[]> = {
     { key: "refund", label: "المبلغ المسترد" },
   ],
   onchain: [
-    { key: "withdraw", label: "التحويل على السلسلة" },
-    { key: "deposit", label: "الاستلام" },
+    { key: "withdraw", label: "سحب" },
+    { key: "deposit", label: "إيداع" },
   ],
   internal: [
     { key: "internal_out", label: "سحب" },
