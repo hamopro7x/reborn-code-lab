@@ -936,21 +936,19 @@ function mapStoredRow(r: any): CardTxn {
     ["3", "5", "6", "7", "10", "11"].includes(side) ||
     tradeStatus === "3" ||
     /REFUND|REVERS|CHARGEBACK/.test(upper);
-  // The status persisted at ingest time is the source of truth. Only when it is
-  // missing/unknown (or still pending) do we derive one from the raw tradeStatus.
+  // The status persisted at ingest time is the source of truth. A stored
+  // "pending" is a stale authorisation snapshot, so it is re-derived below and
+  // card rows never render as pending.
   const stored: CardTxn["status"] | null =
-    r.status === "success" || r.status === "failed" || r.status === "refund" || r.status === "pending"
-      ? r.status
-      : null;
+    r.status === "success" || r.status === "failed" || r.status === "refund" ? r.status : null;
   const derived: CardTxn["status"] = isRefund
     ? "refund"
     : tradeStatus === "2" || /FAIL|DECLIN|REJECT|CANCEL/.test(upper)
       ? "failed"
-      : tradeStatus === "1" || /SUCCESS|COMPLETE|SETTLE|APPROVED|DONE/.test(upper)
-        ? "success"
-        : "pending";
-  const status: CardTxn["status"] =
-    isRefund ? "refund" : stored && stored !== "pending" ? stored : derived;
+      : "success";
+  const status: CardTxn["status"] = isRefund ? "refund" : (stored ?? derived);
+
+
 
 
   return {
