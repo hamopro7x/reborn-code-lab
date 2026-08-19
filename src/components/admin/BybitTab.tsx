@@ -19,6 +19,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { FintechBackdrop } from "@/components/admin/FintechBackdrop";
 import { useAdminBack } from "@/components/admin/back-nav";
+import { BybitLedgerPanel } from "@/components/admin/BybitLedgerPanel";
+
 
 import { RefreshCw, CreditCard, Layers, ArrowUp, ArrowDown, ChevronDown, Loader2, Trash2, Plus, Download, Copy, Pencil, ChevronLeft, Wallet, ArrowDownUp, Search, BarChart3, Clock, PieChart } from "lucide-react";
 import {
@@ -436,10 +438,10 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
             />
           ))}
         </div>
-
-
-
       )}
+
+      {!!list.length && <BybitLedgerPanel />}
+
 
       <AddAccountDialog
         open={addOpen}

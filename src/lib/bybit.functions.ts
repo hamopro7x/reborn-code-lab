@@ -393,3 +393,33 @@ export const confirmBybitConvert = createServerFn({ method: "POST" })
       return { ok: false as const, error: message, errorCode: code };
     }
   });
+
+/* ============================ السجل المركزي للمعاملات ============================ */
+
+export const getBybitLedger = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { kind?: string; accountId?: string; page?: number; pageSize?: number }) => ({
+    kind: input?.kind ? String(input.kind).slice(0, 30) : "all",
+    accountId: input?.accountId ? String(input.accountId) : undefined,
+    page: Math.max(Number(input?.page ?? 1) || 1, 1),
+    pageSize: Math.min(Math.max(Number(input?.pageSize ?? 50) || 50, 10), 200),
+  }))
+  .handler(async ({ data, context }) => {
+    await assertAccess(context.supabase, context.userId);
+    const mod = await import("./bybit.server");
+    return mod.fetchLedgerPage(data);
+  });
+
+export const syncBybitLedger = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAccess(context.supabase, context.userId);
+    const mod = await import("./bybit.server");
+    try {
+      return { ok: true as const, ...(await mod.syncAllLedger()) };
+    } catch (e) {
+      const errs = await import("./bybit-errors");
+      const { message, code } = errs.normalizeBybitError(e);
+      return { ok: false as const, saved: 0, accounts: 0, error: message, errorCode: code };
+    }
+  });

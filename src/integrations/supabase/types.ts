@@ -383,6 +383,62 @@ export type Database = {
           },
         ]
       }
+      bybit_ledger: {
+        Row: {
+          account_id: string | null
+          amount: number
+          created_at: string
+          currency: string
+          detail: Json
+          direction: string
+          fee: number
+          id: string
+          kind: string
+          occurred_at: string
+          ref_id: string
+          status: string
+          title: string
+        }
+        Insert: {
+          account_id?: string | null
+          amount?: number
+          created_at?: string
+          currency?: string
+          detail?: Json
+          direction?: string
+          fee?: number
+          id?: string
+          kind: string
+          occurred_at?: string
+          ref_id: string
+          status?: string
+          title?: string
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number
+          created_at?: string
+          currency?: string
+          detail?: Json
+          direction?: string
+          fee?: number
+          id?: string
+          kind?: string
+          occurred_at?: string
+          ref_id?: string
+          status?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bybit_ledger_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "bybit_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       card_transactions: {
         Row: {
           amount: number
