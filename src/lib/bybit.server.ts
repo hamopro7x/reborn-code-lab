@@ -376,11 +376,11 @@ async function callCardPage(params: Record<string, unknown>, creds: Creds) {
 
 /** Fetch every card record ever recorded on the account, for every Bybit query type. */
 async function fetchCardPages(maxRows: number, creds: Creds): Promise<any[]> {
-  const merged = new Map<string, any>();
+  const merged = new Map<string, { row: any; sourcePriority: number; updatedAt: number }>();
   const pageSize = 100; // Bybit caps this endpoint at 100 per page (larger values silently return 10)
   const maxPages = Math.max(1, Math.ceil(maxRows / pageSize));
 
-  for (const type of CARD_QUERY_TYPES) {
+  for (const [typeIndex, type] of CARD_QUERY_TYPES.entries()) {
     try {
       for (let page = 1; page <= maxPages; page++) {
         const result = await callCardPage({
@@ -391,7 +391,18 @@ async function fetchCardPages(maxRows: number, creds: Creds): Promise<any[]> {
         const rows = Array.isArray(result?.data) ? result.data : [];
         for (const r of rows) {
           const k = cardRowKey(r);
-          if (!merged.has(k)) merged.set(k, r);
+          const updatedAt = Number(r?.txnUpdate ?? r?.updateTime ?? r?.updatedTime ?? r?.settleTime ?? r?.txnCreate ?? 0);
+          const current = merged.get(k);
+          // The same transaction can be returned by AUTH first and FINANCIAL
+          // later. Keep the provider's later/more final record instead of
+          // freezing the initial authorisation (usually pending).
+          if (
+            !current ||
+            typeIndex > current.sourcePriority ||
+            (typeIndex === current.sourcePriority && updatedAt > current.updatedAt)
+          ) {
+            merged.set(k, { row: r, sourcePriority: typeIndex, updatedAt });
+          }
         }
         const totalCount = Number(result?.totalCount ?? 0);
         const pageNo = Number(result?.pageNo ?? page);
@@ -405,7 +416,9 @@ async function fetchCardPages(maxRows: number, creds: Creds): Promise<any[]> {
     await sleep(400);
   }
 
-  return [...merged.values()].sort((a, b) => Number(b?.txnCreate ?? 0) - Number(a?.txnCreate ?? 0));
+  return [...merged.values()]
+    .map(({ row }) => row)
+    .sort((a, b) => Number(b?.txnCreate ?? 0) - Number(a?.txnCreate ?? 0));
 }
 
 async function callCard(limit: number, accountId?: string, creds?: Creds): Promise<any[]> {
@@ -981,12 +994,8 @@ export async function fetchCardTxnsPage(opts: {
 
   const scoped = (q: any) => (opts.accountId ? q.eq("account_id", opts.accountId) : q);
 
-  // The table renders anything that is neither failed nor refunded as "ناجحة",
-  // so the success filter must match that exact rule. Bybit stores freshly
-  // authorised purchases with tradeStatus 0 ("pending"), which is why the newest
-  // successful purchases used to be missing from this tab.
   const applyStatus = (q: any, s: "all" | "success" | "failed" | "refund") =>
-    s === "all" ? q : s === "success" ? q.in("status", ["success", "pending"]) : q.eq("status", s);
+    s === "all" ? q : q.eq("status", s);
 
   const countFor = async (s: "all" | "success" | "failed" | "refund") => {
     const { count } = await applyStatus(scoped(base().q.select("txn_id", { count: "exact", head: true })), s);
@@ -1018,6 +1027,9 @@ export async function fetchCardTxnsPage(opts: {
 /** Sync recent records and one resumable historical chunk outside the visible read. */
 export async function syncCardTxns(accountId?: string): Promise<{ added: number; backfillDone: boolean }> {
   const creds = await getCreds(accountId);
+  // An explicit sync must ask the provider again; cached authorisation rows can
+  // still say pending after the account history has already settled them.
+  cardCache.delete(accountId ?? "default");
   const liveRows = await callCard(100, accountId, creds);
   const rows = liveRows.map(mapCardTxn);
   await persistCardTxns(rows, accountId);
@@ -1621,6 +1633,9 @@ export async function syncAccountLedger(accountId: string): Promise<number> {
   const rows: LedgerInsert[] = [];
 
   // 1) card movements (purchases / refunds / fees) from the archive
+  // Refresh the account's own transaction archive first. The central ledger
+  // must mirror that source, not a stale pending snapshot from an earlier sync.
+  await syncCardTxns(accountId);
   const { data: cards } = await db
     .from("bybit_card_txns")
     .select("txn_id, merchant, amount, currency, status, txn_time, pan4, txn_type, detail")
@@ -1629,10 +1644,9 @@ export async function syncAccountLedger(accountId: string): Promise<number> {
     .limit(2000);
   for (const c of cards ?? []) {
     const t = mapStoredRow(c);
-    // Source of truth = the status persisted in the account's own card archive
-    // (the internal log). Never re-interpret it here.
-    const raw = String((c as { status?: string }).status ?? "").trim().toLowerCase();
-    const status = raw === "success" || raw === "failed" || raw === "refund" || raw === "pending" ? raw : t.status;
+    // This is the exact normalized row shown by the account's internal log.
+    // Do not derive a second status specifically for the central ledger.
+    const status = t.status;
     const isRefund = status === "refund";
     rows.push({
       account_id: accountId,

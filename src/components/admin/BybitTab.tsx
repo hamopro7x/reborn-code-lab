@@ -1665,8 +1665,8 @@ function CardTableInner({
                     {t.status === "refund" ? "استرداد" : t.type ? String(t.type) : "شراء"}
                   </td>
                   <td className="p-4">
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold ${t.status === "failed" ? "bg-red-500/15 text-red-400" : t.status === "refund" ? "bg-muted text-muted-foreground" : "bg-emerald-500/15 text-emerald-400"}`}>
-                      {t.status === "failed" ? "فاشلة" : t.status === "refund" ? "مسترد" : "ناجحة"}
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold ${t.status === "failed" ? "bg-red-500/15 text-red-400" : t.status === "refund" ? "bg-muted text-muted-foreground" : t.status === "pending" ? "bg-amber-500/15 text-amber-400" : "bg-emerald-500/15 text-emerald-400"}`}>
+                      {t.status === "failed" ? "فاشلة" : t.status === "refund" ? "مسترد" : t.status === "pending" ? "قيد التنفيذ" : "ناجحة"}
                     </span>
                   </td>
                   <td className="p-4 text-xs text-muted-foreground tabular-nums">{dt(t.time)}</td>
