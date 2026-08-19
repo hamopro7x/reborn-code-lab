@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { FintechBackdrop } from "@/components/admin/FintechBackdrop";
+import { useAdminBack } from "@/components/admin/back-nav";
 
 import { RefreshCw, CreditCard, Layers, ArrowUp, ArrowDown, ChevronDown, Loader2, Trash2, Plus, Download, Copy, Pencil, ChevronLeft, Wallet, ArrowDownUp, Search, BarChart3, Clock, PieChart } from "lucide-react";
 import {
@@ -308,6 +309,7 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
   const [selected, setSelected] = usePersistentState<string | null>("bybit_selected_account", null);
   // القسم يفتح على قائمة الحسابات مباشرة (أدمن أو موظف) بدون خطوة ضغط زيادة
   const [listOpen, setListOpen] = usePersistentState<boolean>("bybit_list_open", true);
+  const [_bkSelected, _bkSetSelected] = [null, null] as any;
   const [addOpen, setAddOpen] = useState(false);
   const [addError, setAddError] = useState<{ message: string; serverIp?: string | null } | null>(null);
   const [editAccount, setEditAccount] = useState<BybitAccountRow | null>(null);
