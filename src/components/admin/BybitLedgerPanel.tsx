@@ -181,7 +181,7 @@ function MerchantLogo({ name }: { name: string }) {
 
 /** Card brand mark. The brand itself always comes from the card record of the
  * main account (or the original transaction detail) — never chosen by hand. */
-function BrandBadge({ brand }: { brand: string }) {
+export function BrandBadge({ brand }: { brand: string }) {
   const b = String(brand ?? "").toLowerCase().replace(/\s+/g, "");
   if (b.includes("master")) {
     // Official Mastercard mark: red + yellow interlocking circles with the
@@ -265,7 +265,7 @@ const BAD_STATUS = new Set([
   "منتهية",
 ]);
 
-function statusBadge(kind: string, status: string) {
+export function statusBadge(kind: string, status: string) {
   const s = String(status || "").trim().toLowerCase();
   if (kind === "refund" || s === "refund" || s === "مسترد") return { cls: "bg-muted text-muted-foreground", text: "مسترد" };
   if (OK_STATUS.has(s)) return { cls: "bg-emerald-500/15 text-emerald-400", text: "ناجحة" };
@@ -579,7 +579,7 @@ export function BybitLedgerPanel() {
  * Simplified read-only summary matching the reference design: a single block with
  * the most important transaction fields only, no extra raw sections.
  */
-function LedgerRowDetails({ row, badgeText }: { row: any; badgeText: string }) {
+export function LedgerRowDetails({ row, badgeText }: { row: any; badgeText: string }) {
   const d = (row.detail ?? {}) as Record<string, unknown>;
   const cur = String(row.currency || "USD");
   const val = (k: string) => {
