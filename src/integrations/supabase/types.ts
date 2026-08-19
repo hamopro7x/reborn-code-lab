@@ -800,6 +800,30 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_face_enroll: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          image_path: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          image_path: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          image_path?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       exchange_rates: {
         Row: {
           currency_code: string
@@ -1336,6 +1360,147 @@ export type Database = {
         }
         Relationships: []
       }
+      webauthn_credentials: {
+        Row: {
+          created_at: string
+          credential_id: string
+          id: string
+          label: string | null
+          last_used_at: string | null
+          public_key: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          credential_id: string
+          id?: string
+          label?: string | null
+          last_used_at?: string | null
+          public_key: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          credential_id?: string
+          id?: string
+          label?: string | null
+          last_used_at?: string | null
+          public_key?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      work_auth_challenges: {
+        Row: {
+          challenge: string
+          created_at: string
+          expires_at: string
+          id: string
+          purpose: string
+          user_id: string
+        }
+        Insert: {
+          challenge: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          purpose: string
+          user_id: string
+        }
+        Update: {
+          challenge?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          purpose?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      work_shifts: {
+        Row: {
+          created_at: string
+          ended_at: string | null
+          ended_reason: string | null
+          id: string
+          started_at: string
+          user_id: string
+          verified_device: boolean
+          verified_face: boolean
+        }
+        Insert: {
+          created_at?: string
+          ended_at?: string | null
+          ended_reason?: string | null
+          id?: string
+          started_at?: string
+          user_id: string
+          verified_device?: boolean
+          verified_face?: boolean
+        }
+        Update: {
+          created_at?: string
+          ended_at?: string | null
+          ended_reason?: string | null
+          id?: string
+          started_at?: string
+          user_id?: string
+          verified_device?: boolean
+          verified_face?: boolean
+        }
+        Relationships: []
+      }
+      work_txn_assignments: {
+        Row: {
+          assign_mode: string
+          assigned_at: string
+          assigned_by: string | null
+          id: string
+          kind: string
+          ledger_id: string
+          occurred_at: string
+          shift_id: string | null
+          user_id: string
+        }
+        Insert: {
+          assign_mode?: string
+          assigned_at?: string
+          assigned_by?: string | null
+          id?: string
+          kind: string
+          ledger_id: string
+          occurred_at: string
+          shift_id?: string | null
+          user_id: string
+        }
+        Update: {
+          assign_mode?: string
+          assigned_at?: string
+          assigned_by?: string | null
+          id?: string
+          kind?: string
+          ledger_id?: string
+          occurred_at?: string
+          shift_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_txn_assignments_ledger_id_fkey"
+            columns: ["ledger_id"]
+            isOneToOne: true
+            referencedRelation: "bybit_ledger"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_txn_assignments_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "work_shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -1430,6 +1595,14 @@ export type Database = {
       prune_bybit_card_txns: {
         Args: { p_delete?: number; p_max?: number }
         Returns: number
+      }
+      work_assign_txn: {
+        Args: { p_ledger_id: string; p_shift_id: string }
+        Returns: Json
+      }
+      work_claim_shift: {
+        Args: { p_device: boolean; p_face: boolean }
+        Returns: Json
       }
     }
     Enums: {
