@@ -391,7 +391,7 @@ export function EmployeeWorkView() {
                     </td>
                     <td className="border border-border/40 px-4 py-4 whitespace-nowrap">{txnTime(Number(r.time))}</td>
                     <td className="border border-border/40 px-4 py-4 tabular-nums whitespace-nowrap">
-                      {last4((r.detail ?? {}) as Record<string, unknown>)}
+                      <Last4Cell detail={(r.detail ?? {}) as Record<string, unknown>} />
                     </td>
                     <td className="border border-border/40 px-4 py-4 whitespace-nowrap">
                       <button
