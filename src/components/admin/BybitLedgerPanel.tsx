@@ -2,7 +2,7 @@ import { Fragment, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ChevronDown } from "lucide-react";
-import { getBybitLedger, getBybitSpendTotals } from "@/lib/bybit.functions";
+import { getBybitCardBrands, getBybitLedger, getBybitSpendTotals } from "@/lib/bybit.functions";
 import { formatDateTime } from "@/lib/format";
 import usdtOfficial from "@/assets/usdt-official.png.asset.json";
 
@@ -307,6 +307,14 @@ export function BybitLedgerPanel() {
     refetchInterval: 120_000,
     refetchIntervalInBackground: false,
   });
+  const brandsFn = useServerFn(getBybitCardBrands);
+  const brandsQ = useQuery({
+    queryKey: ["bybit-card-brands"],
+    queryFn: () => brandsFn({ data: undefined as any }),
+    staleTime: 300_000,
+  });
+  const brands = (brandsQ.data?.brands ?? {}) as Record<string, string>;
+
   const t = totalsQ.data;
   const money = (n: unknown) => `$${Number(n ?? 0).toFixed(2)}`;
 
@@ -392,6 +400,9 @@ export function BybitLedgerPanel() {
                   const badge = statusBadge(r.kind, r.status);
                   const d = (r.detail ?? {}) as Record<string, unknown>;
                   const pan4 = String(d["pan4"] ?? "").trim();
+                  const brand = String(
+                    brands[pan4] ?? d["cardBrand"] ?? d["brand"] ?? d["cardType"] ?? "",
+                  );
                   const StatusCell = (
                     <td className="p-4">
                       <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold ${badge.cls}`}>
@@ -454,7 +465,7 @@ export function BybitLedgerPanel() {
                             <td className="p-4">
                               {pan4 ? (
                                 <span className="inline-flex items-center gap-2">
-                                  <VisaBadge />
+                                  <BrandBadge brand={brand} />
                                   <span className="font-bold tabular-nums">{pan4}</span>
                                 </span>
                               ) : (
