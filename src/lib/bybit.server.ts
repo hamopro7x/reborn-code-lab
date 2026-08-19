@@ -1736,9 +1736,12 @@ export async function syncAllLedger(): Promise<{ saved: number; accounts: number
 
 const GROUP_KINDS: Record<string, string[]> = {
   txns: ["card", "refund"],
-  onchain: ["deposit", "withdraw"],
-  internal: ["internal_in", "internal_out"],
-  p2p: ["p2p_buy", "p2p_sell"],
+  deposit: ["deposit"],
+  withdraw: ["withdraw"],
+  internal_in: ["internal_in"],
+  internal_out: ["internal_out"],
+  p2p_buy: ["p2p_buy"],
+  p2p_sell: ["p2p_sell"],
 };
 
 /** One page of the central ledger across all accounts. */
