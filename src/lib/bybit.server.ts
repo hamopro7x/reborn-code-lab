@@ -1639,16 +1639,30 @@ export async function syncAccountLedger(accountId: string): Promise<number> {
 
   // 1) card movements (purchases / refunds / fees) from the archive.
   // READ-ONLY: never refresh/modify the account's own archive from here.
-  // Every archived page is walked, so no transaction of the account is skipped,
-  // and the row is mirrored verbatim — same ids, amounts, merchant, status and
-  // stage as the account's own internal log.
+  // Incremental: the first run for an account walks the whole archive, later
+  // runs only re-read rows at or after the newest already-mirrored movement
+  // (minus a 48h overlap window so late status changes — pending -> success —
+  // are still picked up). Nothing is skipped, but a routine sync no longer
+  // re-reads and re-upserts tens of thousands of unchanged rows.
+  const { data: wm } = await db
+    .from("bybit_ledger")
+    .select("occurred_at")
+    .eq("account_id", accountId)
+    .in("kind", ["card", "refund"])
+    .order("occurred_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const sinceMs = wm?.occurred_at ? new Date(wm.occurred_at).getTime() - 48 * 3600_000 : 0;
+
   const CHUNK = 1000;
   const HARD_CAP = 200_000;
   for (let from = 0; from < HARD_CAP; from += CHUNK) {
-    const { data: cards } = await db
+    let cardQ = db
       .from("bybit_card_txns")
       .select("txn_id, merchant, amount, currency, status, txn_time, pan4, txn_type, detail")
-      .eq("account_id", accountId)
+      .eq("account_id", accountId);
+    if (sinceMs > 0) cardQ = cardQ.gte("txn_time", sinceMs);
+    const { data: cards } = await cardQ
       .order("txn_time", { ascending: false })
       .range(from, from + CHUNK - 1);
     const batch = cards ?? [];
