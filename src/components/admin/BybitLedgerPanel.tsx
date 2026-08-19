@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useRef, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ChevronDown, Loader2, RefreshCw } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { getBybitLedger, syncBybitLedger } from "@/lib/bybit.functions";
 import { formatDateTime } from "@/lib/format";
 
@@ -223,7 +223,7 @@ export function BybitLedgerPanel() {
           <div className="py-10 text-center text-sm text-muted-foreground">جارٍ التحميل…</div>
         ) : !rows.length ? (
           <div className="py-10 text-center text-sm text-muted-foreground">
-            لا توجد معاملات مسجّلة بعد — اضغط «تحديث السجل» لجلب حركات كل الحسابات.
+            جارٍ تحديث السجل تلقائياً — ستظهر المعاملات هنا بمجرد جلبها.
           </div>
         ) : (
           <div className="overflow-x-auto">
