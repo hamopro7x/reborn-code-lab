@@ -3,12 +3,17 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertAccess, assertAdmin } from "./bybit-access";
 
-/* ------------------------------- reads ------------------------------- */
+/* --------------------- admin-only management reads --------------------- */
+/**
+ * Role-Based Access Control lives here, NOT in the UI: every management read
+ * (shifts, full work table, productivity, P2P linking) requires admin. An
+ * employee calling these endpoints directly gets "Forbidden" and no data.
+ */
 
 export const getWorkCurrent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await assertAccess(context.supabase, context.userId);
+    await assertAdmin(context.supabase, context.userId);
     const mod = await import("./work.server");
     return { current: await mod.currentShift(), me: context.userId };
   });
@@ -19,7 +24,7 @@ export const getWorkShifts = createServerFn({ method: "POST" })
     limit: Math.min(Math.max(Number(input?.limit ?? 60) || 60, 1), 200),
   }))
   .handler(async ({ data, context }) => {
-    await assertAccess(context.supabase, context.userId);
+    await assertAdmin(context.supabase, context.userId);
     const mod = await import("./work.server");
     return mod.listShifts(data.limit);
   });
@@ -30,7 +35,7 @@ export const getWorkProductivity = createServerFn({ method: "POST" })
     days: Math.min(Math.max(Number(input?.days ?? 30) || 30, 1), 400),
   }))
   .handler(async ({ data, context }) => {
-    await assertAccess(context.supabase, context.userId);
+    await assertAdmin(context.supabase, context.userId);
     const mod = await import("./work.server");
     return mod.productivity(Date.now() - data.days * 86400_000);
   });
@@ -48,7 +53,7 @@ export const getWorkTable = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => tableSchema.parse(input ?? {}))
   .handler(async ({ data, context }) => {
-    await assertAccess(context.supabase, context.userId);
+    await assertAdmin(context.supabase, context.userId);
     const mod = await import("./work.server");
     return mod.workTable(data);
   });
@@ -56,10 +61,33 @@ export const getWorkTable = createServerFn({ method: "POST" })
 export const getWorkP2PPending = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await assertAccess(context.supabase, context.userId);
+    await assertAdmin(context.supabase, context.userId);
     const mod = await import("./work.server");
     const [orders, shifts] = await Promise.all([mod.pendingP2P(120), mod.shiftOptions(40)]);
     return { orders, shifts };
+  });
+
+/* ------------------------- employee-scoped reads ------------------------- */
+
+/** Only the caller's own open shift: no other employee's data is returned. */
+export const getMyWorkState = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAccess(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    return mod.myWorkState(context.userId);
+  });
+
+/** Transactions of the caller's own open shift only. */
+export const getMyShiftTxns = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { page?: number } | undefined) => ({
+    page: Math.min(Math.max(Number(input?.page ?? 1) || 1, 1), 10_000),
+  }))
+  .handler(async ({ data, context }) => {
+    await assertAccess(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    return mod.myShiftRows(context.userId, data.page, 50);
   });
 
 /* ------------------------------- claiming ------------------------------- */
