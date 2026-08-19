@@ -188,7 +188,7 @@ export function BybitLedgerPanel() {
   }, []);
 
   const rows = q.data?.rows ?? [];
-  const counts = (q.data?.counts ?? {}) as Record<string, number>;
+  
   const total = Number(q.data?.total ?? 0);
   const pages = Math.max(Math.ceil(total / pageSize), 1);
 
