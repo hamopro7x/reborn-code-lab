@@ -96,6 +96,19 @@ function last4(detail: Record<string, unknown>) {
   return raw ? raw.slice(-4) : "—";
 }
 
+/** Card brand mark + last 4 digits, as shown on the original card row. */
+function Last4Cell({ detail }: { detail: Record<string, unknown> }) {
+  const digits = last4(detail);
+  return (
+    <span className="flex items-center justify-center gap-2">
+      <span className="grid h-5 w-8 shrink-0 place-items-center rounded-[4px] bg-[#1434CB] text-[9px] font-black italic tracking-tight text-white">
+        VISA
+      </span>
+      <span className="tabular-nums">{digits}</span>
+    </span>
+  );
+}
+
 /** «المعاملات» in the employee view = card (visa) transactions only. */
 const isCardTxn = (kind: unknown) => /^(card|refund)$/i.test(String(kind ?? ""));
 
@@ -378,7 +391,7 @@ export function EmployeeWorkView() {
                     </td>
                     <td className="border border-border/40 px-4 py-4 whitespace-nowrap">{txnTime(Number(r.time))}</td>
                     <td className="border border-border/40 px-4 py-4 tabular-nums whitespace-nowrap">
-                      {last4((r.detail ?? {}) as Record<string, unknown>)}
+                      <Last4Cell detail={(r.detail ?? {}) as Record<string, unknown>} />
                     </td>
                     <td className="border border-border/40 px-4 py-4 whitespace-nowrap">
                       <button
