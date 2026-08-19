@@ -371,17 +371,24 @@ export function EmployeeWorkView() {
                       {num(Math.abs(Number(r.amount)))} {r.currency}
                     </td>
                     <td className="border border-border/40 px-4 py-4 tabular-nums whitespace-nowrap">
-                      {r.detail?.paidWithFiat ? String(r.detail.paidWithFiat) : "—"}
+                      <EntryCell row={r} field="egp" onSaved={refetchRows} />
                     </td>
                     <td className="border border-border/40 px-4 py-4 tabular-nums whitespace-nowrap">
-                      {r.detail?.quantity ? String(r.detail.quantity) : num(Math.abs(Number(r.amount)), 4)}
+                      <EntryCell row={r} field="quantity" onSaved={refetchRows} />
                     </td>
                     <td className="border border-border/40 px-4 py-4 whitespace-nowrap">{txnTime(Number(r.time))}</td>
                     <td className="border border-border/40 px-4 py-4 tabular-nums whitespace-nowrap">
                       {last4((r.detail ?? {}) as Record<string, unknown>)}
                     </td>
-                    <td className="border border-border/40 px-4 py-4 whitespace-nowrap text-muted-foreground">
-                      {String(r.status || "—")}
+                    <td className="border border-border/40 px-4 py-4 whitespace-nowrap">
+                      <button
+                        type="button"
+                        onClick={() => setDetailRow(r)}
+                        className="mx-auto flex items-center gap-1.5 rounded-full border border-border/60 bg-card/60 px-3 py-1.5 text-[11px] font-bold transition hover:text-[oklch(0.72_0.16_250)]"
+                      >
+                        <Eye className="size-3.5" />
+                        التفاصيل
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -399,6 +406,8 @@ export function EmployeeWorkView() {
           </table>
         </div>
       </div>
+
+      <TxnDetailsDialog row={detailRow} onClose={() => setDetailRow(null)} />
     </div>
   );
 }
