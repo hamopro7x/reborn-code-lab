@@ -264,9 +264,7 @@ function CoinBalanceCard({ coin }: { coin: CoinRow }) {
 
           {isUsdt ? (
             <span className="relative grid size-[52px] shrink-0 place-items-center rounded-full bg-[oklch(0.62_0.15_167)]" aria-label="USDT">
-              <span className="grid size-[26px] place-items-center rounded-[50%] border-[3px] border-white">
-                <span className="h-[18px] w-[3px] rounded-full bg-white" />
-              </span>
+              <span className="h-[22px] w-[4px] rounded-full bg-white" />
             </span>
           ) : (
             <span className="grid size-[52px] shrink-0 place-items-center rounded-full bg-[oklch(0.18_0.03_285)] border border-border/50">
