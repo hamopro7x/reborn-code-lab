@@ -7,9 +7,12 @@ import { formatDateTime } from "@/lib/format";
 
 const GROUPS: { key: string; label: string }[] = [
   { key: "txns", label: "المعاملات" },
-  { key: "onchain", label: "السحب والإيداع الخارجي" },
-  { key: "internal", label: "السحب والإيداع الداخلي" },
-  { key: "p2p", label: "طلبات P2P" },
+  { key: "deposit", label: "الإيداع الخارجي" },
+  { key: "withdraw", label: "السحب الخارجي" },
+  { key: "internal_in", label: "الإيداع الداخلي" },
+  { key: "internal_out", label: "التحويل الداخلي" },
+  { key: "p2p_buy", label: "شراء P2P" },
+  { key: "p2p_sell", label: "بيع P2P" },
 ];
 
 const STATUSES: { key: string; label: string }[] = [
