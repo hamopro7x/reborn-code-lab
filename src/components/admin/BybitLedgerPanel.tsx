@@ -245,6 +245,17 @@ export function BybitLedgerPanel() {
   const total = Number(q.data?.total ?? 0);
   const pages = Math.max(Math.ceil(total / pageSize), 1);
 
+  const totalsFn = useServerFn(getBybitSpendTotals);
+  const totalsQ = useQuery({
+    queryKey: ["bybit-spend-totals"],
+    queryFn: () => totalsFn({ data: undefined as any }),
+    staleTime: 60_000,
+    refetchInterval: 120_000,
+    refetchIntervalInBackground: false,
+  });
+  const t = totalsQ.data;
+  const money = (n: unknown) => `$${Number(n ?? 0).toFixed(2)}`;
+
   return (
     <div className="relative z-10 space-y-3" dir="rtl">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -265,6 +276,25 @@ export function BybitLedgerPanel() {
           ))}
         </div>
       </div>
+
+      {/* Aggregated spend / visa fees across every visa account */}
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="rounded-2xl border border-border/60 bg-card/70 p-3">
+          <div className="text-xs font-bold text-muted-foreground mb-2 px-1">الإنفاق</div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Stat label="الإنفاق الشهري" value={money(t?.monthSpend)} />
+            <Stat label="الإنفاق اليومي" value={money(t?.daySpend)} />
+          </div>
+        </div>
+        <div className="rounded-2xl border border-border/60 bg-card/70 p-3">
+          <div className="text-xs font-bold text-muted-foreground mb-2 px-1">رسوم الفيزا</div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Stat label="رسوم الفيزا الشهرية" value={money(t?.monthFees)} />
+            <Stat label="رسوم الفيزا اليومية" value={money(t?.dayFees)} />
+          </div>
+        </div>
+      </div>
+
 
 
       <div className="rounded-3xl border border-border/60 bg-card/70 overflow-hidden">
