@@ -816,8 +816,13 @@ function mapCardTxn(t: any): CardTxn {
         settleAmount: pick(t, ["settleAmount", "settlementAmount"]),
         settleCurrency: pick(t, ["settleCurrency", "settlementCurrency"]),
         usdAmount: pick(t, ["usdAmount", "amountUsd", "usdValue", "convertUsdAmount"]),
-        foreignTxnFee: t.foreignTxnFee ?? t.fee ?? null,
-        feeAmount: pick(t, ["feeAmount", "fee", "handlingFee"]),
+        // Fees exactly as the source account returns them (no math, no fallbacks).
+        totalFees: pick(t, ["totalFees"]),
+        foreignTransactionFee: pick(t, ["foreignTransactionFee", "foreignTxnFee"]),
+        interchangeFee: pick(t, ["interchangeFee"]),
+        withdrawalFee: pick(t, ["withdrawalFee"]),
+        fxPad: pick(t, ["fxPad"]),
+        feeAmount: pick(t, ["totalFees", "feeAmount", "fee", "handlingFee"]),
         feeCurrency: pick(t, ["feeCurrency", "foreignTxnFeeCurrency"]),
         tax: pick(t, ["tax", "taxAmount"]),
         shipping: pick(t, ["shipping", "shippingAmount"]),
@@ -1655,7 +1660,11 @@ export async function syncAccountLedger(accountId: string): Promise<number> {
       const isRefund = status === "refund";
       const src = (t.detail ?? {}) as Record<string, any>;
       const { raw: _raw, ...original } = src;
-      const feeVal = num(src["feeAmount"] ?? src["foreignTxnFee"] ?? src["fee"]);
+      // Fee comes straight from the source account's own fee field (totalFees).
+      const rawSrc = (src["raw"] ?? {}) as Record<string, any>;
+      const feeRaw =
+        src["totalFees"] ?? rawSrc["totalFees"] ?? src["feeAmount"] ?? rawSrc["foreignTransactionFee"] ?? null;
+      const feeVal = feeRaw === null || feeRaw === undefined || feeRaw === "" ? 0 : num(feeRaw);
       rows.push({
         account_id: accountId,
         kind: isRefund ? "refund" : "card",
@@ -1672,6 +1681,8 @@ export async function syncAccountLedger(accountId: string): Promise<number> {
         detail: sanitize({
           ...original,
           pan4: t.pan4 ?? null,
+          totalFees: feeRaw,
+          foreignTransactionFee: src["foreignTransactionFee"] ?? rawSrc["foreignTransactionFee"] ?? null,
           type: t.type ?? null,
           merchantName: src["merchantName"] ?? t.merchant ?? null,
           basicAmount: src["basicAmount"] ?? t.amount,

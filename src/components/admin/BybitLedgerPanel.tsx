@@ -485,10 +485,9 @@ function LedgerRowDetails({ row, badgeText }: { row: any; badgeText: string }) {
     add("حالة المعاملة", String(row.status || "") || null);
     add("مرحلة المعاملة", val("stage"));
     add("آخر 4 أرقام للبطاقة", val("pan4"));
-    add(
-      "الرسوم",
-      Number(row.fee) ? `${String(val("feeCurrency") ?? cur)} ${amt(row.fee)}` : `${cur} ${amt(0)}`,
-    );
+    // Fee value exactly as the source account returns it; blank when absent.
+    const feeSrc = val("totalFees") ?? val("feeAmount") ?? val("foreignTransactionFee");
+    add("الرسوم", feeSrc ? `${String(val("feeCurrency") ?? cur)} ${amt(Number(feeSrc))}` : null);
   } else if (row.kind === "deposit" || row.kind === "withdraw") {
     add("نوع السلسلة", val("chain"));
     add("العنوان", val("address"));
