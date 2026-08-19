@@ -410,9 +410,11 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
             <span className="text-xs text-muted-foreground">فتح ›</span>
           </div>
         </button>
+        <BybitLedgerPanel />
       </div>
     );
   }
+
 
   return (
     <div className="relative space-y-4 text-right" dir="rtl">
