@@ -542,8 +542,8 @@ function AccountSummaryCard({
             </div>
           </div>
 
-          {/* left cluster (visually): gauge + cashback */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          {/* left cluster (visually): gauge on the far left, cashback to its right */}
+          <div dir="ltr" className="flex items-center gap-2 sm:gap-3">
             <div className="flex items-center shrink-0">
               <div className="relative grid size-[80px] sm:size-[92px] place-items-center">
                 {/* outer tick ring */}
