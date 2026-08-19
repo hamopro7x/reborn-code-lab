@@ -979,8 +979,9 @@ function BybitAccountView({ isAdmin, accountId, accountName, onBack }: { isAdmin
 
       {/* Balance cards */}
       {show("balance") && (
-        <div className="rounded-2xl border border-border/60 bg-card/70 p-4">
-          <div className="flex flex-wrap items-stretch gap-3">
+        <div className="relative isolate overflow-hidden rounded-2xl border border-border/60 bg-card/70 p-4">
+          <FintechBackdrop className="rounded-2xl opacity-70" />
+          <div className="relative z-10 flex flex-wrap items-stretch gap-3">
             {coinBalances.map((c) => (
               <div
                 key={c.coin}
@@ -1004,22 +1005,29 @@ function BybitAccountView({ isAdmin, accountId, accountName, onBack }: { isAdmin
 
       {show("spend") && (
         <div className="grid gap-3 md:grid-cols-2">
-          <div className="rounded-2xl border border-border/60 bg-card/70 p-3">
-            <div className="text-xs font-bold text-muted-foreground mb-2 px-1">الإنفاق</div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Stat label="الإنفاق الشهري" value={`$${monthSpend.toFixed(2)}`} />
-              <Stat label="الإنفاق اليومي" value={`$${daySpend.toFixed(2)}`} />
+          <div className="relative isolate overflow-hidden rounded-2xl border border-border/60 bg-card/70 p-3">
+            <FintechBackdrop className="rounded-2xl opacity-70" />
+            <div className="relative z-10">
+              <div className="text-xs font-bold text-muted-foreground mb-2 px-1">الإنفاق</div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Stat label="الإنفاق الشهري" value={`$${monthSpend.toFixed(2)}`} />
+                <Stat label="الإنفاق اليومي" value={`$${daySpend.toFixed(2)}`} />
+              </div>
             </div>
           </div>
-          <div className="rounded-2xl border border-border/60 bg-card/70 p-3">
-            <div className="text-xs font-bold text-muted-foreground mb-2 px-1">رسوم الفيزا</div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Stat label="رسوم الفيزا الشهرية" value={`$${monthFees.toFixed(2)}`} />
-              <Stat label="رسوم الفيزا اليومية" value={`$${dayFees.toFixed(2)}`} />
+          <div className="relative isolate overflow-hidden rounded-2xl border border-border/60 bg-card/70 p-3">
+            <FintechBackdrop className="rounded-2xl opacity-70" />
+            <div className="relative z-10">
+              <div className="text-xs font-bold text-muted-foreground mb-2 px-1">رسوم الفيزا</div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Stat label="رسوم الفيزا الشهرية" value={`$${monthFees.toFixed(2)}`} />
+                <Stat label="رسوم الفيزا اليومية" value={`$${dayFees.toFixed(2)}`} />
+              </div>
             </div>
           </div>
         </div>
       )}
+
 
 
 
