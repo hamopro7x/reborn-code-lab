@@ -23,8 +23,6 @@ import {
   assignWorkTxn,
   saveEmployeeFace,
   listEmployeeFaces,
-  getMyWorkState,
-  getMyShiftTxns,
 } from "@/lib/work.functions";
 import { adminListEmployees } from "@/lib/courses.functions";
 import { EmployeeWorkView } from "@/components/admin/EmployeeWorkView";
