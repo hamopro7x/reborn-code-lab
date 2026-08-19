@@ -2,9 +2,21 @@ import { Fragment, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ChevronDown } from "lucide-react";
-import { getBybitLedger } from "@/lib/bybit.functions";
+import { getBybitLedger, getBybitSpendTotals } from "@/lib/bybit.functions";
 import { formatDateTime } from "@/lib/format";
 import usdtOfficial from "@/assets/usdt-official.png.asset.json";
+
+/** Same stat tile as the source visa account cards. */
+function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
+  return (
+    <div className="rounded-2xl border border-border/60 bg-background/60 p-4">
+      <div className="text-xs text-muted-foreground mb-1">{label}</div>
+      <div className="text-2xl font-black">{value}</div>
+      {hint ? <div className="text-[11px] text-muted-foreground mt-1">{hint}</div> : null}
+    </div>
+  );
+}
+
 
 /** Coin cell with the official token icon, matching the source account layout. */
 function CoinCell({ coin }: { coin: string }) {
@@ -245,6 +257,17 @@ export function BybitLedgerPanel() {
   const total = Number(q.data?.total ?? 0);
   const pages = Math.max(Math.ceil(total / pageSize), 1);
 
+  const totalsFn = useServerFn(getBybitSpendTotals);
+  const totalsQ = useQuery({
+    queryKey: ["bybit-spend-totals"],
+    queryFn: () => totalsFn({ data: undefined as any }),
+    staleTime: 60_000,
+    refetchInterval: 120_000,
+    refetchIntervalInBackground: false,
+  });
+  const t = totalsQ.data;
+  const money = (n: unknown) => `$${Number(n ?? 0).toFixed(2)}`;
+
   return (
     <div className="relative z-10 space-y-3" dir="rtl">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -265,6 +288,25 @@ export function BybitLedgerPanel() {
           ))}
         </div>
       </div>
+
+      {/* Aggregated spend / visa fees across every visa account */}
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="rounded-2xl border border-border/60 bg-card/70 p-3">
+          <div className="text-xs font-bold text-muted-foreground mb-2 px-1">الإنفاق</div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Stat label="الإنفاق الشهري" value={money(t?.monthSpend)} />
+            <Stat label="الإنفاق اليومي" value={money(t?.daySpend)} />
+          </div>
+        </div>
+        <div className="rounded-2xl border border-border/60 bg-card/70 p-3">
+          <div className="text-xs font-bold text-muted-foreground mb-2 px-1">رسوم الفيزا</div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Stat label="رسوم الفيزا الشهرية" value={money(t?.monthFees)} />
+            <Stat label="رسوم الفيزا اليومية" value={money(t?.dayFees)} />
+          </div>
+        </div>
+      </div>
+
 
 
       <div className="rounded-3xl border border-border/60 bg-card/70 overflow-hidden">
