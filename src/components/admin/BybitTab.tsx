@@ -979,9 +979,8 @@ function BybitAccountView({ isAdmin, accountId, accountName, onBack }: { isAdmin
 
       {/* Balance cards */}
       {show("balance") && (
-        <div className="relative isolate overflow-hidden rounded-2xl border border-border/60 bg-card/70 p-4">
-          <FintechBackdrop className="rounded-2xl opacity-70" />
-          <div className="relative z-10 flex flex-wrap items-stretch gap-3">
+        <div className="rounded-2xl border border-border/60 bg-card/70 p-4">
+          <div className="flex flex-wrap items-stretch gap-3">
             {coinBalances.map((c) => (
               <div
                 key={c.coin}
@@ -1005,29 +1004,22 @@ function BybitAccountView({ isAdmin, accountId, accountName, onBack }: { isAdmin
 
       {show("spend") && (
         <div className="grid gap-3 md:grid-cols-2">
-          <div className="relative isolate overflow-hidden rounded-2xl border border-border/60 bg-card/70 p-3">
-            <FintechBackdrop className="rounded-2xl opacity-70" />
-            <div className="relative z-10">
-              <div className="text-xs font-bold text-muted-foreground mb-2 px-1">الإنفاق</div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Stat label="الإنفاق الشهري" value={`$${monthSpend.toFixed(2)}`} />
-                <Stat label="الإنفاق اليومي" value={`$${daySpend.toFixed(2)}`} />
-              </div>
+          <div className="rounded-2xl border border-border/60 bg-card/70 p-3">
+            <div className="text-xs font-bold text-muted-foreground mb-2 px-1">الإنفاق</div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Stat label="الإنفاق الشهري" value={`$${monthSpend.toFixed(2)}`} />
+              <Stat label="الإنفاق اليومي" value={`$${daySpend.toFixed(2)}`} />
             </div>
           </div>
-          <div className="relative isolate overflow-hidden rounded-2xl border border-border/60 bg-card/70 p-3">
-            <FintechBackdrop className="rounded-2xl opacity-70" />
-            <div className="relative z-10">
-              <div className="text-xs font-bold text-muted-foreground mb-2 px-1">رسوم الفيزا</div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Stat label="رسوم الفيزا الشهرية" value={`$${monthFees.toFixed(2)}`} />
-                <Stat label="رسوم الفيزا اليومية" value={`$${dayFees.toFixed(2)}`} />
-              </div>
+          <div className="rounded-2xl border border-border/60 bg-card/70 p-3">
+            <div className="text-xs font-bold text-muted-foreground mb-2 px-1">رسوم الفيزا</div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Stat label="رسوم الفيزا الشهرية" value={`$${monthFees.toFixed(2)}`} />
+              <Stat label="رسوم الفيزا اليومية" value={`$${dayFees.toFixed(2)}`} />
             </div>
           </div>
         </div>
       )}
-
 
 
 
@@ -1302,9 +1294,7 @@ function BybitCardArt({ c, onDelete, canDelete = true, onEdit }: { c: any; onDel
 function CardsPanel({ q, isAdmin, onAdd, onDelete, onEdit }: { q: any; isAdmin: boolean; onAdd: () => void; onDelete: (id: string) => void; onEdit?: (c: any) => void }) {
   const list = ((q.data as any)?.cards ?? []) as any[];
   return (
-    <div className="relative isolate overflow-hidden rounded-3xl border border-border/60 bg-card/70 p-4">
-      <FintechBackdrop className="opacity-70" />
-      <div className="relative z-10">
+    <div className="rounded-3xl border border-border/60 bg-card/70 p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="text-sm font-bold">بطاقاتي</h2>
         {isAdmin && (
@@ -1326,9 +1316,7 @@ function CardsPanel({ q, isAdmin, onAdd, onDelete, onEdit }: { q: any; isAdmin: 
           ))}
         </div>
       )}
-      </div>
     </div>
-
   );
 }
 
@@ -1370,10 +1358,8 @@ function AccountInfoCard({ isAdmin, accountId }: { isAdmin: boolean; accountId?:
   ];
 
   return (
-    <div className="relative isolate overflow-hidden rounded-3xl border border-border/60 bg-card/70 p-4">
-      <FintechBackdrop className="opacity-70" />
-      <div className="relative z-10 mb-4 flex items-center justify-between gap-2">
-
+    <div className="rounded-3xl border border-border/60 bg-card/70 p-4">
+      <div className="mb-4 flex items-center justify-between gap-2">
         <h3 className="text-sm font-bold">بيانات الحساب</h3>
         {!isAdmin ? null : edit ? (
           <div className="flex gap-2">
@@ -1386,7 +1372,7 @@ function AccountInfoCard({ isAdmin, accountId }: { isAdmin: boolean; accountId?:
           <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setEdit(true)}>تعديل</Button>
         )}
       </div>
-      <div className="relative z-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {fields.map((f) => (
           <div key={f.key} className="flex flex-col gap-1.5 rounded-2xl border border-border/60 bg-background/40 p-3">
             <span className="text-xs text-muted-foreground">{f.label}</span>
