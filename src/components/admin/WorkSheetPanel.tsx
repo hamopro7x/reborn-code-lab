@@ -75,7 +75,8 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
 
   // Employee = execution view only. No shifts history, no productivity,
   // no full work table, no other employees' data.
-  if (!isAdmin) return <EmployeeWork />;
+  if (!isAdmin) return <EmployeeWorkView />;
+
 
   return (
     <div className="space-y-4" dir="rtl">
