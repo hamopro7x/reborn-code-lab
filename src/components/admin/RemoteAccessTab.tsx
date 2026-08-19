@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAdminBack } from "@/components/admin/back-nav";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -157,9 +158,6 @@ export function RemoteAccessTab() {
             )}
             <Button variant="outline" size="sm" onClick={() => setFrameBlocked((v) => !v)}>
               {frameBlocked ? "إعادة العرض داخل الموقع" : "العرض مش ظاهر؟"}
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setSession(null)}>
-              رجوع للأجهزة
             </Button>
           </div>
         </div>
