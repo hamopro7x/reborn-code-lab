@@ -398,8 +398,9 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
                 <Wallet className="size-5" />
               </span>
               <div>
-                <div className="text-sm font-bold">حسابات بي بت</div>
                 <div className="text-[11px] text-muted-foreground">
+                  {accounts.isLoading ? "جاري التحميل…" : `${list.length} حساب مرتبط`}
+                </div>
                   {accounts.isLoading ? "جاري التحميل…" : `${list.length} حساب مربوط`}
                 </div>
               </div>
