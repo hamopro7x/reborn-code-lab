@@ -93,21 +93,12 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
 
 /* ------------------------------- الشغل الآن ------------------------------- */
 
-function NowTab({ isAdmin }: { isAdmin: boolean }) {
-  const qc = useQueryClient();
-  const currentFn = useServerFn(getWorkCurrent);
+/** Shared claim card (face + device biometric). Contains no management data. */
+function ClaimCard({ adminHint, onClaimed }: { adminHint?: boolean; onClaimed: () => void }) {
   const challengeFn = useServerFn(getWorkAuthChallenge);
   const registerFn = useServerFn(registerWorkDevice);
   const claimFn = useServerFn(claimWorkShift);
   const [busy, setBusy] = useState<string | null>(null);
-
-  const q = useQuery({
-    queryKey: ["work-current"],
-    queryFn: () => currentFn({ data: undefined as any }),
-    refetchInterval: 20_000,
-  });
-  const cur = q.data?.current ?? null;
-  const me = q.data?.me;
 
   const enrollDevice = async () => {
     if (!biometricSupported()) return toast.error("هذا الجهاز/المتصفح لا يدعم المصادقة البيومترية");
@@ -140,14 +131,55 @@ function NowTab({ isAdmin }: { isAdmin: boolean }) {
         return;
       }
       toast.success("تم استلام الشغل");
-      qc.invalidateQueries({ queryKey: ["work-current"] });
-      qc.invalidateQueries({ queryKey: ["work-shifts"] });
+      onClaimed();
     } catch (e) {
       toast.error((e as Error).message || "فشل استلام الشغل");
     } finally {
       setBusy(null);
     }
   };
+
+  return (
+    <div className="rounded-2xl border border-border/60 bg-card/70 p-4 space-y-3">
+      <div className="flex items-center gap-2 text-sm font-black">
+        <ShieldCheck className="size-4 text-primary" />
+        استلام الشغل (تحقق الوجه + مصادقة الجهاز)
+      </div>
+      <p className="text-xs leading-6 text-muted-foreground">
+        استلام الشغل يحتاج تحقق الوجه بالكاميرا ثم مصادقة الجهاز (Face ID / Touch ID / بصمة أندرويد).
+        بعد النجاح ينتهي الشفت السابق تلقائيًا ويبدأ شفتك في نفس اللحظة. لا يتم تخزين أي بصمة.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <Button onClick={() => void claim()} disabled={busy !== null}>
+          {busy === "claim" ? <Loader2 className="size-4 animate-spin" /> : <Camera className="size-4" />}
+          استلام الشغل
+        </Button>
+        <Button variant="outline" onClick={() => void enrollDevice()} disabled={busy !== null}>
+          {busy === "device" ? <Loader2 className="size-4 animate-spin" /> : null}
+          تسجيل مصادقة هذا الجهاز
+        </Button>
+      </div>
+      {adminHint ? (
+        <p className="text-[11px] text-muted-foreground">
+          لا بد من تسجيل صورة الوجه المرجعية للموظف من تبويب «تسجيل الوجه» قبل أول استلام.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/** Admin-only overview of who is holding the work now. */
+function NowTab() {
+  const qc = useQueryClient();
+  const currentFn = useServerFn(getWorkCurrent);
+
+  const q = useQuery({
+    queryKey: ["work-current"],
+    queryFn: () => currentFn({ data: undefined as any }),
+    refetchInterval: 20_000,
+  });
+  const cur = q.data?.current ?? null;
+  const me = q.data?.me;
 
   return (
     <div className="space-y-4">
@@ -170,31 +202,13 @@ function NowTab({ isAdmin }: { isAdmin: boolean }) {
         )}
       </div>
 
-      <div className="rounded-2xl border border-border/60 bg-card/70 p-4 space-y-3">
-        <div className="flex items-center gap-2 text-sm font-black">
-          <ShieldCheck className="size-4 text-primary" />
-          استلام الشغل (تحقق الوجه + مصادقة الجهاز)
-        </div>
-        <p className="text-xs leading-6 text-muted-foreground">
-          استلام الشغل يحتاج تحقق الوجه بالكاميرا ثم مصادقة الجهاز (Face ID / Touch ID / بصمة أندرويد).
-          بعد النجاح ينتهي شفت الموظف السابق تلقائيًا ويبدأ شفتك في نفس اللحظة. لا يتم تخزين أي بصمة.
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={() => void claim()} disabled={busy !== null}>
-            {busy === "claim" ? <Loader2 className="size-4 animate-spin" /> : <Camera className="size-4" />}
-            استلام الشغل
-          </Button>
-          <Button variant="outline" onClick={() => void enrollDevice()} disabled={busy !== null}>
-            {busy === "device" ? <Loader2 className="size-4 animate-spin" /> : null}
-            تسجيل مصادقة هذا الجهاز
-          </Button>
-        </div>
-        {isAdmin ? (
-          <p className="text-[11px] text-muted-foreground">
-            لا بد من تسجيل صورة الوجه المرجعية للموظف من تبويب «تسجيل الوجه» قبل أول استلام.
-          </p>
-        ) : null}
-      </div>
+      <ClaimCard
+        adminHint
+        onClaimed={() => {
+          qc.invalidateQueries({ queryKey: ["work-current"] });
+          qc.invalidateQueries({ queryKey: ["work-shifts"] });
+        }}
+      />
     </div>
   );
 }
