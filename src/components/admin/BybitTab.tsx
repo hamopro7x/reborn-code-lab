@@ -502,7 +502,7 @@ function AccountSummaryCard({
         {/* Top row — identity on right (RTL), gauge on left (visual) */}
         <div className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
           {/* right cluster (visually): identity + action icons */}
-          <div className="flex items-start justify-end gap-2 sm:gap-3">
+          <div className="flex items-start justify-start gap-2 sm:gap-3">
             <div className="min-w-0 text-right pt-1">
               <div className="flex items-center justify-end gap-1">
                 {isAdmin && (
@@ -581,7 +581,7 @@ function AccountSummaryCard({
         </div>
 
         {/* Balances — bottom right aligned, fixed height */}
-        <div className="mr-auto h-[120px] min-h-[120px] max-h-[120px] w-full max-w-[240px] shrink-0 overflow-hidden">
+        <div className="ml-auto h-[120px] min-h-[120px] max-h-[120px] w-full max-w-[240px] shrink-0 overflow-hidden">
           {q.isLoading ? (
             <div className="relative h-full w-full rounded-[24px] p-[5px] bg-[radial-gradient(120%_120%_at_50%_0%,oklch(0.55_0.13_170/0.28),transparent_70%)]">
               <div className="grid h-full w-full place-items-center rounded-[20px] bg-[oklch(0.055_0.008_190)] shadow-[0_0_28px_-10px_oklch(0.6_0.14_170/0.35)]">
