@@ -23,40 +23,48 @@ function CoinCell({ coin }: { coin: string }) {
   );
 }
 
-/** Chain cell with a network badge icon next to the chain name. */
-const CHAIN_STYLES: Record<string, { bg: string; fg: string; label: string }> = {
-  BSC: { bg: "#F0B90B", fg: "#1A1A1A", label: "B" },
-  BNB: { bg: "#F0B90B", fg: "#1A1A1A", label: "B" },
-  ETH: { bg: "#627EEA", fg: "#FFFFFF", label: "E" },
-  TRX: { bg: "#EF0027", fg: "#FFFFFF", label: "T" },
-  APTOS: { bg: "#FFFFFF", fg: "#111111", label: "A" },
-  TON: { bg: "#0098EA", fg: "#FFFFFF", label: "T" },
-  SOL: { bg: "#14F195", fg: "#0B1B14", label: "S" },
-  ARBI: { bg: "#28A0F0", fg: "#FFFFFF", label: "A" },
-  OP: { bg: "#FF0420", fg: "#FFFFFF", label: "O" },
-  MATIC: { bg: "#8247E5", fg: "#FFFFFF", label: "P" },
-  POLYGON: { bg: "#8247E5", fg: "#FFFFFF", label: "P" },
-};
+/** Official network logos (same marks Bybit uses), keyed by chain name fragment. */
+const CHAIN_LOGO_BASE = "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains";
+const CHAIN_LOGOS: [string, string][] = [
+  ["BSC", "smartchain"],
+  ["BNB", "smartchain"],
+  ["BEP20", "smartchain"],
+  ["APTOS", "aptos"],
+  ["APT", "aptos"],
+  ["TON", "ton"],
+  ["ERC20", "ethereum"],
+  ["ETH", "ethereum"],
+  ["TRC20", "tron"],
+  ["TRX", "tron"],
+  ["TRON", "tron"],
+  ["SOL", "solana"],
+  ["POLYGON", "polygon"],
+  ["MATIC", "polygon"],
+  ["ARB", "arbitrum"],
+  ["OP", "optimism"],
+];
 
 function ChainCell({ chain }: { chain: string }) {
   const raw = String(chain || "").trim();
+  const [failed, setFailed] = useState(false);
   if (!raw) return <span className="text-muted-foreground">—</span>;
   const key = raw.toUpperCase();
-  const style =
-    CHAIN_STYLES[key] ??
-    Object.entries(CHAIN_STYLES).find(([k]) => key.includes(k))?.[1] ?? {
-      bg: "#3B82F6",
-      fg: "#FFFFFF",
-      label: key.slice(0, 1),
-    };
+  const slug = CHAIN_LOGOS.find(([k]) => key.includes(k))?.[1];
   return (
     <span className="inline-flex items-center gap-2">
-      <span
-        className="grid size-5 shrink-0 place-items-center rounded-full text-[10px] font-black leading-none"
-        style={{ backgroundColor: style.bg, color: style.fg }}
-      >
-        {style.label}
-      </span>
+      {slug && !failed ? (
+        <img
+          src={`${CHAIN_LOGO_BASE}/${slug}/info/logo.png`}
+          alt={key}
+          className="size-5 shrink-0 rounded-full"
+          loading="lazy"
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <span className="grid size-5 shrink-0 place-items-center rounded-full bg-muted text-[9px] font-black">
+          {key.slice(0, 2)}
+        </span>
+      )}
       <span className="text-xs font-bold text-blue-400">{key}</span>
     </span>
   );
