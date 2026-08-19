@@ -3,7 +3,20 @@ import { createRouter } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
 
 export const getRouter = () => {
-  const queryClient = new QueryClient();
+  // Shared cache defaults: a section re-opened within 30s reuses its data
+  // instead of re-hitting the API, and focus changes no longer refetch
+  // everything. Individual queries can still opt into shorter staleTimes.
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: 30_000,
+        gcTime: 5 * 60_000,
+        refetchOnWindowFocus: false,
+        refetchOnMount: true,
+        retry: 1,
+      },
+    },
+  });
 
   const router = createRouter({
     routeTree,
