@@ -1636,34 +1636,18 @@ export async function syncAccountLedger(accountId: string): Promise<number> {
   // Refresh the account's own transaction archive first. The central ledger
   // must mirror that source, not a stale pending snapshot from an earlier sync.
   await syncCardTxns(accountId);
-  // Read the whole archive of this account in pages so the central ledger
-  // mirrors every stored transaction, not just the newest slice.
-  const cards: any[] = [];
-  const CARD_CHUNK = 1000;
-  for (let from = 0; from < 100_000; from += CARD_CHUNK) {
-    const { data: chunk } = await db
-      .from("bybit_card_txns")
-      .select("txn_id, merchant, amount, currency, status, txn_time, pan4, txn_type, detail")
-      .eq("account_id", accountId)
-      .order("txn_time", { ascending: false })
-      .range(from, from + CARD_CHUNK - 1);
-    const list = chunk ?? [];
-    cards.push(...list);
-    if (list.length < CARD_CHUNK) break;
-  }
-  for (const c of cards) {
+  const { data: cards } = await db
+    .from("bybit_card_txns")
+    .select("txn_id, merchant, amount, currency, status, txn_time, pan4, txn_type, detail")
+    .eq("account_id", accountId)
+    .order("txn_time", { ascending: false })
+    .limit(2000);
+  for (const c of cards ?? []) {
     const t = mapStoredRow(c);
     // This is the exact normalized row shown by the account's internal log.
     // Do not derive a second status specifically for the central ledger.
     const status = t.status;
     const isRefund = status === "refund";
-    const raw = (t.detail ?? {}) as Record<string, unknown>;
-    const flat: Record<string, string | number | boolean | null> = {};
-    for (const [k, v] of Object.entries(raw)) {
-      if (v === null || v === undefined) continue;
-      if (typeof v === "object") continue;
-      flat[k] = v as string | number | boolean;
-    }
     rows.push({
       account_id: accountId,
       kind: isRefund ? "refund" : "card",
@@ -1675,7 +1659,7 @@ export async function syncAccountLedger(accountId: string): Promise<number> {
       fee: num((t.detail as any)?.feeAmount),
       status,
       occurred_at: iso(t.time),
-      detail: { ...flat, pan4: t.pan4 ?? null, type: t.type ?? null },
+      detail: { pan4: t.pan4 ?? null, type: t.type ?? null },
     });
   }
 
