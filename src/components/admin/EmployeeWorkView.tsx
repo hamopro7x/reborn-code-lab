@@ -80,11 +80,136 @@ function txnTime(ms: number) {
 const num = (n: number, digits = 2) =>
   Number(n || 0).toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits });
 
+/**
+ * Card last 4 digits, taken from the ORIGINAL transaction payload stored with
+ * the ledger row (pan4 as reported by the card account itself).
+ */
 function last4(detail: Record<string, unknown>) {
   const raw = String(
-    detail["cardNo"] ?? detail["cardNumber"] ?? detail["maskedCardNo"] ?? detail["pan"] ?? "",
+    detail["pan4"] ??
+      detail["cardNo"] ??
+      detail["cardNumber"] ??
+      detail["maskedCardNo"] ??
+      detail["pan"] ??
+      "",
   ).replace(/\D/g, "");
   return raw ? raw.slice(-4) : "—";
+}
+
+/** «المعاملات» in the employee view = card (visa) transactions only. */
+const isCardTxn = (kind: unknown) => /^(card|refund)$/i.test(String(kind ?? ""));
+
+/** One employee-entered cell: write-once, auto-saved on blur, then locked. */
+function EntryCell({
+  row,
+  field,
+  onSaved,
+}: {
+  row: any;
+  field: "egp" | "quantity";
+  onSaved: () => void;
+}) {
+  const saveFn = useServerFn(saveMyTxnEntry);
+  const saved = row[field];
+  const [value, setValue] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  if (saved !== null && saved !== undefined) {
+    return (
+      <span className="tabular-nums">
+        {Number(saved).toLocaleString("en-US", { maximumFractionDigits: 4 })}
+      </span>
+    );
+  }
+
+  const commit = async () => {
+    const n = Number(String(value).replace(/,/g, "").trim());
+    if (!value.trim() || !Number.isFinite(n) || n < 0) return;
+    setBusy(true);
+    try {
+      const res: any = await saveFn({ data: { ledgerId: row.ledgerId, field, value: n } });
+      if (res?.ok) {
+        toast.success("تم الحفظ");
+        onSaved();
+      } else {
+        toast.error(String(res?.error ?? "تعذر الحفظ"));
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "تعذر الحفظ");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center justify-center gap-1">
+      <input
+        inputMode="decimal"
+        data-no-autosave
+        disabled={busy}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={() => void commit()}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+        }}
+        className="h-8 w-20 rounded-lg border border-border/60 bg-background/60 px-2 text-center text-xs tabular-nums outline-none focus:border-[oklch(0.62_0.18_250)]"
+      />
+      {busy ? <Loader2 className="size-3 animate-spin text-muted-foreground" /> : null}
+    </div>
+  );
+}
+
+/** Original transaction details, exactly as stored on the source transaction. */
+function TxnDetailsDialog({ row, onClose }: { row: any | null; onClose: () => void }) {
+  const detail = (row?.detail ?? {}) as Record<string, unknown>;
+  return (
+    <Dialog open={!!row} onOpenChange={(o) => (o ? null : onClose())}>
+      <DialogContent dir="rtl" className="max-h-[85vh] max-w-2xl overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>تفاصيل المعاملة الأصلية</DialogTitle>
+        </DialogHeader>
+        {row ? (
+          <div className="space-y-4 text-xs">
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                ["اسم التاجر", String(detail["merchantName"] ?? row.title ?? "—")],
+                ["المبلغ", `${num(Math.abs(Number(row.amount)))} ${row.currency}`],
+                ["الرسوم", `${num(Number(row.fee ?? 0))} ${row.currency}`],
+                ["الحالة", String(row.status || "—")],
+                ["آخر 4 أرقام", last4(detail)],
+                ["وقت المعاملة", formatDateTime(Number(row.time))],
+                ["المرجع", String(row.refId || "—")],
+                ["الحساب", String(row.accountName ?? "—")],
+              ].map(([k, v]) => (
+                <div key={k} className="rounded-lg border border-border/50 bg-card/40 px-3 py-2">
+                  <div className="text-[10px] text-muted-foreground">{k}</div>
+                  <div className="mt-1 font-bold break-all">{v}</div>
+                </div>
+              ))}
+            </div>
+            {TXN_SECTIONS.map((sec) => {
+              const defs = sec.defs.filter(([k]) => hasField(detail, k));
+              if (!defs.length) return null;
+              return (
+                <div key={sec.title}>
+                  <div className="mb-2 font-bold text-foreground/90">{sec.title}</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {defs.map(([k, label]) => (
+                      <div key={k} className="rounded-lg border border-border/50 bg-card/40 px-3 py-2">
+                        <div className="text-[10px] text-muted-foreground">{label}</div>
+                        <div className="mt-1 font-bold break-all">{fmtFieldValue(k, detail[k])}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 export function EmployeeWorkView() {
