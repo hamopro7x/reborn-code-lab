@@ -254,10 +254,10 @@ function CoinLogo({ coin }: { coin: string }) {
 function CoinBalanceCard({ coin }: { coin: CoinRow }) {
   const isUsdt = String(coin.coin).toUpperCase() === "USDT";
   return (
-    <div dir="ltr" className="relative mx-auto w-full max-w-[240px] rounded-[28px] p-[6px] bg-[radial-gradient(120%_120%_at_50%_0%,oklch(0.55_0.13_170/0.28),transparent_70%)]">
-      <div className="relative overflow-hidden rounded-[24px] bg-[oklch(0.055_0.008_190)] px-5 pt-4 pb-4 shadow-[0_0_28px_-10px_oklch(0.6_0.14_170/0.35)]">
+    <div dir="ltr" className="relative mx-auto w-full max-w-[190px] rounded-[22px] p-[5px] bg-[radial-gradient(120%_120%_at_50%_0%,oklch(0.55_0.13_170/0.28),transparent_70%)]">
+      <div className="relative overflow-hidden rounded-[18px] bg-[oklch(0.055_0.008_190)] px-4 pt-3 pb-3 shadow-[0_0_28px_-10px_oklch(0.6_0.14_170/0.35)]">
         <div className="flex items-center justify-between gap-2">
-          <div className="text-[34px] font-black leading-none tracking-tight tabular-nums text-white">
+          <div className="text-[28px] font-black leading-none tracking-tight tabular-nums text-white">
             {coin.balance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
 
@@ -265,16 +265,16 @@ function CoinBalanceCard({ coin }: { coin: CoinRow }) {
             <img
               src={usdtLogo.url}
               alt="USDT"
-              className="size-[52px] shrink-0 rounded-full object-cover"
+              className="size-[42px] shrink-0 rounded-full object-cover"
             />
           ) : (
-            <span className="grid size-[52px] shrink-0 place-items-center rounded-full bg-[oklch(0.18_0.03_285)] border border-border/50">
+            <span className="grid size-[42px] shrink-0 place-items-center rounded-full bg-[oklch(0.18_0.03_285)] border border-border/50">
               <CoinLogo coin={coin.coin} />
             </span>
           )}
         </div>
 
-        <div className="mt-3 text-left text-[12.5px] font-medium text-[oklch(0.72_0.12_170)]">
+        <div className="mt-2 text-left text-[11px] font-medium text-[oklch(0.72_0.12_170)]">
           USD {coin.usd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ≈
         </div>
       </div>
@@ -487,27 +487,27 @@ function AccountSummaryCard({
   const visaNo = account.sortOrder && account.sortOrder > 0 ? account.sortOrder : index + 1;
 
   return (
-    <div className="relative overflow-hidden rounded-[28px] border border-teal-400/25 bg-[oklch(0.16_0.03_190)] p-4 sm:p-5 shadow-[0_0_0_1px_oklch(0.7_0.13_190_/_0.08),0_18px_50px_-24px_oklch(0.6_0.15_190_/_0.45)] transition-shadow hover:shadow-[0_0_0_1px_oklch(0.7_0.13_190_/_0.2),0_22px_60px_-20px_oklch(0.65_0.16_190_/_0.6)]">
+    <div className="relative overflow-hidden rounded-[24px] border border-teal-400/25 bg-[oklch(0.16_0.03_190)] p-3 sm:p-4 shadow-[0_0_0_1px_oklch(0.7_0.13_190_/_0.08),0_18px_50px_-24px_oklch(0.6_0.15_190_/_0.45)] transition-shadow hover:shadow-[0_0_0_1px_oklch(0.7_0.13_190_/_0.2),0_22px_60px_-20px_oklch(0.65_0.16_190_/_0.6)]">
       {/* Decorative glow + wave */}
       <div aria-hidden className="pointer-events-none absolute inset-0">
         <div className="absolute -top-20 right-1/4 h-56 w-56 rounded-full bg-teal-400/10 blur-3xl" />
-        <svg viewBox="0 0 400 120" preserveAspectRatio="none" className="absolute inset-x-0 top-14 h-24 w-full opacity-60">
+        <svg viewBox="0 0 400 120" preserveAspectRatio="none" className="absolute inset-x-0 top-12 h-20 w-full opacity-60">
           <path d="M0 80 C 60 20, 120 110, 200 60 S 340 10, 400 70" fill="none" stroke="oklch(0.75 0.14 190)" strokeOpacity="0.35" strokeWidth="1.5" />
           <path d="M0 95 C 70 45, 140 120, 210 75 S 350 30, 400 88" fill="none" stroke="oklch(0.75 0.14 190)" strokeOpacity="0.18" strokeWidth="1.5" />
         </svg>
       </div>
 
-      <div className="relative space-y-4">
+      <div className="relative space-y-3">
         {/* Top row — mirrored: identity on left, number on right */}
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
           {/* left cluster: identity */}
           <div className="flex items-start justify-start gap-2 sm:gap-3">
-            <span className="grid size-11 shrink-0 place-items-center rounded-full border border-teal-400/30 bg-teal-400/10 text-teal-300">
-              <Wallet className="size-5" />
+            <span className="grid size-9 shrink-0 place-items-center rounded-full border border-teal-400/30 bg-teal-400/10 text-teal-300">
+              <Wallet className="size-4" />
             </span>
             <div className="min-w-0 text-right pt-1">
               <div className="flex items-center justify-end gap-1">
-                <div className="truncate text-sm sm:text-base font-black">حساب {account.name}</div>
+                <div className="truncate text-xs sm:text-sm font-black">حساب {account.name}</div>
                 {isAdmin && (
                   <div className="flex items-center gap-0.5">
                     <Button variant="ghost" size="icon" className="size-7 rounded-lg" onClick={onEdit} title="تعديل">
@@ -520,7 +520,7 @@ function AccountSummaryCard({
                 )}
               </div>
               {account.uid && (
-                <div className="flex items-center justify-end gap-1 text-[11px] text-muted-foreground">
+                <div className="flex items-center justify-end gap-1 text-[10px] text-muted-foreground">
                   <span dir="ltr" className="tabular-nums">UID {account.uid}</span>
                   <button
                     type="button"
@@ -537,22 +537,22 @@ function AccountSummaryCard({
           </div>
 
           {/* right cluster: cashback + number (swapped — circle on left visually) */}
-          <div className="flex items-center gap-3 sm:gap-4">
-            <div className="flex flex-col items-end gap-1.5 pt-1">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex flex-col items-end gap-1 pt-1">
               <div className="flex items-center gap-2">
-                <span className="text-sm sm:text-base text-foreground/90 whitespace-nowrap">استرداد بنسبة</span>
-                <PieChart className="size-5 text-teal-400 shrink-0" />
+                <span className="text-xs sm:text-sm text-foreground/90 whitespace-nowrap">استرداد بنسبة</span>
+                <PieChart className="size-4 text-teal-400 shrink-0" />
               </div>
-              <div className="text-2xl sm:text-3xl font-black text-teal-300 tabular-nums leading-none" dir="ltr">
+              <div className="text-xl sm:text-2xl font-black text-teal-300 tabular-nums leading-none" dir="ltr">
                 {cashback.toLocaleString("en-US", { maximumFractionDigits: 2 })}%
               </div>
             </div>
 
             {/* vertical dashed divider */}
-            <div className="h-16 sm:h-20 w-0 border-r border-dashed border-teal-400/45" aria-hidden />
+            <div className="h-14 sm:h-16 w-0 border-r border-dashed border-teal-400/45" aria-hidden />
 
             <div className="flex items-center shrink-0">
-              <div className="relative grid size-[92px] sm:size-[104px] place-items-center">
+              <div className="relative grid size-[78px] sm:size-[88px] place-items-center">
                 {/* outer tick ring */}
                 <div
                   className="absolute inset-0 rounded-full opacity-80"
@@ -565,10 +565,10 @@ function AccountSummaryCard({
                   }}
                 />
                 {/* thin outer circle */}
-                <div className="absolute inset-[6px] rounded-full border border-teal-400/25" aria-hidden />
+                <div className="absolute inset-[5px] rounded-full border border-teal-400/25" aria-hidden />
                 {/* glowing main ring */}
-                <div className="absolute inset-[13px] rounded-full border-[3px] border-teal-400 shadow-[0_0_26px_-2px_oklch(0.75_0.15_190_/_0.85),inset_0_0_22px_-6px_oklch(0.75_0.15_190_/_0.9)]" aria-hidden />
-                <span className="relative text-3xl sm:text-4xl font-black text-teal-300 tabular-nums" dir="ltr">{visaNo}</span>
+                <div className="absolute inset-[11px] rounded-full border-[3px] border-teal-400 shadow-[0_0_26px_-2px_oklch(0.75_0.15_190_/_0.85),inset_0_0_22px_-6px_oklch(0.75_0.15_190_/_0.9)]" aria-hidden />
+                <span className="relative text-2xl sm:text-3xl font-black text-teal-300 tabular-nums" dir="ltr">{visaNo}</span>
               </div>
             </div>
           </div>
@@ -578,8 +578,8 @@ function AccountSummaryCard({
 
         {/* Balances */}
         {q.isLoading ? (
-          <div className="grid min-h-[104px] place-items-center rounded-2xl border border-teal-400/15 bg-[oklch(0.12_0.03_190)]">
-            <Loader2 className="size-5 animate-spin" />
+          <div className="grid min-h-[90px] place-items-center rounded-2xl border border-teal-400/15 bg-[oklch(0.12_0.03_190)]">
+            <Loader2 className="size-4 animate-spin" />
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
