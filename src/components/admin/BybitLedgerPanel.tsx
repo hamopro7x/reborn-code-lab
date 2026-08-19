@@ -188,35 +188,33 @@ export function BybitLedgerPanel() {
     queryKey: ["bybit-ledger", group, status, page],
     queryFn: () => listFn({ data: { group, status, page, pageSize } }),
     placeholderData: (prev) => prev,
-    refetchInterval: 15_000,
-    refetchIntervalInBackground: true,
+    staleTime: 20_000,
+    // Poll only while the tab is actually visible; a hidden panel used to keep
+    // hitting the server in the background.
+    refetchInterval: 30_000,
+    refetchIntervalInBackground: false,
   });
 
-  // Fully automatic: no manual control. The scheduler keeps the ledger fresh in
-  // the background; while the panel is open we also nudge a sync every 30s and
-  // re-read the list, so new transactions appear on their own. Overlapping runs
-  // are dropped server-side by the single-flight lease.
-  const running = useRef(false);
+  // Fully automatic: no manual control. The scheduler runs the sync every
+  // minute in the background, so the list only needs a single nudge when the
+  // panel opens — the previous 30s client-side sync loop duplicated the
+  // scheduler's work on every viewer and dominated server time.
+  const nudged = useRef(false);
   useEffect(() => {
+    if (nudged.current) return;
+    nudged.current = true;
     let alive = true;
-    const tick = async () => {
-      if (!alive || running.current || typeof document === "undefined" || document.hidden) return;
-      running.current = true;
+    const timer = setTimeout(async () => {
       try {
         await syncFn();
         if (alive) qc.invalidateQueries({ queryKey: ["bybit-ledger"] });
       } catch {
-        /* the next tick retries; the list keeps showing stored rows */
-      } finally {
-        running.current = false;
+        /* the scheduler retries; the list keeps showing stored rows */
       }
-    };
-    const first = setTimeout(tick, 1000);
-    const timer = setInterval(tick, 30_000);
+    }, 1200);
     return () => {
       alive = false;
-      clearTimeout(first);
-      clearInterval(timer);
+      clearTimeout(timer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
