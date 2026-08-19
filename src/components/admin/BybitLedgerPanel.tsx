@@ -76,12 +76,12 @@ function VisaBadge() {
 }
 
 function statusBadge(kind: string, status: string) {
-  const s = String(status || "").toLowerCase();
-  if (kind === "refund" || s === "refund") return { cls: "bg-muted text-muted-foreground", text: "مسترد" };
-  if (s === "failed" || s === "fail" || s === "cancelled" || s === "ملغاة")
+  const s = String(status || "").trim().toLowerCase();
+  if (kind === "refund" || s === "refund" || s === "مسترد") return { cls: "bg-muted text-muted-foreground", text: "مسترد" };
+  if (s === "failed" || s === "fail" || s === "cancelled" || s === "ملغاة" || s === "فاشلة" || s === "قيد التنفيذ")
     return { cls: "bg-red-500/15 text-red-400", text: "فاشلة" };
-  if (s === "pending" || s === "processing") return { cls: "bg-amber-500/15 text-amber-400", text: "قيد التنفيذ" };
-  return { cls: "bg-emerald-500/15 text-emerald-400", text: "ناجحة" };
+  if (s === "success" || s === "completed" || s === "ناجحة") return { cls: "bg-emerald-500/15 text-emerald-400", text: "ناجحة" };
+  return { cls: "bg-red-500/15 text-red-400", text: "فاشلة" };
 }
 
 function amt(n: number) {
