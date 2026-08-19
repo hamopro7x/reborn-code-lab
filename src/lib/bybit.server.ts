@@ -1731,7 +1731,7 @@ export async function syncAccountLedger(accountId: string): Promise<number> {
         fee: 0,
         status: o.status,
         occurred_at: iso(o.time),
-        detail: { fiatAmount: o.amount, fiat: o.fiat, price: o.price },
+        detail: { fiatAmount: o.amount, fiat: o.fiat, price: o.price, counterparty: o.counterparty ?? null },
       });
     }
   }
