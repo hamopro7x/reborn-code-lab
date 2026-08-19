@@ -1681,6 +1681,8 @@ export async function syncAccountLedger(accountId: string): Promise<number> {
         detail: sanitize({
           ...original,
           pan4: t.pan4 ?? null,
+          totalFees: feeRaw,
+          foreignTransactionFee: src["foreignTransactionFee"] ?? rawSrc["foreignTransactionFee"] ?? null,
           type: t.type ?? null,
           merchantName: src["merchantName"] ?? t.merchant ?? null,
           basicAmount: src["basicAmount"] ?? t.amount,
