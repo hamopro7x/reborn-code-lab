@@ -21,6 +21,7 @@ const STATUSES: { key: string; label: string }[] = [
 
 const KIND_LABEL: Record<string, string> = {
   card: "شراء",
+  "1": "شراء",
   refund: "استرداد",
   deposit: "إيداع خارجي",
   withdraw: "سحب خارجي",
@@ -29,6 +30,7 @@ const KIND_LABEL: Record<string, string> = {
   p2p_buy: "شراء P2P",
   p2p_sell: "بيع P2P",
 };
+
 
 function Chip({ active, children, onClick }: { active?: boolean; children: React.ReactNode; onClick?: () => void }) {
   return (
