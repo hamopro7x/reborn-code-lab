@@ -1,7 +1,6 @@
 import { Fragment, useEffect, useState, useRef } from "react";
 import { usePersistentState } from "@/lib/persistent-state";
 import tonAsset from "@/assets/ton.png.asset.json";
-import usdtLogo from "@/assets/usdt-logo.png.asset.json";
 import usdtOfficial from "@/assets/usdt-official.png.asset.json";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
