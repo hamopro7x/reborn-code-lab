@@ -184,15 +184,22 @@ function MerchantLogo({ name }: { name: string }) {
 function BrandBadge({ brand }: { brand: string }) {
   const b = String(brand ?? "").toLowerCase().replace(/\s+/g, "");
   if (b.includes("master")) {
+    // Official Mastercard mark: red + yellow interlocking circles with the
+    // darker orange intersection band.
     return (
-      <span className="inline-flex items-center gap-1 rounded-md bg-[#0b0b0b] px-1.5 py-1">
-        <span className="relative inline-flex h-3 w-[22px] items-center">
-          <span className="absolute left-0 size-3 rounded-full bg-[#eb001b]" />
-          <span className="absolute left-[9px] size-3 rounded-full bg-[#f79e1b] mix-blend-multiply" />
-        </span>
+      <span className="inline-flex items-center rounded-md bg-white px-1.5 py-1">
+        <svg viewBox="0 0 152 94" className="h-3.5 w-auto" role="img" aria-label="Mastercard">
+          <circle cx="47" cy="47" r="47" fill="#eb001b" />
+          <circle cx="105" cy="47" r="47" fill="#f79e1b" />
+          <path
+            fill="#ff5f00"
+            d="M76 8.6a47 47 0 000 76.8 47 47 0 000-76.8z"
+          />
+        </svg>
       </span>
     );
   }
+
   const label =
     b.includes("visa") || !b
       ? "VISA"
