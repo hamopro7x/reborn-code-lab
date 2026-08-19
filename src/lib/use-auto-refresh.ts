@@ -4,7 +4,7 @@ import { uploadManager } from "./upload-manager";
 
 // يفحص إذا كان في نسخة جديدة منشورة من الموقع، ولو موجودة
 // يعمل تحديث تلقائي للصفحة الحالية فوراً (نفس المسار).
-export function useAutoRefreshOnDeploy(intervalMs = 1000) {
+export function useAutoRefreshOnDeploy(intervalMs = 60_000) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     let stopped = false;
