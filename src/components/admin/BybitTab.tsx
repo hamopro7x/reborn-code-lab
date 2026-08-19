@@ -488,7 +488,7 @@ function AccountSummaryCard({
   const visaNo = account.sortOrder && account.sortOrder > 0 ? account.sortOrder : index + 1;
 
   return (
-    <div className="relative overflow-hidden rounded-[24px] border border-teal-400/25 bg-[oklch(0.16_0.03_190)] p-3 sm:p-4 shadow-[0_0_0_1px_oklch(0.7_0.13_190_/_0.08),0_18px_50px_-24px_oklch(0.6_0.15_190_/_0.45)] transition-shadow hover:shadow-[0_0_0_1px_oklch(0.7_0.13_190_/_0.2),0_22px_60px_-20px_oklch(0.65_0.16_190_/_0.6)]">
+    <div className="relative flex h-[280px] flex-col overflow-hidden rounded-[24px] border border-teal-400/25 bg-[oklch(0.16_0.03_190)] p-3 sm:p-4 shadow-[0_0_0_1px_oklch(0.7_0.13_190_/_0.08),0_18px_50px_-24px_oklch(0.6_0.15_190_/_0.45)] transition-shadow hover:shadow-[0_0_0_1px_oklch(0.7_0.13_190_/_0.2),0_22px_60px_-20px_oklch(0.65_0.16_190_/_0.6)]">
       {/* Decorative glow + wave */}
       <div aria-hidden className="pointer-events-none absolute inset-0">
         <div className="absolute -top-20 right-1/4 h-56 w-56 rounded-full bg-teal-400/10 blur-3xl" />
@@ -498,9 +498,9 @@ function AccountSummaryCard({
         </svg>
       </div>
 
-      <div className="relative space-y-3">
+      <div className="relative flex min-h-0 flex-1 flex-col gap-3">
         {/* Top row — mirrored: identity on left, number on right */}
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+        <div className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
           {/* left cluster: identity */}
           <div className="flex items-start justify-start gap-2 sm:gap-3">
             <span className="grid size-9 shrink-0 place-items-center rounded-full border border-teal-400/30 bg-teal-400/10 text-teal-300">
@@ -578,7 +578,7 @@ function AccountSummaryCard({
         </div>
 
         {/* Balances — ارتفاع ثابت في كل الحالات */}
-        <div className="h-[104px] overflow-hidden">
+        <div className="h-[104px] shrink-0 overflow-hidden">
           {q.isLoading ? (
             <div className="grid h-full place-items-center rounded-2xl border border-teal-400/15 bg-[oklch(0.12_0.03_190)]">
               <Loader2 className="size-4 animate-spin" />
@@ -592,21 +592,20 @@ function AccountSummaryCard({
           )}
         </div>
 
-
-        {d.failed && (
-          <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-2 text-[11px] text-destructive-foreground">
+        {d.failed ? (
+          <div className="shrink-0 rounded-xl border border-destructive/40 bg-destructive/10 p-2 text-[11px] text-destructive-foreground line-clamp-2">
             تعذّر جلب البيانات: {String(d.failed)}
           </div>
+        ) : (
+          <button
+            type="button"
+            onClick={onOpen}
+            className="mt-auto flex w-full shrink-0 items-center justify-center gap-2 rounded-2xl border border-teal-400/35 bg-[linear-gradient(135deg,oklch(0.32_0.08_190),oklch(0.22_0.06_190))] px-4 py-3 text-sm font-bold text-teal-100 shadow-[0_0_20px_-10px_oklch(0.7_0.15_190_/_0.8)] transition-all hover:border-teal-300/60 hover:brightness-125 hover:shadow-[0_0_28px_-8px_oklch(0.72_0.16_190_/_0.9)]"
+          >
+            <BarChart3 className="size-4 text-teal-300" />
+            عرض بيانات الحساب
+          </button>
         )}
-
-        <button
-          type="button"
-          onClick={onOpen}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-teal-400/35 bg-[linear-gradient(135deg,oklch(0.32_0.08_190),oklch(0.22_0.06_190))] px-4 py-3 text-sm font-bold text-teal-100 shadow-[0_0_20px_-10px_oklch(0.7_0.15_190_/_0.8)] transition-all hover:border-teal-300/60 hover:brightness-125 hover:shadow-[0_0_28px_-8px_oklch(0.72_0.16_190_/_0.9)]"
-        >
-          <BarChart3 className="size-4 text-teal-300" />
-          عرض بيانات الحساب
-        </button>
       </div>
     </div>
   );
