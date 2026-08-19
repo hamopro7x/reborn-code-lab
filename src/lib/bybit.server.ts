@@ -1574,7 +1574,7 @@ export type LedgerRow = {
   fee: number;
   status: string;
   time: number;
-  detail: Record<string, unknown>;
+  detail: Record<string, string | number | boolean | null>;
 };
 
 export type LedgerPage = {
@@ -1596,7 +1596,7 @@ type LedgerInsert = {
   fee: number;
   status: string;
   occurred_at: string;
-  detail: Record<string, unknown>;
+  detail: Record<string, string | number | boolean | null>;
 };
 
 const iso = (ms: number) => new Date(ms > 0 ? ms : Date.now()).toISOString();
@@ -1642,7 +1642,7 @@ export async function syncAccountLedger(accountId: string): Promise<number> {
       fee: num((t.detail as any)?.feeAmount),
       status: t.status,
       occurred_at: iso(t.time),
-      detail: { pan4: t.pan4, type: t.type },
+      detail: { pan4: t.pan4 ?? null, type: t.type ?? null },
     });
   }
 
@@ -1770,7 +1770,7 @@ export async function fetchLedgerPage(opts: {
       fee: num(r.fee),
       status: r.status ?? "",
       time: new Date(r.occurred_at).getTime(),
-      detail: (r.detail ?? {}) as Record<string, unknown>,
+      detail: (r.detail ?? {}) as Record<string, string | number | boolean | null>,
     })),
     total: kind ? (counts[kind] ?? 0) : counts["all"] ?? 0,
     page,
