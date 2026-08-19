@@ -1386,7 +1386,7 @@ function AccountInfoCard({ isAdmin, accountId }: { isAdmin: boolean; accountId?:
           <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setEdit(true)}>تعديل</Button>
         )}
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="relative z-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {fields.map((f) => (
           <div key={f.key} className="flex flex-col gap-1.5 rounded-2xl border border-border/60 bg-background/40 p-3">
             <span className="text-xs text-muted-foreground">{f.label}</span>
