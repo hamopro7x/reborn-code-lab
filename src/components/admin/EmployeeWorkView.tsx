@@ -19,8 +19,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { getMyWorkState, getMyShiftTxns, saveMyTxnEntry } from "@/lib/work.functions";
 import { useClaimWork } from "@/lib/use-claim-work";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { TXN_SECTIONS, fmtFieldValue, hasField } from "@/lib/bybit-txn-fields";
-import { formatDateTime } from "@/lib/format";
+import { getBybitCardBrands } from "@/lib/bybit.functions";
+import { BrandBadge, LedgerRowDetails, statusBadge } from "@/components/admin/BybitLedgerPanel";
 
 type TabKey = "p2p" | "transfers" | "wrong" | "week" | "all";
 
@@ -96,14 +96,22 @@ function last4(detail: Record<string, unknown>) {
   return raw ? raw.slice(-4) : "—";
 }
 
-/** Card brand mark + last 4 digits, as shown on the original card row. */
-function Last4Cell({ detail }: { detail: Record<string, unknown> }) {
+/** Card mark + last 4 digits. The brand comes from the main account card
+ * records (pan4 -> brand reference map), never chosen by hand. */
+function Last4Cell({
+  detail,
+  brands,
+}: {
+  detail: Record<string, unknown>;
+  brands: Record<string, string>;
+}) {
   const digits = last4(detail);
+  const brand = String(
+    brands[digits] ?? detail["cardBrand"] ?? detail["brand"] ?? detail["cardType"] ?? "",
+  );
   return (
     <span className="flex items-center justify-center gap-2">
-      <span className="grid h-5 w-8 shrink-0 place-items-center rounded-[4px] bg-[#1434CB] text-[9px] font-black italic tracking-tight text-white">
-        VISA
-      </span>
+      <BrandBadge brand={brand} />
       <span className="tabular-nums">{digits}</span>
     </span>
   );
@@ -173,52 +181,19 @@ function EntryCell({
   );
 }
 
-/** Original transaction details, exactly as stored on the source transaction. */
+/** Original transaction details, rendered exactly like the central ledger. */
 function TxnDetailsDialog({ row, onClose }: { row: any | null; onClose: () => void }) {
-  const detail = (row?.detail ?? {}) as Record<string, unknown>;
   return (
     <Dialog open={!!row} onOpenChange={(o) => (o ? null : onClose())}>
-      <DialogContent dir="rtl" className="max-h-[85vh] max-w-2xl overflow-y-auto">
+      <DialogContent dir="rtl" className="max-h-[85vh] max-w-3xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>تفاصيل المعاملة الأصلية</DialogTitle>
         </DialogHeader>
         {row ? (
-          <div className="space-y-4 text-xs">
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                ["اسم التاجر", String(detail["merchantName"] ?? row.title ?? "—")],
-                ["المبلغ", `${num(Math.abs(Number(row.amount)))} ${row.currency}`],
-                ["الرسوم", `${num(Number(row.fee ?? 0))} ${row.currency}`],
-                ["الحالة", String(row.status || "—")],
-                ["آخر 4 أرقام", last4(detail)],
-                ["وقت المعاملة", formatDateTime(Number(row.time))],
-                ["المرجع", String(row.refId || "—")],
-                ["الحساب", String(row.accountName ?? "—")],
-              ].map(([k, v]) => (
-                <div key={k} className="rounded-lg border border-border/50 bg-card/40 px-3 py-2">
-                  <div className="text-[10px] text-muted-foreground">{k}</div>
-                  <div className="mt-1 font-bold break-all">{v}</div>
-                </div>
-              ))}
-            </div>
-            {TXN_SECTIONS.map((sec) => {
-              const defs = sec.defs.filter(([k]) => hasField(detail, k));
-              if (!defs.length) return null;
-              return (
-                <div key={sec.title}>
-                  <div className="mb-2 font-bold text-foreground/90">{sec.title}</div>
-                  <div className="grid grid-cols-2 gap-2">
-                    {defs.map(([k, label]) => (
-                      <div key={k} className="rounded-lg border border-border/50 bg-card/40 px-3 py-2">
-                        <div className="text-[10px] text-muted-foreground">{label}</div>
-                        <div className="mt-1 font-bold break-all">{fmtFieldValue(k, detail[k])}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <LedgerRowDetails
+            row={{ ...row, id: row.ledgerId, refId: row.refId ?? "—" }}
+            badgeText={statusBadge(String(row.kind), String(row.status ?? "")).text}
+          />
         ) : null}
       </DialogContent>
     </Dialog>
@@ -229,6 +204,7 @@ export function EmployeeWorkView() {
   const qc = useQueryClient();
   const stateFn = useServerFn(getMyWorkState);
   const txnsFn = useServerFn(getMyShiftTxns);
+  const brandsFn = useServerFn(getBybitCardBrands);
   const [tab, setTab] = useState<TabKey>("all");
   const now = useNow();
   const clock = clockParts(now);
@@ -256,6 +232,13 @@ export function EmployeeWorkView() {
     enabled: holding,
     refetchInterval: 20_000,
   });
+
+  const brandsQ = useQuery({
+    queryKey: ["bybit-card-brands"],
+    queryFn: () => brandsFn({ data: undefined as any }),
+    staleTime: 300_000,
+  });
+  const brands = (brandsQ.data?.brands ?? {}) as Record<string, string>;
 
   const { busy, claim } = useClaimWork(() => {
     qc.invalidateQueries({ queryKey: ["my-work-state"] });
@@ -391,7 +374,7 @@ export function EmployeeWorkView() {
                     </td>
                     <td className="border border-border/40 px-4 py-4 whitespace-nowrap">{txnTime(Number(r.time))}</td>
                     <td className="border border-border/40 px-4 py-4 tabular-nums whitespace-nowrap">
-                      <Last4Cell detail={(r.detail ?? {}) as Record<string, unknown>} />
+                      <Last4Cell detail={(r.detail ?? {}) as Record<string, unknown>} brands={brands} />
                     </td>
                     <td className="border border-border/40 px-4 py-4 whitespace-nowrap">
                       <button
