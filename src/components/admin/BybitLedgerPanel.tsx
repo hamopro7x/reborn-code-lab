@@ -22,17 +22,14 @@ const SUB_FILTERS: Record<string, { key: string; label: string }[]> = {
   onchain: [
     { key: "withdraw", label: "التحويل على السلسلة" },
     { key: "deposit", label: "الاستلام" },
-    { key: "all", label: "الجميع" },
   ],
   internal: [
     { key: "internal_out", label: "سحب" },
     { key: "internal_in", label: "إيداع" },
-    { key: "all", label: "الجميع" },
   ],
   p2p: [
     { key: "p2p_buy", label: "شراء" },
     { key: "p2p_sell", label: "بيع" },
-    { key: "all", label: "الجميع" },
   ],
 };
 
@@ -191,7 +188,7 @@ export function BybitLedgerPanel() {
   }, []);
 
   const rows = q.data?.rows ?? [];
-  const counts = (q.data?.counts ?? {}) as Record<string, number>;
+  
   const total = Number(q.data?.total ?? 0);
   const pages = Math.max(Math.ceil(total / pageSize), 1);
 
@@ -205,13 +202,12 @@ export function BybitLedgerPanel() {
               active={group === g.key}
               onClick={() => {
                 setGroup(g.key);
-                setStatus("all");
+                setStatus((SUB_FILTERS[g.key]?.[0]?.key) ?? "all");
                 setPage(1);
                 setOpenId(null);
               }}
             >
               {g.label}
-              {counts[g.key] !== undefined ? ` (${counts[g.key]!.toLocaleString("en-US")})` : ""}
             </Chip>
           ))}
         </div>
@@ -231,7 +227,6 @@ export function BybitLedgerPanel() {
               }}
             >
               {s.label}
-              {s.key !== "all" && counts[s.key] !== undefined ? ` (${counts[s.key]!.toLocaleString("en-US")})` : ""}
             </Chip>
           ))}
         </div>
