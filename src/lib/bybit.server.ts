@@ -1214,10 +1214,9 @@ export async function fetchP2P(accountId?: string): Promise<P2PRow[]> {
 }
 
 const wdStatus = (s: unknown) => {
-  const v = String(s ?? "");
-  if (v === "success" || v === "3") return "ناجحة";
-  if (v === "Fail" || v === "CancelByUser" || v === "Reject") return "فاشلة";
-  return "قيد التنفيذ";
+  const v = String(s ?? "").trim().toLowerCase();
+  if (v === "success" || v === "3" || v === "completed") return "ناجحة";
+  return "فاشلة";
 };
 
 export async function fetchOnChain(accountId?: string): Promise<{ deposits: AssetRow[]; withdrawals: AssetRow[] }> {
@@ -1235,7 +1234,7 @@ export async function fetchOnChain(accountId?: string): Promise<{ deposits: Asse
           chain: String(d.chain ?? ""),
           amount: num(d.amount),
           fee: num(d.depositFee),
-          status: String(d.status) === "3" ? "ناجحة" : "قيد التنفيذ",
+          status: String(d.status) === "3" ? "ناجحة" : "فاشلة",
           time: Number(d.successAt ?? 0),
           address: String(d.toAddress ?? ""),
           direction: "in" as const,
@@ -1275,7 +1274,7 @@ export async function fetchInternal(accountId?: string): Promise<{ deposits: Ass
           chain: "التحويل الداخلي",
           amount: num(d.amount),
           fee: 0,
-          status: String(d.status) === "2" ? "ناجحة" : "قيد التنفيذ",
+          status: String(d.status) === "2" ? "ناجحة" : "فاشلة",
           time: Number(d.createdTime ?? 0),
           address: String(d.address ?? d.fromAddress ?? ""),
           direction: "in" as const,
