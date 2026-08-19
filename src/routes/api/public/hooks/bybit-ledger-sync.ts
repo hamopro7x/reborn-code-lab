@@ -49,7 +49,7 @@ export const Route = createFileRoute("/api/public/hooks/bybit-ledger-sync")({
 
         await supabaseAdmin
           .from("bybit_sync_state")
-          .update({ lease_until: null, last_run_at: new Date().toISOString(), last_result: result })
+          .update({ lease_until: null, last_run_at: new Date().toISOString(), last_result: result as never })
           .eq("id", "ledger");
 
         return json({ ok: !("error" in result), ...result });
