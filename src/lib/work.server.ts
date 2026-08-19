@@ -547,5 +547,75 @@ export async function myShiftRows(userId: string, page = 1, pageSize = 50) {
   const state = await myWorkState(userId);
   if (!state.holding) return { page: 1, pageSize, total: 0, rows: [] as any[], holding: false as const };
   const res = await workTable({ userId, shiftId: state.shiftId, page, pageSize });
-  return { ...res, holding: true as const };
+  const entries = await myEntries(res.rows.map((r: any) => r.ledgerId));
+  const rows = res.rows.map((r: any) => {
+    const e = entries.get(r.ledgerId);
+    return { ...r, egp: e?.egp ?? null, quantity: e?.quantity ?? null };
+  });
+  return { ...res, rows, holding: true as const };
+}
+
+/* ------------------ employee-entered values (جنيه / الكمية) ------------------ */
+/**
+ * Employee-entered columns live in their own table (work_txn_entries) so the
+ * original transaction row is never touched. Each field can be written exactly
+ * once: a value that already exists is returned as-is (locked).
+ */
+
+export async function myEntries(ledgerIds: string[]) {
+  if (!ledgerIds.length) return new Map<string, { egp: number | null; quantity: number | null }>();
+  const db = await admin();
+  const { data } = await db
+    .from("work_txn_entries")
+    .select("ledger_id,egp,quantity")
+    .in("ledger_id", ledgerIds);
+  const map = new Map<string, { egp: number | null; quantity: number | null }>();
+  for (const r of data ?? []) {
+    map.set(r.ledger_id as string, {
+      egp: r.egp === null || r.egp === undefined ? null : Number(r.egp),
+      quantity: r.quantity === null || r.quantity === undefined ? null : Number(r.quantity),
+    });
+  }
+  return map;
+}
+
+export async function saveEntryField(
+  userId: string,
+  ledgerId: string,
+  field: "egp" | "quantity",
+  value: number,
+) {
+  const db = await admin();
+
+  // The transaction must belong to an assignment of the caller's OWN open shift.
+  const state = await myWorkState(userId);
+  if (!state.holding) return { ok: false as const, error: "لست مستلمًا للشغل حاليًا" };
+  const { data: asg } = await db
+    .from("work_txn_assignments")
+    .select("ledger_id")
+    .eq("ledger_id", ledgerId)
+    .eq("shift_id", state.shiftId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!asg) return { ok: false as const, error: "المعاملة ليست ضمن شفتك" };
+
+  const { data: existing } = await db
+    .from("work_txn_entries")
+    .select("ledger_id,egp,quantity")
+    .eq("ledger_id", ledgerId)
+    .maybeSingle();
+
+  if (existing) {
+    if (existing[field] !== null && existing[field] !== undefined) {
+      return { ok: false as const, error: "القيمة محفوظة بالفعل ولا يمكن تعديلها", locked: true as const };
+    }
+    const { error } = await db.from("work_txn_entries").update({ [field]: value }).eq("ledger_id", ledgerId);
+    if (error) return { ok: false as const, error: error.message };
+  } else {
+    const { error } = await db
+      .from("work_txn_entries")
+      .insert({ ledger_id: ledgerId, user_id: userId, [field]: value });
+    if (error) return { ok: false as const, error: error.message };
+  }
+  return { ok: true as const, field, value };
 }

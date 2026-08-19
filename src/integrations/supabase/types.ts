@@ -1501,6 +1501,47 @@ export type Database = {
           },
         ]
       }
+      work_txn_entries: {
+        Row: {
+          created_at: string
+          egp: number | null
+          egp_at: string | null
+          ledger_id: string
+          quantity: number | null
+          quantity_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          egp?: number | null
+          egp_at?: string | null
+          ledger_id: string
+          quantity?: number | null
+          quantity_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          egp?: number | null
+          egp_at?: string | null
+          ledger_id?: string
+          quantity?: number | null
+          quantity_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_txn_entries_ledger_id_fkey"
+            columns: ["ledger_id"]
+            isOneToOne: true
+            referencedRelation: "bybit_ledger"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
