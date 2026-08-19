@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useRef, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ChevronDown, Loader2, RefreshCw } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { getBybitLedger, syncBybitLedger } from "@/lib/bybit.functions";
 import { formatDateTime } from "@/lib/format";
 
@@ -139,20 +139,36 @@ export function BybitLedgerPanel() {
     queryKey: ["bybit-ledger", group, status, page],
     queryFn: () => listFn({ data: { group, status, page, pageSize } }),
     placeholderData: (prev) => prev,
-    refetchInterval: 60_000,
+    refetchInterval: 15_000,
+    refetchIntervalInBackground: true,
   });
 
-  const sync = useMutation({
-    mutationFn: () => syncFn(),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["bybit-ledger"] }),
-  });
-
-  const once = useRef(false);
+  // Fully automatic: no manual control. The scheduler keeps the ledger fresh in
+  // the background; while the panel is open we also nudge a sync every 30s and
+  // re-read the list, so new transactions appear on their own. Overlapping runs
+  // are dropped server-side by the single-flight lease.
+  const running = useRef(false);
   useEffect(() => {
-    if (once.current) return;
-    once.current = true;
-    const t = setTimeout(() => sync.mutate(), 1200);
-    return () => clearTimeout(t);
+    let alive = true;
+    const tick = async () => {
+      if (!alive || running.current || typeof document === "undefined" || document.hidden) return;
+      running.current = true;
+      try {
+        await syncFn();
+        if (alive) qc.invalidateQueries({ queryKey: ["bybit-ledger"] });
+      } catch {
+        /* the next tick retries; the list keeps showing stored rows */
+      } finally {
+        running.current = false;
+      }
+    };
+    const first = setTimeout(tick, 1000);
+    const timer = setInterval(tick, 30_000);
+    return () => {
+      alive = false;
+      clearTimeout(first);
+      clearInterval(timer);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -181,16 +197,8 @@ export function BybitLedgerPanel() {
             </Chip>
           ))}
         </div>
-        <button
-          type="button"
-          onClick={() => sync.mutate()}
-          disabled={sync.isPending}
-          className="inline-flex items-center gap-2 rounded-xl border border-border/60 px-3 py-1.5 text-xs hover:border-primary/60 disabled:opacity-60"
-        >
-          {sync.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
-          تحديث السجل
-        </button>
       </div>
+
 
       <div className="rounded-3xl border border-border/60 bg-card/70 overflow-hidden">
         {group === "txns" && (
@@ -215,7 +223,7 @@ export function BybitLedgerPanel() {
           <div className="py-10 text-center text-sm text-muted-foreground">جارٍ التحميل…</div>
         ) : !rows.length ? (
           <div className="py-10 text-center text-sm text-muted-foreground">
-            لا توجد معاملات مسجّلة بعد — اضغط «تحديث السجل» لجلب حركات كل الحسابات.
+            جارٍ تحديث السجل تلقائياً — ستظهر المعاملات هنا بمجرد جلبها.
           </div>
         ) : (
           <div className="overflow-x-auto">
