@@ -1781,14 +1781,12 @@ export async function fetchLedgerPage(opts: {
     return Number(count ?? 0);
   };
 
-  const [listRes, cTxns, cOnchain, cInternal, cP2p, cAll, cSuccess, cFailed, cRefund] = await Promise.all([
+  const groupKeys = Object.keys(GROUP_KINDS);
+  const [listRes, groupCounts, cAll, cSuccess, cFailed, cRefund] = await Promise.all([
     applyScope(base().select("*"), group, status)
       .order("occurred_at", { ascending: false })
       .range(from, from + pageSize - 1),
-    countFor("txns", "all"),
-    countFor("onchain", "all"),
-    countFor("internal", "all"),
-    countFor("p2p", "all"),
+    Promise.all(groupKeys.map((g) => countFor(g, "all"))),
     countFor(group, "all"),
     countFor("txns", "success"),
     countFor("txns", "failed"),
@@ -1798,15 +1796,14 @@ export async function fetchLedgerPage(opts: {
   if (error) throw new Error(error.message);
 
   const counts: Record<string, number> = {
-    txns: cTxns,
-    onchain: cOnchain,
-    internal: cInternal,
-    p2p: cP2p,
     all: cAll,
     success: cSuccess,
     failed: cFailed,
     refund: cRefund,
   };
+  groupKeys.forEach((g, i) => {
+    counts[g] = (groupCounts as number[])[i] ?? 0;
+  });
 
   const total =
     group === "txns"
@@ -1816,7 +1813,7 @@ export async function fetchLedgerPage(opts: {
           ? cFailed
           : status === "refund"
             ? cRefund
-            : cTxns
+            : counts["txns"]!
       : cAll;
 
   return {
