@@ -254,10 +254,10 @@ function CoinLogo({ coin }: { coin: string }) {
 function CoinBalanceCard({ coin }: { coin: CoinRow }) {
   const isUsdt = String(coin.coin).toUpperCase() === "USDT";
   return (
-    <div dir="ltr" className="relative mx-auto w-full max-w-[240px] rounded-[28px] p-[6px] bg-[radial-gradient(120%_120%_at_50%_0%,oklch(0.55_0.13_170/0.28),transparent_70%)]">
-      <div className="relative overflow-hidden rounded-[24px] bg-[oklch(0.055_0.008_190)] px-5 pt-4 pb-4 shadow-[0_0_28px_-10px_oklch(0.6_0.14_170/0.35)]">
+    <div dir="ltr" className="relative mx-auto w-full max-w-[190px] rounded-[22px] p-[5px] bg-[radial-gradient(120%_120%_at_50%_0%,oklch(0.55_0.13_170/0.28),transparent_70%)]">
+      <div className="relative overflow-hidden rounded-[18px] bg-[oklch(0.055_0.008_190)] px-4 pt-3 pb-3 shadow-[0_0_28px_-10px_oklch(0.6_0.14_170/0.35)]">
         <div className="flex items-center justify-between gap-2">
-          <div className="text-[34px] font-black leading-none tracking-tight tabular-nums text-white">
+          <div className="text-[28px] font-black leading-none tracking-tight tabular-nums text-white">
             {coin.balance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
 
@@ -265,16 +265,16 @@ function CoinBalanceCard({ coin }: { coin: CoinRow }) {
             <img
               src={usdtLogo.url}
               alt="USDT"
-              className="size-[52px] shrink-0 rounded-full object-cover"
+              className="size-[42px] shrink-0 rounded-full object-cover"
             />
           ) : (
-            <span className="grid size-[52px] shrink-0 place-items-center rounded-full bg-[oklch(0.18_0.03_285)] border border-border/50">
+            <span className="grid size-[42px] shrink-0 place-items-center rounded-full bg-[oklch(0.18_0.03_285)] border border-border/50">
               <CoinLogo coin={coin.coin} />
             </span>
           )}
         </div>
 
-        <div className="mt-3 text-left text-[12.5px] font-medium text-[oklch(0.72_0.12_170)]">
+        <div className="mt-2 text-left text-[11px] font-medium text-[oklch(0.72_0.12_170)]">
           USD {coin.usd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ≈
         </div>
       </div>
