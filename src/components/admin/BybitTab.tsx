@@ -1294,7 +1294,9 @@ function BybitCardArt({ c, onDelete, canDelete = true, onEdit }: { c: any; onDel
 function CardsPanel({ q, isAdmin, onAdd, onDelete, onEdit }: { q: any; isAdmin: boolean; onAdd: () => void; onDelete: (id: string) => void; onEdit?: (c: any) => void }) {
   const list = ((q.data as any)?.cards ?? []) as any[];
   return (
-    <div className="rounded-3xl border border-border/60 bg-card/70 p-4">
+    <div className="relative isolate overflow-hidden rounded-3xl border border-border/60 bg-card/70 p-4">
+      <FintechBackdrop className="opacity-70" />
+      <div className="relative z-10">
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="text-sm font-bold">بطاقاتي</h2>
         {isAdmin && (
@@ -1316,7 +1318,9 @@ function CardsPanel({ q, isAdmin, onAdd, onDelete, onEdit }: { q: any; isAdmin: 
           ))}
         </div>
       )}
+      </div>
     </div>
+
   );
 }
 
