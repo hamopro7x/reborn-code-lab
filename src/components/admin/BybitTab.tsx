@@ -1370,8 +1370,10 @@ function AccountInfoCard({ isAdmin, accountId }: { isAdmin: boolean; accountId?:
   ];
 
   return (
-    <div className="rounded-3xl border border-border/60 bg-card/70 p-4">
-      <div className="mb-4 flex items-center justify-between gap-2">
+    <div className="relative isolate overflow-hidden rounded-3xl border border-border/60 bg-card/70 p-4">
+      <FintechBackdrop className="opacity-70" />
+      <div className="relative z-10 mb-4 flex items-center justify-between gap-2">
+
         <h3 className="text-sm font-bold">بيانات الحساب</h3>
         {!isAdmin ? null : edit ? (
           <div className="flex gap-2">
