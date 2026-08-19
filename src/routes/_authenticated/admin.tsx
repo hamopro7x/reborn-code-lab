@@ -289,6 +289,22 @@ function Admin() {
   );
 }
 
+function AdminBackButton() {
+  const back = useAdminBackTarget();
+  if (!back) return null;
+  return (
+    <Button
+      size="sm"
+      variant="outline"
+      className="rounded-xl gap-1 shrink-0"
+      onClick={back}
+      aria-label="رجوع"
+    >
+      <ChevronRight className="size-4" /> رجوع
+    </Button>
+  );
+}
+
 // ============ READ ONLY WRAPPER ============
 
 // ============ OVERVIEW ============
