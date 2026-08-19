@@ -29,7 +29,7 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: "p2p", label: "طلبات P2P" },
   { key: "transfers", label: "الاستلم من والتحويل الي" },
   { key: "wrong", label: "المعاملات الغلط" },
-  { key: "week", label: "المعاملات علي مدار الاسبوع" },
+  { key: "week", label: "الحسابات المتراكمة" },
   { key: "all", label: "المعاملات" },
 ];
 
