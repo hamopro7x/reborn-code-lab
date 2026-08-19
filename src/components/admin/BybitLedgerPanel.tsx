@@ -395,7 +395,7 @@ export function BybitLedgerPanel() {
                       </tr>
                       {openId === r.id && (
                         <tr className="border-b border-border/40 bg-muted/20">
-                          <td colSpan={7} className="p-4">
+                          <td colSpan={COLUMNS[group]?.length ?? 7} className="p-4">
                             <LedgerRowDetails row={r} badgeText={badge.text} />
                           </td>
                         </tr>
