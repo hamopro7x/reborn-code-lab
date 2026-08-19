@@ -282,6 +282,7 @@ function Admin() {
           </main>
 
         </div>
+        </AdminBackProvider>
       </div>
     </SidebarProvider>
   );
