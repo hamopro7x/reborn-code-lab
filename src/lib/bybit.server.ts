@@ -1558,3 +1558,223 @@ export async function convertStatus(quoteTxId: string, accountId?: string) {
     toAmount: num(r?.toAmount),
   };
 }
+
+/* ============================ السجل المركزي للمعاملات ============================ */
+
+export type LedgerRow = {
+  id: string;
+  accountId: string | null;
+  accountName: string;
+  kind: string;
+  direction: "in" | "out";
+  refId: string;
+  title: string;
+  amount: number;
+  currency: string;
+  fee: number;
+  status: string;
+  time: number;
+  detail: Record<string, unknown>;
+};
+
+export type LedgerPage = {
+  rows: LedgerRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+  counts: Record<string, number>;
+};
+
+type LedgerInsert = {
+  account_id: string | null;
+  kind: string;
+  direction: "in" | "out";
+  ref_id: string;
+  title: string;
+  amount: number;
+  currency: string;
+  fee: number;
+  status: string;
+  occurred_at: string;
+  detail: Record<string, unknown>;
+};
+
+const iso = (ms: number) => new Date(ms > 0 ? ms : Date.now()).toISOString();
+
+async function upsertLedger(rows: LedgerInsert[]) {
+  const clean = rows.filter((r) => r.ref_id);
+  if (!clean.length) return 0;
+  const db = await admin();
+  let saved = 0;
+  for (let i = 0; i < clean.length; i += 500) {
+    const { error } = await db
+      .from("bybit_ledger")
+      .upsert(clean.slice(i, i + 500), { onConflict: "account_id,kind,ref_id" });
+    if (error) console.error("bybit_ledger upsert failed:", error.message);
+    else saved += Math.min(500, clean.length - i);
+  }
+  return saved;
+}
+
+/** Mirrors every movement type of one account into the central ledger. */
+export async function syncAccountLedger(accountId: string): Promise<number> {
+  const db = await admin();
+  const rows: LedgerInsert[] = [];
+
+  // 1) card movements (purchases / refunds / fees) from the archive
+  const { data: cards } = await db
+    .from("bybit_card_txns")
+    .select("txn_id, merchant, amount, currency, status, txn_time, pan4, txn_type, detail")
+    .eq("account_id", accountId)
+    .order("txn_time", { ascending: false })
+    .limit(2000);
+  for (const c of cards ?? []) {
+    const t = mapStoredRow(c);
+    const isRefund = t.status === "refund";
+    rows.push({
+      account_id: accountId,
+      kind: isRefund ? "refund" : "card",
+      direction: isRefund ? "in" : "out",
+      ref_id: String(t.id),
+      title: t.merchant,
+      amount: isRefund ? Math.abs(t.amount) : -Math.abs(t.amount),
+      currency: t.currency,
+      fee: num((t.detail as any)?.feeAmount),
+      status: t.status,
+      occurred_at: iso(t.time),
+      detail: { pan4: t.pan4, type: t.type },
+    });
+  }
+
+  // 2) on-chain + internal transfers + P2P (live from Bybit)
+  const [onchain, internal, p2p] = await Promise.allSettled([
+    fetchOnChain(accountId),
+    fetchInternal(accountId),
+    fetchP2P(accountId),
+  ]);
+
+  const pushAssets = (list: AssetRow[], kind: string) => {
+    for (const a of list) {
+      if (!a.id) continue;
+      rows.push({
+        account_id: accountId,
+        kind,
+        direction: a.direction,
+        ref_id: a.id,
+        title: `${a.coin}${a.chain ? ` · ${a.chain}` : ""}`,
+        amount: a.amount,
+        currency: a.coin || "USDT",
+        fee: a.fee,
+        status: a.status,
+        occurred_at: iso(a.time),
+        detail: { address: a.address, chain: a.chain },
+      });
+    }
+  };
+
+  if (onchain.status === "fulfilled") {
+    pushAssets(onchain.value.deposits, "deposit");
+    pushAssets(onchain.value.withdrawals, "withdraw");
+  }
+  if (internal.status === "fulfilled") {
+    pushAssets(internal.value.deposits, "internal_in");
+    pushAssets(internal.value.withdrawals, "internal_out");
+  }
+  if (p2p.status === "fulfilled") {
+    for (const o of p2p.value) {
+      if (!o.id) continue;
+      rows.push({
+        account_id: accountId,
+        kind: o.side === "sell" ? "p2p_sell" : "p2p_buy",
+        direction: o.side === "sell" ? "out" : "in",
+        ref_id: o.id,
+        title: `P2P ${o.coin}/${o.fiat}${o.counterparty ? ` · ${o.counterparty}` : ""}`,
+        amount: o.side === "sell" ? -Math.abs(o.quantity) : Math.abs(o.quantity),
+        currency: o.coin || "USDT",
+        fee: 0,
+        status: o.status,
+        occurred_at: iso(o.time),
+        detail: { fiatAmount: o.amount, fiat: o.fiat, price: o.price },
+      });
+    }
+  }
+
+  return upsertLedger(rows);
+}
+
+/** Runs the ledger sync for every linked account. */
+export async function syncAllLedger(): Promise<{ saved: number; accounts: number }> {
+  const accounts = await listAccounts();
+  const results = await Promise.all(
+    accounts.map(async (a) => {
+      try {
+        return await syncAccountLedger(a.id);
+      } catch {
+        return 0;
+      }
+    }),
+  );
+  return { saved: results.reduce((s, n) => s + n, 0), accounts: accounts.length };
+}
+
+/** One page of the central ledger across all accounts. */
+export async function fetchLedgerPage(opts: {
+  kind?: string;
+  accountId?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<LedgerPage> {
+  const db = await admin();
+  const pageSize = Math.min(Math.max(opts.pageSize ?? 50, 10), 200);
+  const page = Math.max(opts.page ?? 1, 1);
+  const from = (page - 1) * pageSize;
+  const kind = opts.kind && opts.kind !== "all" ? opts.kind : null;
+
+  const accounts = await listAccounts();
+  const nameById = new Map(accounts.map((a, i) => [a.id, `${a.name} (فيزا ${a.sortOrder || i + 1})`]));
+
+  const scoped = (q: any) => {
+    let out = q;
+    if (opts.accountId) out = out.eq("account_id", opts.accountId);
+    if (kind) out = out.eq("kind", kind);
+    return out;
+  };
+
+  const countKinds = ["all", "card", "refund", "deposit", "withdraw", "internal_in", "internal_out", "p2p_buy", "p2p_sell"];
+  const [{ data, error }, ...countResults] = await Promise.all([
+    scoped(db.from("bybit_ledger").select("*")).order("occurred_at", { ascending: false }).range(from, from + pageSize - 1),
+    ...countKinds.map(async (k) => {
+      let q = db.from("bybit_ledger").select("id", { count: "exact", head: true });
+      if (opts.accountId) q = q.eq("account_id", opts.accountId);
+      if (k !== "all") q = q.eq("kind", k);
+      const { count } = await q;
+      return Number(count ?? 0);
+    }),
+  ]);
+  if (error) throw new Error(error.message);
+
+  const counts: Record<string, number> = {};
+  countKinds.forEach((k, i) => (counts[k] = countResults[i] as number));
+
+  return {
+    rows: (data ?? []).map((r: any) => ({
+      id: r.id,
+      accountId: r.account_id ?? null,
+      accountName: nameById.get(r.account_id) ?? "حساب محذوف",
+      kind: r.kind,
+      direction: r.direction === "in" ? "in" : "out",
+      refId: r.ref_id,
+      title: r.title || "—",
+      amount: num(r.amount),
+      currency: r.currency ?? "USD",
+      fee: num(r.fee),
+      status: r.status ?? "",
+      time: new Date(r.occurred_at).getTime(),
+      detail: (r.detail ?? {}) as Record<string, unknown>,
+    })),
+    total: kind ? (counts[kind] ?? 0) : counts["all"] ?? 0,
+    page,
+    pageSize,
+    counts,
+  };
+}
