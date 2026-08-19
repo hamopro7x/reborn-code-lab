@@ -432,7 +432,7 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
           لا توجد حسابات مربوطة بعد{isAdmin ? " — أضف حساباً بمفتاح API (قراءة فقط)." : "."}
         </div>
       ) : (
-        <div className="grid auto-rows-[280px] grid-cols-1 gap-4 xl:grid-cols-2">
+        <div className="grid auto-rows-[320px] grid-cols-1 gap-4 xl:grid-cols-2">
           {list.map((a, i) => (
             <AccountSummaryCard
               key={a.id}
