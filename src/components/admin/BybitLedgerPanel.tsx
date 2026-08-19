@@ -308,19 +308,7 @@ export function BybitLedgerPanel() {
                       {openId === r.id && (
                         <tr className="border-b border-border/40 bg-muted/20">
                           <td colSpan={7} className="p-4">
-                            <div className="grid gap-3 text-xs sm:grid-cols-2 lg:grid-cols-4">
-                              <Detail label="الحساب" value={r.accountName} />
-                              <Detail label="النوع" value={KIND_LABEL[r.kind] ?? r.kind} />
-                              <Detail label="العملة" value={r.currency} />
-                              <Detail label="الرسوم" value={r.fee ? amt(r.fee) : "—"} />
-                              <Detail label="حالة المزوّد" value={r.status || "—"} />
-                              <Detail label="معرّف المعاملة" value={r.refId} mono />
-                              {Object.entries(r.detail ?? {}).map(([k, v]) =>
-                                v === null || v === "" ? null : (
-                                  <Detail key={k} label={k} value={String(v)} mono />
-                                ),
-                              )}
-                            </div>
+                            <LedgerRowDetails row={r} badgeText={badge.text} />
                           </td>
                         </tr>
                       )}
