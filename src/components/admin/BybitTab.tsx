@@ -254,8 +254,9 @@ function CoinLogo({ coin }: { coin: string }) {
 function CoinBalanceCard({ coin }: { coin: CoinRow }) {
   const isUsdt = String(coin.coin).toUpperCase() === "USDT";
   return (
-    <div dir="ltr" className="relative mx-auto w-full max-w-[190px] rounded-[22px] p-[5px] bg-[radial-gradient(120%_120%_at_50%_0%,oklch(0.55_0.13_170/0.28),transparent_70%)]">
-      <div className="relative overflow-hidden rounded-[18px] bg-[oklch(0.055_0.008_190)] px-4 pt-3 pb-3 shadow-[0_0_28px_-10px_oklch(0.6_0.14_170/0.35)]">
+    <div dir="ltr" className="relative mx-auto h-[104px] w-full max-w-[190px] shrink-0 rounded-[22px] p-[5px] bg-[radial-gradient(120%_120%_at_50%_0%,oklch(0.55_0.13_170/0.28),transparent_70%)]">
+      <div className="relative flex h-full flex-col justify-center overflow-hidden rounded-[18px] bg-[oklch(0.055_0.008_190)] px-4 py-3 shadow-[0_0_28px_-10px_oklch(0.6_0.14_170/0.35)]">
+
         <div className="flex items-center justify-between gap-2">
           <div className="text-[28px] font-black leading-none tracking-tight tabular-nums text-white">
             {coin.balance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -576,18 +577,21 @@ function AccountSummaryCard({
 
         </div>
 
-        {/* Balances */}
-        {q.isLoading ? (
-          <div className="grid min-h-[90px] place-items-center rounded-2xl border border-teal-400/15 bg-[oklch(0.12_0.03_190)]">
-            <Loader2 className="size-4 animate-spin" />
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {coins.map((c) => (
-              <CoinBalanceCard key={c.coin} coin={c} />
-            ))}
-          </div>
-        )}
+        {/* Balances — ارتفاع ثابت في كل الحالات */}
+        <div className="h-[104px] overflow-hidden">
+          {q.isLoading ? (
+            <div className="grid h-full place-items-center rounded-2xl border border-teal-400/15 bg-[oklch(0.12_0.03_190)]">
+              <Loader2 className="size-4 animate-spin" />
+            </div>
+          ) : (
+            <div className="grid h-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 overflow-y-auto">
+              {coins.map((c) => (
+                <CoinBalanceCard key={c.coin} coin={c} />
+              ))}
+            </div>
+          )}
+        </div>
+
 
         {d.failed && (
           <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-2 text-[11px] text-destructive-foreground">
