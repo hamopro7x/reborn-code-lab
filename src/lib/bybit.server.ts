@@ -1632,10 +1632,9 @@ export async function syncAccountLedger(accountId: string): Promise<number> {
   const db = await admin();
   const rows: LedgerInsert[] = [];
 
-  // 1) card movements (purchases / refunds / fees) from the archive
-  // Refresh the account's own transaction archive first. The central ledger
-  // must mirror that source, not a stale pending snapshot from an earlier sync.
-  await syncCardTxns(accountId);
+  // 1) card movements (purchases / refunds / fees) from the archive.
+  // READ-ONLY: never refresh/modify the account's own archive from here.
+
   const { data: cards } = await db
     .from("bybit_card_txns")
     .select("txn_id, merchant, amount, currency, status, txn_time, pan4, txn_type, detail")
