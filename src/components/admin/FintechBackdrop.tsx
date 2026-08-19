@@ -4,7 +4,10 @@ import { useEffect, useRef } from "react";
  * Animated Cyber / Fintech backdrop rendered on a single canvas.
  * Purely decorative: pointer-events none, sits behind content.
  */
-export function FintechBackdrop({ className = "" }: { className?: string }) {
+export function FintechBackdrop({
+  className = "",
+  fullscreen = false,
+}: { className?: string; fullscreen?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
@@ -72,7 +75,7 @@ export function FintechBackdrop({ className = "" }: { className?: string }) {
 
     const build = () => {
       const area = (w * h) / 1000;
-      const nodeCount = Math.max(18, Math.min(70, Math.round(area / 9)));
+      const nodeCount = Math.max(18, Math.min(70, Math.round(area / 6)));
       nodes = Array.from({ length: nodeCount }, () => ({
         x: rand(0, w),
         y: rand(0, h),
@@ -80,7 +83,7 @@ export function FintechBackdrop({ className = "" }: { className?: string }) {
         vy: rand(-0.12, 0.12),
       }));
 
-      particles = Array.from({ length: Math.max(20, Math.min(90, Math.round(area / 7))) }, () => ({
+      particles = Array.from({ length: Math.max(20, Math.min(90, Math.round(area / 4.5))) }, () => ({
         x: rand(0, w),
         y: rand(0, h),
         vx: rand(-0.25, 0.25),
@@ -89,10 +92,12 @@ export function FintechBackdrop({ className = "" }: { className?: string }) {
         hue: [175, 190, 205, 45].at(Math.floor(rand(0, 4)))!,
       }));
 
-      candlesL = makeCandles(22, 12, 13, h * 0.32);
-      candlesR = makeCandles(18, w - 12 - 17 * 12, 12, h * 0.62);
+      const colsTop = Math.max(10, Math.floor((w - 24) / 13));
+      const colsBottom = Math.max(10, Math.floor((w - 24) / 12));
+      candlesL = makeCandles(colsTop, 12, 13, h * 0.24);
+      candlesR = makeCandles(colsBottom, 12, 12, h * 0.78);
 
-      trails = Array.from({ length: 7 }, () => ({
+      trails = Array.from({ length: 12 }, () => ({
         x: rand(0, w),
         y: rand(0, h),
         len: rand(60, 190),
@@ -142,7 +147,7 @@ export function FintechBackdrop({ className = "" }: { className?: string }) {
       const step = 46;
       const off = (t * 0.012) % step;
       ctx.lineWidth = 1;
-      ctx.strokeStyle = "rgba(45, 212, 191, 0.05)";
+      ctx.strokeStyle = "rgba(45, 212, 191, 0.11)";
       ctx.beginPath();
       for (let x = -step + off; x < w; x += step) {
         ctx.moveTo(x, 0);
@@ -157,7 +162,7 @@ export function FintechBackdrop({ className = "" }: { className?: string }) {
 
     const drawMap = (t: number) => {
       for (const d of mapDots) {
-        const a = 0.16 + 0.14 * Math.sin(t * 0.0016 + d.ph);
+        const a = 0.34 + 0.26 * Math.sin(t * 0.0016 + d.ph);
         ctx.fillStyle = `rgba(56, 189, 248, ${a})`;
         ctx.beginPath();
         ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
@@ -171,13 +176,13 @@ export function FintechBackdrop({ className = "" }: { className?: string }) {
         const wob = Math.sin(t * 0.001 + i * 0.5 + phase) * 3;
         const up = c.up;
         const col = up ? "45, 212, 191" : "239, 68, 68";
-        ctx.strokeStyle = `rgba(${col}, 0.22)`;
+        ctx.strokeStyle = `rgba(${col}, 0.6)`;
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(c.x + 3, c.hi + wob);
         ctx.lineTo(c.x + 3, c.lo + wob);
         ctx.stroke();
-        ctx.fillStyle = `rgba(${col}, 0.2)`;
+        ctx.fillStyle = `rgba(${col}, 0.5)`;
         const top = Math.min(c.o, c.c) + wob;
         const hgt = Math.max(2, Math.abs(c.c - c.o));
         ctx.fillRect(c.x, top, 6, hgt);
@@ -193,7 +198,7 @@ export function FintechBackdrop({ className = "" }: { className?: string }) {
         if (i === 0) ctx.moveTo(0, y);
         else ctx.lineTo(i * seg, y);
       }
-      ctx.strokeStyle = "rgba(34, 211, 238, 0.16)";
+      ctx.strokeStyle = "rgba(34, 211, 238, 0.42)";
       ctx.lineWidth = 1.4;
       ctx.shadowColor = "rgba(34, 211, 238, 0.35)";
       ctx.shadowBlur = 10;
@@ -217,14 +222,14 @@ export function FintechBackdrop({ className = "" }: { className?: string }) {
           const dy = a.y - b.y;
           const d2 = dx * dx + dy * dy;
           if (d2 > 150 * 150) continue;
-          const alpha = (1 - Math.sqrt(d2) / 150) * 0.16;
+          const alpha = (1 - Math.sqrt(d2) / 150) * 0.34;
           ctx.strokeStyle = `rgba(125, 211, 252, ${alpha})`;
           ctx.beginPath();
           ctx.moveTo(a.x, a.y);
           ctx.lineTo(b.x, b.y);
           ctx.stroke();
         }
-        const pulse = 0.3 + 0.25 * Math.sin(t * 0.002 + a.x * 0.01);
+        const pulse = 0.55 + 0.3 * Math.sin(t * 0.002 + a.x * 0.01);
         ctx.fillStyle = `rgba(45, 212, 191, ${pulse})`;
         ctx.beginPath();
         ctx.arc(a.x, a.y, 1.5, 0, Math.PI * 2);
@@ -242,7 +247,7 @@ export function FintechBackdrop({ className = "" }: { className?: string }) {
         }
         if (p.x < -10) p.x = w + 10;
         if (p.x > w + 10) p.x = -10;
-        ctx.fillStyle = `hsla(${p.hue}, 85%, 62%, 0.4)`;
+        ctx.fillStyle = `hsla(${p.hue}, 85%, 65%, 0.75)`;
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
         ctx.fill();
@@ -255,7 +260,7 @@ export function FintechBackdrop({ className = "" }: { className?: string }) {
           ? ctx.createLinearGradient(tr.x, tr.y, tr.x, tr.y + tr.len)
           : ctx.createLinearGradient(tr.x, tr.y, tr.x + tr.len, tr.y);
         g.addColorStop(0, `hsla(${tr.hue}, 90%, 65%, 0)`);
-        g.addColorStop(0.6, `hsla(${tr.hue}, 90%, 68%, 0.22)`);
+        g.addColorStop(0.6, `hsla(${tr.hue}, 90%, 68%, 0.5)`);
         g.addColorStop(1, `hsla(${tr.hue}, 90%, 75%, 0)`);
         ctx.strokeStyle = g;
         ctx.lineWidth = 1.2;
@@ -284,7 +289,12 @@ export function FintechBackdrop({ className = "" }: { className?: string }) {
     const spawnGlyph = () => {
       const mono = Math.random() > 0.45;
       const edge = Math.random();
-      const x = edge < 0.5 ? rand(4, Math.max(6, w * 0.22)) : rand(w * 0.76, Math.max(w * 0.78, w - 90));
+      const x =
+        edge < 0.38
+          ? rand(4, Math.max(6, w * 0.2))
+          : edge < 0.76
+            ? rand(w * 0.74, Math.max(w * 0.76, w - 90))
+            : rand(w * 0.2, Math.max(w * 0.22, w * 0.74));
       const text = mono
         ? Array.from({ length: Math.round(rand(6, 14)) }, () => (Math.random() > 0.5 ? "1" : "0")).join("")
         : Math.random() > 0.45
@@ -292,11 +302,11 @@ export function FintechBackdrop({ className = "" }: { className?: string }) {
           : `${rand(10, 99).toFixed(2)}  ${Math.random() > 0.5 ? "+" : "-"}${rand(0, 9).toFixed(2)}%`;
       const max = rand(2600, 5200);
       glyphs.push({ x, y: rand(10, h - 10), text, life: 0, max, mono });
-      if (glyphs.length > 40) glyphs.shift();
+      if (glyphs.length > 70) glyphs.shift();
     };
 
     const drawGlyphs = (dt: number) => {
-      ctx.font = "10px ui-monospace, SFMono-Regular, Menlo, monospace";
+      ctx.font = "11px ui-monospace, SFMono-Regular, Menlo, monospace";
       ctx.textAlign = "left";
       for (let i = glyphs.length - 1; i >= 0; i--) {
         const g = glyphs[i]!;
@@ -306,7 +316,7 @@ export function FintechBackdrop({ className = "" }: { className?: string }) {
           continue;
         }
         const k = g.life / g.max;
-        const a = Math.sin(Math.PI * k) * (g.mono ? 0.22 : 0.18);
+        const a = Math.sin(Math.PI * k) * (g.mono ? 0.5 : 0.42);
         ctx.fillStyle = g.mono
           ? `rgba(45, 212, 191, ${a})`
           : `rgba(148, 197, 255, ${a})`;
@@ -316,7 +326,7 @@ export function FintechBackdrop({ className = "" }: { className?: string }) {
 
     const drawHud = (t: number) => {
       ctx.save();
-      ctx.strokeStyle = "rgba(45, 212, 191, 0.18)";
+      ctx.strokeStyle = "rgba(45, 212, 191, 0.35)";
       ctx.lineWidth = 1;
       // corner brackets
       const b = 22;
@@ -337,12 +347,12 @@ export function FintechBackdrop({ className = "" }: { className?: string }) {
       const gx = w - 58;
       const gy = h - 62;
       const r = 26;
-      ctx.strokeStyle = "rgba(56, 189, 248, 0.12)";
+      ctx.strokeStyle = "rgba(56, 189, 248, 0.22)";
       ctx.beginPath();
       ctx.arc(gx, gy, r, 0, Math.PI * 2);
       ctx.stroke();
       const start = (t * 0.0009) % (Math.PI * 2);
-      ctx.strokeStyle = "rgba(45, 212, 191, 0.3)";
+      ctx.strokeStyle = "rgba(45, 212, 191, 0.6)";
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.arc(gx, gy, r, start, start + 1.6);
@@ -371,7 +381,7 @@ export function FintechBackdrop({ className = "" }: { className?: string }) {
       drawHud(now);
 
       glyphTimer += dt;
-      if (glyphTimer > 520) {
+      if (glyphTimer > 200) {
         glyphTimer = 0;
         spawnGlyph();
       }
@@ -421,11 +431,13 @@ export function FintechBackdrop({ className = "" }: { className?: string }) {
   return (
     <div
       aria-hidden
-      className={`pointer-events-none absolute inset-0 overflow-hidden rounded-3xl ${className}`}
+      className={`pointer-events-none overflow-hidden ${
+        fullscreen ? "fixed inset-0 z-0" : "absolute inset-0 rounded-3xl"
+      } ${className}`}
     >
-      <div className="absolute inset-0 bg-[radial-gradient(120%_90%_at_50%_0%,oklch(0.14_0.05_230/0.9),oklch(0.05_0.02_260/0.95))]" />
+      <div className="absolute inset-0 bg-[radial-gradient(120%_90%_at_50%_0%,oklch(0.12_0.045_230/0.85),oklch(0.045_0.02_260/0.92))]" />
       <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
-      <div className="absolute inset-0 bg-[radial-gradient(70%_60%_at_50%_50%,oklch(0.04_0.01_260/0.72),transparent_75%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(65%_55%_at_50%_50%,oklch(0.04_0.01_260/0.45),transparent_80%)]" />
     </div>
   );
 }
