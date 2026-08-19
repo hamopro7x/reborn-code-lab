@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useState, useRef } from "react";
 import { usePersistentState } from "@/lib/persistent-state";
 import tonAsset from "@/assets/ton.png.asset.json";
-import usdtLogo from "@/assets/usdt-logo.png.asset.json";
+import usdtOfficial from "@/assets/usdt-official.png.asset.json";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -254,28 +254,28 @@ function CoinLogo({ coin }: { coin: string }) {
 function CoinBalanceCard({ coin }: { coin: CoinRow }) {
   const isUsdt = String(coin.coin).toUpperCase() === "USDT";
   return (
-    <div dir="ltr" className="relative mx-auto h-[88px] w-full max-w-[174px] shrink-0 rounded-[17px] p-[3px] bg-[radial-gradient(120%_120%_at_50%_0%,oklch(0.55_0.13_170/0.28),transparent_70%)]">
-      <div className="relative flex h-full flex-col justify-center overflow-hidden rounded-[14px] bg-[oklch(0.055_0.008_190)] px-3 py-2 shadow-[0_0_28px_-10px_oklch(0.6_0.14_170/0.35)]">
+    <div dir="ltr" className="relative mx-auto h-[96px] w-full max-w-[190px] shrink-0 rounded-[18px] p-[3px] bg-[radial-gradient(120%_120%_at_50%_0%,oklch(0.55_0.13_170/0.28),transparent_70%)]">
+      <div className="relative flex h-full flex-col justify-center overflow-hidden rounded-[15px] bg-[oklch(0.055_0.008_190)] px-3.5 py-2.5 shadow-[0_0_28px_-10px_oklch(0.6_0.14_170/0.35)]">
 
         <div className="flex items-center justify-between gap-2">
-          <div className="text-[24px] font-black leading-none tracking-tight tabular-nums text-white">
+          <div className="text-[26px] font-black leading-none tracking-tight tabular-nums text-white">
             {coin.balance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
 
           {isUsdt ? (
             <img
-              src={usdtLogo.url}
+              src={usdtOfficial.url}
               alt="USDT"
-              className="size-[34px] shrink-0 rounded-full object-cover"
+              className="size-[38px] shrink-0 rounded-full object-cover"
             />
           ) : (
-            <span className="grid size-[34px] shrink-0 place-items-center rounded-full bg-[oklch(0.18_0.03_285)] border border-border/50">
+            <span className="grid size-[38px] shrink-0 place-items-center rounded-full bg-[oklch(0.18_0.03_285)] border border-border/50">
               <CoinLogo coin={coin.coin} />
             </span>
           )}
         </div>
 
-        <div className="mt-1.5 text-left text-[10px] font-medium text-[oklch(0.72_0.12_170)]">
+        <div className="mt-2 text-left text-[11px] font-medium text-[oklch(0.72_0.12_170)]">
           USD {coin.usd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ≈
         </div>
       </div>
@@ -580,11 +580,11 @@ function AccountSummaryCard({
           </div>
         </div>
 
-        {/* Balances — bottom right aligned, fixed height */}
-        <div className="ml-auto h-[88px] min-h-[88px] max-h-[88px] w-full max-w-[174px] shrink-0 overflow-hidden">
+        {/* Balances — bottom right aligned, lowered and slightly larger */}
+        <div className="ml-auto mt-auto h-[96px] min-h-[96px] max-h-[96px] w-full max-w-[190px] shrink-0 overflow-hidden">
           {q.isLoading ? (
-            <div className="relative h-full w-full rounded-[17px] p-[3px] bg-[radial-gradient(120%_120%_at_50%_0%,oklch(0.55_0.13_170/0.28),transparent_70%)]">
-              <div className="grid h-full w-full place-items-center rounded-[14px] bg-[oklch(0.055_0.008_190)] shadow-[0_0_28px_-10px_oklch(0.6_0.14_170/0.35)]">
+            <div className="relative h-full w-full rounded-[18px] p-[3px] bg-[radial-gradient(120%_120%_at_50%_0%,oklch(0.55_0.13_170/0.28),transparent_70%)]">
+              <div className="grid h-full w-full place-items-center rounded-[15px] bg-[oklch(0.055_0.008_190)] shadow-[0_0_28px_-10px_oklch(0.6_0.14_170/0.35)]">
                 <Loader2 className="size-5 animate-spin" />
               </div>
             </div>
