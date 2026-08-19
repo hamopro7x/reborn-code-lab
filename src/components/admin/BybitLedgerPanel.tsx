@@ -227,7 +227,6 @@ export function BybitLedgerPanel() {
               }}
             >
               {s.label}
-              {s.key !== "all" && counts[s.key] !== undefined ? ` (${counts[s.key]!.toLocaleString("en-US")})` : ""}
             </Chip>
           ))}
         </div>
