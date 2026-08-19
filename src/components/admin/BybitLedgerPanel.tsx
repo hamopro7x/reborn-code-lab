@@ -56,12 +56,12 @@ function ChainCell({ chain }: { chain: string }) {
         <img
           src={`${CHAIN_LOGO_BASE}/${slug}/info/logo.png`}
           alt={key}
-          className="size-5 shrink-0 rounded-full"
+          className="size-6 shrink-0 rounded-full"
           loading="lazy"
           onError={() => setFailed(true)}
         />
       ) : (
-        <span className="grid size-5 shrink-0 place-items-center rounded-full bg-muted text-[9px] font-black">
+        <span className="grid size-6 shrink-0 place-items-center rounded-full bg-muted text-[10px] font-black">
           {key.slice(0, 2)}
         </span>
       )}
