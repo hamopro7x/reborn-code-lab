@@ -4,7 +4,6 @@ import { useServerFn } from "@tanstack/react-start";
 import { ChevronDown } from "lucide-react";
 import { getBybitLedger, syncBybitLedger } from "@/lib/bybit.functions";
 import { formatDateTime } from "@/lib/format";
-import { TXN_SECTIONS, fmtFieldValue, hasField, txnFeeBreakdown } from "@/lib/bybit-txn-fields";
 
 const GROUPS: { key: string; label: string }[] = [
   { key: "txns", label: "المعاملات" },
@@ -349,83 +348,31 @@ export function BybitLedgerPanel() {
   );
 }
 
-/** Known keys already rendered by the labelled sections or the summary block. */
-const RENDERED_KEYS = new Set([
-  ...TXN_SECTIONS.flatMap((s) => s.defs.map(([k]) => k)),
-  "pan4",
-  "type",
-  "raw",
-  "tradeStatus",
-  "side",
-  "basicAmount",
-  "basicCurrency",
-  "settleAmount",
-  "settleCurrency",
-]);
-
 /**
- * Read-only rendering of the ORIGINAL transaction data as it was mirrored from
- * the source account: same ids, amounts, merchant, dates, status and stage.
- * Status and stage are two separate fields and are never swapped.
+ * Simplified read-only summary matching the reference design: a single block with
+ * the most important transaction fields only, no extra raw sections.
  */
 function LedgerRowDetails({ row, badgeText }: { row: any; badgeText: string }) {
   const d = (row.detail ?? {}) as Record<string, unknown>;
-  const { total, fee, spend } = txnFeeBreakdown({ amount: row.amount, detail: d });
   const cur = String(row.currency || "USD");
-  const money = (n: number) =>
-    `${cur} ${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-  const sections = TXN_SECTIONS.map((s) => ({
-    title: s.title,
-    fields: s.defs.filter(([k]) => hasField(d, k)),
-  })).filter((s) => s.fields.length);
-
-  const extras = Object.entries(d).filter(
-    ([k, v]) => !RENDERED_KEYS.has(k) && v !== null && v !== undefined && v !== "",
-  );
 
   const summary: [string, string][] = [
     ["الحساب / الفيزا", row.accountName || "—"],
+    ["حالة المعاملة", String(row.status || "—")],
     ["نوع المعاملة", KIND_LABEL[row.kind] ?? row.kind],
-    ["حالة المعاملة", badgeText],
-    ["حالة المزوّد", String(row.status || "—")],
-    ["مرحلة المعاملة", String(d["stage"] ?? "—")],
+    ["الحالة", badgeText],
     ["تاريخ ووقت المعاملة", formatDateTime(row.time)],
-    ["العملة", cur],
-    ["آخر 4 أرقام للبطاقة", String(d["pan4"] ?? "—") || "—"],
+    ["مرحلة المعاملة", String(d["stage"] ?? "—")],
+    ["حالة المزوّد", String(d["tradeStatus"] ?? d["status"] ?? row.status ?? "—")],
     ["معرّف المعاملة", row.refId],
+    ["آخر 4 أرقام للبطاقة", String(d["pan4"] ?? "—") || "—"],
+    ["العملة", cur],
   ];
 
   return (
     <div className="rounded-2xl border border-border/50 bg-muted/10 p-4" dir="rtl">
-      <div className="flex flex-col gap-5">
-        <div>
-          <div className="mb-3 text-sm font-black">ملخص المعاملة</div>
-          <FieldGrid rows={summary} />
-        </div>
-        {sections.map((s) => (
-          <div key={s.title}>
-            <div className="mb-3 text-sm font-black">{s.title}</div>
-            <FieldGrid rows={s.fields.map(([k, label]) => [label, fmtFieldValue(k, d[k])])} />
-          </div>
-        ))}
-        <div>
-          <div className="mb-3 text-sm font-black">الرسوم والمبلغ المحتسب</div>
-          <FieldGrid
-            rows={[
-              ["إجمالي المعاملة", total !== null ? money(total) : "—"],
-              ["الرسوم", fee !== null && fee > 0 ? money(fee) : fee === 0 ? "بدون رسوم" : row.fee ? money(Math.abs(row.fee)) : "بدون رسوم"],
-              ["المحتسب في الصرف الشهري", spend !== null ? money(spend) : "—"],
-            ]}
-          />
-        </div>
-        {extras.length > 0 && (
-          <div>
-            <div className="mb-3 text-sm font-black">بيانات أصلية إضافية</div>
-            <FieldGrid rows={extras.map(([k, v]) => [k, fmtFieldValue(k, v)])} />
-          </div>
-        )}
-      </div>
+      <div className="mb-3 text-sm font-black">ملخص المعاملة</div>
+      <FieldGrid rows={summary} />
     </div>
   );
 }
