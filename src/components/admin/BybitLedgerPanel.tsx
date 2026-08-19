@@ -113,8 +113,11 @@ function statusBadge(kind: string, status: string) {
   if (kind === "refund" || s === "refund" || s === "مسترد") return { cls: "bg-muted text-muted-foreground", text: "مسترد" };
   if (OK_STATUS.has(s)) return { cls: "bg-emerald-500/15 text-emerald-400", text: "ناجحة" };
   if (BAD_STATUS.has(s)) return { cls: "bg-red-500/15 text-red-400", text: "فاشلة" };
-  return { cls: "bg-red-500/15 text-red-400", text: "فاشلة" };
+  if (s === "pending" || s === "قيد التنفيذ" || s === "0" || s === "1")
+    return { cls: "bg-amber-500/15 text-amber-400", text: "قيد التنفيذ" };
+  return { cls: "bg-muted text-muted-foreground", text: status || "—" };
 }
+
 
 
 function amt(n: number) {
