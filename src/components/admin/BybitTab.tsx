@@ -578,8 +578,8 @@ function AccountSummaryCard({
 
         {/* Balances */}
         {q.isLoading ? (
-          <div className="grid min-h-[104px] place-items-center rounded-2xl border border-teal-400/15 bg-[oklch(0.12_0.03_190)]">
-            <Loader2 className="size-5 animate-spin" />
+          <div className="grid min-h-[90px] place-items-center rounded-2xl border border-teal-400/15 bg-[oklch(0.12_0.03_190)]">
+            <Loader2 className="size-4 animate-spin" />
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
