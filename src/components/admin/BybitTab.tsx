@@ -255,8 +255,8 @@ function CoinBalanceCard({ coin }: { coin: CoinRow }) {
   const isUsdt = String(coin.coin).toUpperCase() === "USDT";
   return (
     <div dir="ltr" className="relative mx-auto w-full max-w-[240px] rounded-[28px] p-[6px] bg-[radial-gradient(120%_120%_at_50%_0%,oklch(0.55_0.13_170/0.28),transparent_70%)]">
-        <div className="relative overflow-hidden rounded-[24px] bg-[oklch(0.055_0.008_190)] px-5 pt-4 pb-4 shadow-[0_0_28px_-10px_oklch(0.6_0.14_170/0.35)]">
-          <div className="mt-0 flex items-center justify-between gap-2">
+      <div className="relative overflow-hidden rounded-[24px] bg-[oklch(0.055_0.008_190)] px-5 pt-4 pb-4 shadow-[0_0_28px_-10px_oklch(0.6_0.14_170/0.35)]">
+        <div className="flex items-center justify-between gap-2">
           <div className="text-[34px] font-black leading-none tracking-tight tabular-nums text-white">
             {coin.balance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
