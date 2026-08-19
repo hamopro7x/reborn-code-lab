@@ -19,7 +19,7 @@ import {
   LayoutDashboard, Package, Layers, ShoppingCart, CreditCard, Coins, Clock, Settings2,
   Plus, Trash2, Edit, ExternalLink, Check, X, TrendingUp, DollarSign, Users, Bell, Loader2,
   Star, UserCog, LogOut, Repeat, ArrowUpRight, GraduationCap, MonitorSmartphone, Upload, PlayCircle,
-  Lock, Camera, Download,
+  Lock, Camera, Download, ChevronRight,
 } from "lucide-react";
 
 import { useServerFn } from "@tanstack/react-start";
@@ -30,6 +30,7 @@ import { getDeviceFingerprint } from "@/lib/device";
 import { ShieldAlert } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { ReportsTab } from "@/components/admin/ReportsTab";
+import { AdminBackProvider, useAdminBack, useAdminBackTarget } from "@/components/admin/back-nav";
 import { BybitTab, ApiKeyPanel } from "@/components/admin/BybitTab";
 import { RedotPayPanel } from "@/components/admin/RedotPayPanel";
 import { FileBarChart, MonitorPlay, Image as ImageIcon, ChevronUp, ChevronDown, WalletCards, KeyRound } from "lucide-react";
@@ -225,9 +226,11 @@ function Admin() {
           </SidebarFooter>
         </Sidebar>
 
+        <AdminBackProvider>
         <div className="flex-1 flex flex-col min-w-0">
           <header className="h-14 flex items-center gap-3 border-b border-border/40 backdrop-blur-xl bg-background/80 sticky top-0 z-30 px-4">
             <SidebarTrigger />
+            <AdminBackButton />
             <h1 className="font-bold">{visibleNavGroups.flatMap((g) => g.items).find((i) => i.key === panel)?.label}</h1>
             {adminOnly && !basePanels.includes(panel) && (
               <label className="ms-auto flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
@@ -280,8 +283,25 @@ function Admin() {
           </main>
 
         </div>
+        </AdminBackProvider>
       </div>
     </SidebarProvider>
+  );
+}
+
+function AdminBackButton() {
+  const back = useAdminBackTarget();
+  if (!back) return null;
+  return (
+    <Button
+      size="sm"
+      variant="outline"
+      className="rounded-xl gap-1 shrink-0"
+      onClick={back}
+      aria-label="رجوع"
+    >
+      <ChevronRight className="size-4" /> رجوع
+    </Button>
   );
 }
 
@@ -649,15 +669,12 @@ function EmployeesTab() {
     }));
   }, [selected?.user_id, selected]);
 
+  useAdminBack(selected ? () => setExpanded(null) : null, [selected?.user_id]);
+
   if (selected) {
     const u: any = selected;
     return (
       <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" className="rounded-full" onClick={() => setExpanded(null)}>
-            رجوع للموظفين
-          </Button>
-        </div>
 
         <div className="card-surface rounded-2xl p-6 flex flex-col items-center text-center gap-3">
           <button

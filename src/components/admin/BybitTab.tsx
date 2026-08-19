@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { FintechBackdrop } from "@/components/admin/FintechBackdrop";
+import { useAdminBack } from "@/components/admin/back-nav";
 
 import { RefreshCw, CreditCard, Layers, ArrowUp, ArrowDown, ChevronDown, Loader2, Trash2, Plus, Download, Copy, Pencil, ChevronLeft, Wallet, ArrowDownUp, Search, BarChart3, Clock, PieChart } from "lucide-react";
 import {
@@ -373,6 +374,8 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
 
   const current = list.find((a) => a.id === selected) ?? null;
 
+  useAdminBack(!current && listOpen ? () => setListOpen(false) : null, [!!current, listOpen]);
+
   if (current) {
     return (
       <BybitAccountView
@@ -414,12 +417,7 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
     <div className="relative space-y-4 text-right" dir="rtl">
       <FintechBackdrop fullscreen />
       <div className="relative z-10 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setListOpen(false)}>
-            رجوع
-          </Button>
-          
-        </div>
+        <div className="flex items-center gap-2" />
         {isAdmin && (
           <Button size="sm" className="rounded-xl" onClick={() => { setAddError(null); setAddOpen(true); }}>
             <Plus className="size-4 ml-1" /> إضافة حساب
@@ -817,6 +815,7 @@ function BybitAccountView({ isAdmin, accountId, accountName, onBack }: { isAdmin
   const syncCardFn = useServerFn(syncBybitCardTxns);
   const cardsFn = useServerFn(getBybitCards);
   const [cardsOpen, setCardsOpen] = useState(false);
+  useAdminBack(cardsOpen ? () => setCardsOpen(false) : onBack, [cardsOpen, onBack]);
   const [addCardOpen, setAddCardOpen] = useState(false);
   const chainFn = useServerFn(getBybitOnChain);
   const internalFn = useServerFn(getBybitInternal);
@@ -919,9 +918,6 @@ function BybitAccountView({ isAdmin, accountId, accountName, onBack }: { isAdmin
     <div className="space-y-4 text-right" dir="rtl">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="rounded-xl" onClick={cardsOpen ? () => setCardsOpen(false) : onBack}>
-            <ChevronLeft className="size-4 ml-1 rotate-180" /> رجوع
-          </Button>
           {cardsOpen && <h2 className="text-sm font-bold">بطاقاتي</h2>}
         </div>
         {!cardsOpen && (
