@@ -88,7 +88,11 @@ function Admin() {
       const v = (data?.value ?? {}) as any;
       return Array.isArray(v.panels) ? (v.panels as PanelKey[]) : [];
     },
-    refetchInterval: 5000,
+    // Panel sharing changes rarely; a 5s poll on every admin session was pure
+    // overhead. Still automatic, just far cheaper and only while visible.
+    staleTime: 30_000,
+    refetchInterval: 30_000,
+    refetchIntervalInBackground: false,
   });
   const shared = sharedQ.data ?? [];
   const basePanels: PanelKey[] = ["orders", "courses"];
