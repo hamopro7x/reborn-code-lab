@@ -140,6 +140,7 @@ function Admin() {
         { key: "reviews", label: "المراجعات", icon: Star },
         { key: "reports", label: "التقارير", icon: FileBarChart, adminOnly: true },
         { key: "cardtx", label: "معاملات الفيزا", icon: WalletCards, adminOnly: true },
+        { key: "worksheet", label: "جدول بيانات الشغل", icon: ClipboardList },
 
       ],
     },
