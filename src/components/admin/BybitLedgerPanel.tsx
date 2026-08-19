@@ -1,8 +1,8 @@
-import { Fragment, useEffect, useRef, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Fragment, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ChevronDown } from "lucide-react";
-import { getBybitLedger, syncBybitLedger } from "@/lib/bybit.functions";
+import { getBybitLedger } from "@/lib/bybit.functions";
 import { formatDateTime } from "@/lib/format";
 import usdtOfficial from "@/assets/usdt-official.png.asset.json";
 
@@ -175,9 +175,7 @@ function amt(n: number) {
 
 /** السجل المركزي: كل معاملة على أي حساب من حسابات الفيزا تُسجَّل هنا تلقائياً. */
 export function BybitLedgerPanel() {
-  const qc = useQueryClient();
   const listFn = useServerFn(getBybitLedger);
-  const syncFn = useServerFn(syncBybitLedger);
   const [group, setGroup] = useState("txns");
   const [status, setStatus] = useState("all");
   const [openId, setOpenId] = useState<string | null>(null);
@@ -194,30 +192,6 @@ export function BybitLedgerPanel() {
     refetchInterval: 30_000,
     refetchIntervalInBackground: false,
   });
-
-  // Fully automatic: no manual control. The scheduler runs the sync every
-  // minute in the background, so the list only needs a single nudge when the
-  // panel opens — the previous 30s client-side sync loop duplicated the
-  // scheduler's work on every viewer and dominated server time.
-  const nudged = useRef(false);
-  useEffect(() => {
-    if (nudged.current) return;
-    nudged.current = true;
-    let alive = true;
-    const timer = setTimeout(async () => {
-      try {
-        await syncFn();
-        if (alive) qc.invalidateQueries({ queryKey: ["bybit-ledger"] });
-      } catch {
-        /* the scheduler retries; the list keeps showing stored rows */
-      }
-    }, 1200);
-    return () => {
-      alive = false;
-      clearTimeout(timer);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const rows = q.data?.rows ?? [];
   
