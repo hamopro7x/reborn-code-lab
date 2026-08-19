@@ -23,6 +23,45 @@ function CoinCell({ coin }: { coin: string }) {
   );
 }
 
+/** Chain cell with a network badge icon next to the chain name. */
+const CHAIN_STYLES: Record<string, { bg: string; fg: string; label: string }> = {
+  BSC: { bg: "#F0B90B", fg: "#1A1A1A", label: "B" },
+  BNB: { bg: "#F0B90B", fg: "#1A1A1A", label: "B" },
+  ETH: { bg: "#627EEA", fg: "#FFFFFF", label: "E" },
+  TRX: { bg: "#EF0027", fg: "#FFFFFF", label: "T" },
+  APTOS: { bg: "#FFFFFF", fg: "#111111", label: "A" },
+  TON: { bg: "#0098EA", fg: "#FFFFFF", label: "T" },
+  SOL: { bg: "#14F195", fg: "#0B1B14", label: "S" },
+  ARBI: { bg: "#28A0F0", fg: "#FFFFFF", label: "A" },
+  OP: { bg: "#FF0420", fg: "#FFFFFF", label: "O" },
+  MATIC: { bg: "#8247E5", fg: "#FFFFFF", label: "P" },
+  POLYGON: { bg: "#8247E5", fg: "#FFFFFF", label: "P" },
+};
+
+function ChainCell({ chain }: { chain: string }) {
+  const raw = String(chain || "").trim();
+  if (!raw) return <span className="text-muted-foreground">—</span>;
+  const key = raw.toUpperCase();
+  const style =
+    CHAIN_STYLES[key] ??
+    Object.entries(CHAIN_STYLES).find(([k]) => key.includes(k))?.[1] ?? {
+      bg: "#3B82F6",
+      fg: "#FFFFFF",
+      label: key.slice(0, 1),
+    };
+  return (
+    <span className="inline-flex items-center gap-2">
+      <span
+        className="grid size-5 shrink-0 place-items-center rounded-full text-[10px] font-black leading-none"
+        style={{ backgroundColor: style.bg, color: style.fg }}
+      >
+        {style.label}
+      </span>
+      <span className="text-xs font-bold text-blue-400">{key}</span>
+    </span>
+  );
+}
+
 const GROUPS: { key: string; label: string }[] = [
   { key: "txns", label: "المعاملات" },
   { key: "onchain", label: "السحب والإيداع الخارجي" },
@@ -335,7 +374,7 @@ export function BybitLedgerPanel() {
                         ) : group === "onchain" ? (
                           <>
                             <td className="p-4"><CoinCell coin={r.currency} /></td>
-                            <td className="p-4 text-xs font-bold text-blue-400">{String(d["chain"] ?? "—") || "—"}</td>
+                            <td className="p-4"><ChainCell chain={String(d["chain"] ?? "")} /></td>
                             {AmountCell}
                             <td className="p-4 text-xs text-muted-foreground tabular-nums" dir="ltr">
                               {r.fee ? `${r.currency} ${amt(r.fee)}` : "—"}
