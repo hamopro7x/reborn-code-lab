@@ -1816,46 +1816,21 @@ export async function fetchLedgerPage(opts: {
     return out;
   };
 
-  const countFor = async (g: string, st: string) => {
-    const { count } = await applyScope(base().select("id", { count: "exact", head: true }), g, st);
-    return Number(count ?? 0);
+  // One round trip: the page rows and the row count for the same scope. The
+  // previous version issued ~15 extra exact-count scans per request (one per
+  // group and sub-filter) even though the UI shows no counters — that alone
+  // made every ledger read scan the whole table more than a dozen times.
+  const { data, error, count } = (await applyScope(base().select("*", { count: "planned" }), group, status)
+    .order("occurred_at", { ascending: false })
+    .range(from, from + pageSize - 1)) as {
+    data: any[] | null;
+    error: { message: string } | null;
+    count: number | null;
   };
-
-  const groupKeys = Object.keys(GROUP_KINDS);
-  const subKeys = Object.keys(SUB_KIND);
-  const [listRes, groupCounts, subCounts, cScoped, cSuccess, cFailed, cRefund] = await Promise.all([
-    applyScope(base().select("*"), group, status)
-      .order("occurred_at", { ascending: false })
-      .range(from, from + pageSize - 1),
-    Promise.all(groupKeys.map((g) => countFor(g, "all"))),
-    Promise.all(
-      subKeys.map((s) => {
-        const g = groupKeys.find((k) => (GROUP_KINDS[k] as string[]).includes(SUB_KIND[s]!));
-        return g ? countFor(g, s) : Promise.resolve(0);
-      }),
-    ),
-    countFor(group, status),
-    countFor("txns", "success"),
-    countFor("txns", "failed"),
-    countFor("txns", "refund"),
-  ]);
-  const { data, error } = listRes as { data: any[] | null; error: { message: string } | null };
   if (error) throw new Error(error.message);
 
-  const counts: Record<string, number> = {
-    all: cScoped,
-    success: cSuccess,
-    failed: cFailed,
-    refund: cRefund,
-  };
-  groupKeys.forEach((g, i) => {
-    counts[g] = (groupCounts as number[])[i] ?? 0;
-  });
-  subKeys.forEach((s, i) => {
-    counts[s] = (subCounts as number[])[i] ?? 0;
-  });
-
-  const total = cScoped;
+  const counts: Record<string, number> = {};
+  const total = Number(count ?? (data?.length ?? 0));
 
   return {
     rows: (data ?? []).map((r: any) => ({
