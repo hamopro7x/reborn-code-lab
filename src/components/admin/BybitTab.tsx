@@ -488,7 +488,7 @@ function AccountSummaryCard({
   const visaNo = account.sortOrder && account.sortOrder > 0 ? account.sortOrder : index + 1;
 
   return (
-    <div className="relative flex h-[280px] min-h-[280px] max-h-[280px] flex-col overflow-hidden rounded-[24px] border border-teal-400/25 bg-[oklch(0.16_0.03_190)] p-3 sm:p-4 shadow-[0_0_0_1px_oklch(0.7_0.13_190_/_0.08),0_18px_50px_-24px_oklch(0.6_0.15_190_/_0.45)] transition-shadow hover:shadow-[0_0_0_1px_oklch(0.7_0.13_190_/_0.2),0_22px_60px_-20px_oklch(0.65_0.16_190_/_0.6)]">
+    <div className="relative flex h-[320px] min-h-[320px] max-h-[320px] flex-col overflow-hidden rounded-[24px] border border-teal-400/25 bg-[oklch(0.16_0.03_190)] p-4 sm:p-5 shadow-[0_0_0_1px_oklch(0.7_0.13_190_/_0.08),0_18px_50px_-24px_oklch(0.6_0.15_190_/_0.45)] transition-shadow hover:shadow-[0_0_0_1px_oklch(0.7_0.13_190_/_0.2),0_22px_60px_-20px_oklch(0.65_0.16_190_/_0.6)]">
       {/* Decorative glow + wave */}
       <div aria-hidden className="pointer-events-none absolute inset-0">
         <div className="absolute -top-20 right-1/4 h-56 w-56 rounded-full bg-teal-400/10 blur-3xl" />
@@ -498,17 +498,17 @@ function AccountSummaryCard({
         </svg>
       </div>
 
-      <div className="relative flex min-h-0 flex-1 flex-col gap-3">
-        {/* Top row — mirrored: identity on left, number on right */}
+      <div className="relative flex min-h-0 flex-1 flex-col gap-4">
+        {/* Top row — identity on right, number on left (RTL) */}
         <div className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
           {/* left cluster: identity */}
           <div className="flex items-start justify-start gap-2 sm:gap-3">
-            <span className="grid size-9 shrink-0 place-items-center rounded-full border border-teal-400/30 bg-teal-400/10 text-teal-300">
+            <span className="grid size-10 shrink-0 place-items-center rounded-full border border-teal-400/30 bg-teal-400/10 text-teal-300">
               <Wallet className="size-4" />
             </span>
             <div className="min-w-0 text-right pt-1">
               <div className="flex items-center justify-end gap-1">
-                <div className="truncate text-xs sm:text-sm font-black">حساب {account.name}</div>
+                <div className="truncate text-sm font-black">حساب {account.name}</div>
                 {isAdmin && (
                   <div className="flex items-center gap-0.5">
                     <Button variant="ghost" size="icon" className="size-7 rounded-lg" onClick={onEdit} title="تعديل">
@@ -541,10 +541,10 @@ function AccountSummaryCard({
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="flex flex-col items-end gap-1 pt-1">
               <div className="flex items-center gap-2">
-                <span className="text-xs sm:text-sm text-foreground/90 whitespace-nowrap">استرداد بنسبة</span>
+                <span className="text-sm text-foreground/90 whitespace-nowrap">استرداد بنسبة</span>
                 <PieChart className="size-4 text-teal-400 shrink-0" />
               </div>
-              <div className="text-xl sm:text-2xl font-black text-teal-300 tabular-nums leading-none" dir="ltr">
+              <div className="text-2xl sm:text-3xl font-black text-teal-300 tabular-nums leading-none" dir="ltr">
                 {cashback.toLocaleString("en-US", { maximumFractionDigits: 2 })}%
               </div>
             </div>
@@ -553,7 +553,7 @@ function AccountSummaryCard({
             <div className="h-14 sm:h-16 w-0 border-r border-dashed border-teal-400/45" aria-hidden />
 
             <div className="flex items-center shrink-0">
-              <div className="relative grid size-[78px] sm:size-[88px] place-items-center">
+              <div className="relative grid size-[82px] sm:size-[92px] place-items-center">
                 {/* outer tick ring */}
                 <div
                   className="absolute inset-0 rounded-full opacity-80"
@@ -569,7 +569,7 @@ function AccountSummaryCard({
                 <div className="absolute inset-[5px] rounded-full border border-teal-400/25" aria-hidden />
                 {/* glowing main ring */}
                 <div className="absolute inset-[11px] rounded-full border-[3px] border-teal-400 shadow-[0_0_26px_-2px_oklch(0.75_0.15_190_/_0.85),inset_0_0_22px_-6px_oklch(0.75_0.15_190_/_0.9)]" aria-hidden />
-                <span className="relative text-2xl sm:text-3xl font-black text-teal-300 tabular-nums" dir="ltr">{visaNo}</span>
+                <span className="relative text-3xl sm:text-4xl font-black text-teal-300 tabular-nums" dir="ltr">{visaNo}</span>
               </div>
             </div>
           </div>
@@ -578,11 +578,11 @@ function AccountSummaryCard({
         </div>
 
         {/* Balances — ارتفاع ثابت في كل الحالات */}
-        <div className="mx-auto h-[104px] min-h-[104px] max-h-[104px] w-full max-w-[190px] shrink-0 overflow-hidden">
+        <div className="mx-auto h-[120px] min-h-[120px] max-h-[120px] w-full max-w-[240px] shrink-0 overflow-hidden">
           {q.isLoading ? (
-            <div className="relative h-full w-full rounded-[22px] p-[5px] bg-[radial-gradient(120%_120%_at_50%_0%,oklch(0.55_0.13_170/0.28),transparent_70%)]">
-              <div className="grid h-full w-full place-items-center rounded-[18px] bg-[oklch(0.055_0.008_190)] shadow-[0_0_28px_-10px_oklch(0.6_0.14_170/0.35)]">
-                <Loader2 className="size-4 animate-spin" />
+            <div className="relative h-full w-full rounded-[24px] p-[5px] bg-[radial-gradient(120%_120%_at_50%_0%,oklch(0.55_0.13_170/0.28),transparent_70%)]">
+              <div className="grid h-full w-full place-items-center rounded-[20px] bg-[oklch(0.055_0.008_190)] shadow-[0_0_28px_-10px_oklch(0.6_0.14_170/0.35)]">
+                <Loader2 className="size-5 animate-spin" />
               </div>
             </div>
           ) : (
