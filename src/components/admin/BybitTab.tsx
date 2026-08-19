@@ -542,7 +542,7 @@ function AccountSummaryCard({
             </div>
           </div>
 
-          {/* left cluster (visually): gauge on the far left, cashback to its right */}
+          {/* left cluster: gauge on the left, cashback on the right (matches image-280) */}
           <div dir="ltr" className="flex items-center gap-2 sm:gap-3">
             <div className="flex items-center shrink-0">
               <div className="relative grid size-[80px] sm:size-[92px] place-items-center">
@@ -570,8 +570,8 @@ function AccountSummaryCard({
 
             <div className="flex flex-col items-end gap-1 pt-1">
               <div className="flex items-center gap-2">
-                <span className="text-sm text-foreground/90 whitespace-nowrap">استرداد بنسبة</span>
                 <PieChart className="size-4 text-teal-400 shrink-0" />
+                <span className="text-sm text-foreground/90 whitespace-nowrap text-right">استرداد بنسبة</span>
               </div>
               <div className="text-2xl sm:text-3xl font-black text-teal-300 tabular-nums leading-none" dir="ltr">
                 {cashback.toLocaleString("en-US", { maximumFractionDigits: 2 })}%
