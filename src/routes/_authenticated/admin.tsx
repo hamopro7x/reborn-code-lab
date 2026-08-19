@@ -41,11 +41,11 @@ import { EmployeeDevices } from "@/components/admin/DeviceMonitorGrid";
 
 type PanelKey =
   | "overview" | "orders" | "products" | "categories" | "customers" | "employees"
-  | "reviews" | "payments" | "currencies" | "timers" | "settings" | "courses" | "devices" | "reports" | "remote" | "cardtx" | "apikey";
+  | "reviews" | "payments" | "currencies" | "timers" | "settings" | "courses" | "devices" | "reports" | "remote" | "cardtx" | "apikey" | "worksheet";
 
 const panelKeys: PanelKey[] = [
   "overview", "orders", "products", "categories", "customers", "employees",
-  "reviews", "payments", "currencies", "timers", "settings", "courses", "devices", "reports", "remote", "cardtx", "apikey",
+  "reviews", "payments", "currencies", "timers", "settings", "courses", "devices", "reports", "remote", "cardtx", "apikey", "worksheet",
 ];
 
 
