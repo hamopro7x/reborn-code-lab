@@ -309,7 +309,6 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
   const [selected, setSelected] = usePersistentState<string | null>("bybit_selected_account", null);
   // القسم يفتح على قائمة الحسابات مباشرة (أدمن أو موظف) بدون خطوة ضغط زيادة
   const [listOpen, setListOpen] = usePersistentState<boolean>("bybit_list_open", true);
-  const [_bkSelected, _bkSetSelected] = [null, null] as any;
   const [addOpen, setAddOpen] = useState(false);
   const [addError, setAddError] = useState<{ message: string; serverIp?: string | null } | null>(null);
   const [editAccount, setEditAccount] = useState<BybitAccountRow | null>(null);
@@ -374,6 +373,8 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
 
 
   const current = list.find((a) => a.id === selected) ?? null;
+
+  useAdminBack(!current && listOpen ? () => setListOpen(false) : null, [!!current, listOpen]);
 
   if (current) {
     return (
@@ -814,6 +815,7 @@ function BybitAccountView({ isAdmin, accountId, accountName, onBack }: { isAdmin
   const syncCardFn = useServerFn(syncBybitCardTxns);
   const cardsFn = useServerFn(getBybitCards);
   const [cardsOpen, setCardsOpen] = useState(false);
+  useAdminBack(cardsOpen ? () => setCardsOpen(false) : onBack, [cardsOpen, onBack]);
   const [addCardOpen, setAddCardOpen] = useState(false);
   const chainFn = useServerFn(getBybitOnChain);
   const internalFn = useServerFn(getBybitInternal);
