@@ -297,8 +297,8 @@ function WorkRows({ filters }: { filters: { userId?: string; shiftId?: string; d
     queryKey: ["work-table", filters, page],
     queryFn: () => fn({ data: { ...filters, page, pageSize: 50 } }),
   });
-  const rows = q.data?.rows ?? [];
-  const pages = Math.max(Math.ceil(Number(q.data?.total ?? 0) / 50), 1);
+  const rows: any[] = (q.data as any)?.rows ?? [];
+  const pages = Math.max(Math.ceil(Number((q.data as any)?.total ?? 0) / 50), 1);
 
   return (
     <div className="space-y-2">
