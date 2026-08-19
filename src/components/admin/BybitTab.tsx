@@ -432,7 +432,7 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
           لا توجد حسابات مربوطة بعد{isAdmin ? " — أضف حساباً بمفتاح API (قراءة فقط)." : "."}
         </div>
       ) : (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <div className="grid auto-rows-[280px] grid-cols-1 gap-4 xl:grid-cols-2">
           {list.map((a, i) => (
             <AccountSummaryCard
               key={a.id}
@@ -488,7 +488,7 @@ function AccountSummaryCard({
   const visaNo = account.sortOrder && account.sortOrder > 0 ? account.sortOrder : index + 1;
 
   return (
-    <div className="relative flex h-[280px] flex-col overflow-hidden rounded-[24px] border border-teal-400/25 bg-[oklch(0.16_0.03_190)] p-3 sm:p-4 shadow-[0_0_0_1px_oklch(0.7_0.13_190_/_0.08),0_18px_50px_-24px_oklch(0.6_0.15_190_/_0.45)] transition-shadow hover:shadow-[0_0_0_1px_oklch(0.7_0.13_190_/_0.2),0_22px_60px_-20px_oklch(0.65_0.16_190_/_0.6)]">
+    <div className="relative flex h-[280px] min-h-[280px] max-h-[280px] flex-col overflow-hidden rounded-[24px] border border-teal-400/25 bg-[oklch(0.16_0.03_190)] p-3 sm:p-4 shadow-[0_0_0_1px_oklch(0.7_0.13_190_/_0.08),0_18px_50px_-24px_oklch(0.6_0.15_190_/_0.45)] transition-shadow hover:shadow-[0_0_0_1px_oklch(0.7_0.13_190_/_0.2),0_22px_60px_-20px_oklch(0.65_0.16_190_/_0.6)]">
       {/* Decorative glow + wave */}
       <div aria-hidden className="pointer-events-none absolute inset-0">
         <div className="absolute -top-20 right-1/4 h-56 w-56 rounded-full bg-teal-400/10 blur-3xl" />
@@ -578,13 +578,15 @@ function AccountSummaryCard({
         </div>
 
         {/* Balances — ارتفاع ثابت في كل الحالات */}
-        <div className="h-[104px] shrink-0 overflow-hidden">
+        <div className="mx-auto h-[104px] min-h-[104px] max-h-[104px] w-full max-w-[190px] shrink-0 overflow-hidden">
           {q.isLoading ? (
-            <div className="grid h-full place-items-center rounded-2xl border border-teal-400/15 bg-[oklch(0.12_0.03_190)]">
-              <Loader2 className="size-4 animate-spin" />
+            <div className="relative h-full w-full rounded-[22px] p-[5px] bg-[radial-gradient(120%_120%_at_50%_0%,oklch(0.55_0.13_170/0.28),transparent_70%)]">
+              <div className="grid h-full w-full place-items-center rounded-[18px] bg-[oklch(0.055_0.008_190)] shadow-[0_0_28px_-10px_oklch(0.6_0.14_170/0.35)]">
+                <Loader2 className="size-4 animate-spin" />
+              </div>
             </div>
           ) : (
-            <div className="grid h-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 overflow-y-auto">
+            <div className="h-full w-full overflow-hidden">
               {coins.map((c) => (
                 <CoinBalanceCard key={c.coin} coin={c} />
               ))}
