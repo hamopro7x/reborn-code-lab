@@ -225,9 +225,11 @@ function Admin() {
           </SidebarFooter>
         </Sidebar>
 
+        <AdminBackProvider>
         <div className="flex-1 flex flex-col min-w-0">
           <header className="h-14 flex items-center gap-3 border-b border-border/40 backdrop-blur-xl bg-background/80 sticky top-0 z-30 px-4">
             <SidebarTrigger />
+            <AdminBackButton />
             <h1 className="font-bold">{visibleNavGroups.flatMap((g) => g.items).find((i) => i.key === panel)?.label}</h1>
             {adminOnly && !basePanels.includes(panel) && (
               <label className="ms-auto flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
