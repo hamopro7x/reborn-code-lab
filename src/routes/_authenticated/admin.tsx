@@ -33,7 +33,8 @@ import { ReportsTab } from "@/components/admin/ReportsTab";
 import { AdminBackProvider, useAdminBack, useAdminBackTarget } from "@/components/admin/back-nav";
 import { BybitTab, ApiKeyPanel } from "@/components/admin/BybitTab";
 import { RedotPayPanel } from "@/components/admin/RedotPayPanel";
-import { FileBarChart, MonitorPlay, Image as ImageIcon, ChevronUp, ChevronDown, WalletCards, KeyRound } from "lucide-react";
+import { FileBarChart, MonitorPlay, Image as ImageIcon, ChevronUp, ChevronDown, WalletCards, KeyRound, ClipboardList } from "lucide-react";
+import { WorkSheetPanel } from "@/components/admin/WorkSheetPanel";
 import { LessonUploader } from "@/components/admin/LessonUploader";
 import { DeviceMonitorGrid } from "@/components/admin/DeviceMonitorGrid";
 import { EmployeeDevices } from "@/components/admin/DeviceMonitorGrid";
@@ -41,11 +42,11 @@ import { EmployeeDevices } from "@/components/admin/DeviceMonitorGrid";
 
 type PanelKey =
   | "overview" | "orders" | "products" | "categories" | "customers" | "employees"
-  | "reviews" | "payments" | "currencies" | "timers" | "settings" | "courses" | "devices" | "reports" | "remote" | "cardtx" | "apikey";
+  | "reviews" | "payments" | "currencies" | "timers" | "settings" | "courses" | "devices" | "reports" | "remote" | "cardtx" | "apikey" | "worksheet";
 
 const panelKeys: PanelKey[] = [
   "overview", "orders", "products", "categories", "customers", "employees",
-  "reviews", "payments", "currencies", "timers", "settings", "courses", "devices", "reports", "remote", "cardtx", "apikey",
+  "reviews", "payments", "currencies", "timers", "settings", "courses", "devices", "reports", "remote", "cardtx", "apikey", "worksheet",
 ];
 
 
@@ -95,7 +96,7 @@ function Admin() {
     refetchIntervalInBackground: false,
   });
   const shared = sharedQ.data ?? [];
-  const basePanels: PanelKey[] = ["orders", "courses"];
+  const basePanels: PanelKey[] = ["orders", "courses", "worksheet"];
   const employeeAllowed = (key: PanelKey) => basePanels.includes(key) || shared.includes(key);
   const canView = (key: PanelKey) => adminOnly || employeeAllowed(key);
   const readOnly = isEmployee && !basePanels.includes(panel);
@@ -140,6 +141,7 @@ function Admin() {
         { key: "reviews", label: "المراجعات", icon: Star },
         { key: "reports", label: "التقارير", icon: FileBarChart, adminOnly: true },
         { key: "cardtx", label: "معاملات الفيزا", icon: WalletCards, adminOnly: true },
+        { key: "worksheet", label: "جدول بيانات الشغل", icon: ClipboardList },
 
       ],
     },
@@ -272,6 +274,7 @@ function Admin() {
             {panel === "reviews" && canView("reviews") && <ReviewsTab />}
             {panel === "reports" && canView("reports") && <ReportsTab />}
             {panel === "cardtx" && canView("cardtx") && <BybitTab isAdmin={adminOnly} />}
+            {panel === "worksheet" && canView("worksheet") && <WorkSheetPanel isAdmin={adminOnly} />}
 
             {panel === "products" && canView("products") && <ProductsTab />}
             {panel === "categories" && canView("categories") && <CategoriesTab />}

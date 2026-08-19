@@ -1627,6 +1627,14 @@ async function upsertLedger(rows: LedgerInsert[]) {
     if (error) console.error("bybit_ledger upsert failed:", error.message);
     else saved += Math.min(500, clean.length - i);
   }
+  // Work-sheet layer: link the freshly mirrored movements to the open shift.
+  // Never modifies ledger rows; failures here must not break the sync.
+  try {
+    const work = await import("./work-assign.server");
+    await work.autoAssignLedger(db);
+  } catch (e) {
+    console.error("work auto-assign skipped:", (e as Error)?.message);
+  }
   return saved;
 }
 
