@@ -62,10 +62,9 @@ export function BybitLedgerPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const data = q.data as any;
-  const rows = (data?.rows ?? []) as any[];
-  const counts = (data?.counts ?? {}) as Record<string, number>;
-  const total = Number(data?.total ?? 0);
+  const rows = q.data?.rows ?? [];
+  const counts = (q.data?.counts ?? {}) as Record<string, number>;
+  const total = Number(q.data?.total ?? 0);
   const pages = Math.max(Math.ceil(total / pageSize), 1);
 
   return (
@@ -104,7 +103,7 @@ export function BybitLedgerPanel() {
             }`}
           >
             {k.label}
-            {counts[k.key] !== undefined ? ` (${counts[k.key].toLocaleString("en-US")})` : ""}
+            {counts[k.key] !== undefined ? ` (${counts[k.key]!.toLocaleString("en-US")})` : ""}
           </button>
         ))}
       </div>
@@ -138,7 +137,11 @@ export function BybitLedgerPanel() {
                   <td className="whitespace-nowrap p-2 font-medium">{r.accountName}</td>
                   <td className="whitespace-nowrap p-2 text-muted-foreground">{kindLabel(r.kind)}</td>
                   <td className="max-w-[220px] truncate p-2">{r.title}</td>
-                  <td className={`whitespace-nowrap p-2 font-semibold ${r.direction === "in" ? "text-emerald-400" : "text-rose-400"}`}>
+                  <td
+                    className={`whitespace-nowrap p-2 font-semibold ${
+                      r.direction === "in" ? "text-emerald-400" : "text-rose-400"
+                    }`}
+                  >
                     <span className="inline-flex items-center gap-1">
                       {r.direction === "in" ? <ArrowDownLeft className="size-3" /> : <ArrowUpRight className="size-3" />}
                       {fmtAmount(r.amount)} {r.currency}
