@@ -398,8 +398,9 @@ export const confirmBybitConvert = createServerFn({ method: "POST" })
 
 export const getBybitLedger = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { kind?: string; accountId?: string; page?: number; pageSize?: number }) => ({
-    kind: input?.kind ? String(input.kind).slice(0, 30) : "all",
+  .inputValidator((input: { group?: string; status?: string; accountId?: string; page?: number; pageSize?: number }) => ({
+    group: input?.group ? String(input.group).slice(0, 30) : "txns",
+    status: input?.status ? String(input.status).slice(0, 30) : "all",
     accountId: input?.accountId ? String(input.accountId) : undefined,
     page: Math.max(Number(input?.page ?? 1) || 1, 1),
     pageSize: Math.min(Math.max(Number(input?.pageSize ?? 50) || 50, 10), 200),

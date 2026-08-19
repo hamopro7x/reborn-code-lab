@@ -1717,9 +1717,17 @@ export async function syncAllLedger(): Promise<{ saved: number; accounts: number
   return { saved: results.reduce((s, n) => s + n, 0), accounts: accounts.length };
 }
 
+const GROUP_KINDS: Record<string, string[]> = {
+  txns: ["card", "refund"],
+  onchain: ["deposit", "withdraw"],
+  internal: ["internal_in", "internal_out"],
+  p2p: ["p2p_buy", "p2p_sell"],
+};
+
 /** One page of the central ledger across all accounts. */
 export async function fetchLedgerPage(opts: {
-  kind?: string;
+  group?: string;
+  status?: string;
   accountId?: string;
   page?: number;
   pageSize?: number;
@@ -1728,33 +1736,68 @@ export async function fetchLedgerPage(opts: {
   const pageSize = Math.min(Math.max(opts.pageSize ?? 50, 10), 200);
   const page = Math.max(opts.page ?? 1, 1);
   const from = (page - 1) * pageSize;
-  const kind = opts.kind && opts.kind !== "all" ? opts.kind : null;
+  const group = GROUP_KINDS[opts.group ?? "txns"] ? (opts.group as string) : "txns";
+  const status = opts.status && opts.status !== "all" ? opts.status : "all";
 
   const accounts = await listAccounts();
   const nameById = new Map(accounts.map((a, i) => [a.id, `${a.name} (فيزا ${a.sortOrder || i + 1})`]));
 
-  const scoped = (q: any) => {
+  const base = () => {
+    let q: any = db.from("bybit_ledger");
+    return q;
+  };
+
+  const applyScope = (q: any, g: string, st: string) => {
     let out = q;
     if (opts.accountId) out = out.eq("account_id", opts.accountId);
-    if (kind) out = out.eq("kind", kind);
+    if (g === "txns" && st === "refund") out = out.eq("kind", "refund");
+    else if (g === "txns" && (st === "success" || st === "failed")) out = out.eq("kind", "card").eq("status", st);
+    else out = out.in("kind", GROUP_KINDS[g] as string[]);
     return out;
   };
 
-  const countKinds = ["all", "card", "refund", "deposit", "withdraw", "internal_in", "internal_out", "p2p_buy", "p2p_sell"];
-  const [{ data, error }, ...countResults] = await Promise.all([
-    scoped(db.from("bybit_ledger").select("*")).order("occurred_at", { ascending: false }).range(from, from + pageSize - 1),
-    ...countKinds.map(async (k) => {
-      let q = db.from("bybit_ledger").select("id", { count: "exact", head: true });
-      if (opts.accountId) q = q.eq("account_id", opts.accountId);
-      if (k !== "all") q = q.eq("kind", k);
-      const { count } = await q;
-      return Number(count ?? 0);
-    }),
+  const countFor = async (g: string, st: string) => {
+    const { count } = await applyScope(base().select("id", { count: "exact", head: true }), g, st);
+    return Number(count ?? 0);
+  };
+
+  const [listRes, cTxns, cOnchain, cInternal, cP2p, cAll, cSuccess, cFailed, cRefund] = await Promise.all([
+    applyScope(base().select("*"), group, status)
+      .order("occurred_at", { ascending: false })
+      .range(from, from + pageSize - 1),
+    countFor("txns", "all"),
+    countFor("onchain", "all"),
+    countFor("internal", "all"),
+    countFor("p2p", "all"),
+    countFor(group, "all"),
+    countFor("txns", "success"),
+    countFor("txns", "failed"),
+    countFor("txns", "refund"),
   ]);
+  const { data, error } = listRes as { data: any[] | null; error: { message: string } | null };
   if (error) throw new Error(error.message);
 
-  const counts: Record<string, number> = {};
-  countKinds.forEach((k, i) => (counts[k] = countResults[i] as number));
+  const counts: Record<string, number> = {
+    txns: cTxns,
+    onchain: cOnchain,
+    internal: cInternal,
+    p2p: cP2p,
+    all: cAll,
+    success: cSuccess,
+    failed: cFailed,
+    refund: cRefund,
+  };
+
+  const total =
+    group === "txns"
+      ? status === "success"
+        ? cSuccess
+        : status === "failed"
+          ? cFailed
+          : status === "refund"
+            ? cRefund
+            : cTxns
+      : cAll;
 
   return {
     rows: (data ?? []).map((r: any) => ({
@@ -1772,9 +1815,10 @@ export async function fetchLedgerPage(opts: {
       time: new Date(r.occurred_at).getTime(),
       detail: (r.detail ?? {}) as Record<string, string | number | boolean | null>,
     })),
-    total: kind ? (counts[kind] ?? 0) : counts["all"] ?? 0,
+    total,
     page,
     pageSize,
     counts,
   };
 }
+
