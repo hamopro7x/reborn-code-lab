@@ -1660,7 +1660,11 @@ export async function syncAccountLedger(accountId: string): Promise<number> {
       const isRefund = status === "refund";
       const src = (t.detail ?? {}) as Record<string, any>;
       const { raw: _raw, ...original } = src;
-      const feeVal = num(src["feeAmount"] ?? src["foreignTxnFee"] ?? src["fee"]);
+      // Fee comes straight from the source account's own fee field (totalFees).
+      const rawSrc = (src["raw"] ?? {}) as Record<string, any>;
+      const feeRaw =
+        src["totalFees"] ?? rawSrc["totalFees"] ?? src["feeAmount"] ?? rawSrc["foreignTransactionFee"] ?? null;
+      const feeVal = feeRaw === null || feeRaw === undefined || feeRaw === "" ? 0 : num(feeRaw);
       rows.push({
         account_id: accountId,
         kind: isRefund ? "refund" : "card",
