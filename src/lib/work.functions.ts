@@ -90,6 +90,27 @@ export const getMyShiftTxns = createServerFn({ method: "POST" })
     return mod.myShiftRows(context.userId, data.page, 50);
   });
 
+/**
+ * Employee-entered «جنيه» / «الكمية» for one transaction of his own open shift.
+ * Write-once: the server refuses to overwrite a value that already exists.
+ */
+export const saveMyTxnEntry = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        ledgerId: z.string().uuid(),
+        field: z.enum(["egp", "quantity"]),
+        value: z.number().finite().min(0).max(1_000_000_000),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAccess(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    return mod.saveEntryField(context.userId, data.ledgerId, data.field, data.value);
+  });
+
 /* ------------------------------- claiming ------------------------------- */
 
 export const getWorkAuthChallenge = createServerFn({ method: "POST" })
