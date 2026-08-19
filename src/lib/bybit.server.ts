@@ -1002,29 +1002,27 @@ export async function fetchCardTxnsPage(opts: {
   const applyStatus = (q: any, s: "all" | "success" | "failed" | "refund") =>
     s === "all" ? q : q.eq("status", s);
 
-  const countFor = async (s: "all" | "success" | "failed" | "refund") => {
-    const { count } = await applyStatus(scoped(base().q.select("txn_id", { count: "exact", head: true })), s);
-    return Number(count ?? 0);
-  };
-
-  let rowsQuery = applyStatus(
-    scoped(base().q.select("txn_id, merchant, amount, currency, status, txn_time, pan4, txn_type, detail")),
+  // Page rows and the count for the same scope in a single round trip; the
+  // three extra per-status counts were never rendered and cost a full scan each.
+  const rowsQuery = applyStatus(
+    scoped(
+      base().q.select("txn_id, merchant, amount, currency, status, txn_time, pan4, txn_type, detail", {
+        count: "exact",
+      }),
+    ),
     status,
   );
 
-  const [{ data, error }, all, success, failed, refund] = await Promise.all([
-    rowsQuery.order("txn_time", { ascending: false }).range(from, from + pageSize - 1),
-    countFor("all"),
-    countFor("success"),
-    countFor("failed"),
-    countFor("refund"),
-  ]);
+  const { data, error, count } = await rowsQuery
+    .order("txn_time", { ascending: false })
+    .range(from, from + pageSize - 1);
   if (error) throw new Error(error.message);
 
-  const counts = { all, success, failed, refund };
+  const total = Number(count ?? (data?.length ?? 0));
+  const counts = { all: total, success: 0, failed: 0, refund: 0 };
   return {
     rows: (data ?? []).map(mapStoredRow),
-    total: status === "all" ? all : counts[status],
+    total,
     counts,
   };
 }
