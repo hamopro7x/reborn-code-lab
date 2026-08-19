@@ -1,31 +1,46 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useId, useState, type ReactNode } from "react";
 
-type Handler = (() => void) | null;
+type Handler = () => void;
 
 const Ctx = createContext<{
-  handler: Handler;
-  register: (h: Handler) => void;
-}>({ handler: null, register: () => {} });
+  stack: { id: string; handler: Handler }[];
+  push: (id: string, handler: Handler) => void;
+  pop: (id: string) => void;
+}>({ stack: [], push: () => {}, pop: () => {} });
 
 export function AdminBackProvider({ children }: { children: ReactNode }) {
-  const [handler, setHandler] = useState<Handler>(null);
+  const [stack, setStack] = useState<{ id: string; handler: Handler }[]>([]);
   return (
-    <Ctx.Provider value={{ handler, register: (h) => setHandler(() => h) }}>
+    <Ctx.Provider
+      value={{
+        stack,
+        push: (id, handler) =>
+          setStack((s) => [...s.filter((e) => e.id !== id), { id, handler }]),
+        pop: (id) => setStack((s) => s.filter((e) => e.id !== id)),
+      }}
+    >
       {children}
     </Ctx.Provider>
   );
 }
 
-export function useAdminBackTarget() {
-  return useContext(Ctx).handler;
+/** Back action currently owned by the deepest open view. */
+export function useAdminBackTarget(): Handler | null {
+  const { stack } = useContext(Ctx);
+  return stack.length ? stack[stack.length - 1].handler : null;
 }
 
-/** Register a back action rendered by the admin top banner. */
-export function useAdminBack(handler: Handler, deps: unknown[] = []) {
-  const { register } = useContext(Ctx);
+/**
+ * Register a back action that the admin top banner renders.
+ * Pass null when the view has nothing to go back from.
+ */
+export function useAdminBack(handler: Handler | null, deps: unknown[] = []) {
+  const { push, pop } = useContext(Ctx);
+  const id = useId();
   useEffect(() => {
-    register(handler ?? null);
-    return () => register(null);
+    if (handler) push(id, handler);
+    else pop(id);
+    return () => pop(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [!!handler, ...deps]);
+  }, [id, !!handler, ...deps]);
 }
