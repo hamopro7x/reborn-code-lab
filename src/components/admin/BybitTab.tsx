@@ -412,8 +412,9 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
   }
 
   return (
-    <div className="space-y-4 text-right" dir="rtl">
-      <div className="flex items-center justify-between gap-2">
+    <div className="relative space-y-4 text-right" dir="rtl">
+      <FintechBackdrop fullscreen />
+      <div className="relative z-10 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setListOpen(false)}>
             رجوع
@@ -428,28 +429,26 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
       </div>
 
       {accounts.isLoading ? (
-        <div className="flex justify-center p-10"><Loader2 className="size-6 animate-spin" /></div>
+        <div className="relative z-10 flex justify-center p-10"><Loader2 className="size-6 animate-spin" /></div>
       ) : !list.length ? (
-        <div className="rounded-3xl border border-border/60 bg-card/60 p-8 text-center text-sm text-muted-foreground">
+        <div className="relative z-10 rounded-3xl border border-border/60 bg-card/60 p-8 text-center text-sm text-muted-foreground">
           لا توجد حسابات مربوطة بعد{isAdmin ? " — أضف حساباً بمفتاح API (قراءة فقط)." : "."}
         </div>
       ) : (
-        <div className="relative isolate overflow-hidden rounded-3xl border border-teal-400/10 p-3 sm:p-5">
-          <FintechBackdrop />
-          <div className="relative z-10 grid auto-rows-[320px] grid-cols-1 gap-4 xl:grid-cols-2">
-            {list.map((a, i) => (
-              <AccountSummaryCard
-                key={a.id}
-                account={a}
-                index={i}
-                isAdmin={isAdmin}
-                onOpen={() => setSelected(a.id)}
-                onDelete={() => removeAccount.mutate({ id: a.id })}
-                onEdit={() => setEditAccount(a)}
-              />
-            ))}
-          </div>
+        <div className="relative z-10 grid auto-rows-[320px] grid-cols-1 gap-4 xl:grid-cols-2">
+          {list.map((a, i) => (
+            <AccountSummaryCard
+              key={a.id}
+              account={a}
+              index={i}
+              isAdmin={isAdmin}
+              onOpen={() => setSelected(a.id)}
+              onDelete={() => removeAccount.mutate({ id: a.id })}
+              onEdit={() => setEditAccount(a)}
+            />
+          ))}
         </div>
+
 
 
       )}
