@@ -669,15 +669,12 @@ function EmployeesTab() {
     }));
   }, [selected?.user_id, selected]);
 
+  useAdminBack(selected ? () => setExpanded(null) : null, [selected?.user_id]);
+
   if (selected) {
     const u: any = selected;
     return (
       <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" className="rounded-full" onClick={() => setExpanded(null)}>
-            رجوع للموظفين
-          </Button>
-        </div>
 
         <div className="card-surface rounded-2xl p-6 flex flex-col items-center text-center gap-3">
           <button
