@@ -1555,8 +1555,8 @@ function P2PTable({ q }: { q: any }) {
         <Empty text="لا توجد طلبات P2P" />
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-sm border-collapse [&_th]:border [&_th]:border-border/40 [&_td]:border [&_td]:border-border/40">
-            <thead className="text-[12px] text-muted-foreground border border-border/40">
+          <table className="data-table">
+            <thead>
               <tr>
                 <th className="p-4 text-right font-normal">النوع / التاريخ</th>
                 <th className="p-4 text-right font-normal">رقم الطلب</th>
@@ -1640,8 +1640,8 @@ function CardTableInner({
         <Empty text="لا توجد معاملات" />
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-sm border-collapse [&_th]:border [&_th]:border-border/40 [&_td]:border [&_td]:border-border/40">
-            <thead className="text-[12px] text-muted-foreground border border-border/40">
+          <table className="data-table">
+            <thead>
               <tr>
                 <th className="p-4 text-right font-normal">اسم التاجر</th>
                 <th className="p-4 text-center font-normal">إجمالي المبلغ المصحح</th>
@@ -1943,8 +1943,8 @@ function AssetTable({
         <Empty text="لا توجد سجلات" />
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-sm border-collapse [&_th]:border [&_th]:border-border/40 [&_td]:border [&_td]:border-border/40">
-            <thead className="text-[11px] text-muted-foreground border border-border/40">
+          <table className="data-table">
+            <thead>
               <tr>
                 <th className="p-3 text-right">عملة</th>
                 {!hideChain && <th className="p-3 text-right">نوع السلسلة</th>}
