@@ -47,7 +47,7 @@ type TabKey = "p2p" | "transfers" | "wrong" | "week" | "all" | "employee";
 const TOP_TABS: { key: TabKey; label: string; icon: typeof ListOrdered }[] = [
   { key: "all", label: "المعاملات", icon: ListOrdered },
   { key: "week", label: "الحسابات المتراكمة", icon: Layers },
-  { key: "wrong", label: "خاص بالموظف", icon: AlertTriangle },
+  { key: "wrong", label: "المعاملات الغلط والخاص بالموظف", icon: AlertTriangle },
   { key: "transfers", label: "الاستلم من والتحويل الي", icon: ArrowLeftRight },
   { key: "p2p", label: "طلبات P2P", icon: Users },
 ];
@@ -55,7 +55,7 @@ const TOP_TABS: { key: TabKey; label: string; icon: typeof ListOrdered }[] = [
 /** The shift's own inner sections (no «الحسابات المتراكمة» here). */
 const INNER_TABS: { key: TabKey; label: string; icon: typeof ListOrdered }[] = [
   { key: "all", label: "المعاملات", icon: ListOrdered },
-  { key: "wrong", label: "خاص بالموظف", icon: AlertTriangle },
+  { key: "wrong", label: "المعاملات الغلط والخاص بالموظف", icon: AlertTriangle },
   { key: "transfers", label: "الاستلم من والتحويل الي", icon: ArrowLeftRight },
   { key: "p2p", label: "طليات P2P", icon: Users },
 ];
@@ -75,20 +75,35 @@ const GLOW_ACTIVE =
 const GLOW_IDLE =
   "border-border/40 bg-[oklch(0.11_0.02_270)] text-foreground/75 hover:border-[oklch(0.45_0.1_258)] hover:text-foreground/90";
 
-/** Vertical stacked split-pill content for the merged "wrong + employee" tab. */
-function SplitTabContent() {
+/** Split-pill content for the merged "wrong + employee" tab. */
+function SplitTabContent({ reversed }: { reversed?: boolean }) {
+  if (reversed) {
+    return (
+      <>
+        <span className="flex items-center gap-1">
+          <span className="whitespace-nowrap">المعاملات الغلط</span>
+          <AlertTriangle className="size-3.5 shrink-0" />
+        </span>
+        <span className="mx-1.5 inline-block h-3.5 w-px bg-current/20" />
+        <span className="flex items-center gap-1">
+          <span className="whitespace-nowrap">الخاص بالموظف</span>
+          <User className="size-3.5 shrink-0" />
+        </span>
+      </>
+    );
+  }
   return (
-    <div className="flex flex-col items-center gap-0.5 leading-none">
-      <span className="flex items-center gap-1 text-[10px] font-semibold whitespace-nowrap">
-        <span>خاص بالموظف</span>
-        <User className="size-3 shrink-0" />
+    <>
+      <span className="flex items-center gap-1">
+        <span className="whitespace-nowrap">الخاص بالموظف</span>
+        <User className="size-3.5 shrink-0" />
       </span>
-      <span className="my-0.5 h-px w-7 bg-current/20" />
-      <span className="flex items-center gap-1 text-[10px] font-semibold whitespace-nowrap">
-        <span>المعاملات الغلط</span>
-        <AlertTriangle className="size-3 shrink-0" />
+      <span className="mx-1.5 inline-block h-3.5 w-px bg-current/20" />
+      <span className="flex items-center gap-1">
+        <span className="whitespace-nowrap">المعاملات الغلط</span>
+        <AlertTriangle className="size-3.5 shrink-0" />
       </span>
-    </div>
+    </>
   );
 }
 
@@ -437,21 +452,20 @@ export function EmployeeWorkView() {
       </div>
 
       {/* ---------------------------- Top bar ---------------------------- */}
-      <div className="flex flex-wrap items-stretch gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {TOP_TABS.map((t) => {
           const Icon = t.icon;
           const active = tab === t.key;
-          const isMerged = t.key === "wrong";
           return (
             <button
               key={t.key}
               type="button"
               onClick={() => setTab(t.key)}
-              className={`flex ${isMerged ? "flex-col justify-center gap-1 min-w-[120px]" : "items-center gap-2"} rounded-2xl border px-3 py-2 text-[11px] font-bold transition ${
+              className={`flex items-center gap-2 rounded-2xl border px-3 py-2 text-[11px] font-bold transition ${
                 active ? GLOW_ACTIVE : GLOW_IDLE
               }`}
             >
-              {isMerged ? (
+              {t.key === "wrong" ? (
                 <SplitTabContent />
               ) : (
                 <>
@@ -470,21 +484,20 @@ export function EmployeeWorkView() {
 
       {/* ------------------------- Inner sections ------------------------- */}
       <div className="rounded-2xl border border-border/50 bg-[oklch(0.1_0.015_270)] p-2.5">
-        <div className="flex flex-wrap items-stretch gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {INNER_TABS.map((t) => {
             const Icon = t.icon;
             const active = tab === t.key;
-            const isMerged = t.key === "wrong";
             return (
               <button
                 key={`inner-${t.key}`}
                 type="button"
                 onClick={() => setTab(t.key)}
-                className={`${isMerged ? "flex flex-col justify-center gap-1" : "flex items-center justify-center gap-1.5"} min-w-[130px] flex-1 rounded-2xl border px-3 py-2 text-center text-[11px] font-bold transition ${
+                className={`min-w-[130px] flex-1 rounded-2xl border px-3 py-2 text-center text-[11px] font-bold transition ${
                   active ? GLOW_ACTIVE : GLOW_IDLE
                 }`}
               >
-                {isMerged ? (
+                {t.key === "wrong" ? (
                   <SplitTabContent />
                 ) : (
                   <span className="flex items-center justify-center gap-1.5">
