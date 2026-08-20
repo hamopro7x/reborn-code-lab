@@ -197,7 +197,7 @@ function EntryCell({
   const [busy, setBusy] = useState(false);
   const valueRef = useRef("");
   const sentRef = useRef("");
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
 
   const commit = (raw: string) => {
     const txt = String(raw).replace(/,/g, "").trim();
@@ -227,12 +227,6 @@ function EntryCell({
 
   useEffect(() => {
     valueRef.current = value;
-    if (!value.trim()) return;
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => commitRef.current(value), 500);
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
   }, [value]);
 
   // Never lose a value the employee typed then walked away from.
