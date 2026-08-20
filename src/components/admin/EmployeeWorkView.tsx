@@ -34,7 +34,14 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { getMyWorkState, getMyShiftTxns, saveMyTxnEntry } from "@/lib/work.functions";
+import {
+  getMyWorkState,
+  getMyShiftTxns,
+  saveMyTxnEntry,
+  getMyManualTxns,
+  addMyManualTxn,
+  saveMyManualTxn,
+} from "@/lib/work.functions";
 import { useClaimWork } from "@/lib/use-claim-work";
 import { getViewerIdentity } from "@/lib/courses.functions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -562,6 +569,7 @@ export function EmployeeWorkView() {
 
 
       {/* ------------------------- Transactions ------------------------- */}
+      {tab === "wrong" ? <ManualSection /> : (
       <div className="overflow-hidden rounded-2xl border border-border/50 bg-[oklch(0.1_0.015_270)]">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-center text-xs">
@@ -637,6 +645,7 @@ export function EmployeeWorkView() {
           </table>
         </div>
       </div>
+      )}
 
       <TxnDetailsDialog row={detailRow} onClose={() => setDetailRow(null)} />
     </div>
