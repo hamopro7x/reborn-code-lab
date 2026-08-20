@@ -350,32 +350,28 @@ function ManualCard({
         </button>
       </div>
 
-      {rows.length > 0 ? (
-        <div className="max-h-[520px] overflow-y-auto overflow-x-hidden scrollbar-hide">
-          <table className="data-table text-center">
-            <thead className="sticky top-0 z-10">
-              <tr>
-                <th className="w-[26%]">المبلغ</th>
-                <th>التفاصيل</th>
+      <div className="max-h-[520px] min-h-[520px] overflow-y-auto overflow-x-hidden scrollbar-hide">
+        <table className="data-table text-center">
+          <thead className="sticky top-0 z-10">
+            <tr>
+              <th className="w-[26%]">المبلغ</th>
+              <th>التفاصيل</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.id}>
+                <td className="!p-0">
+                  <ManualCell id={r.id} field="amount" initial={r.amount} numeric autoFocus={r.id === newestId} />
+                </td>
+                <td className="!p-0">
+                  <ManualCell id={r.id} field="details" initial={r.details} />
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.id}>
-                  <td className="!p-0">
-                    <ManualCell id={r.id} field="amount" initial={r.amount} numeric autoFocus={r.id === newestId} />
-                  </td>
-                  <td className="!p-0">
-                    <ManualCell id={r.id} field="details" initial={r.details} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <div className="min-h-[520px]" />
-      )}
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
