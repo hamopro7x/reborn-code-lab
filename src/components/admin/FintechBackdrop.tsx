@@ -175,7 +175,7 @@ export function FintechBackdrop({
         const c = set[i]!;
         const wob = Math.sin(t * 0.001 + i * 0.5 + phase) * 3;
         const up = c.up;
-        const col = up ? "45, 212, 191" : "239, 68, 68";
+        const col = up ? "196, 196, 192" : "118, 118, 114";
         ctx.strokeStyle = `rgba(${col}, 0.6)`;
         ctx.lineWidth = 1;
         ctx.beginPath();
