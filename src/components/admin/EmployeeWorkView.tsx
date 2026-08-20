@@ -339,12 +339,13 @@ function ManualCell({
     valueRef.current = value;
     if (value === savedRef.current) return;
     if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => flush(value), 400);
+    timerRef.current = setTimeout(() => flush(value), 500);
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, id, field]);
+
 
   // Save pending edits when the section unmounts, or when the tab/window
   // is hidden or closed — otherwise a fast "type then leave" loses the value.
