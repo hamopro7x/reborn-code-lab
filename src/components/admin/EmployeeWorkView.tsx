@@ -494,36 +494,36 @@ export function EmployeeWorkView() {
             <tbody>
               {holding && txns.isLoading ? (
                 <tr>
-                  <td colSpan={COLUMNS.length} className="border border-border/40 px-4 py-10">
-                    <Loader2 className="mx-auto size-5 animate-spin text-muted-foreground" />
+                  <td colSpan={COLUMNS.length} className="border border-border/40 px-3 py-8">
+                    <Loader2 className="mx-auto size-4 animate-spin text-muted-foreground" />
                   </td>
                 </tr>
               ) : (
                 rows.map((r) => (
                   <tr key={r.assignmentId ?? r.ledgerId} className="hover:bg-[oklch(0.16_0.03_258)]/60">
-                    <td className="border border-border/40 px-4 py-4 whitespace-nowrap">
+                    <td className="border border-border/40 px-3 py-3 whitespace-nowrap">
                       {String(r.detail?.merchantName ?? r.title ?? "—")}
                     </td>
-                    <td className="border border-border/40 px-4 py-4 tabular-nums whitespace-nowrap">
+                    <td className="border border-border/40 px-3 py-3 tabular-nums whitespace-nowrap">
                       {num(Math.abs(Number(r.amount)))} {r.currency}
                     </td>
-                    <td className="border border-border/40 px-4 py-4 tabular-nums whitespace-nowrap">
+                    <td className="border border-border/40 px-3 py-3 tabular-nums whitespace-nowrap">
                       <EntryCell row={r} field="egp" onSaved={refetchRows} />
                     </td>
-                    <td className="border border-border/40 px-4 py-4 tabular-nums whitespace-nowrap">
+                    <td className="border border-border/40 px-3 py-3 tabular-nums whitespace-nowrap">
                       <EntryCell row={r} field="quantity" onSaved={refetchRows} />
                     </td>
-                    <td className="border border-border/40 px-4 py-4 whitespace-nowrap">{txnTime(Number(r.time))}</td>
-                    <td className="border border-border/40 px-4 py-4 tabular-nums whitespace-nowrap">
+                    <td className="border border-border/40 px-3 py-3 whitespace-nowrap">{txnTime(Number(r.time))}</td>
+                    <td className="border border-border/40 px-3 py-3 tabular-nums whitespace-nowrap">
                       <Last4Cell detail={(r.detail ?? {}) as Record<string, unknown>} brands={brands} />
                     </td>
-                    <td className="border border-border/40 px-4 py-4 whitespace-nowrap">
+                    <td className="border border-border/40 px-3 py-3 whitespace-nowrap">
                       <button
                         type="button"
                         onClick={() => setDetailRow(r)}
-                        className="mx-auto flex items-center gap-1.5 rounded-full border border-border/60 bg-card/60 px-3 py-1.5 text-[11px] font-bold transition hover:text-[oklch(0.72_0.16_250)]"
+                        className="mx-auto flex items-center gap-1 rounded-full border border-border/60 bg-card/60 px-2.5 py-1 text-[10px] font-bold transition hover:text-[oklch(0.72_0.16_250)]"
                       >
-                        <Eye className="size-3.5" />
+                        <Eye className="size-3" />
                         التفاصيل
                       </button>
                     </td>
@@ -533,12 +533,13 @@ export function EmployeeWorkView() {
               {Array.from({ length: emptyRows }).map((_, i) => (
                 <tr key={`empty-${i}`}>
                   {COLUMNS.map((c) => (
-                    <td key={c.label} className="border border-border/40 px-4 py-4">
+                    <td key={c.label} className="border border-border/40 px-3 py-3">
                       &nbsp;
                     </td>
                   ))}
                 </tr>
               ))}
+
             </tbody>
           </table>
         </div>
