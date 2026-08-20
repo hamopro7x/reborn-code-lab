@@ -227,9 +227,9 @@ function ShiftsTab() {
   const q = useQuery({ queryKey: ["work-shifts"], queryFn: () => fn({ data: { limit: 60 } }) });
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/70">
-      <table className="w-full text-right text-xs">
-        <thead className="bg-muted/40 text-[11px] text-muted-foreground">
+    <div className="data-surface">
+      <table className="data-table text-right">
+        <thead>
           <tr>
             <th className="p-3">الموظف</th>
             <th className="p-3">بداية الشفت</th>
@@ -242,7 +242,7 @@ function ShiftsTab() {
         <tbody>
           {(q.data ?? []).map((s) => (
             <Fragment key={s.id}>
-              <tr className="border-t border-border/40">
+              <tr>
                 <td className="p-3 font-bold">{s.name}</td>
                 <td className="p-3">{formatDateTime(s.startedAt)}</td>
                 <td className="p-3">{s.endedAt ? formatDateTime(s.endedAt) : <Badge variant="outline">مفتوح</Badge>}</td>
@@ -260,7 +260,7 @@ function ShiftsTab() {
                 </td>
               </tr>
               {openId === s.id ? (
-                <tr className="border-t border-border/40 bg-background/40">
+                <tr>
                   <td colSpan={6} className="p-3">
                     <WorkRows filters={{ shiftId: s.id }} />
                   </td>
@@ -322,9 +322,9 @@ function WorkRows({ filters }: { filters: { userId?: string; shiftId?: string; d
 
   return (
     <div className="space-y-2">
-      <div className="overflow-x-auto rounded-2xl border border-border/60 bg-card/70">
-        <table className="w-full min-w-[820px] text-right text-xs">
-          <thead className="bg-muted/40 text-[11px] text-muted-foreground">
+      <div className="data-surface overflow-x-auto">
+        <table className="data-table min-w-[820px] text-right">
+          <thead>
             <tr>
               <th className="p-3">الموظف</th>
               <th className="p-3">النوع</th>
@@ -341,7 +341,7 @@ function WorkRows({ filters }: { filters: { userId?: string; shiftId?: string; d
           <tbody>
             {rows.map((r) => (
               <Fragment key={r.assignmentId}>
-                <tr className="border-t border-border/40">
+                <tr>
                   <td className="p-3 font-bold">{r.name}</td>
                   <td className="p-3">{r.kind}</td>
                   <td className="p-3 max-w-[240px] truncate">{r.title}</td>
@@ -363,7 +363,7 @@ function WorkRows({ filters }: { filters: { userId?: string; shiftId?: string; d
                   </td>
                 </tr>
                 {openId === r.assignmentId ? (
-                  <tr className="border-t border-border/40 bg-background/40">
+                  <tr>
                     <td colSpan={10} className="p-4">
                       <div className="mb-2 text-xs font-black">ملخص المعاملة</div>
                       <div className="grid gap-2 text-[11px] sm:grid-cols-2 lg:grid-cols-3">
@@ -515,9 +515,9 @@ function P2PTab() {
         طلبات P2P تظل ظاهرة لجميع الموظفين في قسمها الأصلي. من هنا يربطها المدير بشفت الموظف الصحيح — مرة واحدة فقط،
         وبعد الربط لا يظهر الطلب هنا ولا يمكن ربطه مرة أخرى.
       </p>
-      <div className="overflow-x-auto rounded-2xl border border-border/60 bg-card/70">
-        <table className="w-full min-w-[760px] text-right text-xs">
-          <thead className="bg-muted/40 text-[11px] text-muted-foreground">
+      <div className="data-surface overflow-x-auto">
+        <table className="data-table min-w-[760px] text-right">
+          <thead>
             <tr>
               <th className="p-3">الطلب</th>
               <th className="p-3">الحساب</th>
@@ -530,7 +530,7 @@ function P2PTab() {
           <tbody>
             {(q.data?.orders ?? []).map((o) => (
               <Fragment key={o.ledgerId}>
-                <tr className="border-t border-border/40">
+                <tr>
                   <td className="p-3 max-w-[240px] truncate font-bold">{o.title}</td>
                   <td className="p-3">{o.accountName}</td>
                   <td className="p-3 font-black">
@@ -545,7 +545,7 @@ function P2PTab() {
                   </td>
                 </tr>
                 {pick === o.ledgerId ? (
-                  <tr className="border-t border-border/40 bg-background/40">
+                  <tr>
                     <td colSpan={6} className="p-3">
                       <div className="mb-2 text-[11px] text-muted-foreground">اختر الموظف / الشفت:</div>
                       <div className="flex flex-wrap gap-2">
