@@ -53,11 +53,11 @@ const TOP_TABS: { key: TabKey; label: string; icon: typeof ListOrdered }[] = [
 ];
 
 /** The shift's own inner sections (no «الحسابات المتراكمة» here). */
-const INNER_TABS: { key: TabKey; label: string }[] = [
-  { key: "all", label: "المعاملات" },
-  { key: "wrong", label: "المعاملات الغلط والخاص بالموظف" },
-  { key: "transfers", label: "الاستلم من والتحويل الي" },
-  { key: "p2p", label: "طليات P2P" },
+const INNER_TABS: { key: TabKey; label: string; icon: typeof ListOrdered }[] = [
+  { key: "all", label: "المعاملات", icon: ListOrdered },
+  { key: "wrong", label: "المعاملات الغلط والخاص بالموظف", icon: AlertTriangle },
+  { key: "transfers", label: "الاستلم من والتحويل الي", icon: ArrowLeftRight },
+  { key: "p2p", label: "طليات P2P", icon: Users },
 ];
 
 const COLUMNS: { label: string; icon: typeof ListOrdered }[] = [
@@ -74,6 +74,39 @@ const GLOW_ACTIVE =
   "border-[oklch(0.55_0.14_255)] bg-[linear-gradient(180deg,oklch(0.34_0.12_258),oklch(0.26_0.09_258))] text-[oklch(0.96_0.01_255)] shadow-[0_0_0_1px_oklch(0.55_0.14_255/0.35)]";
 const GLOW_IDLE =
   "border-border/40 bg-[oklch(0.11_0.02_270)] text-foreground/75 hover:border-[oklch(0.45_0.1_258)] hover:text-foreground/90";
+
+/** Split-pill content for the merged "wrong + employee" tab. */
+function SplitTabContent({ reversed }: { reversed?: boolean }) {
+  if (reversed) {
+    return (
+      <>
+        <span className="flex items-center gap-1">
+          <span className="whitespace-nowrap">المعاملات الغلط</span>
+          <AlertTriangle className="size-3.5 shrink-0" />
+        </span>
+        <span className="mx-1.5 inline-block h-3.5 w-px bg-current/20" />
+        <span className="flex items-center gap-1">
+          <span className="whitespace-nowrap">الخاص بالموظف</span>
+          <User className="size-3.5 shrink-0" />
+        </span>
+      </>
+    );
+  }
+  return (
+    <>
+      <span className="flex items-center gap-1">
+        <span className="whitespace-nowrap">الخاص بالموظف</span>
+        <User className="size-3.5 shrink-0" />
+      </span>
+      <span className="mx-1.5 inline-block h-3.5 w-px bg-current/20" />
+      <span className="flex items-center gap-1">
+        <span className="whitespace-nowrap">المعاملات الغلط</span>
+        <AlertTriangle className="size-3.5 shrink-0" />
+      </span>
+    </>
+  );
+}
+
 
 
 function useNow() {
