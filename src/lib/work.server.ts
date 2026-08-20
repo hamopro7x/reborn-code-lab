@@ -659,13 +659,21 @@ export async function saveManualTxn(
   value: string,
 ) {
   const db = await admin();
-  const patch: Record<string, unknown> =
-    field === "amount"
-      ? { amount: value.trim() === "" ? null : Number(String(value).replace(/,/g, "")) }
-      : { details: value };
-  if (field === "amount" && patch["amount"] !== null && !Number.isFinite(patch["amount"] as number)) {
-    return { ok: false as const, error: "قيمة غير صحيحة" };
+  let patch: Record<string, unknown>;
+  if (field === "amount") {
+    // Lenient parsing: Arabic-Indic digits, thousand separators, stray symbols.
+    const norm = String(value)
+      .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+      .replace(/[\u06f0-\u06f9]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
+      .replace(/[\u066b\u060c,]/g, ".")
+      .replace(/[^\d.\-]/g, "")
+      .trim();
+    const n = Number(norm);
+    patch = { amount: norm === "" || !Number.isFinite(n) ? null : n };
+  } else {
+    patch = { details: value };
   }
+
   const { error } = await db.from("work_manual_txns").update(patch).eq("id", id).eq("user_id", userId);
   if (error) return { ok: false as const, error: error.message };
   return { ok: true as const };
