@@ -279,17 +279,29 @@ function ManualCell({
   const saveFn = useServerFn(saveMyManualTxn);
   const [value, setValue] = useState(initial);
   const savedRef = useRef(initial);
+  const valueRef = useRef(initial);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const flush = (v: string) => {
     if (v === savedRef.current) return;
     savedRef.current = v;
-    void saveFn({ data: { id, field, value: v } }).catch(() => {
-      savedRef.current = "\u0000";
-    });
+    void saveFn({ data: { id, field, value: v } })
+      .then((res: any) => {
+        if (res && res.ok === false) {
+          savedRef.current = "\u0000";
+          toast.error(String(res.error ?? "تعذر الحفظ"));
+        }
+      })
+      .catch(() => {
+        savedRef.current = "\u0000";
+        toast.error("تعذر الحفظ، حاول مرة أخرى");
+      });
   };
+  const flushRef = useRef(flush);
+  flushRef.current = flush;
 
   useEffect(() => {
+    valueRef.current = value;
     if (value === savedRef.current) return;
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => flush(value), 400);
@@ -298,6 +310,22 @@ function ManualCell({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, id, field]);
+
+  // Save pending edits when the section unmounts, or when the tab/window
+  // is hidden or closed — otherwise a fast "type then leave" loses the value.
+  useEffect(() => {
+    const onHide = () => flushRef.current(valueRef.current);
+    document.addEventListener("visibilitychange", onHide);
+    window.addEventListener("pagehide", onHide);
+    window.addEventListener("beforeunload", onHide);
+    return () => {
+      document.removeEventListener("visibilitychange", onHide);
+      window.removeEventListener("pagehide", onHide);
+      window.removeEventListener("beforeunload", onHide);
+      flushRef.current(valueRef.current);
+    };
+  }, []);
+
 
   return (
     <input
