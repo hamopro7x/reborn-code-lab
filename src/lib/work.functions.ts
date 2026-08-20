@@ -228,7 +228,7 @@ export const getMyManualTxns = createServerFn({ method: "POST" })
 
 export const addMyManualTxn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ card: z.enum(["wrong", "employee"]) }).parse(input))
+  .inputValidator((input: unknown) => z.object({ card: z.enum(["wrong", "employee", "receive", "transfer"]) }).parse(input))
   .handler(async ({ data, context }) => {
     await assertAccess(context.supabase, context.userId);
     const mod = await import("./work.server");
@@ -255,7 +255,7 @@ export const saveMyManualTxn = createServerFn({ method: "POST" })
 /** Admin-only: clear every manual row in one card for the current user. */
 export const clearMyManualTxns = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ card: z.enum(["wrong", "employee"]) }).parse(input))
+  .inputValidator((input: unknown) => z.object({ card: z.enum(["wrong", "employee", "receive", "transfer"]) }).parse(input))
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
     const mod = await import("./work.server");

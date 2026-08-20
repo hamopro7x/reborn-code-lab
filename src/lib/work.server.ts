@@ -622,7 +622,7 @@ export async function saveEntryField(
 
 /* ---------------- manual rows: «المعاملات الغلط» / «خاص بالموظف» ---------------- */
 
-export type ManualCard = "wrong" | "employee";
+export type ManualCard = "wrong" | "employee" | "receive" | "transfer";
 
 export async function listManualTxns(userId: string) {
   const db = await admin();
