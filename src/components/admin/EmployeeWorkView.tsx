@@ -327,7 +327,7 @@ function ManualCard({
         </button>
       </div>
 
-      <div className="max-h-[520px] overflow-y-auto overflow-x-hidden">
+      <div className="max-h-[520px] overflow-y-auto overflow-x-hidden scrollbar-hide">
         <table className="w-full border-collapse text-center text-xs">
           <thead className="sticky top-0 z-10 bg-[oklch(0.09_0.015_270)]">
             <tr>
