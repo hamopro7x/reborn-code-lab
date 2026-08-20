@@ -404,11 +404,13 @@ function ManualCard({
 
 
 /** The two independent cards, side by side. */
-function ManualSection() {
+function ManualSection({ isAdmin }: { isAdmin: boolean }) {
   const qc = useQueryClient();
   const listFn = useServerFn(getMyManualTxns);
   const addFn = useServerFn(addMyManualTxn);
+  const clearFn = useServerFn(clearMyManualTxns);
   const [adding, setAdding] = useState<"wrong" | "employee" | null>(null);
+  const [clearing, setClearing] = useState<"wrong" | "employee" | null>(null);
   const [newestId, setNewestId] = useState<string | null>(null);
 
   const q = useQuery({
@@ -432,6 +434,22 @@ function ManualSection() {
     }
   };
 
+  const clear = async (card: "wrong" | "employee") => {
+    if (!confirm("سيتم حذف جميع المعاملات في هذا الكرت. متابعة؟")) return;
+    setClearing(card);
+    try {
+      const res: any = await clearFn({ data: { card } });
+      if (res?.ok) {
+        toast.success("تم التصفير");
+        await qc.invalidateQueries({ queryKey: ["my-manual-txns"] });
+      } else toast.error(String(res?.error ?? "تعذر التصفير"));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "تعذر التصفير");
+    } finally {
+      setClearing(null);
+    }
+  };
+
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
       <ManualCard
@@ -439,20 +457,26 @@ function ManualSection() {
         title="خاص بالموظف"
         rows={all.filter((r: any) => r.card === "employee")}
         onAdd={add}
+        onClear={clear}
         adding={adding === "employee"}
+        clearing={clearing === "employee"}
         newestId={newestId}
+        isAdmin={isAdmin}
       />
       <ManualCard
         card="wrong"
         title="المعاملات الغلط"
         rows={all.filter((r: any) => r.card === "wrong")}
         onAdd={add}
+        onClear={clear}
         adding={adding === "wrong"}
+        clearing={clearing === "wrong"}
         newestId={newestId}
+        isAdmin={isAdmin}
       />
-
     </div>
   );
+}
 }
 
 
