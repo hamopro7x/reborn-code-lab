@@ -180,7 +180,8 @@ function Last4Cell({
 /** «المعاملات» in the employee view = card (visa) transactions only. */
 const isCardTxn = (kind: unknown) => /^(card|refund)$/i.test(String(kind ?? ""));
 
-/** One employee-entered cell: write-once, auto-saved on blur, then locked. */
+/** One employee-entered cell: auto-saved while typing (debounce + blur +
+ * tab-hide flush), then locked once the server stored the value. */
 function EntryCell({
   row,
   field,
@@ -194,6 +195,59 @@ function EntryCell({
   const saved = row[field];
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
+  const valueRef = useRef("");
+  const sentRef = useRef("");
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const commit = (raw: string) => {
+    const txt = String(raw).replace(/,/g, "").trim();
+    if (!txt || txt === sentRef.current) return;
+    const n = Number(txt);
+    if (!Number.isFinite(n) || n < 0) return;
+    sentRef.current = txt;
+    setBusy(true);
+    void saveFn({ data: { ledgerId: row.ledgerId, field, value: n } })
+      .then((res: any) => {
+        if (res?.ok) {
+          toast.success("تم الحفظ");
+          onSaved();
+        } else {
+          sentRef.current = "";
+          toast.error(String(res?.error ?? "تعذر الحفظ"));
+        }
+      })
+      .catch((e) => {
+        sentRef.current = "";
+        toast.error(e instanceof Error ? e.message : "تعذر الحفظ");
+      })
+      .finally(() => setBusy(false));
+  };
+  const commitRef = useRef(commit);
+  commitRef.current = commit;
+
+  useEffect(() => {
+    valueRef.current = value;
+    if (!value.trim()) return;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => commitRef.current(value), 500);
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [value]);
+
+  // Never lose a value the employee typed then walked away from.
+  useEffect(() => {
+    const onHide = () => commitRef.current(valueRef.current);
+    document.addEventListener("visibilitychange", onHide);
+    window.addEventListener("pagehide", onHide);
+    window.addEventListener("beforeunload", onHide);
+    return () => {
+      document.removeEventListener("visibilitychange", onHide);
+      window.removeEventListener("pagehide", onHide);
+      window.removeEventListener("beforeunload", onHide);
+      commitRef.current(valueRef.current);
+    };
+  }, []);
 
   if (saved !== null && saved !== undefined) {
     return (
@@ -203,34 +257,14 @@ function EntryCell({
     );
   }
 
-  const commit = async () => {
-    const n = Number(String(value).replace(/,/g, "").trim());
-    if (!value.trim() || !Number.isFinite(n) || n < 0) return;
-    setBusy(true);
-    try {
-      const res: any = await saveFn({ data: { ledgerId: row.ledgerId, field, value: n } });
-      if (res?.ok) {
-        toast.success("تم الحفظ");
-        onSaved();
-      } else {
-        toast.error(String(res?.error ?? "تعذر الحفظ"));
-      }
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "تعذر الحفظ");
-    } finally {
-      setBusy(false);
-    }
-  };
-
   return (
     <div className="flex items-center justify-center gap-1">
       <input
         inputMode="decimal"
         data-no-autosave
-        disabled={busy}
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        onBlur={() => void commit()}
+        onBlur={() => commit(value)}
         onKeyDown={(e) => {
           if (e.key === "Enter") (e.target as HTMLInputElement).blur();
         }}
@@ -240,6 +274,7 @@ function EntryCell({
     </div>
   );
 }
+
 
 /** Original transaction details, rendered exactly like the central ledger. */
 function TxnDetailsDialog({ row, onClose }: { row: any | null; onClose: () => void }) {
