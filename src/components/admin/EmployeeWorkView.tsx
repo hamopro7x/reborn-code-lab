@@ -227,12 +227,6 @@ function EntryCell({
 
   useEffect(() => {
     valueRef.current = value;
-    if (!value.trim()) return;
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => commitRef.current(value), 500);
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
   }, [value]);
 
   // Never lose a value the employee typed then walked away from.
