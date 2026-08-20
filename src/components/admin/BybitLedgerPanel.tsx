@@ -436,7 +436,7 @@ export function BybitLedgerPanel() {
                       <button
                         type="button"
                         onClick={() => setOpenId((v) => (v === r.id ? null : r.id))}
-                        className="inline-flex items-center gap-1 text-sm text-amber-400 hover:underline"
+                        className="table-btn"
                       >
                         التفاصيل
                         <ChevronDown className={`size-3.5 transition-transform ${openId === r.id ? "rotate-180" : ""}`} />
