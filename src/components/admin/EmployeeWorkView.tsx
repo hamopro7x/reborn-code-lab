@@ -364,35 +364,6 @@ export function EmployeeWorkView() {
         </div>
       </div>
 
-      {/* ---------------------------- Top bar ---------------------------- */}
-      <div className="flex flex-wrap items-center gap-2">
-        {TOP_TABS.map((t) => {
-          const Icon = t.icon;
-          const active = tab === t.key;
-          return (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => setTab(t.key)}
-              className={`flex items-center gap-2 rounded-2xl border px-3 py-2 text-[11px] font-bold transition ${
-                active ? GLOW_ACTIVE : GLOW_IDLE
-              }`}
-            >
-              {t.key === "wrong" ? (
-                <SplitTabContent />
-              ) : (
-                <>
-                  <span className="whitespace-nowrap">{t.label}</span>
-                  <Icon className="size-3.5 shrink-0" />
-                </>
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-
-      {/* ------------------------- Inner sections ------------------------- */}
       <div className="rounded-2xl border border-border/50 bg-[oklch(0.1_0.015_270)] p-2.5">
         <div className="flex flex-wrap items-center gap-2">
           {INNER_TABS.map((t) => {
