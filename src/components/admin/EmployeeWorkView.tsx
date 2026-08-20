@@ -36,6 +36,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { getMyWorkState, getMyShiftTxns, saveMyTxnEntry } from "@/lib/work.functions";
 import { useClaimWork } from "@/lib/use-claim-work";
+import { getViewerIdentity } from "@/lib/courses.functions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { getBybitCardBrands } from "@/lib/bybit.functions";
 import { BrandBadge, LedgerRowDetails, statusBadge } from "@/components/admin/BybitLedgerPanel";
