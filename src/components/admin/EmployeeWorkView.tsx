@@ -388,14 +388,12 @@ export function EmployeeWorkView() {
                   active ? GLOW_ACTIVE : GLOW_IDLE
                 }`}
               >
-                {t.key === "wrong" ? (
-                  <SplitTabContent />
-                ) : (
-                  <span className="flex items-center justify-center gap-1.5">
-                    <span className="whitespace-nowrap">{t.label}</span>
-                    <Icon className="size-3.5 shrink-0" />
+                <span className="flex items-center justify-center gap-1.5">
+                  <span className={`whitespace-nowrap ${t.key === "employee" ? "text-[oklch(0.66_0.19_25)]" : ""}`}>
+                    {t.label}
                   </span>
-                )}
+                  <Icon className={`size-3.5 shrink-0 ${t.key === "employee" ? "text-[oklch(0.66_0.19_25)]" : ""}`} />
+                </span>
               </button>
             );
           })}
