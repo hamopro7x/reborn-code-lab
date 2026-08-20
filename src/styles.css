@@ -119,11 +119,14 @@
 @utility glow-purple {
   box-shadow: 0 0 0 1px oklch(0.6 0.25 300 / 0.4), 0 10px 40px -10px oklch(0.5 0.3 300 / 0.5), 0 0 60px -10px oklch(0.55 0.28 305 / 0.4);
 }
-@utility card-surface {
-  background: linear-gradient(180deg, oklch(0.14 0.035 285 / 0.9), oklch(0.1 0.03 285 / 0.9));
-  backdrop-filter: blur(12px);
-  border: 1px solid oklch(0.3 0.06 295 / 0.4);
+@utility scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 
 @keyframes floaty { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
 @keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
