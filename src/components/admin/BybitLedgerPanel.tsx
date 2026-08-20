@@ -77,7 +77,7 @@ function ChainCell({ chain }: { chain: string }) {
           {key.slice(0, 2)}
         </span>
       )}
-      <span className="text-xs font-bold text-blue-400">{key}</span>
+      <span className="text-xs font-bold text-foreground/85">{key}</span>
     </span>
   );
 }
@@ -147,8 +147,8 @@ function Chip({ active, children, onClick }: { active?: boolean; children: React
       onClick={onClick}
       className={`px-4 py-2 rounded-full text-xs font-bold transition-colors border ${
         active
-          ? "bg-blue-500/15 text-blue-400 border-blue-500/40"
-          : "text-muted-foreground border-border/40 hover:text-foreground hover:border-blue-500/30"
+          ? "bg-muted/40 text-foreground/85 border-border/60"
+          : "text-muted-foreground border-border/40 hover:text-foreground hover:border-border/60"
       }`}
     >
       {children}
