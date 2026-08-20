@@ -71,9 +71,9 @@ const COLUMNS: { label: string; icon: typeof ListOrdered }[] = [
 ];
 
 const GLOW_ACTIVE =
-  "border-[oklch(0.55_0.14_255)] bg-[linear-gradient(180deg,oklch(0.34_0.12_258),oklch(0.26_0.09_258))] text-[oklch(0.96_0.01_255)] shadow-[0_0_0_1px_oklch(0.55_0.14_255/0.35)]";
+  "border-[oklch(0.42_0.003_106)] bg-[linear-gradient(180deg,oklch(0.30_0.003_106),oklch(0.24_0.003_106))] text-[oklch(0.96_0.002_106)] shadow-[0_0_0_1px_oklch(0.55_0.14_255/0.35)]";
 const GLOW_IDLE =
-  "border-border/40 bg-[oklch(0.11_0.02_270)] text-foreground/75 hover:border-[oklch(0.45_0.1_258)] hover:text-foreground/90";
+  "border-border/40 bg-[oklch(0.21_0.002_106)] text-foreground/75 hover:border-[oklch(0.44_0.003_106)] hover:text-foreground/90";
 
 /** Split-pill content for the merged "wrong + employee" tab — side by side. */
 function SplitTabContent({ reversed }: { reversed?: boolean }) {
@@ -232,7 +232,7 @@ function EntryCell({
         onKeyDown={(e) => {
           if (e.key === "Enter") (e.target as HTMLInputElement).blur();
         }}
-        className="h-8 w-20 rounded-lg border border-border/60 bg-background/60 px-2 text-center text-xs tabular-nums outline-none focus:border-[oklch(0.62_0.18_250)]"
+        className="h-8 w-20 rounded-lg border border-border/60 bg-background/60 px-2 text-center text-xs tabular-nums outline-none focus:border-[oklch(0.55_0.003_106)]"
       />
       {busy ? <Loader2 className="size-3 animate-spin text-muted-foreground" /> : null}
     </div>
@@ -311,16 +311,16 @@ function ManualCard({
 }) {
   const emptyRows = Math.max(12 - rows.length, 0);
   return (
-    <div className="overflow-hidden rounded-2xl border border-border/50 bg-[oklch(0.1_0.015_270)]">
-      <div className="relative flex items-center justify-center bg-[linear-gradient(180deg,oklch(0.38_0.14_258),oklch(0.3_0.11_258))] px-3 py-3">
-        <span className="text-sm font-black text-[oklch(0.96_0.01_255)]">{title}</span>
+    <div className="overflow-hidden rounded-2xl border border-border/50 bg-[oklch(0.20_0.002_106)]">
+      <div className="relative flex items-center justify-center bg-[linear-gradient(180deg,oklch(0.325_0.003_106),oklch(0.26_0.003_106))] px-3 py-3">
+        <span className="text-sm font-black text-[oklch(0.96_0.002_106)]">{title}</span>
         <button
           type="button"
           onClick={() => onAdd(card)}
           disabled={adding}
-          className="absolute left-3 flex items-center gap-2 text-[10px] font-bold text-[oklch(0.96_0.01_255)] disabled:opacity-60"
+          className="absolute left-3 flex items-center gap-2 text-[10px] font-bold text-[oklch(0.96_0.002_106)] disabled:opacity-60"
         >
-          <span className="grid size-6 place-items-center rounded-full bg-[oklch(0.55_0.16_255)] text-sm leading-none">
+          <span className="grid size-6 place-items-center rounded-full bg-[oklch(0.40_0.003_106)] text-sm leading-none">
             {adding ? <Loader2 className="size-3 animate-spin" /> : "+"}
           </span>
           <span className="whitespace-nowrap">إضافة معاملة جديدة</span>
@@ -329,7 +329,7 @@ function ManualCard({
 
       <div className="max-h-[520px] overflow-y-auto overflow-x-hidden scrollbar-hide">
         <table className="w-full border-collapse text-center text-xs">
-          <thead className="sticky top-0 z-10 bg-[oklch(0.09_0.015_270)]">
+          <thead className="sticky top-0 z-10 bg-[oklch(0.185_0.002_106)]">
             <tr>
               <th className="w-[26%] border border-border/40 px-3 py-3 text-[11px] font-bold whitespace-nowrap">
                 المبلغ
@@ -517,7 +517,7 @@ export function EmployeeWorkView() {
           type="button"
           onClick={() => void claim()}
           disabled={busy !== null}
-          className="flex w-[96px] shrink-0 flex-col items-center gap-1 rounded-2xl border border-[oklch(0.55_0.14_250)] bg-card/70 px-2 py-2 text-[10px] font-bold transition hover:bg-card disabled:opacity-60"
+          className="flex w-[96px] shrink-0 flex-col items-center gap-1 rounded-2xl border border-[oklch(0.42_0.003_106)] bg-card/70 px-2 py-2 text-[10px] font-bold transition hover:bg-card disabled:opacity-60"
         >
           {busy === "claim" ? (
             <Loader2 className="size-5 animate-spin text-foreground" />
@@ -570,17 +570,17 @@ export function EmployeeWorkView() {
 
       {/* ------------------------- Transactions ------------------------- */}
       {tab === "wrong" ? <ManualSection /> : (
-      <div className="overflow-hidden rounded-2xl border border-border/50 bg-[oklch(0.1_0.015_270)]">
+      <div className="overflow-hidden rounded-2xl border border-border/50 bg-[oklch(0.20_0.002_106)]">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-center text-xs">
             <thead>
-              <tr className="bg-[linear-gradient(180deg,oklch(0.38_0.14_258),oklch(0.3_0.11_258))]">
+              <tr className="bg-[linear-gradient(180deg,oklch(0.325_0.003_106),oklch(0.26_0.003_106))]">
                 {COLUMNS.map((c) => {
                   const Icon = c.icon;
                   return (
                     <th
                       key={c.label}
-                      className="border border-[oklch(0.55_0.14_255)]/25 px-3 py-3 font-bold whitespace-nowrap text-[oklch(0.96_0.01_255)] text-[11px]"
+                      className="border border-[oklch(0.42_0.003_106)]/25 px-3 py-3 font-bold whitespace-nowrap text-[oklch(0.96_0.002_106)] text-[11px]"
                     >
                       <span className="flex items-center justify-center gap-1.5">
                         <span>{c.label}</span>
@@ -601,7 +601,7 @@ export function EmployeeWorkView() {
                 </tr>
               ) : (
                 rows.map((r) => (
-                  <tr key={r.assignmentId ?? r.ledgerId} className="hover:bg-[oklch(0.16_0.03_258)]/60">
+                  <tr key={r.assignmentId ?? r.ledgerId} className="hover:bg-[oklch(0.28_0.002_106)]/60">
                     <td className="border border-border/40 px-3 py-3 whitespace-nowrap">
                       {String(r.detail?.merchantName ?? r.title ?? "—")}
                     </td>
@@ -622,7 +622,7 @@ export function EmployeeWorkView() {
                       <button
                         type="button"
                         onClick={() => setDetailRow(r)}
-                        className="mx-auto flex items-center gap-1 rounded-full border border-border/60 bg-card/60 px-2.5 py-1 text-[10px] font-bold transition hover:text-[oklch(0.72_0.16_250)]"
+                        className="mx-auto flex items-center gap-1 rounded-full border border-border/60 bg-card/60 px-2.5 py-1 text-[10px] font-bold transition hover:text-[oklch(0.80_0.002_106)]"
                       >
                         <Eye className="size-3" />
                         التفاصيل
