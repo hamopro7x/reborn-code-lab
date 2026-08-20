@@ -1,8 +1,9 @@
 /**
  * Employee execution view — visual design is fixed by the approved reference:
- * black surface, one header row (identity → claim button → live clock → tabs),
- * then a single bordered panel holding the transactions grid. Data is real:
- * it comes from the employee's own open shift only.
+ * black surface with blue neon accents, a top section bar, a horizontal shift
+ * strip, the shift's inner section bar, then the transactions grid.
+ *
+ * Data is real: it comes from the employee's own open shift only.
  *
  * Column ownership is strict:
  *  - "آخر 4 أرقام للبطاقة" and "الإجراء" (details) come from the ORIGINAL
@@ -13,7 +14,26 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, User, Clock, ScanFace, Eye } from "lucide-react";
+import {
+  Loader2,
+  User,
+  Clock,
+  ScanFace,
+  Eye,
+  ListOrdered,
+  Layers,
+  AlertTriangle,
+  ArrowLeftRight,
+  Users,
+  UserRound,
+  CalendarDays,
+  Settings,
+  CreditCard,
+  CalendarClock,
+  Package,
+  DollarSign,
+  Wallet,
+} from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { getMyWorkState, getMyShiftTxns, saveMyTxnEntry } from "@/lib/work.functions";
@@ -22,26 +42,41 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { getBybitCardBrands } from "@/lib/bybit.functions";
 import { BrandBadge, LedgerRowDetails, statusBadge } from "@/components/admin/BybitLedgerPanel";
 
-type TabKey = "p2p" | "transfers" | "wrong" | "week" | "all";
+type TabKey = "p2p" | "transfers" | "wrong" | "week" | "all" | "employee";
 
 /** DOM order = right-to-left order in the reference. */
-const TABS: { key: TabKey; label: string }[] = [
-  { key: "p2p", label: "طلبات P2P" },
-  { key: "transfers", label: "الاستلم من والتحويل الي" },
-  { key: "wrong", label: "المعاملات الغلط" },
-  { key: "week", label: "الحسابات المتراكمة" },
-  { key: "all", label: "المعاملات" },
+const TOP_TABS: { key: TabKey; label: string; icon: typeof ListOrdered }[] = [
+  { key: "all", label: "المعاملات", icon: ListOrdered },
+  { key: "week", label: "الحسابات المتراكمة", icon: Layers },
+  { key: "wrong", label: "المعاملات الغلط", icon: AlertTriangle },
+  { key: "transfers", label: "الاستلم من والتحويل الي", icon: ArrowLeftRight },
+  { key: "p2p", label: "طلبات P2P", icon: Users },
+  { key: "employee", label: "الخاص بالوظف", icon: UserRound },
 ];
 
-const COLUMNS = [
-  "اسم التاجر",
-  "إجمالي المبلغ",
-  "جنيه",
-  "الكمية",
-  "تاريخ وقت المعاملة",
-  "آخر 4 أرقام للبطاقة",
-  "الإجراء",
+/** The shift's own inner sections (no «الحسابات المتراكمة» here). */
+const INNER_TABS: { key: TabKey; label: string }[] = [
+  { key: "all", label: "المعاملات" },
+  { key: "wrong", label: "المعاملات الغلط" },
+  { key: "transfers", label: "الاستلم من والتحويل الي" },
+  { key: "p2p", label: "طليات P2P" },
+  { key: "employee", label: "الخاص بالوظف" },
 ];
+
+const COLUMNS: { label: string; icon: typeof ListOrdered }[] = [
+  { label: "اسم التاجر", icon: User },
+  { label: "إجمالي المبلغ", icon: Wallet },
+  { label: "جنية", icon: DollarSign },
+  { label: "الكمية", icon: Package },
+  { label: "تاريخ وقت المعاملة", icon: CalendarClock },
+  { label: "آخر 4 أرقام للبطاقة", icon: CreditCard },
+  { label: "الإجراء", icon: Settings },
+];
+
+const GLOW_ACTIVE =
+  "border-[oklch(0.62_0.2_255)] bg-[linear-gradient(180deg,oklch(0.38_0.16_258),oklch(0.28_0.13_258))] text-[oklch(0.98_0.01_255)] shadow-[0_0_0_1px_oklch(0.62_0.2_255/0.6),0_0_22px_oklch(0.55_0.2_258/0.55)]";
+const GLOW_IDLE =
+  "border-border/60 bg-[oklch(0.11_0.02_270)] text-foreground/85 hover:border-[oklch(0.5_0.14_258)] hover:text-foreground";
 
 function useNow() {
   const [now, setNow] = useState(() => new Date());
@@ -200,6 +235,59 @@ function TxnDetailsDialog({ row, onClose }: { row: any | null; onClose: () => vo
   );
 }
 
+type ShiftCard = { id: string; label: string; date: string; index: number; sameDay: boolean };
+
+/** Shift cards of the employee, grouped so two shifts of one day sit together. */
+function ShiftStrip({ shifts, activeId }: { shifts: ShiftCard[]; activeId: string | null }) {
+  return (
+    <div className="rounded-2xl border border-border/50 bg-[oklch(0.1_0.015_270)] p-3">
+      <div className="flex flex-row-reverse flex-wrap items-stretch justify-end gap-3">
+        {shifts.length === 0 ? (
+          <div className="px-3 py-4 text-xs text-muted-foreground">لا توجد شفتات بعد</div>
+        ) : null}
+        {shifts.map((s, i) => {
+          const prev = shifts[i - 1];
+          const pairWithPrev = !!prev && prev.date === s.date;
+          const active = s.id === activeId;
+          return (
+            <div key={s.id} className="flex flex-row-reverse items-center gap-2">
+              {pairWithPrev ? (
+                <span className="grid size-9 shrink-0 place-items-center rounded-xl border border-[oklch(0.55_0.14_160)]/50 bg-[oklch(0.13_0.03_160)]">
+                  <ArrowLeftRight className="size-4 text-[oklch(0.82_0.16_100)]" />
+                </span>
+              ) : null}
+              <div
+                className={`flex min-w-[190px] items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-xs font-bold transition ${
+                  active ? GLOW_ACTIVE : GLOW_IDLE
+                } ${
+                  pairWithPrev || (shifts[i + 1] && shifts[i + 1].date === s.date)
+                    ? "shadow-[0_0_0_1px_oklch(0.55_0.16_160/0.5),0_0_18px_oklch(0.55_0.16_160/0.25)]"
+                    : ""
+                }`}
+              >
+                <CalendarDays
+                  className={`size-5 shrink-0 ${active ? "text-[oklch(0.85_0.13_240)]" : "text-foreground/70"}`}
+                />
+                <div className="text-right leading-tight">
+                  <div className="flex items-center justify-end gap-2">
+                    {s.sameDay ? (
+                      <span className="grid size-5 place-items-center rounded-full bg-[oklch(0.62_0.16_162)] text-[10px] font-black text-[oklch(0.12_0.02_160)]">
+                        {s.index}
+                      </span>
+                    ) : null}
+                    <span>{s.label}</span>
+                  </div>
+                  <div className="mt-1 tabular-nums text-foreground/70">{`{ ${s.date} }`}</div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function EmployeeWorkView() {
   const qc = useQueryClient();
   const stateFn = useServerFn(getMyWorkState);
@@ -245,6 +333,23 @@ export function EmployeeWorkView() {
     qc.invalidateQueries({ queryKey: ["my-shift-txns"] });
   });
 
+  /** The employee's own shift cards — his open shift only, nothing invented. */
+  const shifts: ShiftCard[] = useMemo(() => {
+    const s = st.data as any;
+    if (!s?.holding) return [];
+    const d = new Date(Number(s.startedAt));
+    const p = (n: number) => String(n).padStart(2, "0");
+    return [
+      {
+        id: String(s.shiftId),
+        label: `شفت يوم ${AR_DAYS[d.getDay()]}`,
+        date: `${d.getFullYear()} - ${p(d.getMonth() + 1)} - ${p(d.getDate())}`,
+        index: 1,
+        sameDay: false,
+      },
+    ];
+  }, [st.data]);
+
   const allRows: any[] = (txns.data as any)?.rows ?? [];
   const rows = useMemo(() => {
     const weekAgo = Date.now() - 7 * 86400_000;
@@ -257,6 +362,8 @@ export function EmployeeWorkView() {
         return allRows.filter((r) => /p2p/i.test(String(r.kind)));
       case "week":
         return allRows.filter((r) => Number(r.time) >= weekAgo);
+      case "employee":
+        return [] as any[];
       default:
         // «المعاملات» = card (visa) transactions only.
         return allRows.filter((r) => isCardTxn(r.kind));
@@ -269,85 +376,113 @@ export function EmployeeWorkView() {
   const emptyRows = Math.max(12 - rows.length, 0);
 
   return (
-    <div dir="rtl" className="space-y-5">
-      {/* ---------------------------- Header ---------------------------- */}
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 lg:flex lg:flex-wrap lg:justify-between">
-        <div className="flex min-w-0 flex-wrap items-center gap-4">
-          {/* identity */}
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="grid size-16 shrink-0 place-items-center rounded-full bg-secondary/80 text-muted-foreground">
-              <User className="size-8" />
-            </div>
-            <div className="min-w-0">
-              <div className="truncate text-lg font-black">{name}</div>
-              <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-                <span>موظف</span>
-                <span className="size-1.5 rounded-full bg-emerald-500" />
-                <span className="text-emerald-500">{holding ? "متصل" : "متصل"}</span>
-              </div>
-            </div>
+    <div dir="rtl" className="space-y-4">
+      {/* --------------------- identity / claim / clock --------------------- */}
+      <div className="flex flex-wrap items-center gap-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="grid size-16 shrink-0 place-items-center rounded-full bg-secondary/80 text-muted-foreground">
+            <User className="size-8" />
           </div>
-
-          {/* claim work */}
-          <button
-            type="button"
-            onClick={() => void claim()}
-            disabled={busy !== null}
-            className="flex w-[112px] shrink-0 flex-col items-center gap-1.5 rounded-2xl border border-[oklch(0.62_0.18_250)] bg-card/70 px-3 py-3 text-[11px] font-bold transition hover:bg-card disabled:opacity-60"
-          >
-            {busy === "claim" ? (
-              <Loader2 className="size-6 animate-spin text-foreground" />
-            ) : (
-              <ScanFace className="size-6" />
-            )}
-            <span>استلم الشغل</span>
-          </button>
-
-          {/* live clock */}
-          <div className="flex shrink-0 items-center gap-3">
-            <div className="text-left leading-tight">
-              <div className="text-sm font-black tabular-nums">
-                {clock.ampm} {clock.time}
-              </div>
-              <div className="mt-1 text-[11px] text-muted-foreground">{clock.date}</div>
+          <div className="min-w-0">
+            <div className="truncate text-lg font-black">{name}</div>
+            <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span>موظف</span>
+              <span className="size-1.5 rounded-full bg-emerald-500" />
+              <span className="text-emerald-500">متصل</span>
             </div>
-            <Clock className="size-6 text-muted-foreground" />
           </div>
         </div>
 
-        {/* tabs */}
-        <div className="col-span-2 flex flex-wrap items-center gap-3 lg:col-auto">
-          {TABS.map((t) => (
+        <button
+          type="button"
+          onClick={() => void claim()}
+          disabled={busy !== null}
+          className="flex w-[112px] shrink-0 flex-col items-center gap-1.5 rounded-2xl border border-[oklch(0.62_0.18_250)] bg-card/70 px-3 py-3 text-[11px] font-bold transition hover:bg-card disabled:opacity-60"
+        >
+          {busy === "claim" ? (
+            <Loader2 className="size-6 animate-spin text-foreground" />
+          ) : (
+            <ScanFace className="size-6" />
+          )}
+          <span>استلم الشغل</span>
+        </button>
+
+        <div className="flex shrink-0 items-center gap-3">
+          <div className="text-left leading-tight">
+            <div className="text-sm font-black tabular-nums">
+              {clock.ampm} {clock.time}
+            </div>
+            <div className="mt-1 text-[11px] text-muted-foreground">{clock.date}</div>
+          </div>
+          <Clock className="size-6 text-muted-foreground" />
+        </div>
+      </div>
+
+      {/* ---------------------------- Top bar ---------------------------- */}
+      <div className="flex flex-wrap items-center gap-3">
+        {TOP_TABS.map((t) => {
+          const Icon = t.icon;
+          const active = tab === t.key;
+          return (
             <button
               key={t.key}
               type="button"
               onClick={() => setTab(t.key)}
-              className={`rounded-full border px-5 py-2.5 text-xs font-bold transition ${
-                tab === t.key
-                  ? "border-[oklch(0.62_0.18_250)] bg-card/60 text-[oklch(0.72_0.16_250)]"
-                  : "border-border/70 bg-card/50 text-foreground/85 hover:text-foreground"
+              className={`flex items-center gap-2.5 rounded-2xl border px-5 py-3.5 text-xs font-bold transition ${
+                active ? GLOW_ACTIVE : GLOW_IDLE
               }`}
             >
-              {t.label}
+              <span className="whitespace-nowrap">{t.label}</span>
+              <Icon className="size-4.5 shrink-0" />
             </button>
-          ))}
+          );
+        })}
+      </div>
+
+      {/* ----------------------------- Shifts ----------------------------- */}
+      <ShiftStrip shifts={shifts} activeId={shifts[0]?.id ?? null} />
+
+      {/* ------------------------- Inner sections ------------------------- */}
+      <div className="rounded-2xl border border-border/50 bg-[oklch(0.1_0.015_270)] p-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {INNER_TABS.map((t) => {
+            const active = tab === t.key;
+            return (
+              <button
+                key={`inner-${t.key}`}
+                type="button"
+                onClick={() => setTab(t.key)}
+                className={`min-w-[150px] flex-1 rounded-2xl border px-5 py-3.5 text-center text-xs font-bold transition ${
+                  active ? GLOW_ACTIVE : GLOW_IDLE
+                }`}
+              >
+                {t.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {/* ------------------------- Transactions ------------------------- */}
-      <div className="rounded-3xl border border-border/70 bg-card/40 p-5">
+      <div className="overflow-hidden rounded-2xl border border-border/50 bg-[oklch(0.1_0.015_270)]">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-center text-xs">
             <thead>
-              <tr>
-                {COLUMNS.map((c) => (
-                  <th
-                    key={c}
-                    className="border border-border/50 bg-background/40 px-4 py-5 font-bold text-foreground/90 whitespace-nowrap"
-                  >
-                    {c}
-                  </th>
-                ))}
+              <tr className="bg-[linear-gradient(180deg,oklch(0.45_0.2_258),oklch(0.34_0.17_258))] shadow-[0_0_24px_oklch(0.5_0.2_258/0.45)]">
+                {COLUMNS.map((c) => {
+                  const Icon = c.icon;
+                  return (
+                    <th
+                      key={c.label}
+                      className="border border-[oklch(0.62_0.2_255)]/35 px-4 py-4 font-bold whitespace-nowrap text-[oklch(0.99_0.01_255)]"
+                    >
+                      <span className="flex items-center justify-center gap-2">
+                        <span>{c.label}</span>
+                        <Icon className="size-4 shrink-0 opacity-90" />
+                      </span>
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
@@ -359,7 +494,7 @@ export function EmployeeWorkView() {
                 </tr>
               ) : (
                 rows.map((r) => (
-                  <tr key={r.assignmentId ?? r.ledgerId}>
+                  <tr key={r.assignmentId ?? r.ledgerId} className="hover:bg-[oklch(0.16_0.03_258)]/60">
                     <td className="border border-border/40 px-4 py-4 whitespace-nowrap">
                       {String(r.detail?.merchantName ?? r.title ?? "—")}
                     </td>
@@ -392,7 +527,7 @@ export function EmployeeWorkView() {
               {Array.from({ length: emptyRows }).map((_, i) => (
                 <tr key={`empty-${i}`}>
                   {COLUMNS.map((c) => (
-                    <td key={c} className="border border-border/40 px-4 py-4">
+                    <td key={c.label} className="border border-border/40 px-4 py-4">
                       &nbsp;
                     </td>
                   ))}
