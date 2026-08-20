@@ -1,0 +1,2 @@
+ALTER TABLE public.work_manual_txns DROP CONSTRAINT work_manual_txns_card_check;
+ALTER TABLE public.work_manual_txns ADD CONSTRAINT work_manual_txns_card_check CHECK (card = ANY (ARRAY['wrong'::text,'employee'::text,'receive'::text,'transfer'::text]));
