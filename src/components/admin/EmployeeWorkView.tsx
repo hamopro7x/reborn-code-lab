@@ -339,12 +339,13 @@ function ManualCell({
     valueRef.current = value;
     if (value === savedRef.current) return;
     if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => flush(value), 400);
+    timerRef.current = setTimeout(() => flush(value), 500);
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, id, field]);
+
 
   // Save pending edits when the section unmounts, or when the tab/window
   // is hidden or closed — otherwise a fast "type then leave" loses the value.
@@ -362,20 +363,34 @@ function ManualCell({
   }, []);
 
 
+  // «المبلغ» accepts digits (incl. Arabic-Indic) and one decimal point only;
+  // «التفاصيل» is free text (letters, numbers, symbols, spaces) and optional.
+  const clean = (raw: string) => {
+    if (!numeric) return raw;
+    const latin = raw
+      .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+      .replace(/[\u06f0-\u06f9]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
+      .replace(/[\u066b\u060c,]/g, ".")
+      .replace(/[^\d.]/g, "");
+    const [head, ...rest] = latin.split(".");
+    return rest.length ? `${head}.${rest.join("")}` : head ?? "";
+  };
+
   return (
     <input
       data-no-autosave
       autoFocus={autoFocus}
       inputMode={numeric ? "decimal" : "text"}
       value={value}
-      onChange={(e) => setValue(e.target.value)}
+      onChange={(e) => setValue(clean(e.target.value))}
       onBlur={(e) => {
         if (timerRef.current) clearTimeout(timerRef.current);
-        flush(e.target.value);
+        flush(clean(e.target.value));
       }}
       onKeyDown={(e) => {
         if (e.key === "Enter") (e.target as HTMLInputElement).blur();
       }}
+
       className={`h-full w-full border-0 bg-transparent px-3 py-2.5 text-xs text-foreground/90 outline-none placeholder:text-transparent ${
         numeric ? "text-center tabular-nums" : "text-right"
       }`}
