@@ -313,19 +313,24 @@ function ManualCell({
 }) {
   const saveFn = useServerFn(saveMyManualTxn);
   const [value, setValue] = useState(initial);
+  const [locked, setLocked] = useState(initial.trim() !== "");
   const savedRef = useRef(initial);
   const valueRef = useRef(initial);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const flush = (v: string) => {
-    if (v === savedRef.current) return;
+    if (v === savedRef.current) {
+      if (v.trim() !== "") setLocked(true);
+      return;
+    }
     savedRef.current = v;
     void saveFn({ data: { id, field, value: v } })
       .then((res: any) => {
         if (res && res.ok === false) {
           savedRef.current = "\u0000";
           toast.error(String(res.error ?? "تعذر الحفظ"));
+          return;
         }
+        if (v.trim() !== "") setLocked(true);
       })
       .catch(() => {
         savedRef.current = "\u0000";
@@ -337,15 +342,7 @@ function ManualCell({
 
   useEffect(() => {
     valueRef.current = value;
-    if (value === savedRef.current) return;
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => flush(value), 500);
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value, id, field]);
-
+  }, [value]);
 
   // Save pending edits when the section unmounts, or when the tab/window
   // is hidden or closed — otherwise a fast "type then leave" loses the value.
@@ -362,7 +359,6 @@ function ManualCell({
     };
   }, []);
 
-
   // «المبلغ» accepts digits (incl. Arabic-Indic) and one decimal point only;
   // «التفاصيل» is free text (letters, numbers, symbols, spaces) and optional.
   const clean = (raw: string) => {
@@ -376,6 +372,19 @@ function ManualCell({
     return rest.length ? `${head}.${rest.join("")}` : head ?? "";
   };
 
+  if (locked) {
+    return (
+      <div
+        title="محفوظ — لا يمكن التعديل"
+        className={`h-full w-full px-3 py-2.5 text-xs text-foreground/90 ${
+          numeric ? "text-center tabular-nums" : "text-right"
+        }`}
+      >
+        {value}
+      </div>
+    );
+  }
+
   return (
     <input
       data-no-autosave
@@ -383,14 +392,10 @@ function ManualCell({
       inputMode={numeric ? "decimal" : "text"}
       value={value}
       onChange={(e) => setValue(clean(e.target.value))}
-      onBlur={(e) => {
-        if (timerRef.current) clearTimeout(timerRef.current);
-        flush(clean(e.target.value));
-      }}
+      onBlur={(e) => flush(clean(e.target.value))}
       onKeyDown={(e) => {
         if (e.key === "Enter") (e.target as HTMLInputElement).blur();
       }}
-
       className={`h-full w-full border-0 bg-transparent px-3 py-2.5 text-xs text-foreground/90 outline-none placeholder:text-transparent ${
         numeric ? "text-center tabular-nums" : "text-right"
       }`}
