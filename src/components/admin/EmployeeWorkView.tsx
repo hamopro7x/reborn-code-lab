@@ -11,7 +11,7 @@
  *  - "جنيه" and "الكمية" are entered by the employee, saved automatically on
  *    blur, then locked for good (enforced on the server).
  */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
