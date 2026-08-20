@@ -387,6 +387,7 @@ function ManualSection() {
   const listFn = useServerFn(getMyManualTxns);
   const addFn = useServerFn(addMyManualTxn);
   const [adding, setAdding] = useState<"wrong" | "employee" | null>(null);
+  const [newestId, setNewestId] = useState<string | null>(null);
 
   const q = useQuery({
     queryKey: ["my-manual-txns"],
@@ -398,8 +399,10 @@ function ManualSection() {
     setAdding(card);
     try {
       const res: any = await addFn({ data: { card } });
-      if (res?.ok) await qc.invalidateQueries({ queryKey: ["my-manual-txns"] });
-      else toast.error(String(res?.error ?? "تعذر الإضافة"));
+      if (res?.ok) {
+        setNewestId(String(res?.id ?? res?.row?.id ?? "") || null);
+        await qc.invalidateQueries({ queryKey: ["my-manual-txns"] });
+      } else toast.error(String(res?.error ?? "تعذر الإضافة"));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "تعذر الإضافة");
     } finally {
@@ -415,6 +418,7 @@ function ManualSection() {
         rows={all.filter((r: any) => r.card === "employee")}
         onAdd={add}
         adding={adding === "employee"}
+        newestId={newestId}
       />
       <ManualCard
         card="wrong"
@@ -422,7 +426,9 @@ function ManualSection() {
         rows={all.filter((r: any) => r.card === "wrong")}
         onAdd={add}
         adding={adding === "wrong"}
+        newestId={newestId}
       />
+
     </div>
   );
 }
