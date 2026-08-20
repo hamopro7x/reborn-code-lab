@@ -392,11 +392,11 @@ export function BybitLedgerPanel() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px] text-sm border-collapse [&_th]:border [&_th]:border-border/40 [&_td]:border [&_td]:border-border/40">
-              <thead className="text-[12px] text-muted-foreground border border-border/40">
+            <table className="data-table min-w-[900px]">
+              <thead>
                 <tr>
                   {COLUMNS[group].map((c) => (
-                    <th key={c} className="p-4 text-right font-normal">
+                    <th key={c} className="!p-4 text-right">
                       {c}
                     </th>
                   ))}
@@ -436,7 +436,7 @@ export function BybitLedgerPanel() {
                       <button
                         type="button"
                         onClick={() => setOpenId((v) => (v === r.id ? null : r.id))}
-                        className="inline-flex items-center gap-1 text-sm text-amber-400 hover:underline"
+                        className="table-btn"
                       >
                         التفاصيل
                         <ChevronDown className={`size-3.5 transition-transform ${openId === r.id ? "rotate-180" : ""}`} />
