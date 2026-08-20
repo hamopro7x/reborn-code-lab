@@ -36,6 +36,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { getMyWorkState, getMyShiftTxns, saveMyTxnEntry } from "@/lib/work.functions";
 import { useClaimWork } from "@/lib/use-claim-work";
+import { getViewerIdentity } from "@/lib/courses.functions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { getBybitCardBrands } from "@/lib/bybit.functions";
 import { BrandBadge, LedgerRowDetails, statusBadge } from "@/components/admin/BybitLedgerPanel";
@@ -261,14 +262,24 @@ export function EmployeeWorkView() {
   const clock = clockParts(now);
 
   const [name, setName] = useState("موظف");
+  const [avatar, setAvatar] = useState("");
+  const identityFn = useServerFn(getViewerIdentity);
   useEffect(() => {
     void (async () => {
+      try {
+        const v: any = await identityFn();
+        setName(v?.full_name || v?.email?.split("@")[0] || "موظف");
+        setAvatar(v?.avatar_url || "");
+        return;
+      } catch {
+        // fall back to the client session below
+      }
       const { data: auth } = await supabase.auth.getUser();
       if (!auth.user) return;
       const { data } = await supabase.from("profiles").select("full_name").eq("id", auth.user.id).maybeSingle();
       setName((data?.full_name as string) || auth.user.email?.split("@")[0] || "موظف");
     })();
-  }, []);
+  }, [identityFn]);
 
   const st = useQuery({
     queryKey: ["my-work-state"],
@@ -327,8 +338,12 @@ export function EmployeeWorkView() {
       {/* --------------------- identity / claim / clock --------------------- */}
       <div className="flex flex-wrap items-center gap-4">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="grid size-16 shrink-0 place-items-center rounded-full bg-secondary/80 text-muted-foreground">
-            <User className="size-8" />
+          <div className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-full bg-secondary/80 text-muted-foreground">
+            {avatar ? (
+              <img src={avatar} alt={name} className="size-full object-cover" />
+            ) : (
+              <User className="size-8" />
+            )}
           </div>
           <div className="min-w-0">
             <div className="truncate text-lg font-black">{name}</div>
