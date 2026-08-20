@@ -1,0 +1,1 @@
+DELETE FROM public.work_manual_txns;
