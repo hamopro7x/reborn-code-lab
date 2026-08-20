@@ -311,49 +311,45 @@ function ManualCard({
 }) {
   const emptyRows = Math.max(12 - rows.length, 0);
   return (
-    <div className="overflow-hidden rounded-2xl border border-border/50 bg-[oklch(0.1_0.015_270)]">
-      <div className="relative flex items-center justify-center bg-[linear-gradient(180deg,oklch(0.38_0.14_258),oklch(0.3_0.11_258))] px-3 py-3">
-        <span className="text-sm font-black text-[oklch(0.96_0.01_255)]">{title}</span>
+    <div className="data-surface">
+      <div className="data-table-head relative flex items-center justify-center px-3 py-3">
+        <span className="text-sm font-black">{title}</span>
         <button
           type="button"
           onClick={() => onAdd(card)}
           disabled={adding}
-          className="absolute left-3 flex items-center gap-2 text-[10px] font-bold text-[oklch(0.96_0.01_255)] disabled:opacity-60"
+          className="table-btn absolute left-3 disabled:opacity-60"
         >
-          <span className="grid size-6 place-items-center rounded-full bg-[oklch(0.55_0.16_255)] text-sm leading-none">
-            {adding ? <Loader2 className="size-3 animate-spin" /> : "+"}
+          <span className="grid size-4 place-items-center rounded-full bg-[oklch(0.5_0.14_255)] text-[11px] leading-none text-[oklch(0.98_0_0)]">
+            {adding ? <Loader2 className="size-2.5 animate-spin" /> : "+"}
           </span>
           <span className="whitespace-nowrap">إضافة معاملة جديدة</span>
         </button>
       </div>
 
       <div className="max-h-[520px] overflow-y-auto overflow-x-hidden scrollbar-hide">
-        <table className="w-full border-collapse text-center text-xs">
-          <thead className="sticky top-0 z-10 bg-[oklch(0.09_0.015_270)]">
+        <table className="data-table text-center">
+          <thead className="sticky top-0 z-10">
             <tr>
-              <th className="w-[26%] border border-border/40 px-3 py-3 text-[11px] font-bold whitespace-nowrap">
-                المبلغ
-              </th>
-              <th className="border border-border/40 px-3 py-3 text-[11px] font-bold whitespace-nowrap">
-                التفاصيل
-              </th>
+              <th className="w-[26%]">المبلغ</th>
+              <th>التفاصيل</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((r) => (
               <tr key={r.id}>
-                <td className="border border-border/40 p-0">
+                <td className="!p-0">
                   <ManualCell id={r.id} field="amount" initial={r.amount} numeric />
                 </td>
-                <td className="border border-border/40 p-0">
+                <td className="!p-0">
                   <ManualCell id={r.id} field="details" initial={r.details} />
                 </td>
               </tr>
             ))}
             {Array.from({ length: emptyRows }).map((_, i) => (
               <tr key={`e-${i}`}>
-                <td className="border border-border/40 px-3 py-3">&nbsp;</td>
-                <td className="border border-border/40 px-3 py-3">&nbsp;</td>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
               </tr>
             ))}
           </tbody>
