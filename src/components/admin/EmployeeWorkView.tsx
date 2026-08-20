@@ -61,9 +61,20 @@ const INNER_TABS: { key: TabKey; label: string; icon: typeof ListOrdered }[] = [
   { key: "p2p", label: "طليات P2P", icon: Users },
 ];
 
+const COLUMNS: { label: string; icon: typeof ListOrdered }[] = [
+  { label: "اسم التاجر", icon: User },
+  { label: "إجمالي المبلغ", icon: Wallet },
+  { label: "جنية", icon: DollarSign },
+  { label: "الكمية", icon: Package },
+  { label: "تاريخ وقت المعاملة", icon: CalendarClock },
+  { label: "آخر 4 أرقام للبطاقة", icon: CreditCard },
+  { label: "الإجراء", icon: Settings },
+];
 
-
-
+const GLOW_ACTIVE =
+  "border-[oklch(0.55_0.14_255)] bg-[linear-gradient(180deg,oklch(0.34_0.12_258),oklch(0.26_0.09_258))] text-[oklch(0.96_0.01_255)] shadow-[0_0_0_1px_oklch(0.55_0.14_255/0.35)]";
+const GLOW_IDLE =
+  "border-border/40 bg-[oklch(0.11_0.02_270)] text-foreground/75 hover:border-[oklch(0.45_0.1_258)] hover:text-foreground/90";
 
 function useNow() {
   const [now, setNow] = useState(() => new Date());
