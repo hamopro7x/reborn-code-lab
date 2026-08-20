@@ -465,8 +465,14 @@ export function EmployeeWorkView() {
                 active ? GLOW_ACTIVE : GLOW_IDLE
               }`}
             >
-              <span className="whitespace-nowrap">{t.label}</span>
-              <Icon className="size-3.5 shrink-0" />
+              {t.key === "wrong" ? (
+                <SplitTabContent />
+              ) : (
+                <>
+                  <span className="whitespace-nowrap">{t.label}</span>
+                  <Icon className="size-3.5 shrink-0" />
+                </>
+              )}
             </button>
           );
         })}
@@ -480,6 +486,7 @@ export function EmployeeWorkView() {
       <div className="rounded-2xl border border-border/50 bg-[oklch(0.1_0.015_270)] p-2.5">
         <div className="flex flex-wrap items-center gap-2">
           {INNER_TABS.map((t) => {
+            const Icon = t.icon;
             const active = tab === t.key;
             return (
               <button
@@ -490,12 +497,20 @@ export function EmployeeWorkView() {
                   active ? GLOW_ACTIVE : GLOW_IDLE
                 }`}
               >
-                {t.label}
+                {t.key === "wrong" ? (
+                  <SplitTabContent />
+                ) : (
+                  <span className="flex items-center justify-center gap-1.5">
+                    <span className="whitespace-nowrap">{t.label}</span>
+                    <Icon className="size-3.5 shrink-0" />
+                  </span>
+                )}
               </button>
             );
           })}
         </div>
       </div>
+
 
 
       {/* ------------------------- Transactions ------------------------- */}
