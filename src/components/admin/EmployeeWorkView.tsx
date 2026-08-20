@@ -477,10 +477,8 @@ function ManualSection({ isAdmin }: { isAdmin: boolean }) {
     </div>
   );
 }
-}
 
-
-export function EmployeeWorkView() {
+export function EmployeeWorkView({ isAdmin = false }: { isAdmin?: boolean }) {
   const qc = useQueryClient();
   const stateFn = useServerFn(getMyWorkState);
   const txnsFn = useServerFn(getMyShiftTxns);
