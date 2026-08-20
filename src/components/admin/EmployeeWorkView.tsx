@@ -50,6 +50,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { getBybitCardBrands } from "@/lib/bybit.functions";
 import { BrandBadge, LedgerRowDetails, statusBadge } from "@/components/admin/BybitLedgerPanel";
 
+type ManualKind = "wrong" | "employee" | "receive" | "transfer";
+
 type TabKey = "p2p" | "transfers" | "wrong" | "week" | "all" | "employee";
 
 /** DOM order = right-to-left order in the reference. */
@@ -408,11 +410,11 @@ function ManualCard({
   newestId,
   isAdmin,
 }: {
-  card: "wrong" | "employee";
+  card: ManualKind;
   title: string;
   rows: { id: string; amount: string; details: string }[];
-  onAdd: (card: "wrong" | "employee") => void;
-  onClear: (card: "wrong" | "employee") => void;
+  onAdd: (card: ManualKind) => void;
+  onClear: (card: ManualKind) => void;
   adding: boolean;
   clearing: boolean;
   newestId: string | null;
@@ -480,14 +482,20 @@ function ManualCard({
 }
 
 
-/** The two independent cards, side by side. */
-function ManualSection({ isAdmin }: { isAdmin: boolean }) {
+/** Two independent manual cards, side by side (same design + autosave/lock). */
+function ManualSection({
+  isAdmin,
+  cards,
+}: {
+  isAdmin: boolean;
+  cards: [{ card: ManualKind; title: string }, { card: ManualKind; title: string }];
+}) {
   const qc = useQueryClient();
   const listFn = useServerFn(getMyManualTxns);
   const addFn = useServerFn(addMyManualTxn);
   const clearFn = useServerFn(clearMyManualTxns);
-  const [adding, setAdding] = useState<"wrong" | "employee" | null>(null);
-  const [clearing, setClearing] = useState<"wrong" | "employee" | null>(null);
+  const [adding, setAdding] = useState<ManualKind | null>(null);
+  const [clearing, setClearing] = useState<ManualKind | null>(null);
   const [newestId, setNewestId] = useState<string | null>(null);
 
   const q = useQuery({
@@ -496,7 +504,7 @@ function ManualSection({ isAdmin }: { isAdmin: boolean }) {
   });
   const all = (q.data as any)?.rows ?? [];
 
-  const add = async (card: "wrong" | "employee") => {
+  const add = async (card: ManualKind) => {
     setAdding(card);
     try {
       const res: any = await addFn({ data: { card } });
@@ -511,7 +519,7 @@ function ManualSection({ isAdmin }: { isAdmin: boolean }) {
     }
   };
 
-  const clear = async (card: "wrong" | "employee") => {
+  const clear = async (card: ManualKind) => {
     if (!confirm("سيتم حذف جميع المعاملات في هذا الكرت. متابعة؟")) return;
     setClearing(card);
     try {
@@ -529,28 +537,20 @@ function ManualSection({ isAdmin }: { isAdmin: boolean }) {
 
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-      <ManualCard
-        card="employee"
-        title="خاص بالموظف"
-        rows={all.filter((r: any) => r.card === "employee")}
-        onAdd={add}
-        onClear={clear}
-        adding={adding === "employee"}
-        clearing={clearing === "employee"}
-        newestId={newestId}
-        isAdmin={isAdmin}
-      />
-      <ManualCard
-        card="wrong"
-        title="المعاملات الغلط"
-        rows={all.filter((r: any) => r.card === "wrong")}
-        onAdd={add}
-        onClear={clear}
-        adding={adding === "wrong"}
-        clearing={clearing === "wrong"}
-        newestId={newestId}
-        isAdmin={isAdmin}
-      />
+      {cards.map((c) => (
+        <ManualCard
+          key={c.card}
+          card={c.card}
+          title={c.title}
+          rows={all.filter((r: any) => r.card === c.card)}
+          onAdd={add}
+          onClear={clear}
+          adding={adding === c.card}
+          clearing={clearing === c.card}
+          newestId={newestId}
+          isAdmin={isAdmin}
+        />
+      ))}
     </div>
   );
 }
@@ -714,7 +714,23 @@ export function EmployeeWorkView({ isAdmin = false }: { isAdmin?: boolean }) {
 
 
       {/* ------------------------- Transactions ------------------------- */}
-      {tab === "wrong" ? <ManualSection isAdmin={isAdmin} /> : (
+      {tab === "wrong" ? (
+        <ManualSection
+          isAdmin={isAdmin}
+          cards={[
+            { card: "employee", title: "خاص بالموظف" },
+            { card: "wrong", title: "المعاملات الغلط" },
+          ]}
+        />
+      ) : tab === "transfers" ? (
+        <ManualSection
+          isAdmin={isAdmin}
+          cards={[
+            { card: "receive", title: "الاستلام من" },
+            { card: "transfer", title: "التحويل الي" },
+          ]}
+        />
+      ) : (
       <div className="data-surface">
         <div className="overflow-x-auto">
           <table className="data-table text-center">
