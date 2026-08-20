@@ -570,21 +570,18 @@ export function EmployeeWorkView() {
 
       {/* ------------------------- Transactions ------------------------- */}
       {tab === "wrong" ? <ManualSection /> : (
-      <div className="overflow-hidden rounded-2xl border border-border/50 bg-[oklch(0.1_0.015_270)]">
+      <div className="data-surface">
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-center text-xs">
+          <table className="data-table text-center">
             <thead>
-              <tr className="bg-[linear-gradient(180deg,oklch(0.38_0.14_258),oklch(0.3_0.11_258))]">
+              <tr>
                 {COLUMNS.map((c) => {
                   const Icon = c.icon;
                   return (
-                    <th
-                      key={c.label}
-                      className="border border-[oklch(0.55_0.14_255)]/25 px-3 py-3 font-bold whitespace-nowrap text-[oklch(0.96_0.01_255)] text-[11px]"
-                    >
+                    <th key={c.label}>
                       <span className="flex items-center justify-center gap-1.5">
                         <span>{c.label}</span>
-                        <Icon className="size-3.5 shrink-0 opacity-80" />
+                        <Icon className="size-3.5 shrink-0 opacity-70" />
                       </span>
                     </th>
                   );
@@ -595,35 +592,29 @@ export function EmployeeWorkView() {
             <tbody>
               {holding && txns.isLoading ? (
                 <tr>
-                  <td colSpan={COLUMNS.length} className="border border-border/40 px-3 py-8">
+                  <td colSpan={COLUMNS.length} className="py-8">
                     <Loader2 className="mx-auto size-4 animate-spin text-muted-foreground" />
                   </td>
                 </tr>
               ) : (
                 rows.map((r) => (
-                  <tr key={r.assignmentId ?? r.ledgerId} className="hover:bg-[oklch(0.16_0.03_258)]/60">
-                    <td className="border border-border/40 px-3 py-3 whitespace-nowrap">
-                      {String(r.detail?.merchantName ?? r.title ?? "—")}
-                    </td>
-                    <td className="border border-border/40 px-3 py-3 tabular-nums whitespace-nowrap">
+                  <tr key={r.assignmentId ?? r.ledgerId}>
+                    <td>{String(r.detail?.merchantName ?? r.title ?? "—")}</td>
+                    <td className="tabular-nums">
                       {num(Math.abs(Number(r.amount)))} {r.currency}
                     </td>
-                    <td className="border border-border/40 px-3 py-3 tabular-nums whitespace-nowrap">
+                    <td className="tabular-nums">
                       <EntryCell row={r} field="egp" onSaved={refetchRows} />
                     </td>
-                    <td className="border border-border/40 px-3 py-3 tabular-nums whitespace-nowrap">
+                    <td className="tabular-nums">
                       <EntryCell row={r} field="quantity" onSaved={refetchRows} />
                     </td>
-                    <td className="border border-border/40 px-3 py-3 whitespace-nowrap">{txnTime(Number(r.time))}</td>
-                    <td className="border border-border/40 px-3 py-3 tabular-nums whitespace-nowrap">
+                    <td>{txnTime(Number(r.time))}</td>
+                    <td className="tabular-nums">
                       <Last4Cell detail={(r.detail ?? {}) as Record<string, unknown>} brands={brands} />
                     </td>
-                    <td className="border border-border/40 px-3 py-3 whitespace-nowrap">
-                      <button
-                        type="button"
-                        onClick={() => setDetailRow(r)}
-                        className="mx-auto flex items-center gap-1 rounded-full border border-border/60 bg-card/60 px-2.5 py-1 text-[10px] font-bold transition hover:text-[oklch(0.72_0.16_250)]"
-                      >
+                    <td>
+                      <button type="button" onClick={() => setDetailRow(r)} className="table-btn mx-auto">
                         <Eye className="size-3" />
                         التفاصيل
                       </button>
@@ -634,9 +625,7 @@ export function EmployeeWorkView() {
               {Array.from({ length: emptyRows }).map((_, i) => (
                 <tr key={`empty-${i}`}>
                   {COLUMNS.map((c) => (
-                    <td key={c.label} className="border border-border/40 px-3 py-3">
-                      &nbsp;
-                    </td>
+                    <td key={c.label}>&nbsp;</td>
                   ))}
                 </tr>
               ))}
