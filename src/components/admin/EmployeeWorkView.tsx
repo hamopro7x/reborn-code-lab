@@ -261,14 +261,24 @@ export function EmployeeWorkView() {
   const clock = clockParts(now);
 
   const [name, setName] = useState("موظف");
+  const [avatar, setAvatar] = useState("");
+  const identityFn = useServerFn(getViewerIdentity);
   useEffect(() => {
     void (async () => {
+      try {
+        const v: any = await identityFn();
+        setName(v?.full_name || v?.email?.split("@")[0] || "موظف");
+        setAvatar(v?.avatar_url || "");
+        return;
+      } catch {
+        // fall back to the client session below
+      }
       const { data: auth } = await supabase.auth.getUser();
       if (!auth.user) return;
       const { data } = await supabase.from("profiles").select("full_name").eq("id", auth.user.id).maybeSingle();
       setName((data?.full_name as string) || auth.user.email?.split("@")[0] || "موظف");
     })();
-  }, []);
+  }, [identityFn]);
 
   const st = useQuery({
     queryKey: ["my-work-state"],
