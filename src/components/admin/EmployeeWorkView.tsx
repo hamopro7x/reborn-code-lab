@@ -197,7 +197,7 @@ function EntryCell({
   const [busy, setBusy] = useState(false);
   const valueRef = useRef("");
   const sentRef = useRef("");
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
 
   const commit = (raw: string) => {
     const txt = String(raw).replace(/,/g, "").trim();
