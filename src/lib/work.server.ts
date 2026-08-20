@@ -630,7 +630,7 @@ export async function listManualTxns(userId: string) {
     .from("work_manual_txns")
     .select("id,card,amount,details,created_at")
     .eq("user_id", userId)
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: false });
   return {
     rows: (data ?? []).map((r: any) => ({
       id: r.id as string,
