@@ -211,8 +211,8 @@ export function ReportsTab() {
 
       <div className="card-surface rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="text-[11px] uppercase tracking-wide text-muted-foreground bg-muted/20 border-b border-border/40">
+          <table className="data-table">
+            <thead className="uppercase tracking-wide">
               <tr>
                 <th className="text-start p-3 font-semibold">الفترة</th>
                 <th className="text-start p-3 font-semibold">العملة</th>
@@ -225,7 +225,7 @@ export function ReportsTab() {
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={`${r.key}-${r.currency}`} className="border-b border-border/20 last:border-0 hover:bg-muted/20 transition-colors">
+                <tr key={`${r.key}-${r.currency}`} className="transition-colors">
                   <td className="p-3 font-semibold whitespace-nowrap">{r.key}</td>
                   <td className="p-3 text-muted-foreground">{r.currency}</td>
                   <td className="p-3 text-end tabular-nums">{r.orders}</td>
@@ -244,7 +244,7 @@ export function ReportsTab() {
               )}
             </tbody>
             {rows.length > 0 && (
-              <tfoot className="bg-muted/20 border-t border-border/40 font-bold">
+              <tfoot className="font-bold">
                 <tr>
                   <td className="p-3" colSpan={2}>الإجمالي</td>
                   <td className="p-3 text-end tabular-nums">{grand.orders}</td>
