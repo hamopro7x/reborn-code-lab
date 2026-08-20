@@ -25,7 +25,6 @@ import {
   AlertTriangle,
   ArrowLeftRight,
   Users,
-  CalendarDays,
   Settings,
   CreditCard,
   CalendarClock,
@@ -258,56 +257,6 @@ function TxnDetailsDialog({ row, onClose }: { row: any | null; onClose: () => vo
   );
 }
 
-type ShiftCard = { id: string; label: string; date: string; index: number; sameDay: boolean };
-
-/** Shift cards of the employee, grouped so two shifts of one day sit together. */
-function ShiftStrip({ shifts, activeId }: { shifts: ShiftCard[]; activeId: string | null }) {
-  return (
-    <div className="rounded-2xl border border-border/50 bg-[oklch(0.1_0.015_270)] p-3">
-      <div className="flex flex-row-reverse flex-wrap items-stretch justify-end gap-3">
-        {shifts.map((s, i) => {
-          const prev = shifts[i - 1];
-          const pairWithPrev = !!prev && prev.date === s.date;
-          const active = s.id === activeId;
-          return (
-            <div key={s.id} className="flex flex-row-reverse items-center gap-2">
-              {pairWithPrev ? (
-                <span className="grid size-8 shrink-0 place-items-center rounded-xl border border-[oklch(0.55_0.14_160)]/40 bg-[oklch(0.13_0.03_160)]">
-                  <ArrowLeftRight className="size-3.5 text-[oklch(0.82_0.16_100)]" />
-                </span>
-              ) : null}
-              <div
-                className={`flex min-w-[160px] items-center justify-between gap-2 rounded-2xl border px-3 py-2 text-[11px] font-bold transition ${
-                  active ? GLOW_ACTIVE : GLOW_IDLE
-                } ${
-                  pairWithPrev || (shifts[i + 1] && shifts[i + 1].date === s.date)
-                    ? "shadow-[0_0_0_1px_oklch(0.55_0.16_160/0.35)]"
-                    : ""
-                }`}
-              >
-                <CalendarDays
-                  className={`size-4 shrink-0 ${active ? "text-[oklch(0.85_0.13_240)]" : "text-foreground/70"}`}
-                />
-                <div className="text-right leading-tight">
-                  <div className="flex items-center justify-end gap-1.5">
-                    {s.sameDay ? (
-                      <span className="grid size-4 place-items-center rounded-full bg-[oklch(0.62_0.16_162)] text-[9px] font-black text-[oklch(0.12_0.02_160)]">
-                        {s.index}
-                      </span>
-                    ) : null}
-                    <span>{s.label}</span>
-                  </div>
-                  <div className="mt-0.5 tabular-nums text-foreground/70 text-[10px]">{`{ ${s.date} }`}</div>
-                </div>
-              </div>
-
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
 
 export function EmployeeWorkView() {
   const qc = useQueryClient();
@@ -354,22 +303,6 @@ export function EmployeeWorkView() {
     qc.invalidateQueries({ queryKey: ["my-shift-txns"] });
   });
 
-  /** The employee's own shift cards — his open shift only, nothing invented. */
-  const shifts: ShiftCard[] = useMemo(() => {
-    const s = st.data as any;
-    if (!s?.holding) return [];
-    const d = new Date(Number(s.startedAt));
-    const p = (n: number) => String(n).padStart(2, "0");
-    return [
-      {
-        id: String(s.shiftId),
-        label: `شفت يوم ${AR_DAYS[d.getDay()]}`,
-        date: `${d.getFullYear()} - ${p(d.getMonth() + 1)} - ${p(d.getDate())}`,
-        index: 1,
-        sameDay: false,
-      },
-    ];
-  }, [st.data]);
 
   const allRows: any[] = (txns.data as any)?.rows ?? [];
   const rows = useMemo(() => {
@@ -467,9 +400,6 @@ export function EmployeeWorkView() {
         })}
       </div>
 
-
-      {/* ----------------------------- Shifts ----------------------------- */}
-      <ShiftStrip shifts={shifts} activeId={shifts[0]?.id ?? null} />
 
       {/* ------------------------- Inner sections ------------------------- */}
       <div className="rounded-2xl border border-border/50 bg-[oklch(0.1_0.015_270)] p-2.5">
