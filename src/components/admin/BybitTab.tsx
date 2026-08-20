@@ -51,8 +51,8 @@ function Chip({ active, children, onClick }: { active?: boolean; children: React
       onClick={onClick}
       className={`px-4 py-2 rounded-full text-xs font-bold transition-colors border ${
         active
-          ? "bg-muted/40 text-foreground/85 border-border/60"
-          : "text-muted-foreground border-border/40 hover:text-foreground hover:border-border/60"
+          ? "bg-blue-500/15 text-blue-400 border-blue-500/40"
+          : "text-muted-foreground border-border/40 hover:text-foreground hover:border-blue-500/30"
       }`}
     >
       {children}
@@ -261,7 +261,7 @@ function CoinBalanceCard({ coin }: { coin: CoinRow }) {
   const isUsdt = String(coin.coin).toUpperCase() === "USDT";
   return (
     <div dir="ltr" className="relative mx-auto h-[96px] w-full max-w-[190px] shrink-0 rounded-[18px] p-[3px] bg-[radial-gradient(120%_120%_at_50%_0%,oklch(0.55_0.13_170/0.28),transparent_70%)]">
-      <div className="relative flex h-full flex-col justify-center overflow-hidden rounded-[15px] bg-[oklch(0.20_0.002_106)] px-3.5 py-2.5 shadow-[0_0_28px_-10px_oklch(0_0_0/0.7)]">
+      <div className="relative flex h-full flex-col justify-center overflow-hidden rounded-[15px] bg-[oklch(0.055_0.008_190)] px-3.5 py-2.5 shadow-[0_0_28px_-10px_oklch(0.6_0.14_170/0.35)]">
 
         <div className="flex items-center justify-between gap-2">
           <div className="text-[26px] font-black leading-none tracking-tight tabular-nums text-white">
@@ -275,13 +275,13 @@ function CoinBalanceCard({ coin }: { coin: CoinRow }) {
               className="size-[38px] shrink-0 rounded-full object-cover"
             />
           ) : (
-            <span className="grid size-[38px] shrink-0 place-items-center rounded-full bg-[oklch(0.28_0.002_106)] border border-border/50">
+            <span className="grid size-[38px] shrink-0 place-items-center rounded-full bg-[oklch(0.18_0.03_285)] border border-border/50">
               <CoinLogo coin={coin.coin} />
             </span>
           )}
         </div>
 
-        <div className="mt-2 text-left text-[11px] font-medium text-[oklch(0.76_0.003_106)]">
+        <div className="mt-2 text-left text-[11px] font-medium text-[oklch(0.72_0.12_170)]">
           USD {coin.usd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ≈
         </div>
       </div>
@@ -400,7 +400,7 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
         >
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <span className="size-10 rounded-xl bg-muted/40 text-foreground/85 grid place-items-center">
+              <span className="size-10 rounded-xl bg-blue-500/15 text-blue-400 grid place-items-center">
                 <Wallet className="size-5" />
               </span>
               <div>
@@ -490,10 +490,10 @@ function AccountSummaryCard({
   const visaNo = account.sortOrder && account.sortOrder > 0 ? account.sortOrder : index + 1;
 
   return (
-    <div className="relative flex h-[320px] min-h-[320px] max-h-[320px] flex-col overflow-hidden rounded-[24px] border border-border/60 bg-[oklch(0.235_0.002_106)] p-4 sm:p-5 shadow-[0_0_0_1px_oklch(0.42_0.003_106_/_0.5),0_18px_50px_-24px_oklch(0_0_0_/_0.6)] transition-shadow hover:shadow-[0_0_0_1px_oklch(0.5_0.003_106_/_0.6),0_22px_60px_-20px_oklch(0_0_0_/_0.7)]">
+    <div className="relative flex h-[320px] min-h-[320px] max-h-[320px] flex-col overflow-hidden rounded-[24px] border border-teal-400/25 bg-[oklch(0.16_0.03_190)] p-4 sm:p-5 shadow-[0_0_0_1px_oklch(0.7_0.13_190_/_0.08),0_18px_50px_-24px_oklch(0.6_0.15_190_/_0.45)] transition-shadow hover:shadow-[0_0_0_1px_oklch(0.7_0.13_190_/_0.2),0_22px_60px_-20px_oklch(0.65_0.16_190_/_0.6)]">
       {/* Decorative glow + wave */}
       <div aria-hidden className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-20 right-1/4 h-56 w-56 rounded-full bg-muted/40 blur-3xl" />
+        <div className="absolute -top-20 right-1/4 h-56 w-56 rounded-full bg-teal-400/10 blur-3xl" />
         <svg viewBox="0 0 400 120" preserveAspectRatio="none" className="absolute inset-x-0 top-12 h-20 w-full opacity-60">
           <path d="M0 80 C 60 20, 120 110, 200 60 S 340 10, 400 70" fill="none" stroke="oklch(0.75 0.14 190)" strokeOpacity="0.35" strokeWidth="1.5" />
           <path d="M0 95 C 70 45, 140 120, 210 75 S 350 30, 400 88" fill="none" stroke="oklch(0.75 0.14 190)" strokeOpacity="0.18" strokeWidth="1.5" />
@@ -512,7 +512,7 @@ function AccountSummaryCard({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="size-8 rounded-full border border-border/60 bg-muted/40 text-foreground/85 hover:bg-muted/40 hover:text-foreground/85"
+                      className="size-8 rounded-full border border-teal-400/25 bg-teal-400/5 text-teal-300 hover:bg-teal-400/15 hover:text-teal-200"
                       onClick={() => { navigator.clipboard?.writeText(account.uid ?? ""); toast.success("تم نسخ UID"); }}
                       title="نسخ UID"
                     >
@@ -533,7 +533,7 @@ function AccountSummaryCard({
                   <span dir="ltr" className="tabular-nums">UID {account.uid}</span>
                   <button
                     type="button"
-                    className="grid size-5 place-items-center rounded-md hover:bg-muted/40 hover:text-foreground/85"
+                    className="grid size-5 place-items-center rounded-md hover:bg-teal-400/10 hover:text-teal-300"
                     title="نسخ UID"
                     onClick={() => { navigator.clipboard?.writeText(account.uid ?? ""); toast.success("تم نسخ UID"); }}
                   >
@@ -560,22 +560,22 @@ function AccountSummaryCard({
                   }}
                 />
                 {/* thin outer circle */}
-                <div className="absolute inset-[4px] rounded-full border border-border/60" aria-hidden />
+                <div className="absolute inset-[4px] rounded-full border border-teal-400/25" aria-hidden />
                 {/* glowing main ring */}
-                <div className="absolute inset-[10px] rounded-full border-[3px] border-border shadow-[0_0_26px_-2px_oklch(0.45_0.003_106_/_0.5),inset_0_0_22px_-6px_oklch(0.45_0.003_106_/_0.5)]" aria-hidden />
-                <span className="relative text-3xl sm:text-4xl font-black text-foreground/85 tabular-nums" dir="ltr">{visaNo}</span>
+                <div className="absolute inset-[10px] rounded-full border-[3px] border-teal-400 shadow-[0_0_26px_-2px_oklch(0.75_0.15_190_/_0.85),inset_0_0_22px_-6px_oklch(0.75_0.15_190_/_0.9)]" aria-hidden />
+                <span className="relative text-3xl sm:text-4xl font-black text-teal-300 tabular-nums" dir="ltr">{visaNo}</span>
               </div>
             </div>
 
             {/* vertical dashed divider */}
-            <div className="h-14 sm:h-16 w-0 border-r border-dashed border-border/60" aria-hidden />
+            <div className="h-14 sm:h-16 w-0 border-r border-dashed border-teal-400/45" aria-hidden />
 
             <div className="flex flex-col items-end gap-1 pt-1">
               <div className="flex items-center gap-2">
-                <PieChart className="size-4 text-foreground/85 shrink-0" />
+                <PieChart className="size-4 text-teal-400 shrink-0" />
                 <span className="text-sm text-foreground/90 whitespace-nowrap text-right">استرداد بنسبة</span>
               </div>
-              <div className="text-2xl sm:text-3xl font-black text-foreground/85 tabular-nums leading-none" dir="ltr">
+              <div className="text-2xl sm:text-3xl font-black text-teal-300 tabular-nums leading-none" dir="ltr">
                 {cashback.toLocaleString("en-US", { maximumFractionDigits: 2 })}%
               </div>
             </div>
@@ -586,7 +586,7 @@ function AccountSummaryCard({
         <div className="ml-auto mt-auto h-[96px] min-h-[96px] max-h-[96px] w-full max-w-[190px] shrink-0 overflow-hidden">
           {q.isLoading ? (
             <div className="relative h-full w-full rounded-[18px] p-[3px] bg-[radial-gradient(120%_120%_at_50%_0%,oklch(0.55_0.13_170/0.28),transparent_70%)]">
-              <div className="grid h-full w-full place-items-center rounded-[15px] bg-[oklch(0.20_0.002_106)] shadow-[0_0_28px_-10px_oklch(0_0_0/0.7)]">
+              <div className="grid h-full w-full place-items-center rounded-[15px] bg-[oklch(0.055_0.008_190)] shadow-[0_0_28px_-10px_oklch(0.6_0.14_170/0.35)]">
                 <Loader2 className="size-5 animate-spin" />
               </div>
             </div>
@@ -607,9 +607,9 @@ function AccountSummaryCard({
           <button
             type="button"
             onClick={onOpen}
-            className="mt-auto flex w-full shrink-0 items-center justify-center gap-2 rounded-2xl border border-border/60 bg-[linear-gradient(135deg,oklch(0.32_0.003_106),oklch(0.25_0.003_106))] px-4 py-3 text-sm font-bold text-foreground/85 shadow-[0_0_20px_-10px_oklch(0_0_0_/_0.8)] transition-all hover:border-border/60 hover:brightness-125 hover:shadow-[0_0_28px_-8px_oklch(0.5_0.003_106_/_0.5)]"
+            className="mt-auto flex w-full shrink-0 items-center justify-center gap-2 rounded-2xl border border-teal-400/35 bg-[linear-gradient(135deg,oklch(0.32_0.08_190),oklch(0.22_0.06_190))] px-4 py-3 text-sm font-bold text-teal-100 shadow-[0_0_20px_-10px_oklch(0.7_0.15_190_/_0.8)] transition-all hover:border-teal-300/60 hover:brightness-125 hover:shadow-[0_0_28px_-8px_oklch(0.72_0.16_190_/_0.9)]"
           >
-            <BarChart3 className="size-4 text-foreground/85" />
+            <BarChart3 className="size-4 text-teal-300" />
             عرض بيانات الحساب
           </button>
         )}
@@ -1178,7 +1178,7 @@ function BybitCardArt({ c, onDelete, canDelete = true, onEdit }: { c: any; onDel
         <button
           type="button"
           onClick={handleDownload}
-          className="rounded-md bg-black/40 p-1 text-white/70 transition-colors hover:text-foreground/85"
+          className="rounded-md bg-black/40 p-1 text-white/70 transition-colors hover:text-sky-400"
           title="تحميل صورة البطاقة"
         >
           <Download className="size-3.5" />
@@ -1187,7 +1187,7 @@ function BybitCardArt({ c, onDelete, canDelete = true, onEdit }: { c: any; onDel
           <button
             type="button"
             onClick={onEdit}
-            className="rounded-md bg-black/40 p-1 text-white/70 transition-colors hover:text-foreground/85"
+            className="rounded-md bg-black/40 p-1 text-white/70 transition-colors hover:text-sky-400"
             title="تعديل بيانات البطاقة"
           >
             <Pencil className="size-3.5" />
@@ -1973,7 +1973,7 @@ function AssetTable({
                     <td className="p-3">
                       <div className="flex items-center justify-start gap-2">
                         <ChainLogo chain={r.chain} />
-                        <span className="text-foreground/85 font-bold">{r.chain || "—"}</span>
+                        <span className="text-sky-400 font-bold">{r.chain || "—"}</span>
                       </div>
                     </td>
                   )}

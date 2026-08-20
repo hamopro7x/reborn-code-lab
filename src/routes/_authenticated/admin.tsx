@@ -1051,7 +1051,7 @@ function OrdersTab({ isAdmin }: { isAdmin: boolean }) {
             {o.status !== "completed" && o.status !== "cancelled" && o.status !== "rejected" && (
               <div className="mt-3 flex flex-wrap gap-2 border-t border-border pt-3">
                 {o.status !== "confirmed" && (
-                  <Button size="sm" onClick={() => updateStatus(o.id, "confirmed")} className="bg-secondary hover:bg-accent text-foreground gap-1"><Check className="size-4" />استلام الطلب</Button>
+                  <Button size="sm" onClick={() => updateStatus(o.id, "confirmed")} className="bg-blue-600 hover:bg-blue-700 text-white gap-1"><Check className="size-4" />استلام الطلب</Button>
                 )}
                 <Button size="sm" onClick={() => updateStatus(o.id, "completed")} className="bg-green-600 hover:bg-green-700 text-white gap-1"><Check className="size-4" />تأكيد الطلب (مكتمل)</Button>
                 <Button size="sm" variant="destructive" onClick={() => { if (confirm("إلغاء الطلب؟")) updateStatus(o.id, "cancelled"); }} className="gap-1"><X className="size-4" />إلغاء الطلب</Button>
