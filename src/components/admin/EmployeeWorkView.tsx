@@ -637,7 +637,7 @@ export function EmployeeWorkView({ isAdmin = false }: { isAdmin?: boolean }) {
 
 
       {/* ------------------------- Transactions ------------------------- */}
-      {tab === "wrong" ? <ManualSection /> : (
+      {tab === "wrong" ? <ManualSection isAdmin={isAdmin} /> : (
       <div className="data-surface">
         <div className="overflow-x-auto">
           <table className="data-table text-center">
