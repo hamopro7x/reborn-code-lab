@@ -422,7 +422,7 @@ export function EmployeeWorkView() {
       </div>
 
       {/* ---------------------------- Top bar ---------------------------- */}
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2">
         {TOP_TABS.map((t) => {
           const Icon = t.icon;
           const active = tab === t.key;
@@ -431,23 +431,24 @@ export function EmployeeWorkView() {
               key={t.key}
               type="button"
               onClick={() => setTab(t.key)}
-              className={`flex items-center gap-2.5 rounded-2xl border px-5 py-3.5 text-xs font-bold transition ${
+              className={`flex items-center gap-2 rounded-2xl border px-3 py-2 text-[11px] font-bold transition ${
                 active ? GLOW_ACTIVE : GLOW_IDLE
               }`}
             >
               <span className="whitespace-nowrap">{t.label}</span>
-              <Icon className="size-4.5 shrink-0" />
+              <Icon className="size-3.5 shrink-0" />
             </button>
           );
         })}
       </div>
 
+
       {/* ----------------------------- Shifts ----------------------------- */}
       <ShiftStrip shifts={shifts} activeId={shifts[0]?.id ?? null} />
 
       {/* ------------------------- Inner sections ------------------------- */}
-      <div className="rounded-2xl border border-border/50 bg-[oklch(0.1_0.015_270)] p-3">
-        <div className="flex flex-wrap items-center gap-3">
+      <div className="rounded-2xl border border-border/50 bg-[oklch(0.1_0.015_270)] p-2.5">
+        <div className="flex flex-wrap items-center gap-2">
           {INNER_TABS.map((t) => {
             const active = tab === t.key;
             return (
@@ -455,7 +456,7 @@ export function EmployeeWorkView() {
                 key={`inner-${t.key}`}
                 type="button"
                 onClick={() => setTab(t.key)}
-                className={`min-w-[150px] flex-1 rounded-2xl border px-5 py-3.5 text-center text-xs font-bold transition ${
+                className={`min-w-[130px] flex-1 rounded-2xl border px-3 py-2 text-center text-[11px] font-bold transition ${
                   active ? GLOW_ACTIVE : GLOW_IDLE
                 }`}
               >
@@ -466,28 +467,30 @@ export function EmployeeWorkView() {
         </div>
       </div>
 
+
       {/* ------------------------- Transactions ------------------------- */}
       <div className="overflow-hidden rounded-2xl border border-border/50 bg-[oklch(0.1_0.015_270)]">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-center text-xs">
             <thead>
-              <tr className="bg-[linear-gradient(180deg,oklch(0.45_0.2_258),oklch(0.34_0.17_258))] shadow-[0_0_24px_oklch(0.5_0.2_258/0.45)]">
+              <tr className="bg-[linear-gradient(180deg,oklch(0.38_0.14_258),oklch(0.3_0.11_258))]">
                 {COLUMNS.map((c) => {
                   const Icon = c.icon;
                   return (
                     <th
                       key={c.label}
-                      className="border border-[oklch(0.62_0.2_255)]/35 px-4 py-4 font-bold whitespace-nowrap text-[oklch(0.99_0.01_255)]"
+                      className="border border-[oklch(0.55_0.14_255)]/25 px-3 py-3 font-bold whitespace-nowrap text-[oklch(0.96_0.01_255)] text-[11px]"
                     >
-                      <span className="flex items-center justify-center gap-2">
+                      <span className="flex items-center justify-center gap-1.5">
                         <span>{c.label}</span>
-                        <Icon className="size-4 shrink-0 opacity-90" />
+                        <Icon className="size-3.5 shrink-0 opacity-80" />
                       </span>
                     </th>
                   );
                 })}
               </tr>
             </thead>
+
             <tbody>
               {holding && txns.isLoading ? (
                 <tr>
