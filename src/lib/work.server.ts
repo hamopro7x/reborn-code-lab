@@ -670,3 +670,11 @@ export async function saveManualTxn(
   if (error) return { ok: false as const, error: error.message };
   return { ok: true as const };
 }
+
+/** Admin-only: delete every manual row in one card for a user. */
+export async function clearManualTxns(userId: string, card: ManualCard) {
+  const db = await admin();
+  const { error } = await db.from("work_manual_txns").delete().eq("user_id", userId).eq("card", card);
+  if (error) return { ok: false as const, error: error.message };
+  return { ok: true as const };
+}
