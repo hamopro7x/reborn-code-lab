@@ -260,35 +260,57 @@ function TxnDetailsDialog({ row, onClose }: { row: any | null; onClose: () => vo
 
 /* ---------------- «المعاملات الغلط» + «خاص بالموظف» (manual) ---------------- */
 
-/** One manual cell: saved automatically while typing (debounced), no save button. */
+/** One manual cell: autosaved while typing (debounced) and flushed on blur. */
 function ManualCell({
   id,
   field,
   initial,
   numeric,
+  autoFocus,
 }: {
   id: string;
   field: "amount" | "details";
   initial: string;
   numeric?: boolean;
+  autoFocus?: boolean;
 }) {
   const saveFn = useServerFn(saveMyManualTxn);
   const [value, setValue] = useState(initial);
+  const savedRef = useRef(initial);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const flush = (v: string) => {
+    if (v === savedRef.current) return;
+    savedRef.current = v;
+    void saveFn({ data: { id, field, value: v } }).catch(() => {
+      savedRef.current = "\u0000";
+    });
+  };
 
   useEffect(() => {
-    if (value === initial) return;
-    const t = setTimeout(() => {
-      void saveFn({ data: { id, field, value } }).catch(() => {});
-    }, 400);
-    return () => clearTimeout(t);
-  }, [value, initial, id, field, saveFn]);
+    if (value === savedRef.current) return;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => flush(value), 400);
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, id, field]);
 
   return (
     <input
       data-no-autosave
+      autoFocus={autoFocus}
       inputMode={numeric ? "decimal" : "text"}
       value={value}
       onChange={(e) => setValue(e.target.value)}
+      onBlur={(e) => {
+        if (timerRef.current) clearTimeout(timerRef.current);
+        flush(e.target.value);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+      }}
       className={`h-full w-full border-0 bg-transparent px-3 py-2.5 text-xs text-foreground/90 outline-none placeholder:text-transparent ${
         numeric ? "text-center tabular-nums" : "text-right"
       }`}
@@ -302,14 +324,15 @@ function ManualCard({
   rows,
   onAdd,
   adding,
+  newestId,
 }: {
   card: "wrong" | "employee";
   title: string;
   rows: { id: string; amount: string; details: string }[];
   onAdd: (card: "wrong" | "employee") => void;
   adding: boolean;
+  newestId: string | null;
 }) {
-  const emptyRows = Math.max(12 - rows.length, 0);
   return (
     <div className="data-surface">
       <div className="data-table-head relative flex items-center justify-center px-3 py-3">
@@ -327,37 +350,36 @@ function ManualCard({
         </button>
       </div>
 
-      <div className="max-h-[520px] overflow-y-auto overflow-x-hidden scrollbar-hide">
-        <table className="data-table text-center">
-          <thead className="sticky top-0 z-10">
-            <tr>
-              <th className="w-[26%]">المبلغ</th>
-              <th>التفاصيل</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.id}>
-                <td className="!p-0">
-                  <ManualCell id={r.id} field="amount" initial={r.amount} numeric />
-                </td>
-                <td className="!p-0">
-                  <ManualCell id={r.id} field="details" initial={r.details} />
-                </td>
+      {rows.length > 0 ? (
+        <div className="max-h-[520px] overflow-y-auto overflow-x-hidden scrollbar-hide">
+          <table className="data-table text-center">
+            <thead className="sticky top-0 z-10">
+              <tr>
+                <th className="w-[26%]">المبلغ</th>
+                <th>التفاصيل</th>
               </tr>
-            ))}
-            {Array.from({ length: emptyRows }).map((_, i) => (
-              <tr key={`e-${i}`}>
-                <td>&nbsp;</td>
-                <td>&nbsp;</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.id}>
+                  <td className="!p-0">
+                    <ManualCell id={r.id} field="amount" initial={r.amount} numeric autoFocus={r.id === newestId} />
+                  </td>
+                  <td className="!p-0">
+                    <ManualCell id={r.id} field="details" initial={r.details} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="min-h-[520px]" />
+      )}
     </div>
   );
 }
+
 
 /** The two independent cards, side by side. */
 function ManualSection() {
