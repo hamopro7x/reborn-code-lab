@@ -21,6 +21,7 @@ import {
   ScanFace,
   Eye,
   ListOrdered,
+  Layers,
   AlertTriangle,
   ArrowLeftRight,
   Users,
