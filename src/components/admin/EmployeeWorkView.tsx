@@ -303,22 +303,6 @@ export function EmployeeWorkView() {
     qc.invalidateQueries({ queryKey: ["my-shift-txns"] });
   });
 
-  /** The employee's own shift cards — his open shift only, nothing invented. */
-  const shifts: ShiftCard[] = useMemo(() => {
-    const s = st.data as any;
-    if (!s?.holding) return [];
-    const d = new Date(Number(s.startedAt));
-    const p = (n: number) => String(n).padStart(2, "0");
-    return [
-      {
-        id: String(s.shiftId),
-        label: `شفت يوم ${AR_DAYS[d.getDay()]}`,
-        date: `${d.getFullYear()} - ${p(d.getMonth() + 1)} - ${p(d.getDate())}`,
-        index: 1,
-        sameDay: false,
-      },
-    ];
-  }, [st.data]);
 
   const allRows: any[] = (txns.data as any)?.rows ?? [];
   const rows = useMemo(() => {
