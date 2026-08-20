@@ -74,9 +74,10 @@ const COLUMNS: { label: string; icon: typeof ListOrdered }[] = [
 ];
 
 const GLOW_ACTIVE =
-  "border-[oklch(0.62_0.2_255)] bg-[linear-gradient(180deg,oklch(0.38_0.16_258),oklch(0.28_0.13_258))] text-[oklch(0.98_0.01_255)] shadow-[0_0_0_1px_oklch(0.62_0.2_255/0.6),0_0_22px_oklch(0.55_0.2_258/0.55)]";
+  "border-[oklch(0.55_0.14_255)] bg-[linear-gradient(180deg,oklch(0.34_0.12_258),oklch(0.26_0.09_258))] text-[oklch(0.96_0.01_255)] shadow-[0_0_0_1px_oklch(0.55_0.14_255/0.35)]";
 const GLOW_IDLE =
-  "border-border/60 bg-[oklch(0.11_0.02_270)] text-foreground/85 hover:border-[oklch(0.5_0.14_258)] hover:text-foreground";
+  "border-border/40 bg-[oklch(0.11_0.02_270)] text-foreground/75 hover:border-[oklch(0.45_0.1_258)] hover:text-foreground/90";
+
 
 function useNow() {
   const [now, setNow] = useState(() => new Date());
@@ -252,34 +253,35 @@ function ShiftStrip({ shifts, activeId }: { shifts: ShiftCard[]; activeId: strin
           return (
             <div key={s.id} className="flex flex-row-reverse items-center gap-2">
               {pairWithPrev ? (
-                <span className="grid size-9 shrink-0 place-items-center rounded-xl border border-[oklch(0.55_0.14_160)]/50 bg-[oklch(0.13_0.03_160)]">
-                  <ArrowLeftRight className="size-4 text-[oklch(0.82_0.16_100)]" />
+                <span className="grid size-8 shrink-0 place-items-center rounded-xl border border-[oklch(0.55_0.14_160)]/40 bg-[oklch(0.13_0.03_160)]">
+                  <ArrowLeftRight className="size-3.5 text-[oklch(0.82_0.16_100)]" />
                 </span>
               ) : null}
               <div
-                className={`flex min-w-[190px] items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-xs font-bold transition ${
+                className={`flex min-w-[160px] items-center justify-between gap-2 rounded-2xl border px-3 py-2 text-[11px] font-bold transition ${
                   active ? GLOW_ACTIVE : GLOW_IDLE
                 } ${
                   pairWithPrev || (shifts[i + 1] && shifts[i + 1].date === s.date)
-                    ? "shadow-[0_0_0_1px_oklch(0.55_0.16_160/0.5),0_0_18px_oklch(0.55_0.16_160/0.25)]"
+                    ? "shadow-[0_0_0_1px_oklch(0.55_0.16_160/0.35)]"
                     : ""
                 }`}
               >
                 <CalendarDays
-                  className={`size-5 shrink-0 ${active ? "text-[oklch(0.85_0.13_240)]" : "text-foreground/70"}`}
+                  className={`size-4 shrink-0 ${active ? "text-[oklch(0.85_0.13_240)]" : "text-foreground/70"}`}
                 />
                 <div className="text-right leading-tight">
-                  <div className="flex items-center justify-end gap-2">
+                  <div className="flex items-center justify-end gap-1.5">
                     {s.sameDay ? (
-                      <span className="grid size-5 place-items-center rounded-full bg-[oklch(0.62_0.16_162)] text-[10px] font-black text-[oklch(0.12_0.02_160)]">
+                      <span className="grid size-4 place-items-center rounded-full bg-[oklch(0.62_0.16_162)] text-[9px] font-black text-[oklch(0.12_0.02_160)]">
                         {s.index}
                       </span>
                     ) : null}
                     <span>{s.label}</span>
                   </div>
-                  <div className="mt-1 tabular-nums text-foreground/70">{`{ ${s.date} }`}</div>
+                  <div className="mt-0.5 tabular-nums text-foreground/70 text-[10px]">{`{ ${s.date} }`}</div>
                 </div>
               </div>
+
             </div>
           );
         })}
@@ -397,15 +399,16 @@ export function EmployeeWorkView() {
           type="button"
           onClick={() => void claim()}
           disabled={busy !== null}
-          className="flex w-[112px] shrink-0 flex-col items-center gap-1.5 rounded-2xl border border-[oklch(0.62_0.18_250)] bg-card/70 px-3 py-3 text-[11px] font-bold transition hover:bg-card disabled:opacity-60"
+          className="flex w-[96px] shrink-0 flex-col items-center gap-1 rounded-2xl border border-[oklch(0.55_0.14_250)] bg-card/70 px-2 py-2 text-[10px] font-bold transition hover:bg-card disabled:opacity-60"
         >
           {busy === "claim" ? (
-            <Loader2 className="size-6 animate-spin text-foreground" />
+            <Loader2 className="size-5 animate-spin text-foreground" />
           ) : (
-            <ScanFace className="size-6" />
+            <ScanFace className="size-5" />
           )}
           <span>استلم الشغل</span>
         </button>
+
 
         <div className="flex shrink-0 items-center gap-3">
           <div className="text-left leading-tight">
