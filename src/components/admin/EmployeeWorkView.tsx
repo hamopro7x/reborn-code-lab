@@ -46,7 +46,8 @@ type TabKey = "p2p" | "transfers" | "wrong" | "week" | "all" | "employee";
 const TOP_TABS: { key: TabKey; label: string; icon: typeof ListOrdered }[] = [
   { key: "all", label: "المعاملات", icon: ListOrdered },
   { key: "week", label: "الحسابات المتراكمة", icon: Layers },
-  { key: "wrong", label: "المعاملات الغلط والخاص بالموظف", icon: AlertTriangle },
+  { key: "employee", label: "الخاص بالموظف", icon: User },
+  { key: "wrong", label: "المعاملات الغلط", icon: AlertTriangle },
   { key: "transfers", label: "الاستلم من والتحويل الي", icon: ArrowLeftRight },
   { key: "p2p", label: "طلبات P2P", icon: Users },
 ];
@@ -54,7 +55,8 @@ const TOP_TABS: { key: TabKey; label: string; icon: typeof ListOrdered }[] = [
 /** The shift's own inner sections (no «الحسابات المتراكمة» here). */
 const INNER_TABS: { key: TabKey; label: string; icon: typeof ListOrdered }[] = [
   { key: "all", label: "المعاملات", icon: ListOrdered },
-  { key: "wrong", label: "المعاملات الغلط والخاص بالموظف", icon: AlertTriangle },
+  { key: "employee", label: "الخاص بالموظف", icon: User },
+  { key: "wrong", label: "المعاملات الغلط", icon: AlertTriangle },
   { key: "transfers", label: "الاستلم من والتحويل الي", icon: ArrowLeftRight },
   { key: "p2p", label: "طليات P2P", icon: Users },
 ];
@@ -73,32 +75,6 @@ const GLOW_ACTIVE =
   "border-[oklch(0.55_0.14_255)] bg-[linear-gradient(180deg,oklch(0.34_0.12_258),oklch(0.26_0.09_258))] text-[oklch(0.96_0.01_255)] shadow-[0_0_0_1px_oklch(0.55_0.14_255/0.35)]";
 const GLOW_IDLE =
   "border-border/40 bg-[oklch(0.11_0.02_270)] text-foreground/75 hover:border-[oklch(0.45_0.1_258)] hover:text-foreground/90";
-
-/** Split-pill content for the merged "wrong + employee" tab — side by side. */
-function SplitTabContent({ reversed }: { reversed?: boolean }) {
-  const own = (
-    <span className="flex items-center gap-1.5 whitespace-nowrap text-[oklch(0.66_0.19_25)]">
-      <span>الخاص بالموظف</span>
-      <User className="size-3.5 shrink-0 text-current/80" />
-    </span>
-  );
-  const wrong = (
-    <span className="flex items-center gap-1.5 whitespace-nowrap">
-      <span>المعاملات الغلط</span>
-      <AlertTriangle className="size-3.5 shrink-0" />
-    </span>
-  );
-  return (
-    <span className="flex flex-row items-center gap-2.5">
-      {reversed ? wrong : own}
-      <span className="inline-block h-4 w-px bg-current/25" />
-      {reversed ? own : wrong}
-    </span>
-  );
-}
-
-
-
 
 function useNow() {
   const [now, setNow] = useState(() => new Date());
@@ -387,14 +363,10 @@ export function EmployeeWorkView() {
                 active ? GLOW_ACTIVE : GLOW_IDLE
               }`}
             >
-              {t.key === "wrong" ? (
-                <SplitTabContent />
-              ) : (
-                <>
-                  <span className="whitespace-nowrap">{t.label}</span>
-                  <Icon className="size-3.5 shrink-0" />
-                </>
-              )}
+              <span className={`whitespace-nowrap ${t.key === "employee" ? "text-[oklch(0.66_0.19_25)]" : ""}`}>
+                {t.label}
+              </span>
+              <Icon className={`size-3.5 shrink-0 ${t.key === "employee" ? "text-[oklch(0.66_0.19_25)]" : ""}`} />
             </button>
           );
         })}
@@ -416,14 +388,12 @@ export function EmployeeWorkView() {
                   active ? GLOW_ACTIVE : GLOW_IDLE
                 }`}
               >
-                {t.key === "wrong" ? (
-                  <SplitTabContent />
-                ) : (
-                  <span className="flex items-center justify-center gap-1.5">
-                    <span className="whitespace-nowrap">{t.label}</span>
-                    <Icon className="size-3.5 shrink-0" />
+                <span className="flex items-center justify-center gap-1.5">
+                  <span className={`whitespace-nowrap ${t.key === "employee" ? "text-[oklch(0.66_0.19_25)]" : ""}`}>
+                    {t.label}
                   </span>
-                )}
+                  <Icon className={`size-3.5 shrink-0 ${t.key === "employee" ? "text-[oklch(0.66_0.19_25)]" : ""}`} />
+                </span>
               </button>
             );
           })}
