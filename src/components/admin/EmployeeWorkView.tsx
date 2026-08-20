@@ -75,35 +75,28 @@ const GLOW_ACTIVE =
 const GLOW_IDLE =
   "border-border/40 bg-[oklch(0.11_0.02_270)] text-foreground/75 hover:border-[oklch(0.45_0.1_258)] hover:text-foreground/90";
 
-/** Split-pill content for the merged "wrong + employee" tab. */
+/** Split-pill content for the merged "wrong + employee" tab — side by side. */
 function SplitTabContent({ reversed }: { reversed?: boolean }) {
-  if (reversed) {
-    return (
-      <>
-        <span className="flex items-center gap-1">
-          <span className="whitespace-nowrap">المعاملات الغلط</span>
-          <AlertTriangle className="size-3.5 shrink-0" />
-        </span>
-        <span className="mx-1.5 inline-block h-3.5 w-px bg-current/20" />
-        <span className="flex items-center gap-1">
-          <span className="whitespace-nowrap">الخاص بالموظف</span>
-          <User className="size-3.5 shrink-0" />
-        </span>
-      </>
-    );
-  }
   return (
-    <>
-      <span className="flex items-center gap-1">
-        <span className="whitespace-nowrap">الخاص بالموظف</span>
-        <User className="size-3.5 shrink-0" />
+    <span className="flex flex-row items-center gap-1.5">
+      <span className="flex items-center gap-1 whitespace-nowrap">
+        <span>{reversed ? "المعاملات الغلط" : "الخاص بالموظف"}</span>
+        {reversed ? (
+          <AlertTriangle className="size-3.5 shrink-0" />
+        ) : (
+          <User className="size-3.5 shrink-0" />
+        )}
       </span>
-      <span className="mx-1.5 inline-block h-3.5 w-px bg-current/20" />
-      <span className="flex items-center gap-1">
-        <span className="whitespace-nowrap">المعاملات الغلط</span>
-        <AlertTriangle className="size-3.5 shrink-0" />
+      <span className="mx-0.5 inline-block h-3.5 w-px bg-current/20" />
+      <span className="flex items-center gap-1 whitespace-nowrap">
+        <span>{reversed ? "الخاص بالموظف" : "المعاملات الغلط"}</span>
+        {reversed ? (
+          <User className="size-3.5 shrink-0" />
+        ) : (
+          <AlertTriangle className="size-3.5 shrink-0" />
+        )}
       </span>
-    </>
+    </span>
   );
 }
 
