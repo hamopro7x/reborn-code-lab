@@ -1685,7 +1685,7 @@ function CardTableInner({
                   <td className="p-4">
                     <button
                       onClick={() => setOpenId((v: string | null) => (v === t.id ? null : t.id))}
-                      className="inline-flex items-center gap-1 text-sm text-amber-400 hover:underline"
+                      className="table-btn"
                     >
                       التفاصيل
                       <ChevronDown className={`size-3.5 transition-transform ${openId === t.id ? "rotate-180" : ""}`} />
@@ -1994,7 +1994,7 @@ function AssetTable({
                   <td className="p-3">
                     <button
                       onClick={() => setOpenId((v: string | null) => (v === r.id ? null : r.id))}
-                      className="inline-flex items-center gap-1 text-sm text-amber-400 hover:underline"
+                      className="table-btn"
                     >
                       التفاصيل
                       <ChevronDown className={`size-3.5 transition-transform ${openId === r.id ? "rotate-180" : ""}`} />
