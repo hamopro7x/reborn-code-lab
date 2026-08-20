@@ -28,7 +28,7 @@ import { adminListEmployees } from "@/lib/courses.functions";
 import { EmployeeWorkView } from "@/components/admin/EmployeeWorkView";
 import { biometricSupported, registerBiometric, assertBiometric, captureFace } from "@/lib/work-client";
 
-type TabKey = "now" | "shifts" | "table" | "productivity" | "p2p" | "faces";
+type TabKey = "now" | "shifts" | "table" | "productivity" | "p2p" | "faces" | "employee";
 
 /** All management tabs are admin-only. Employees get a dedicated work view. */
 const TABS: { key: TabKey; label: string }[] = [
@@ -38,6 +38,7 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: "productivity", label: "الإنتاجية" },
   { key: "p2p", label: "ربط P2P بالشفت" },
   { key: "faces", label: "تسجيل الوجه" },
+  { key: "employee", label: "واجهة الموظف" },
 ];
 
 function Chip({ active, children, onClick }: { active?: boolean; children: React.ReactNode; onClick?: () => void }) {
@@ -93,6 +94,7 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
       {tab === "productivity" && <ProductivityTab />}
       {tab === "p2p" && <P2PTab />}
       {tab === "faces" && <FacesTab />}
+      {tab === "employee" && <EmployeeWorkView isAdmin={true} />}
     </div>
   );
 }

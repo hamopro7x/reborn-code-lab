@@ -31,6 +31,7 @@ import {
   Package,
   DollarSign,
   Wallet,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -41,6 +42,7 @@ import {
   getMyManualTxns,
   addMyManualTxn,
   saveMyManualTxn,
+  clearMyManualTxns,
 } from "@/lib/work.functions";
 import { useClaimWork } from "@/lib/use-claim-work";
 import { getViewerIdentity } from "@/lib/courses.functions";
@@ -323,31 +325,55 @@ function ManualCard({
   title,
   rows,
   onAdd,
+  onClear,
   adding,
+  clearing,
   newestId,
+  isAdmin,
 }: {
   card: "wrong" | "employee";
   title: string;
   rows: { id: string; amount: string; details: string }[];
   onAdd: (card: "wrong" | "employee") => void;
+  onClear: (card: "wrong" | "employee") => void;
   adding: boolean;
+  clearing: boolean;
   newestId: string | null;
+  isAdmin: boolean;
 }) {
   return (
     <div className="data-surface">
       <div className="data-table-head relative flex items-center justify-center px-3 py-3">
         <span className="text-sm font-black">{title}</span>
-        <button
-          type="button"
-          onClick={() => onAdd(card)}
-          disabled={adding}
-          className="table-btn absolute left-3 disabled:opacity-60"
-        >
-          <span className="grid size-4 place-items-center rounded-full bg-[oklch(0.5_0.14_255)] text-[11px] leading-none text-[oklch(0.98_0_0)]">
-            {adding ? <Loader2 className="size-2.5 animate-spin" /> : "+"}
-          </span>
-          <span className="whitespace-nowrap">إضافة معاملة جديدة</span>
-        </button>
+        <div className="absolute left-3 flex items-center gap-2">
+          {isAdmin && rows.length > 0 && (
+            <button
+              type="button"
+              onClick={() => onClear(card)}
+              disabled={clearing}
+              className="table-btn disabled:opacity-60"
+              title="تصفير الصفوف (أدمن فقط)"
+            >
+              {clearing ? (
+                <Loader2 className="size-3 animate-spin" />
+              ) : (
+                <Trash2 className="size-3 text-destructive" />
+              )}
+              <span className="whitespace-nowrap">تصفير</span>
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => onAdd(card)}
+            disabled={adding}
+            className="table-btn disabled:opacity-60"
+          >
+            <span className="grid size-4 place-items-center rounded-full bg-[oklch(0.5_0.14_255)] text-[11px] leading-none text-[oklch(0.98_0_0)]">
+              {adding ? <Loader2 className="size-2.5 animate-spin" /> : "+"}
+            </span>
+            <span className="whitespace-nowrap">إضافة معاملة جديدة</span>
+          </button>
+        </div>
       </div>
 
       <div className="max-h-[520px] min-h-[520px] overflow-y-auto overflow-x-hidden scrollbar-hide">
@@ -378,11 +404,13 @@ function ManualCard({
 
 
 /** The two independent cards, side by side. */
-function ManualSection() {
+function ManualSection({ isAdmin }: { isAdmin: boolean }) {
   const qc = useQueryClient();
   const listFn = useServerFn(getMyManualTxns);
   const addFn = useServerFn(addMyManualTxn);
+  const clearFn = useServerFn(clearMyManualTxns);
   const [adding, setAdding] = useState<"wrong" | "employee" | null>(null);
+  const [clearing, setClearing] = useState<"wrong" | "employee" | null>(null);
   const [newestId, setNewestId] = useState<string | null>(null);
 
   const q = useQuery({
@@ -406,6 +434,22 @@ function ManualSection() {
     }
   };
 
+  const clear = async (card: "wrong" | "employee") => {
+    if (!confirm("سيتم حذف جميع المعاملات في هذا الكرت. متابعة؟")) return;
+    setClearing(card);
+    try {
+      const res: any = await clearFn({ data: { card } });
+      if (res?.ok) {
+        toast.success("تم التصفير");
+        await qc.invalidateQueries({ queryKey: ["my-manual-txns"] });
+      } else toast.error(String(res?.error ?? "تعذر التصفير"));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "تعذر التصفير");
+    } finally {
+      setClearing(null);
+    }
+  };
+
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
       <ManualCard
@@ -413,24 +457,28 @@ function ManualSection() {
         title="خاص بالموظف"
         rows={all.filter((r: any) => r.card === "employee")}
         onAdd={add}
+        onClear={clear}
         adding={adding === "employee"}
+        clearing={clearing === "employee"}
         newestId={newestId}
+        isAdmin={isAdmin}
       />
       <ManualCard
         card="wrong"
         title="المعاملات الغلط"
         rows={all.filter((r: any) => r.card === "wrong")}
         onAdd={add}
+        onClear={clear}
         adding={adding === "wrong"}
+        clearing={clearing === "wrong"}
         newestId={newestId}
+        isAdmin={isAdmin}
       />
-
     </div>
   );
 }
 
-
-export function EmployeeWorkView() {
+export function EmployeeWorkView({ isAdmin = false }: { isAdmin?: boolean }) {
   const qc = useQueryClient();
   const stateFn = useServerFn(getMyWorkState);
   const txnsFn = useServerFn(getMyShiftTxns);
@@ -589,7 +637,7 @@ export function EmployeeWorkView() {
 
 
       {/* ------------------------- Transactions ------------------------- */}
-      {tab === "wrong" ? <ManualSection /> : (
+      {tab === "wrong" ? <ManualSection isAdmin={isAdmin} /> : (
       <div className="data-surface">
         <div className="overflow-x-auto">
           <table className="data-table text-center">
