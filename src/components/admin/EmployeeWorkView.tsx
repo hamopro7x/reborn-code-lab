@@ -47,7 +47,7 @@ type TabKey = "p2p" | "transfers" | "wrong" | "week" | "all" | "employee";
 const TOP_TABS: { key: TabKey; label: string; icon: typeof ListOrdered }[] = [
   { key: "all", label: "المعاملات", icon: ListOrdered },
   { key: "week", label: "الحسابات المتراكمة", icon: Layers },
-  { key: "wrong", label: "المعاملات الغلط والخاص بالموظف", icon: AlertTriangle },
+  { key: "wrong", label: "خاص بالموظف", icon: AlertTriangle },
   { key: "transfers", label: "الاستلم من والتحويل الي", icon: ArrowLeftRight },
   { key: "p2p", label: "طلبات P2P", icon: Users },
 ];
@@ -55,7 +55,7 @@ const TOP_TABS: { key: TabKey; label: string; icon: typeof ListOrdered }[] = [
 /** The shift's own inner sections (no «الحسابات المتراكمة» here). */
 const INNER_TABS: { key: TabKey; label: string; icon: typeof ListOrdered }[] = [
   { key: "all", label: "المعاملات", icon: ListOrdered },
-  { key: "wrong", label: "المعاملات الغلط والخاص بالموظف", icon: AlertTriangle },
+  { key: "wrong", label: "خاص بالموظف", icon: AlertTriangle },
   { key: "transfers", label: "الاستلم من والتحويل الي", icon: ArrowLeftRight },
   { key: "p2p", label: "طليات P2P", icon: Users },
 ];
@@ -75,35 +75,20 @@ const GLOW_ACTIVE =
 const GLOW_IDLE =
   "border-border/40 bg-[oklch(0.11_0.02_270)] text-foreground/75 hover:border-[oklch(0.45_0.1_258)] hover:text-foreground/90";
 
-/** Split-pill content for the merged "wrong + employee" tab. */
-function SplitTabContent({ reversed }: { reversed?: boolean }) {
-  if (reversed) {
-    return (
-      <>
-        <span className="flex items-center gap-1">
-          <span className="whitespace-nowrap">المعاملات الغلط</span>
-          <AlertTriangle className="size-3.5 shrink-0" />
-        </span>
-        <span className="mx-1.5 inline-block h-3.5 w-px bg-current/20" />
-        <span className="flex items-center gap-1">
-          <span className="whitespace-nowrap">الخاص بالموظف</span>
-          <User className="size-3.5 shrink-0" />
-        </span>
-      </>
-    );
-  }
+/** Vertical stacked split-pill content for the merged "wrong + employee" tab. */
+function SplitTabContent() {
   return (
-    <>
-      <span className="flex items-center gap-1">
-        <span className="whitespace-nowrap">الخاص بالموظف</span>
-        <User className="size-3.5 shrink-0" />
+    <div className="flex flex-col items-center gap-0.5 leading-none">
+      <span className="flex items-center gap-1 text-[10px] font-semibold whitespace-nowrap">
+        <span>خاص بالموظف</span>
+        <User className="size-3 shrink-0" />
       </span>
-      <span className="mx-1.5 inline-block h-3.5 w-px bg-current/20" />
-      <span className="flex items-center gap-1">
-        <span className="whitespace-nowrap">المعاملات الغلط</span>
-        <AlertTriangle className="size-3.5 shrink-0" />
+      <span className="my-0.5 h-px w-7 bg-current/20" />
+      <span className="flex items-center gap-1 text-[10px] font-semibold whitespace-nowrap">
+        <span>المعاملات الغلط</span>
+        <AlertTriangle className="size-3 shrink-0" />
       </span>
-    </>
+    </div>
   );
 }
 
