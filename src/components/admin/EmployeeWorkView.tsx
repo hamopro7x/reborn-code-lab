@@ -74,9 +74,10 @@ const COLUMNS: { label: string; icon: typeof ListOrdered }[] = [
 ];
 
 const GLOW_ACTIVE =
-  "border-[oklch(0.62_0.2_255)] bg-[linear-gradient(180deg,oklch(0.38_0.16_258),oklch(0.28_0.13_258))] text-[oklch(0.98_0.01_255)] shadow-[0_0_0_1px_oklch(0.62_0.2_255/0.6),0_0_22px_oklch(0.55_0.2_258/0.55)]";
+  "border-[oklch(0.55_0.14_255)] bg-[linear-gradient(180deg,oklch(0.34_0.12_258),oklch(0.26_0.09_258))] text-[oklch(0.96_0.01_255)] shadow-[0_0_0_1px_oklch(0.55_0.14_255/0.35)]";
 const GLOW_IDLE =
-  "border-border/60 bg-[oklch(0.11_0.02_270)] text-foreground/85 hover:border-[oklch(0.5_0.14_258)] hover:text-foreground";
+  "border-border/40 bg-[oklch(0.11_0.02_270)] text-foreground/75 hover:border-[oklch(0.45_0.1_258)] hover:text-foreground/90";
+
 
 function useNow() {
   const [now, setNow] = useState(() => new Date());
@@ -252,34 +253,35 @@ function ShiftStrip({ shifts, activeId }: { shifts: ShiftCard[]; activeId: strin
           return (
             <div key={s.id} className="flex flex-row-reverse items-center gap-2">
               {pairWithPrev ? (
-                <span className="grid size-9 shrink-0 place-items-center rounded-xl border border-[oklch(0.55_0.14_160)]/50 bg-[oklch(0.13_0.03_160)]">
-                  <ArrowLeftRight className="size-4 text-[oklch(0.82_0.16_100)]" />
+                <span className="grid size-8 shrink-0 place-items-center rounded-xl border border-[oklch(0.55_0.14_160)]/40 bg-[oklch(0.13_0.03_160)]">
+                  <ArrowLeftRight className="size-3.5 text-[oklch(0.82_0.16_100)]" />
                 </span>
               ) : null}
               <div
-                className={`flex min-w-[190px] items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-xs font-bold transition ${
+                className={`flex min-w-[160px] items-center justify-between gap-2 rounded-2xl border px-3 py-2 text-[11px] font-bold transition ${
                   active ? GLOW_ACTIVE : GLOW_IDLE
                 } ${
                   pairWithPrev || (shifts[i + 1] && shifts[i + 1].date === s.date)
-                    ? "shadow-[0_0_0_1px_oklch(0.55_0.16_160/0.5),0_0_18px_oklch(0.55_0.16_160/0.25)]"
+                    ? "shadow-[0_0_0_1px_oklch(0.55_0.16_160/0.35)]"
                     : ""
                 }`}
               >
                 <CalendarDays
-                  className={`size-5 shrink-0 ${active ? "text-[oklch(0.85_0.13_240)]" : "text-foreground/70"}`}
+                  className={`size-4 shrink-0 ${active ? "text-[oklch(0.85_0.13_240)]" : "text-foreground/70"}`}
                 />
                 <div className="text-right leading-tight">
-                  <div className="flex items-center justify-end gap-2">
+                  <div className="flex items-center justify-end gap-1.5">
                     {s.sameDay ? (
-                      <span className="grid size-5 place-items-center rounded-full bg-[oklch(0.62_0.16_162)] text-[10px] font-black text-[oklch(0.12_0.02_160)]">
+                      <span className="grid size-4 place-items-center rounded-full bg-[oklch(0.62_0.16_162)] text-[9px] font-black text-[oklch(0.12_0.02_160)]">
                         {s.index}
                       </span>
                     ) : null}
                     <span>{s.label}</span>
                   </div>
-                  <div className="mt-1 tabular-nums text-foreground/70">{`{ ${s.date} }`}</div>
+                  <div className="mt-0.5 tabular-nums text-foreground/70 text-[10px]">{`{ ${s.date} }`}</div>
                 </div>
               </div>
+
             </div>
           );
         })}
@@ -397,15 +399,16 @@ export function EmployeeWorkView() {
           type="button"
           onClick={() => void claim()}
           disabled={busy !== null}
-          className="flex w-[112px] shrink-0 flex-col items-center gap-1.5 rounded-2xl border border-[oklch(0.62_0.18_250)] bg-card/70 px-3 py-3 text-[11px] font-bold transition hover:bg-card disabled:opacity-60"
+          className="flex w-[96px] shrink-0 flex-col items-center gap-1 rounded-2xl border border-[oklch(0.55_0.14_250)] bg-card/70 px-2 py-2 text-[10px] font-bold transition hover:bg-card disabled:opacity-60"
         >
           {busy === "claim" ? (
-            <Loader2 className="size-6 animate-spin text-foreground" />
+            <Loader2 className="size-5 animate-spin text-foreground" />
           ) : (
-            <ScanFace className="size-6" />
+            <ScanFace className="size-5" />
           )}
           <span>استلم الشغل</span>
         </button>
+
 
         <div className="flex shrink-0 items-center gap-3">
           <div className="text-left leading-tight">
@@ -419,7 +422,7 @@ export function EmployeeWorkView() {
       </div>
 
       {/* ---------------------------- Top bar ---------------------------- */}
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2">
         {TOP_TABS.map((t) => {
           const Icon = t.icon;
           const active = tab === t.key;
@@ -428,23 +431,24 @@ export function EmployeeWorkView() {
               key={t.key}
               type="button"
               onClick={() => setTab(t.key)}
-              className={`flex items-center gap-2.5 rounded-2xl border px-5 py-3.5 text-xs font-bold transition ${
+              className={`flex items-center gap-2 rounded-2xl border px-3 py-2 text-[11px] font-bold transition ${
                 active ? GLOW_ACTIVE : GLOW_IDLE
               }`}
             >
               <span className="whitespace-nowrap">{t.label}</span>
-              <Icon className="size-4.5 shrink-0" />
+              <Icon className="size-3.5 shrink-0" />
             </button>
           );
         })}
       </div>
 
+
       {/* ----------------------------- Shifts ----------------------------- */}
       <ShiftStrip shifts={shifts} activeId={shifts[0]?.id ?? null} />
 
       {/* ------------------------- Inner sections ------------------------- */}
-      <div className="rounded-2xl border border-border/50 bg-[oklch(0.1_0.015_270)] p-3">
-        <div className="flex flex-wrap items-center gap-3">
+      <div className="rounded-2xl border border-border/50 bg-[oklch(0.1_0.015_270)] p-2.5">
+        <div className="flex flex-wrap items-center gap-2">
           {INNER_TABS.map((t) => {
             const active = tab === t.key;
             return (
@@ -452,7 +456,7 @@ export function EmployeeWorkView() {
                 key={`inner-${t.key}`}
                 type="button"
                 onClick={() => setTab(t.key)}
-                className={`min-w-[150px] flex-1 rounded-2xl border px-5 py-3.5 text-center text-xs font-bold transition ${
+                className={`min-w-[130px] flex-1 rounded-2xl border px-3 py-2 text-center text-[11px] font-bold transition ${
                   active ? GLOW_ACTIVE : GLOW_IDLE
                 }`}
               >
@@ -463,61 +467,63 @@ export function EmployeeWorkView() {
         </div>
       </div>
 
+
       {/* ------------------------- Transactions ------------------------- */}
       <div className="overflow-hidden rounded-2xl border border-border/50 bg-[oklch(0.1_0.015_270)]">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-center text-xs">
             <thead>
-              <tr className="bg-[linear-gradient(180deg,oklch(0.45_0.2_258),oklch(0.34_0.17_258))] shadow-[0_0_24px_oklch(0.5_0.2_258/0.45)]">
+              <tr className="bg-[linear-gradient(180deg,oklch(0.38_0.14_258),oklch(0.3_0.11_258))]">
                 {COLUMNS.map((c) => {
                   const Icon = c.icon;
                   return (
                     <th
                       key={c.label}
-                      className="border border-[oklch(0.62_0.2_255)]/35 px-4 py-4 font-bold whitespace-nowrap text-[oklch(0.99_0.01_255)]"
+                      className="border border-[oklch(0.55_0.14_255)]/25 px-3 py-3 font-bold whitespace-nowrap text-[oklch(0.96_0.01_255)] text-[11px]"
                     >
-                      <span className="flex items-center justify-center gap-2">
+                      <span className="flex items-center justify-center gap-1.5">
                         <span>{c.label}</span>
-                        <Icon className="size-4 shrink-0 opacity-90" />
+                        <Icon className="size-3.5 shrink-0 opacity-80" />
                       </span>
                     </th>
                   );
                 })}
               </tr>
             </thead>
+
             <tbody>
               {holding && txns.isLoading ? (
                 <tr>
-                  <td colSpan={COLUMNS.length} className="border border-border/40 px-4 py-10">
-                    <Loader2 className="mx-auto size-5 animate-spin text-muted-foreground" />
+                  <td colSpan={COLUMNS.length} className="border border-border/40 px-3 py-8">
+                    <Loader2 className="mx-auto size-4 animate-spin text-muted-foreground" />
                   </td>
                 </tr>
               ) : (
                 rows.map((r) => (
                   <tr key={r.assignmentId ?? r.ledgerId} className="hover:bg-[oklch(0.16_0.03_258)]/60">
-                    <td className="border border-border/40 px-4 py-4 whitespace-nowrap">
+                    <td className="border border-border/40 px-3 py-3 whitespace-nowrap">
                       {String(r.detail?.merchantName ?? r.title ?? "—")}
                     </td>
-                    <td className="border border-border/40 px-4 py-4 tabular-nums whitespace-nowrap">
+                    <td className="border border-border/40 px-3 py-3 tabular-nums whitespace-nowrap">
                       {num(Math.abs(Number(r.amount)))} {r.currency}
                     </td>
-                    <td className="border border-border/40 px-4 py-4 tabular-nums whitespace-nowrap">
+                    <td className="border border-border/40 px-3 py-3 tabular-nums whitespace-nowrap">
                       <EntryCell row={r} field="egp" onSaved={refetchRows} />
                     </td>
-                    <td className="border border-border/40 px-4 py-4 tabular-nums whitespace-nowrap">
+                    <td className="border border-border/40 px-3 py-3 tabular-nums whitespace-nowrap">
                       <EntryCell row={r} field="quantity" onSaved={refetchRows} />
                     </td>
-                    <td className="border border-border/40 px-4 py-4 whitespace-nowrap">{txnTime(Number(r.time))}</td>
-                    <td className="border border-border/40 px-4 py-4 tabular-nums whitespace-nowrap">
+                    <td className="border border-border/40 px-3 py-3 whitespace-nowrap">{txnTime(Number(r.time))}</td>
+                    <td className="border border-border/40 px-3 py-3 tabular-nums whitespace-nowrap">
                       <Last4Cell detail={(r.detail ?? {}) as Record<string, unknown>} brands={brands} />
                     </td>
-                    <td className="border border-border/40 px-4 py-4 whitespace-nowrap">
+                    <td className="border border-border/40 px-3 py-3 whitespace-nowrap">
                       <button
                         type="button"
                         onClick={() => setDetailRow(r)}
-                        className="mx-auto flex items-center gap-1.5 rounded-full border border-border/60 bg-card/60 px-3 py-1.5 text-[11px] font-bold transition hover:text-[oklch(0.72_0.16_250)]"
+                        className="mx-auto flex items-center gap-1 rounded-full border border-border/60 bg-card/60 px-2.5 py-1 text-[10px] font-bold transition hover:text-[oklch(0.72_0.16_250)]"
                       >
-                        <Eye className="size-3.5" />
+                        <Eye className="size-3" />
                         التفاصيل
                       </button>
                     </td>
@@ -527,12 +533,13 @@ export function EmployeeWorkView() {
               {Array.from({ length: emptyRows }).map((_, i) => (
                 <tr key={`empty-${i}`}>
                   {COLUMNS.map((c) => (
-                    <td key={c.label} className="border border-border/40 px-4 py-4">
+                    <td key={c.label} className="border border-border/40 px-3 py-3">
                       &nbsp;
                     </td>
                   ))}
                 </tr>
               ))}
+
             </tbody>
           </table>
         </div>
