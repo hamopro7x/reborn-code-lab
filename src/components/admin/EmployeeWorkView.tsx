@@ -25,7 +25,6 @@ import {
   AlertTriangle,
   ArrowLeftRight,
   Users,
-  UserRound,
   CalendarDays,
   Settings,
   CreditCard,
