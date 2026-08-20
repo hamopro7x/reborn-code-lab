@@ -392,11 +392,11 @@ export function BybitLedgerPanel() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px] text-sm border-collapse [&_th]:border [&_th]:border-border/40 [&_td]:border [&_td]:border-border/40">
-              <thead className="text-[12px] text-muted-foreground border border-border/40">
+            <table className="data-table min-w-[900px]">
+              <thead>
                 <tr>
                   {COLUMNS[group].map((c) => (
-                    <th key={c} className="p-4 text-right font-normal">
+                    <th key={c} className="!p-4 text-right">
                       {c}
                     </th>
                   ))}
