@@ -94,6 +94,7 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
       {tab === "productivity" && <ProductivityTab />}
       {tab === "p2p" && <P2PTab />}
       {tab === "faces" && <FacesTab />}
+      {tab === "employee" && <EmployeeWorkView isAdmin={true} />}
     </div>
   );
 }
