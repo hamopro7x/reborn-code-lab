@@ -265,7 +265,6 @@ function ShiftStrip({ shifts, activeId }: { shifts: ShiftCard[]; activeId: strin
   return (
     <div className="rounded-2xl border border-border/50 bg-[oklch(0.1_0.015_270)] p-3">
       <div className="flex flex-row-reverse flex-wrap items-stretch justify-end gap-3">
-        )}
         {shifts.map((s, i) => {
           const prev = shifts[i - 1];
           const pairWithPrev = !!prev && prev.date === s.date;
