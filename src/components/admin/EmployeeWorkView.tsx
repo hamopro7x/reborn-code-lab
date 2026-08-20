@@ -53,11 +53,11 @@ const TOP_TABS: { key: TabKey; label: string; icon: typeof ListOrdered }[] = [
 ];
 
 /** The shift's own inner sections (no «الحسابات المتراكمة» here). */
-const INNER_TABS: { key: TabKey; label: string }[] = [
-  { key: "all", label: "المعاملات" },
-  { key: "wrong", label: "المعاملات الغلط والخاص بالموظف" },
-  { key: "transfers", label: "الاستلم من والتحويل الي" },
-  { key: "p2p", label: "طليات P2P" },
+const INNER_TABS: { key: TabKey; label: string; icon: typeof ListOrdered }[] = [
+  { key: "all", label: "المعاملات", icon: ListOrdered },
+  { key: "wrong", label: "المعاملات الغلط والخاص بالموظف", icon: AlertTriangle },
+  { key: "transfers", label: "الاستلم من والتحويل الي", icon: ArrowLeftRight },
+  { key: "p2p", label: "طليات P2P", icon: Users },
 ];
 
 const COLUMNS: { label: string; icon: typeof ListOrdered }[] = [
@@ -74,6 +74,39 @@ const GLOW_ACTIVE =
   "border-[oklch(0.55_0.14_255)] bg-[linear-gradient(180deg,oklch(0.34_0.12_258),oklch(0.26_0.09_258))] text-[oklch(0.96_0.01_255)] shadow-[0_0_0_1px_oklch(0.55_0.14_255/0.35)]";
 const GLOW_IDLE =
   "border-border/40 bg-[oklch(0.11_0.02_270)] text-foreground/75 hover:border-[oklch(0.45_0.1_258)] hover:text-foreground/90";
+
+/** Split-pill content for the merged "wrong + employee" tab. */
+function SplitTabContent({ reversed }: { reversed?: boolean }) {
+  if (reversed) {
+    return (
+      <>
+        <span className="flex items-center gap-1">
+          <span className="whitespace-nowrap">المعاملات الغلط</span>
+          <AlertTriangle className="size-3.5 shrink-0" />
+        </span>
+        <span className="mx-1.5 inline-block h-3.5 w-px bg-current/20" />
+        <span className="flex items-center gap-1">
+          <span className="whitespace-nowrap">الخاص بالموظف</span>
+          <User className="size-3.5 shrink-0" />
+        </span>
+      </>
+    );
+  }
+  return (
+    <>
+      <span className="flex items-center gap-1">
+        <span className="whitespace-nowrap">الخاص بالموظف</span>
+        <User className="size-3.5 shrink-0" />
+      </span>
+      <span className="mx-1.5 inline-block h-3.5 w-px bg-current/20" />
+      <span className="flex items-center gap-1">
+        <span className="whitespace-nowrap">المعاملات الغلط</span>
+        <AlertTriangle className="size-3.5 shrink-0" />
+      </span>
+    </>
+  );
+}
+
 
 
 function useNow() {
@@ -432,8 +465,14 @@ export function EmployeeWorkView() {
                 active ? GLOW_ACTIVE : GLOW_IDLE
               }`}
             >
-              <span className="whitespace-nowrap">{t.label}</span>
-              <Icon className="size-3.5 shrink-0" />
+              {t.key === "wrong" ? (
+                <SplitTabContent />
+              ) : (
+                <>
+                  <span className="whitespace-nowrap">{t.label}</span>
+                  <Icon className="size-3.5 shrink-0" />
+                </>
+              )}
             </button>
           );
         })}
@@ -447,6 +486,7 @@ export function EmployeeWorkView() {
       <div className="rounded-2xl border border-border/50 bg-[oklch(0.1_0.015_270)] p-2.5">
         <div className="flex flex-wrap items-center gap-2">
           {INNER_TABS.map((t) => {
+            const Icon = t.icon;
             const active = tab === t.key;
             return (
               <button
@@ -457,12 +497,20 @@ export function EmployeeWorkView() {
                   active ? GLOW_ACTIVE : GLOW_IDLE
                 }`}
               >
-                {t.label}
+                {t.key === "wrong" ? (
+                  <SplitTabContent />
+                ) : (
+                  <span className="flex items-center justify-center gap-1.5">
+                    <span className="whitespace-nowrap">{t.label}</span>
+                    <Icon className="size-3.5 shrink-0" />
+                  </span>
+                )}
               </button>
             );
           })}
         </div>
       </div>
+
 
 
       {/* ------------------------- Transactions ------------------------- */}
