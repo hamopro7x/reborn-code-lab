@@ -324,31 +324,55 @@ function ManualCard({
   title,
   rows,
   onAdd,
+  onClear,
   adding,
+  clearing,
   newestId,
+  isAdmin,
 }: {
   card: "wrong" | "employee";
   title: string;
   rows: { id: string; amount: string; details: string }[];
   onAdd: (card: "wrong" | "employee") => void;
+  onClear: (card: "wrong" | "employee") => void;
   adding: boolean;
+  clearing: boolean;
   newestId: string | null;
+  isAdmin: boolean;
 }) {
   return (
     <div className="data-surface">
       <div className="data-table-head relative flex items-center justify-center px-3 py-3">
         <span className="text-sm font-black">{title}</span>
-        <button
-          type="button"
-          onClick={() => onAdd(card)}
-          disabled={adding}
-          className="table-btn absolute left-3 disabled:opacity-60"
-        >
-          <span className="grid size-4 place-items-center rounded-full bg-[oklch(0.5_0.14_255)] text-[11px] leading-none text-[oklch(0.98_0_0)]">
-            {adding ? <Loader2 className="size-2.5 animate-spin" /> : "+"}
-          </span>
-          <span className="whitespace-nowrap">إضافة معاملة جديدة</span>
-        </button>
+        <div className="absolute left-3 flex items-center gap-2">
+          {isAdmin && rows.length > 0 && (
+            <button
+              type="button"
+              onClick={() => onClear(card)}
+              disabled={clearing}
+              className="table-btn disabled:opacity-60"
+              title="تصفير الصفوف (أدمن فقط)"
+            >
+              {clearing ? (
+                <Loader2 className="size-3 animate-spin" />
+              ) : (
+                <Trash2 className="size-3 text-destructive" />
+              )}
+              <span className="whitespace-nowrap">تصفير</span>
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => onAdd(card)}
+            disabled={adding}
+            className="table-btn disabled:opacity-60"
+          >
+            <span className="grid size-4 place-items-center rounded-full bg-[oklch(0.5_0.14_255)] text-[11px] leading-none text-[oklch(0.98_0_0)]">
+              {adding ? <Loader2 className="size-2.5 animate-spin" /> : "+"}
+            </span>
+            <span className="whitespace-nowrap">إضافة معاملة جديدة</span>
+          </button>
+        </div>
       </div>
 
       <div className="max-h-[520px] min-h-[520px] overflow-y-auto overflow-x-hidden scrollbar-hide">
