@@ -34,7 +34,14 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { getMyWorkState, getMyShiftTxns, saveMyTxnEntry } from "@/lib/work.functions";
+import {
+  getMyWorkState,
+  getMyShiftTxns,
+  saveMyTxnEntry,
+  getMyManualTxns,
+  addMyManualTxn,
+  saveMyManualTxn,
+} from "@/lib/work.functions";
 import { useClaimWork } from "@/lib/use-claim-work";
 import { getViewerIdentity } from "@/lib/courses.functions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -251,6 +258,157 @@ function TxnDetailsDialog({ row, onClose }: { row: any | null; onClose: () => vo
   );
 }
 
+/* ---------------- «المعاملات الغلط» + «خاص بالموظف» (manual) ---------------- */
+
+/** One manual cell: saved automatically while typing (debounced), no save button. */
+function ManualCell({
+  id,
+  field,
+  initial,
+  numeric,
+}: {
+  id: string;
+  field: "amount" | "details";
+  initial: string;
+  numeric?: boolean;
+}) {
+  const saveFn = useServerFn(saveMyManualTxn);
+  const [value, setValue] = useState(initial);
+
+  useEffect(() => {
+    if (value === initial) return;
+    const t = setTimeout(() => {
+      void saveFn({ data: { id, field, value } }).catch(() => {});
+    }, 400);
+    return () => clearTimeout(t);
+  }, [value, initial, id, field, saveFn]);
+
+  return (
+    <input
+      data-no-autosave
+      inputMode={numeric ? "decimal" : "text"}
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+      className={`h-full w-full border-0 bg-transparent px-3 py-2.5 text-xs text-foreground/90 outline-none placeholder:text-transparent ${
+        numeric ? "text-center tabular-nums" : "text-right"
+      }`}
+    />
+  );
+}
+
+function ManualCard({
+  card,
+  title,
+  rows,
+  onAdd,
+  adding,
+}: {
+  card: "wrong" | "employee";
+  title: string;
+  rows: { id: string; amount: string; details: string }[];
+  onAdd: (card: "wrong" | "employee") => void;
+  adding: boolean;
+}) {
+  const emptyRows = Math.max(12 - rows.length, 0);
+  return (
+    <div className="overflow-hidden rounded-2xl border border-border/50 bg-[oklch(0.1_0.015_270)]">
+      <div className="relative flex items-center justify-center bg-[linear-gradient(180deg,oklch(0.38_0.14_258),oklch(0.3_0.11_258))] px-3 py-3">
+        <span className="text-sm font-black text-[oklch(0.96_0.01_255)]">{title}</span>
+        <button
+          type="button"
+          onClick={() => onAdd(card)}
+          disabled={adding}
+          className="absolute left-3 flex items-center gap-2 text-[10px] font-bold text-[oklch(0.96_0.01_255)] disabled:opacity-60"
+        >
+          <span className="grid size-6 place-items-center rounded-full bg-[oklch(0.55_0.16_255)] text-sm leading-none">
+            {adding ? <Loader2 className="size-3 animate-spin" /> : "+"}
+          </span>
+          <span className="whitespace-nowrap">إضافة معاملة جديدة</span>
+        </button>
+      </div>
+
+      <div className="max-h-[520px] overflow-y-auto overflow-x-hidden">
+        <table className="w-full border-collapse text-center text-xs">
+          <thead className="sticky top-0 z-10 bg-[oklch(0.09_0.015_270)]">
+            <tr>
+              <th className="w-[26%] border border-border/40 px-3 py-3 text-[11px] font-bold whitespace-nowrap">
+                المبلغ
+              </th>
+              <th className="border border-border/40 px-3 py-3 text-[11px] font-bold whitespace-nowrap">
+                التفاصيل
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.id}>
+                <td className="border border-border/40 p-0">
+                  <ManualCell id={r.id} field="amount" initial={r.amount} numeric />
+                </td>
+                <td className="border border-border/40 p-0">
+                  <ManualCell id={r.id} field="details" initial={r.details} />
+                </td>
+              </tr>
+            ))}
+            {Array.from({ length: emptyRows }).map((_, i) => (
+              <tr key={`e-${i}`}>
+                <td className="border border-border/40 px-3 py-3">&nbsp;</td>
+                <td className="border border-border/40 px-3 py-3">&nbsp;</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/** The two independent cards, side by side. */
+function ManualSection() {
+  const qc = useQueryClient();
+  const listFn = useServerFn(getMyManualTxns);
+  const addFn = useServerFn(addMyManualTxn);
+  const [adding, setAdding] = useState<"wrong" | "employee" | null>(null);
+
+  const q = useQuery({
+    queryKey: ["my-manual-txns"],
+    queryFn: () => listFn({ data: undefined as any }),
+  });
+  const all = (q.data as any)?.rows ?? [];
+
+  const add = async (card: "wrong" | "employee") => {
+    setAdding(card);
+    try {
+      const res: any = await addFn({ data: { card } });
+      if (res?.ok) await qc.invalidateQueries({ queryKey: ["my-manual-txns"] });
+      else toast.error(String(res?.error ?? "تعذر الإضافة"));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "تعذر الإضافة");
+    } finally {
+      setAdding(null);
+    }
+  };
+
+  return (
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <ManualCard
+        card="employee"
+        title="خاص بالموظف"
+        rows={all.filter((r: any) => r.card === "employee")}
+        onAdd={add}
+        adding={adding === "employee"}
+      />
+      <ManualCard
+        card="wrong"
+        title="المعاملات الغلط"
+        rows={all.filter((r: any) => r.card === "wrong")}
+        onAdd={add}
+        adding={adding === "wrong"}
+      />
+    </div>
+  );
+}
+
 
 export function EmployeeWorkView() {
   const qc = useQueryClient();
@@ -411,6 +569,7 @@ export function EmployeeWorkView() {
 
 
       {/* ------------------------- Transactions ------------------------- */}
+      {tab === "wrong" ? <ManualSection /> : (
       <div className="overflow-hidden rounded-2xl border border-border/50 bg-[oklch(0.1_0.015_270)]">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-center text-xs">
@@ -486,6 +645,7 @@ export function EmployeeWorkView() {
           </table>
         </div>
       </div>
+      )}
 
       <TxnDetailsDialog row={detailRow} onClose={() => setDetailRow(null)} />
     </div>

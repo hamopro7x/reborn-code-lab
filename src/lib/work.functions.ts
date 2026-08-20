@@ -215,3 +215,39 @@ export const listEmployeeFaces = createServerFn({ method: "POST" })
     const mod = await import("./work.server");
     return mod.faceEnrollList();
   });
+
+/* ------------- manual rows: «المعاملات الغلط» / «خاص بالموظف» ------------- */
+
+export const getMyManualTxns = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAccess(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    return mod.listManualTxns(context.userId);
+  });
+
+export const addMyManualTxn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ card: z.enum(["wrong", "employee"]) }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAccess(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    return mod.addManualTxn(context.userId, data.card);
+  });
+
+export const saveMyManualTxn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        field: z.enum(["amount", "details"]),
+        value: z.string().max(2000),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAccess(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    return mod.saveManualTxn(context.userId, data.id, data.field, data.value);
+  });
