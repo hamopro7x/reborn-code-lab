@@ -251,3 +251,13 @@ export const saveMyManualTxn = createServerFn({ method: "POST" })
     const mod = await import("./work.server");
     return mod.saveManualTxn(context.userId, data.id, data.field, data.value);
   });
+
+/** Admin-only: clear every manual row in one card for the current user. */
+export const clearMyManualTxns = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ card: z.enum(["wrong", "employee"]) }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    return mod.clearManualTxns(context.userId, data.card);
+  });
