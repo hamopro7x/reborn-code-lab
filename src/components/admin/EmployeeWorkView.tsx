@@ -401,9 +401,6 @@ export function EmployeeWorkView() {
       </div>
 
 
-      {/* ----------------------------- Shifts ----------------------------- */}
-      <ShiftStrip shifts={shifts} activeId={shifts[0]?.id ?? null} />
-
       {/* ------------------------- Inner sections ------------------------- */}
       <div className="rounded-2xl border border-border/50 bg-[oklch(0.1_0.015_270)] p-2.5">
         <div className="flex flex-wrap items-center gap-2">
