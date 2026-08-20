@@ -437,20 +437,21 @@ export function EmployeeWorkView() {
       </div>
 
       {/* ---------------------------- Top bar ---------------------------- */}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-stretch gap-2">
         {TOP_TABS.map((t) => {
           const Icon = t.icon;
           const active = tab === t.key;
+          const isMerged = t.key === "wrong";
           return (
             <button
               key={t.key}
               type="button"
               onClick={() => setTab(t.key)}
-              className={`flex items-center gap-2 rounded-2xl border px-3 py-2 text-[11px] font-bold transition ${
+              className={`flex ${isMerged ? "flex-col justify-center gap-1 min-w-[120px]" : "items-center gap-2"} rounded-2xl border px-3 py-2 text-[11px] font-bold transition ${
                 active ? GLOW_ACTIVE : GLOW_IDLE
               }`}
             >
-              {t.key === "wrong" ? (
+              {isMerged ? (
                 <SplitTabContent />
               ) : (
                 <>
@@ -469,20 +470,21 @@ export function EmployeeWorkView() {
 
       {/* ------------------------- Inner sections ------------------------- */}
       <div className="rounded-2xl border border-border/50 bg-[oklch(0.1_0.015_270)] p-2.5">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-stretch gap-2">
           {INNER_TABS.map((t) => {
             const Icon = t.icon;
             const active = tab === t.key;
+            const isMerged = t.key === "wrong";
             return (
               <button
                 key={`inner-${t.key}`}
                 type="button"
                 onClick={() => setTab(t.key)}
-                className={`min-w-[130px] flex-1 rounded-2xl border px-3 py-2 text-center text-[11px] font-bold transition ${
+                className={`${isMerged ? "flex flex-col justify-center gap-1" : "flex items-center justify-center gap-1.5"} min-w-[130px] flex-1 rounded-2xl border px-3 py-2 text-center text-[11px] font-bold transition ${
                   active ? GLOW_ACTIVE : GLOW_IDLE
                 }`}
               >
-                {t.key === "wrong" ? (
+                {isMerged ? (
                   <SplitTabContent />
                 ) : (
                   <span className="flex items-center justify-center gap-1.5">
