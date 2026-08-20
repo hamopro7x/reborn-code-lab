@@ -48,19 +48,17 @@ type TabKey = "p2p" | "transfers" | "wrong" | "week" | "all" | "employee";
 const TOP_TABS: { key: TabKey; label: string; icon: typeof ListOrdered }[] = [
   { key: "all", label: "المعاملات", icon: ListOrdered },
   { key: "week", label: "الحسابات المتراكمة", icon: Layers },
-  { key: "wrong", label: "المعاملات الغلط", icon: AlertTriangle },
+  { key: "wrong", label: "المعاملات الغلط والخاص بالموظف", icon: AlertTriangle },
   { key: "transfers", label: "الاستلم من والتحويل الي", icon: ArrowLeftRight },
   { key: "p2p", label: "طلبات P2P", icon: Users },
-  { key: "employee", label: "الخاص بالوظف", icon: UserRound },
 ];
 
 /** The shift's own inner sections (no «الحسابات المتراكمة» here). */
 const INNER_TABS: { key: TabKey; label: string }[] = [
   { key: "all", label: "المعاملات" },
-  { key: "wrong", label: "المعاملات الغلط" },
+  { key: "wrong", label: "المعاملات الغلط والخاص بالموظف" },
   { key: "transfers", label: "الاستلم من والتحويل الي" },
   { key: "p2p", label: "طليات P2P" },
-  { key: "employee", label: "الخاص بالوظف" },
 ];
 
 const COLUMNS: { label: string; icon: typeof ListOrdered }[] = [
