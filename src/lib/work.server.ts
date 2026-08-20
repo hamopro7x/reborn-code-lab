@@ -619,3 +619,54 @@ export async function saveEntryField(
   }
   return { ok: true as const, field, value };
 }
+
+/* ---------------- manual rows: «المعاملات الغلط» / «خاص بالموظف» ---------------- */
+
+export type ManualCard = "wrong" | "employee";
+
+export async function listManualTxns(userId: string) {
+  const db = await admin();
+  const { data } = await db
+    .from("work_manual_txns")
+    .select("id,card,amount,details,created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: true });
+  return {
+    rows: (data ?? []).map((r: any) => ({
+      id: r.id as string,
+      card: r.card as ManualCard,
+      amount: r.amount === null ? "" : String(r.amount),
+      details: r.details ?? "",
+    })),
+  };
+}
+
+export async function addManualTxn(userId: string, card: ManualCard) {
+  const db = await admin();
+  const { data, error } = await db
+    .from("work_manual_txns")
+    .insert({ user_id: userId, card })
+    .select("id")
+    .maybeSingle();
+  if (error) return { ok: false as const, error: error.message };
+  return { ok: true as const, id: data?.id as string };
+}
+
+export async function saveManualTxn(
+  userId: string,
+  id: string,
+  field: "amount" | "details",
+  value: string,
+) {
+  const db = await admin();
+  const patch: Record<string, unknown> =
+    field === "amount"
+      ? { amount: value.trim() === "" ? null : Number(String(value).replace(/,/g, "")) }
+      : { details: value };
+  if (field === "amount" && patch["amount"] !== null && !Number.isFinite(patch["amount"] as number)) {
+    return { ok: false as const, error: "قيمة غير صحيحة" };
+  }
+  const { error } = await db.from("work_manual_txns").update(patch).eq("id", id).eq("user_id", userId);
+  if (error) return { ok: false as const, error: error.message };
+  return { ok: true as const };
+}
