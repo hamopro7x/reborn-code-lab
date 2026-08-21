@@ -497,7 +497,7 @@ function EntryCell({
         {saved === null || saved === undefined
           ? "—"
           : Number(saved).toLocaleString("en-US", { maximumFractionDigits: 4 })}
-        <Lock className="size-3 text-muted-foreground" />
+        <LockIcon className="size-3 text-muted-foreground" />
       </span>
     );
   }
