@@ -32,6 +32,8 @@ import {
   DollarSign,
   Wallet,
   Trash2,
+  Check,
+
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDateTime } from "@/lib/format";
@@ -54,6 +56,7 @@ import {
 import { useClaimWork } from "@/lib/use-claim-work";
 import { getViewerIdentity } from "@/lib/courses.functions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { getBybitCardBrands } from "@/lib/bybit.functions";
 import { BrandBadge, LedgerRowDetails, statusBadge } from "@/components/admin/BybitLedgerPanel";
 
@@ -122,113 +125,139 @@ const P2P_COLUMNS = [
   "صاحب الطلب",
 ];
 
-/** Two-step picker: employee → his own shifts → link. */
-function P2PLinkDialog({
-  ledgerId,
-  onClose,
-  onLinked,
-}: {
-  ledgerId: string | null;
-  onClose: () => void;
-  onLinked: () => void;
-}) {
+/** Mega-menu picker: employee column stays visible while his shifts open beside it. */
+function P2PLinkMenu({ ledgerId, onLinked }: { ledgerId: string; onLinked?: () => void }) {
   const staffFn = useServerFn(getWorkStaffList);
   const shiftsFn = useServerFn(getStaffShifts);
   const linkFn = useServerFn(linkP2POrder);
+  const [open, setOpen] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!ledgerId) setUserId(null);
-  }, [ledgerId]);
+    if (!open) setUserId(null);
+  }, [open]);
 
   const staff = useQuery({
     queryKey: ["work-staff-list"],
     queryFn: () => staffFn({ data: undefined as any }),
-    enabled: !!ledgerId,
+    enabled: open,
   });
   const shifts = useQuery({
     queryKey: ["work-staff-shifts", userId],
     queryFn: () => shiftsFn({ data: { userId: userId! } }),
-    enabled: !!ledgerId && !!userId,
+    enabled: open && !!userId,
   });
 
+  const staffRows = (staff.data ?? []) as any[];
+  const shiftRows = (shifts.data ?? []) as any[];
+  const activeName = staffRows.find((s) => s.userId === userId)?.name ?? "";
+
   const link = async (shiftId: string) => {
-    if (!ledgerId || busy) return;
+    if (busy) return;
     setBusy(true);
     try {
       const res: any = await linkFn({ data: { ledgerId, shiftId } });
       if (res?.ok) toast.success("تم ربط الطلب بالموظف والشفت");
-      else toast.error(res?.error ?? "فشل الربط");
-      onLinked();
-      onClose();
+      else toast.error(res?.error ?? "هذا الطلب تم ربطه بالفعل.");
+      setOpen(false);
+      onLinked?.();
     } catch (e: any) {
       toast.error(e?.message ?? "فشل الربط");
+      onLinked?.();
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <Dialog open={!!ledgerId} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-md" dir="rtl">
-        <DialogHeader>
-          <DialogTitle>{userId ? "اختار الشفت" : "اختار الموظف"}</DialogTitle>
-        </DialogHeader>
-        {!userId ? (
-          staff.isLoading ? (
-            <Loader2 className="mx-auto size-4 animate-spin text-muted-foreground" />
-          ) : (
-            <div className="max-h-[50vh] space-y-2 overflow-y-auto no-scrollbar">
-              {((staff.data ?? []) as any[]).map((s) => (
-                <button
-                  key={s.userId}
-                  type="button"
-                  onClick={() => setUserId(s.userId)}
-                  className={`w-full rounded-lg border px-3 py-2 text-right text-sm font-bold ${GLOW_IDLE}`}
-                >
-                  {s.name}
-                </button>
-              ))}
-              {!((staff.data ?? []) as any[]).length && (
-                <p className="text-center text-xs text-muted-foreground">لا يوجد موظفين</p>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="rounded-full border border-[oklch(0.82_0.15_85/0.5)] bg-[oklch(0.82_0.15_85/0.12)] px-4 py-1 text-xs font-bold text-[oklch(0.82_0.15_85)] transition hover:bg-[oklch(0.82_0.15_85/0.22)]"
+        >
+          ربط
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        dir="rtl"
+        align="center"
+        className="w-auto max-w-[92vw] border-border/60 bg-[oklch(0.135_0_0)] p-0 shadow-2xl"
+      >
+        <div className="flex flex-row items-stretch divide-x divide-border/50">
+          {/* level 1 — employees */}
+          <div className="w-[190px] shrink-0">
+            <div className="data-table-head px-3 py-2 text-center text-[11px] font-bold">اختر الموظف</div>
+            <div className="max-h-64 overflow-y-auto p-1.5">
+              {staff.isLoading ? (
+                <Loader2 className="mx-auto my-4 size-4 animate-spin text-muted-foreground" />
+              ) : staffRows.length ? (
+                staffRows.map((s) => {
+                  const on = s.userId === userId;
+                  return (
+                    <button
+                      key={s.userId}
+                      type="button"
+                      onClick={() => setUserId(s.userId)}
+                      className={`flex w-full items-center justify-between gap-2 rounded-md px-2.5 py-2 text-right text-xs font-bold transition ${
+                        on
+                          ? "bg-[oklch(0.42_0.16_264/0.35)] text-foreground"
+                          : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                      }`}
+                    >
+                      <span className="truncate">{s.name}</span>
+                      {on && <Check className="size-3.5 shrink-0 text-emerald-400" />}
+                    </button>
+                  );
+                })
+              ) : (
+                <p className="py-4 text-center text-[11px] text-muted-foreground">لا يوجد موظفين</p>
               )}
             </div>
-          )
-        ) : shifts.isLoading ? (
-          <Loader2 className="mx-auto size-4 animate-spin text-muted-foreground" />
-        ) : (
-          <div className="max-h-[50vh] space-y-2 overflow-y-auto no-scrollbar">
-            {((shifts.data ?? []) as any[]).map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                disabled={busy}
-                onClick={() => link(s.id)}
-                className={`w-full rounded-lg border px-3 py-2 text-right text-sm disabled:opacity-50 ${GLOW_IDLE}`}
-              >
-                <div className="font-bold">{s.endedAt ? "شفت منتهي" : "شفت مفتوح"}</div>
-                <div className="text-[11px] text-muted-foreground">
-                  {formatDateTime(s.startedAt)} → {s.endedAt ? formatDateTime(s.endedAt) : "الآن"}
-                </div>
-              </button>
-            ))}
-            {!((shifts.data ?? []) as any[]).length && (
-              <p className="text-center text-xs text-muted-foreground">لا توجد شفتات لهذا الموظف</p>
-            )}
-            <button
-              type="button"
-              onClick={() => setUserId(null)}
-              className="w-full rounded-lg border border-border/40 px-3 py-1.5 text-xs text-muted-foreground"
-            >
-              رجوع
-            </button>
           </div>
-        )}
-      </DialogContent>
-    </Dialog>
+
+          {/* level 2 — shifts of the chosen employee */}
+          {userId && (
+            <div className="w-[240px] shrink-0 animate-slide-up">
+              <div className="data-table-head truncate px-3 py-2 text-center text-[11px] font-bold">
+                شفتات {activeName}
+              </div>
+              <div className="max-h-64 overflow-y-auto p-1.5">
+                {shifts.isLoading ? (
+                  <Loader2 className="mx-auto my-4 size-4 animate-spin text-muted-foreground" />
+                ) : shiftRows.length ? (
+                  shiftRows.map((s, i) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      disabled={busy}
+                      onClick={() => link(s.id)}
+                      className="flex w-full items-start gap-2 rounded-md px-2.5 py-2 text-right transition hover:bg-white/5 disabled:opacity-50"
+                    >
+                      <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border border-border/60 text-[10px] font-bold tabular-nums">
+                        {i + 1}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-xs font-bold">{s.endedAt ? "شفت منتهي" : "شفت مفتوح"}</span>
+                        <span className="block text-[10px] text-muted-foreground">
+                          {formatDateTime(s.startedAt)} → {s.endedAt ? formatDateTime(s.endedAt) : "الآن"}
+                        </span>
+                      </span>
+                    </button>
+                  ))
+                ) : (
+                  <p className="py-4 text-center text-[11px] text-muted-foreground">لا توجد شفتات لهذا الموظف</p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
+
 
 function P2POrdersTable({
   rows,
@@ -242,7 +271,6 @@ function P2POrdersTable({
   onLinked?: () => void;
 }) {
   const emptyRows = Math.max(8 - rows.length, 0);
-  const [linkId, setLinkId] = useState<string | null>(null);
 
   return (
     <div className="data-surface">
@@ -293,13 +321,7 @@ function P2POrdersTable({
                       </span>
                     </td>
                     <td>
-                      <button
-                        type="button"
-                        onClick={() => setLinkId(String(r.ledgerId))}
-                        className="rounded-full border border-[oklch(0.82_0.15_85/0.5)] bg-[oklch(0.82_0.15_85/0.12)] px-4 py-1 text-xs font-bold text-[oklch(0.82_0.15_85)] transition hover:bg-[oklch(0.82_0.15_85/0.22)]"
-                      >
-                        ربط
-                      </button>
+                      <P2PLinkMenu ledgerId={String(r.ledgerId)} onLinked={onLinked} />
                     </td>
 
                   </tr>
@@ -316,7 +338,6 @@ function P2POrdersTable({
           </tbody>
         </table>
       </div>
-      <P2PLinkDialog ledgerId={linkId} onClose={() => setLinkId(null)} onLinked={() => onLinked?.()} />
     </div>
   );
 }
