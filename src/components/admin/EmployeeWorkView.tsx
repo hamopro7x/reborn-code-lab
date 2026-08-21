@@ -115,6 +115,21 @@ function SplitTabContent({ reversed }: { reversed?: boolean }) {
 /* ------------------------- P2P orders table (طلبات P2P) -------------------------
  * Same look as the approved reference: blue pill header row, buy/sell toggle,
  * dark rows with green side + gold owner link. Presentation only. */
+const AR_MONTHS = [
+  "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
+  "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر",
+];
+const AR_DAYS = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+
+/** Compact start date/time for the shift picker card. */
+const shiftStartTime = (ms: number) => {
+  const d = new Date(ms);
+  const p = (n: number) => String(n).padStart(2, "0");
+  const h24 = d.getHours();
+  const h = ((h24 + 11) % 12) + 1;
+  return `${AR_DAYS[d.getDay()]} ${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(h)}:${p(d.getMinutes())} ${h24 < 12 ? "ص" : "م"}`;
+};
+
 const P2P_COLUMNS = [
   "النوع",
   "التاريخ / الوقت",
@@ -219,43 +234,39 @@ function P2PLinkMenu({ ledgerId, onLinked }: { ledgerId: string; onLinked?: () =
 
           {/* level 2 — shifts of the chosen employee */}
           {userId && (
-            <div dir="rtl" className="w-[420px] shrink-0 animate-slide-up">
-              <div className="data-table-head truncate px-3 py-2 text-center text-[11px] font-bold">
+            <div dir="rtl" className="w-[360px] shrink-0 animate-slide-up">
+              <div className="data-table-head truncate px-3 py-1.5 text-center text-[11px] font-bold">
                 شفتات {activeName}
               </div>
-              <div className="max-h-64 overflow-y-auto">
+              <div className="max-h-52 overflow-y-auto">
                 {shifts.isLoading ? (
                   <Loader2 className="mx-auto my-4 size-4 animate-spin text-muted-foreground" />
                 ) : shiftRows.length ? (
                   <table className="data-table w-full text-right">
                     <thead>
                       <tr>
-                        <th className="w-10 px-2 py-1.5 text-[10px]">#</th>
-                        <th className="px-2 py-1.5 text-[10px]">الحالة</th>
-                        <th className="px-2 py-1.5 text-[10px]">البداية</th>
-                        <th className="px-2 py-1.5 text-[10px]">النهاية</th>
-                        <th className="w-16 px-2 py-1.5 text-[10px]">ربط</th>
+                        <th className="w-10 px-2 py-1 text-[10px]">#</th>
+                        <th className="px-2 py-1 text-[10px]">الحالة</th>
+                        <th className="px-2 py-1 text-[10px]">البداية</th>
+                        <th className="w-14 px-2 py-1 text-[10px]">ربط</th>
                       </tr>
                     </thead>
                     <tbody>
                       {shiftRows.map((s, i) => (
                         <tr key={s.id} className="hover:bg-white/5">
-                          <td className="px-2 py-1.5 text-[10px] font-bold tabular-nums">{i + 1}</td>
-                          <td className="px-2 py-1.5 text-[10px] font-bold">
+                          <td className="px-2 py-0.5 text-[10px] font-bold tabular-nums">{i + 1}</td>
+                          <td className="px-2 py-0.5 text-[10px] font-bold">
                             {s.endedAt ? "منتهي" : "مفتوح"}
                           </td>
-                          <td className="px-2 py-1.5 text-[10px] text-muted-foreground">
-                            {formatDateTime(s.startedAt)}
+                          <td className="px-2 py-0.5 text-[10px] leading-4 text-muted-foreground">
+                            {shiftStartTime(s.startedAt)}
                           </td>
-                          <td className="px-2 py-1.5 text-[10px] text-muted-foreground">
-                            {s.endedAt ? formatDateTime(s.endedAt) : "الآن"}
-                          </td>
-                          <td className="px-2 py-1.5">
+                          <td className="px-2 py-0.5">
                             <button
                               type="button"
                               disabled={busy}
                               onClick={() => link(s.id)}
-                              className="rounded-full border border-[oklch(0.82_0.15_85/0.5)] bg-[oklch(0.82_0.15_85/0.12)] px-2.5 py-0.5 text-[10px] font-bold text-[oklch(0.82_0.15_85)] transition hover:bg-[oklch(0.82_0.15_85/0.22)] disabled:opacity-50"
+                              className="rounded-full border border-[oklch(0.82_0.15_85/0.5)] bg-[oklch(0.82_0.15_85/0.12)] px-2 py-0.5 text-[10px] font-bold text-[oklch(0.82_0.15_85)] transition hover:bg-[oklch(0.82_0.15_85/0.22)] disabled:opacity-50"
                             >
                               ربط
                             </button>
@@ -374,11 +385,6 @@ function useNow() {
   return now;
 }
 
-const AR_MONTHS = [
-  "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
-  "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر",
-];
-const AR_DAYS = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
 
 function clockParts(d: Date) {
   const h24 = d.getHours();
