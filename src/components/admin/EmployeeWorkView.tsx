@@ -47,8 +47,7 @@ import {
   saveMyManualTxn,
   clearMyManualTxns,
   getWorkP2PCompleted,
-  getWorkStaffList,
-  getStaffShifts,
+  getMyShiftsForLink,
   linkP2POrder,
 
 
