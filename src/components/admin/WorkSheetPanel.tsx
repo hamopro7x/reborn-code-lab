@@ -99,77 +99,32 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
 
 /* ------------------------------- الشغل الآن ------------------------------- */
 
-/** Shared claim card (face + device biometric). Contains no management data. */
+/** Shared claim card — camera + Face Recognition only. */
 function ClaimCard({ adminHint, onClaimed }: { adminHint?: boolean; onClaimed: () => void }) {
-  const challengeFn = useServerFn(getWorkAuthChallenge);
-  const registerFn = useServerFn(registerWorkDevice);
-  const claimFn = useServerFn(claimWorkShift);
-  const [busy, setBusy] = useState<string | null>(null);
-
-  const enrollDevice = async () => {
-    if (!biometricSupported()) return toast.error("هذا الجهاز/المتصفح لا يدعم المصادقة البيومترية");
-    setBusy("device");
-    try {
-      const { challenge, userId } = await challengeFn({ data: { purpose: "register" } });
-      const cred = await registerBiometric({ challenge, userId, name: "Mag Pro" });
-      await registerFn({ data: { ...cred, label: navigator.platform || "device" } });
-      toast.success("تم تسجيل مصادقة هذا الجهاز");
-    } catch (e) {
-      toast.error((e as Error).message || "فشل تسجيل الجهاز");
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const claim = async () => {
-    setBusy("claim");
-    try {
-      const { challenge, credentials } = await challengeFn({ data: { purpose: "auth" } });
-      if (!credentials.length) {
-        toast.error("سجّل مصادقة الجهاز أولاً");
-        return;
-      }
-      const face = await captureFace();
-      const sig = await assertBiometric({ challenge, credentialIds: credentials.map((c) => c.id) });
-      const res = await claimFn({ data: { faceImage: face, ...sig } });
-      if (!res.ok) {
-        toast.error(res.error);
-        return;
-      }
-      toast.success("تم استلام الشغل");
-      onClaimed();
-    } catch (e) {
-      toast.error((e as Error).message || "فشل استلام الشغل");
-    } finally {
-      setBusy(null);
-    }
-  };
+  const face = useFaceClaim(onClaimed);
 
   return (
     <div className="rounded-2xl border border-border/60 bg-card/70 p-4 space-y-3">
       <div className="flex items-center gap-2 text-sm font-black">
         <ShieldCheck className="size-4 text-primary" />
-        استلام الشغل (تحقق الوجه + مصادقة الجهاز)
+        استلام الشغل (التحقق من الوجه)
       </div>
       <p className="text-xs leading-6 text-muted-foreground">
-        استلام الشغل يحتاج تحقق الوجه بالكاميرا ثم مصادقة الجهاز (Face ID / Touch ID / بصمة أندرويد).
-        بعد النجاح ينتهي الشفت السابق تلقائيًا ويبدأ شفتك في نفس اللحظة. لا يتم تخزين أي بصمة.
+        استلام الشغل يحتاج التحقق من الوجه بالكاميرا فقط. أول مرة يتم تسجيل بيانات وجهك، وبعد ذلك
+        تتم المطابقة مباشرة. بعد النجاح ينتهي الشفت السابق تلقائيًا ويبدأ شفتك في نفس اللحظة.
       </p>
       <div className="flex flex-wrap gap-2">
-        <Button onClick={() => void claim()} disabled={busy !== null}>
-          {busy === "claim" ? <Loader2 className="size-4 animate-spin" /> : <Camera className="size-4" />}
+        <Button onClick={face.start}>
+          <Camera className="size-4" />
           استلام الشغل
-        </Button>
-        <Button variant="outline" onClick={() => void enrollDevice()} disabled={busy !== null}>
-          {busy === "device" ? <Loader2 className="size-4 animate-spin" /> : null}
-          تسجيل مصادقة هذا الجهاز
         </Button>
       </div>
       {adminHint ? (
         <p className="text-[11px] text-muted-foreground">
-          لا بد من تسجيل صورة الوجه المرجعية للموظف من تبويب «تسجيل الوجه» قبل أول استلام.
+          يمكن للأدمن أيضًا رفع صورة مرجعية للموظف من تبويب «تسجيل الوجه».
         </p>
       ) : null}
+      {face.node}
     </div>
   );
 }
