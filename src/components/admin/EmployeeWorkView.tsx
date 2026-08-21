@@ -115,6 +115,21 @@ function SplitTabContent({ reversed }: { reversed?: boolean }) {
 /* ------------------------- P2P orders table (طلبات P2P) -------------------------
  * Same look as the approved reference: blue pill header row, buy/sell toggle,
  * dark rows with green side + gold owner link. Presentation only. */
+const AR_MONTHS = [
+  "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
+  "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر",
+];
+const AR_DAYS = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+
+/** Compact start date/time for the shift picker card. */
+const shiftStartTime = (ms: number) => {
+  const d = new Date(ms);
+  const p = (n: number) => String(n).padStart(2, "0");
+  const h24 = d.getHours();
+  const h = ((h24 + 11) % 12) + 1;
+  return `${AR_DAYS[d.getDay()]} ${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(h)}:${p(d.getMinutes())} ${h24 < 12 ? "ص" : "م"}`;
+};
+
 const P2P_COLUMNS = [
   "النوع",
   "التاريخ / الوقت",
