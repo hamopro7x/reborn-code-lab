@@ -304,6 +304,26 @@ export function FaceGate({
     return frames;
   };
 
+  /**
+   * Extra liveness layer: the physical phone must actually move.
+   * Runs between the face movements and never replaces any face check.
+   */
+  const shakePhase = async () => {
+    if (!motionSensorsAvailable()) return; // desktop / no sensors → skip silently
+    setArrow(null);
+    setCountdown(null);
+    setInstruction("هز الهاتف الآن");
+    const allowed = await requestMotionPermission();
+    if (!allowed) return; // permission denied → do not block the face flow
+    const res = await waitForShake(8000);
+    if (!res.ok) {
+      if (res.reason === "unsupported") return;
+      throw new LivenessError("لم يتم رصد حركة الهاتف — هز الهاتف وحاول مرة أخرى");
+    }
+    setInstruction("تم التحقق من حركة الهاتف");
+    await wait(400);
+  };
+
   const run = async () => {
     if (!captureUprightFrame(videoRef.current, { mirroredPreview: MIRROR })) {
       setStatus("الكاميرا لم تجهز بعد، انتظر لحظة");
