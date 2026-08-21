@@ -249,7 +249,7 @@ function P2PLinkMenu({ ledgerId, onLinked }: { ledgerId: string; onLinked?: () =
                   <Loader2 className="mx-auto my-4 size-4 animate-spin text-muted-foreground" />
                 ) : shiftRows.length ? (
                   <table className="data-table w-full text-right">
-                    <thead>
+                    <thead className="data-table-head">
                       <tr>
                         <th className="w-10 px-2 py-1 text-[10px]">#</th>
                         <th className="px-2 py-1 text-[10px]">الحالة</th>
