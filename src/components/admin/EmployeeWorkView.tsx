@@ -32,7 +32,7 @@ import {
   DollarSign,
   Wallet,
   Trash2,
-  Check,
+  
 
 } from "lucide-react";
 import { toast } from "sonner";
