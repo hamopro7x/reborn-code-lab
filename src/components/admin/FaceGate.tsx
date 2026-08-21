@@ -138,7 +138,8 @@ export function FaceGate({
   };
 
   /** Collects several good frames for one guided pose. */
-  const posePhase = async (msg: string, want: number) => {
+  const posePhase = async (msg: string, want: number, dir: Dir | null = null) => {
+    setArrow(dir);
     for (let s = 3; s >= 1; s--) {
       setStatus(`${msg} (${s})`);
       await wait(650);
@@ -151,6 +152,7 @@ export function FaceGate({
     });
     setStatus("تم ✓");
     await wait(250);
+    setArrow(null);
     return frames;
   };
 
@@ -179,22 +181,30 @@ export function FaceGate({
         return;
       }
 
+      // Dynamic movement challenge: the order comes from the server.
+      const chal = await challengeFn({ data: undefined as any });
       const center = await posePhase("انظر أمام الكاميرا مباشرة...", 3);
-      const right = await posePhase("لُف وجهك ناحية اليمين ببطء...", 1);
-      const left = await posePhase("لُف وجهك ناحية الشمال ببطء...", 1);
-      const back = await posePhase("عد بوجهك للأمام...", 1);
-
-      if (!center.length || !right.length || !left.length) {
-        setStatus("لم يتم رصد الحركة — حاول مرة أخرى");
+      if (!center.length) {
+        setStatus("لم يتم رصد الوجه — حاول مرة أخرى");
         return;
       }
+
+      const steps: Array<{ dir: Dir; image: string }> = [];
+      for (const dir of chal.steps as Dir[]) {
+        const got = await posePhase("اتبع السهم ببطء", 1, dir);
+        if (!got.length) {
+          setStatus("لم يتم رصد الحركة المطلوبة — اتبع السهم ببطء");
+          return;
+        }
+        steps.push({ dir, image: got[0]! });
+      }
+      const back = await posePhase("عد بوجهك للأمام...", 1);
 
       setStatus("جاري التحقق من الحيوية ومطابقة الوجه...");
       const res = await claimFn({
         data: {
           faceImages: center,
-          faceRight: right[0]!,
-          faceLeft: left[0]!,
+          steps,
           ...(back[0] ? { faceBack: back[0] } : {}),
         },
       });
@@ -218,6 +228,7 @@ export function FaceGate({
       setStatus(msg);
       toast.error(msg);
     } finally {
+      setArrow(null);
       setWorking(false);
     }
   };
