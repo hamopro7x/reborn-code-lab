@@ -171,6 +171,15 @@ export type WorkRow = {
   detail: Record<string, string | number | boolean | null>;
 };
 
+/**
+ * The ONLY definition of a "successful" transaction used by «جدول بيانات الشغل».
+ * These are the real status values stored in public.bybit_ledger
+ * (card → success, on-chain/internal → ناجحة, P2P → اكتملت).
+ * Anything else (failed / ملغاة / pending …) is never shown or counted in the
+ * employee work data. The original rows are never modified or deleted.
+ */
+export const SUCCESS_STATUSES = ["success", "ناجحة", "اكتملت"] as const;
+
 export async function workTable(opts: {
   userId?: string;
   shiftId?: string;
@@ -178,6 +187,8 @@ export async function workTable(opts: {
   week?: string;
   page?: number;
   pageSize?: number;
+  /** Employee work data layer: keep successful transactions only. */
+  successOnly?: boolean;
 }) {
   const db = await admin();
   const pageSize = Math.min(Math.max(opts.pageSize ?? 50, 10), 200);
@@ -186,8 +197,11 @@ export async function workTable(opts: {
 
   let q: any = db
     .from("work_txn_assignments")
-    .select("*, bybit_ledger(*)", { count: "exact" })
+    .select(opts.successOnly ? "*, bybit_ledger!inner(*)" : "*, bybit_ledger(*)", { count: "exact" })
     .order("occurred_at", { ascending: false });
+
+  if (opts.successOnly) q = q.in("bybit_ledger.status", SUCCESS_STATUSES as unknown as string[]);
+
 
   if (opts.userId) q = q.eq("user_id", opts.userId);
   if (opts.shiftId) q = q.eq("shift_id", opts.shiftId);
