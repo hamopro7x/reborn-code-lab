@@ -186,14 +186,25 @@ export const enrollMyFace = createServerFn({ method: "POST" })
     return mod.enrollMyFace(context.userId, data.faceImages);
   });
 
+/** Server-issued random movement challenge (direction order is NOT client-chosen). */
+export const startFaceChallenge = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAccess(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    return mod.startFaceChallenge(context.userId);
+  });
+
 const claimSchema = z.object({
   faceImages: z.array(frame).min(1).max(3),
-  faceRight: frame,
-  faceLeft: frame,
+  steps: z
+    .array(z.object({ dir: z.enum(["right", "left"]), image: frame }))
+    .min(2)
+    .max(4),
   faceBack: frame.optional(),
 });
 
-/** Face verification + head-turn liveness, then the shift handover. */
+/** Face verification + open eyes + server-issued movement challenge, then handover. */
 export const claimWorkShift = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => claimSchema.parse(input))
@@ -205,11 +216,19 @@ export const claimWorkShift = createServerFn({ method: "POST" })
       return { ok: false as const, error: "NO_FACE_DATA" };
     }
 
+    const chal = await mod.consumeFaceChallenge(
+      context.userId,
+      data.steps.map((s) => s.dir),
+    );
+    if (!chal.ok) return { ok: false as const, error: chal.reason ?? "فشل التحقق من الحركة" };
+
+    const eyes = await mod.checkEyesOpen(data.faceImages);
+    if (!eyes.ok) return { ok: false as const, error: eyes.reason ?? "افتح عينيك وانظر إلى الكاميرا" };
+
     const live = await mod.checkHeadTurnLiveness({
       center: data.faceImages[0]!,
-      right: data.faceRight,
-      left: data.faceLeft,
-      back: data.faceBack,
+      steps: data.steps,
+      ...(data.faceBack ? { back: data.faceBack } : {}),
     });
     if (!live.ok) return { ok: false as const, error: live.reason ?? "فشل التحقق من حركة الوجه" };
 
@@ -220,8 +239,6 @@ export const claimWorkShift = createServerFn({ method: "POST" })
         error: face.reason ?? "تعذّر التحقق من الوجه، حاول مرة أخرى",
       };
     }
-
-
 
     const { data: shift, error } = await context.supabase.rpc("work_claim_shift", {
       p_face: true,

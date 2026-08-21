@@ -10,10 +10,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, ScanFace, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2, ScanFace, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { claimWorkShift, enrollMyFace, getMyFaceStatus } from "@/lib/work.functions";
+import {
+  claimWorkShift,
+  enrollMyFace,
+  getMyFaceStatus,
+  startFaceChallenge,
+} from "@/lib/work.functions";
 import {
   collectGoodFrames,
   captureUprightFrame,
@@ -33,6 +38,7 @@ const INSTRUCTIONS = [
 ];
 
 type Step = "loading" | "intro" | "camera";
+type Dir = "right" | "left";
 
 export function FaceGate({
   open,
@@ -46,6 +52,7 @@ export function FaceGate({
   const statusFn = useServerFn(getMyFaceStatus);
   const enrollFn = useServerFn(enrollMyFace);
   const claimFn = useServerFn(claimWorkShift);
+  const challengeFn = useServerFn(startFaceChallenge);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -53,6 +60,7 @@ export function FaceGate({
   const [enrolled, setEnrolled] = useState(false);
   const [status, setStatus] = useState("");
   const [working, setWorking] = useState(false);
+  const [arrow, setArrow] = useState<Dir | null>(null);
 
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -138,7 +146,8 @@ export function FaceGate({
   };
 
   /** Collects several good frames for one guided pose. */
-  const posePhase = async (msg: string, want: number) => {
+  const posePhase = async (msg: string, want: number, dir: Dir | null = null) => {
+    setArrow(dir);
     for (let s = 3; s >= 1; s--) {
       setStatus(`${msg} (${s})`);
       await wait(650);
@@ -151,6 +160,7 @@ export function FaceGate({
     });
     setStatus("تم ✓");
     await wait(250);
+    setArrow(null);
     return frames;
   };
 
@@ -179,22 +189,30 @@ export function FaceGate({
         return;
       }
 
+      // Dynamic movement challenge: the order comes from the server.
+      const chal = await challengeFn({ data: undefined as any });
       const center = await posePhase("انظر أمام الكاميرا مباشرة...", 3);
-      const right = await posePhase("لُف وجهك ناحية اليمين ببطء...", 1);
-      const left = await posePhase("لُف وجهك ناحية الشمال ببطء...", 1);
-      const back = await posePhase("عد بوجهك للأمام...", 1);
-
-      if (!center.length || !right.length || !left.length) {
-        setStatus("لم يتم رصد الحركة — حاول مرة أخرى");
+      if (!center.length) {
+        setStatus("لم يتم رصد الوجه — حاول مرة أخرى");
         return;
       }
+
+      const steps: Array<{ dir: Dir; image: string }> = [];
+      for (const dir of chal.steps as Dir[]) {
+        const got = await posePhase("اتبع السهم ببطء", 1, dir);
+        if (!got.length) {
+          setStatus("لم يتم رصد الحركة المطلوبة — اتبع السهم ببطء");
+          return;
+        }
+        steps.push({ dir, image: got[0]! });
+      }
+      const back = await posePhase("عد بوجهك للأمام...", 1);
 
       setStatus("جاري التحقق من الحيوية ومطابقة الوجه...");
       const res = await claimFn({
         data: {
           faceImages: center,
-          faceRight: right[0]!,
-          faceLeft: left[0]!,
+          steps,
           ...(back[0] ? { faceBack: back[0] } : {}),
         },
       });
@@ -218,6 +236,7 @@ export function FaceGate({
       setStatus(msg);
       toast.error(msg);
     } finally {
+      setArrow(null);
       setWorking(false);
     }
   };
@@ -270,6 +289,22 @@ export function FaceGate({
               />
               {/* Guide oval: head-sized and centred on the analysed crop. */}
               <div className="pointer-events-none absolute inset-x-[14%] inset-y-[10%] rounded-[50%] border-2 border-primary/80 shadow-[0_0_24px_oklch(0.7_0.15_220/0.45)]" />
+              {/* Movement challenge: a big arrow instead of a text instruction.
+                  The preview is mirrored, so the employee's own right side is
+                  rendered on the screen's left. */}
+              {arrow ? (
+                <div
+                  className={`pointer-events-none absolute top-1/2 -translate-y-1/2 ${
+                    arrow === "right" ? "left-1" : "right-1"
+                  } animate-pulse text-destructive drop-shadow-[0_0_18px_rgba(255,60,60,0.8)]`}
+                >
+                  {arrow === "right" ? (
+                    <ArrowLeft className="size-16" strokeWidth={3} />
+                  ) : (
+                    <ArrowRight className="size-16" strokeWidth={3} />
+                  )}
+                </div>
+              ) : null}
             </div>
             <div className="min-h-5 text-center text-[11px] font-bold text-muted-foreground">{status}</div>
             <Button className="w-full" onClick={() => void run()} disabled={working}>
