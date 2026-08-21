@@ -94,7 +94,7 @@ export function FaceGate({
           videoRef.current.srcObject = stream;
           await videoRef.current.play().catch(() => {});
         }
-        setStatus(enrolled ? "ضع وجهك داخل الإطار ثم اضغط «تحقق»" : "ضع وجهك داخل الإطار ثم اضغط «تسجيل الوجه»");
+        setStatus(enrolled ? "ضع وجهك داخل الإطار ثم اضغط «تحقق» وستُطلب منك لف الوجه يمين وشمال" : "ضع وجهك داخل الإطار ثم اضغط «تسجيل الوجه»");
       } catch {
         setStatus("تعذّر تشغيل الكاميرا — اسمح بالوصول للكاميرا وحاول مرة أخرى");
       }
