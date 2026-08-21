@@ -34,6 +34,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { formatDateTime } from "@/lib/format";
 import { supabase } from "@/integrations/supabase/client";
 import {
   getMyWorkState,
@@ -412,7 +413,7 @@ function ManualCard({
 }: {
   card: ManualKind;
   title: string;
-  rows: { id: string; amount: string; details: string }[];
+  rows: { id: string; amount: string; details: string; createdAt?: string }[];
   onAdd: (card: ManualKind) => void;
   onClear: (card: ManualKind) => void;
   adding: boolean;
@@ -459,8 +460,9 @@ function ManualCard({
         <table className="data-table text-center">
           <thead className="sticky top-0 z-10">
             <tr>
-              <th className="w-[26%]">المبلغ</th>
+              <th className="w-[24%]">المبلغ</th>
               <th>التفاصيل</th>
+              <th className="w-[34%]">التاريخ والوقت</th>
             </tr>
           </thead>
           <tbody>
@@ -472,6 +474,7 @@ function ManualCard({
                 <td className="!p-0">
                   <ManualCell id={r.id} field="details" initial={r.details} />
                 </td>
+                <td className="text-[11px] text-muted-foreground">{formatDateTime(r.createdAt)}</td>
               </tr>
             ))}
           </tbody>
