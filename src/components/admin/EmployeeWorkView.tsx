@@ -664,6 +664,8 @@ export function EmployeeWorkView({ isAdmin = false }: { isAdmin?: boolean }) {
   const stateFn = useServerFn(getMyWorkState);
   const txnsFn = useServerFn(getMyShiftTxns);
   const brandsFn = useServerFn(getBybitCardBrands);
+  const p2pFn = useServerFn(getWorkP2PCompleted);
+
   const [tab, setTab] = useState<TabKey>("all");
   const now = useNow();
   const clock = clockParts(now);
