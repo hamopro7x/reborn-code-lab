@@ -660,55 +660,130 @@ async function compareOnePair(
   }
 }
 
+/* ------------------- dynamic movement challenge ------------------- */
+
+export type FaceDir = "right" | "left";
+
 /**
- * Active liveness: the employee looks forward, turns right, turns left and
- * returns forward. All frames come from the same preview crop, so the analysed
- * movement is exactly the movement the employee saw on screen.
+ * Issues a RANDOM movement sequence, stored server-side. The client cannot
+ * choose the order, so a replayed recording of an old attempt fails.
  */
-export async function checkHeadTurnLiveness(frames: {
-  center: string;
-  right: string;
-  left: string;
-  back?: string;
-}): Promise<{ ok: boolean; reason?: string }> {
+export async function startFaceChallenge(userId: string) {
+  const db = await admin();
+  const pool: FaceDir[][] = [
+    ["right", "left"],
+    ["left", "right"],
+    ["right", "left", "right"],
+    ["left", "right", "left"],
+  ];
+  const steps = pool[Math.floor(Math.random() * pool.length)]!;
+  await db.from("work_auth_challenges").delete().eq("user_id", userId).eq("purpose", "liveness");
+  const { error } = await db.from("work_auth_challenges").insert({
+    user_id: userId,
+    purpose: "liveness",
+    challenge: steps.join(","),
+    expires_at: new Date(Date.now() + 3 * 60_000).toISOString(),
+  });
+  if (error) throw new Error(error.message);
+  return { steps };
+}
+
+/** Reads + burns the pending challenge and checks the client followed it. */
+export async function consumeFaceChallenge(
+  userId: string,
+  steps: FaceDir[],
+): Promise<{ ok: boolean; reason?: string }> {
+  const db = await admin();
+  const { data } = await db
+    .from("work_auth_challenges")
+    .select("challenge,expires_at")
+    .eq("user_id", userId)
+    .eq("purpose", "liveness")
+    .maybeSingle();
+  await db.from("work_auth_challenges").delete().eq("user_id", userId).eq("purpose", "liveness");
+  if (!data?.challenge) return { ok: false, reason: "انتهت جلسة التحقق — ابدأ من جديد" };
+  if (new Date(data.expires_at).getTime() < Date.now())
+    return { ok: false, reason: "انتهت مدة التحقق — حاول مرة أخرى" };
+  if (String(data.challenge) !== steps.join(","))
+    return { ok: false, reason: "لم يتم تنفيذ الحركة المطلوبة بالترتيب — حاول مرة أخرى" };
+  return { ok: true };
+}
+
+async function askVision(system: string, text: string, images: string[]) {
   const key = process.env["LOVABLE_API_KEY"];
-  if (!key) return { ok: false, reason: "خدمة التحقق غير متاحة" };
-  const images = [frames.center, frames.right, frames.left, ...(frames.back ? [frames.back] : [])];
+  if (!key) return null;
   const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
     body: JSON.stringify({
       model: "google/gemini-2.5-flash",
       messages: [
-        {
-          role: "system",
-          content:
-            'You are a face liveness service. Frames of one person in order: (1) looking forward, (2) head turned to their right, (3) head turned to their left, (4 optional) forward again. Reply with strict JSON only: {"live":true|false,"samePerson":true|false,"turnedRight":true|false,"turnedLeft":true|false,"reason":"short"}. "turnedRight"/"turnedLeft" are true when the head yaw clearly changed to that side compared to frame 1, even if the turn is small. Tolerate slight motion blur. "live" is false only if the frames look like a printed photo, a screen replay, or identical static images.',
-        },
+        { role: "system", content: system },
         {
           role: "user",
           content: [
-            { type: "text", text: "Evaluate the head movement across these frames in order." },
+            { type: "text", text },
             ...images.map((url) => ({ type: "image_url", image_url: { url } })),
           ],
         },
       ],
     }),
   });
-  if (!res.ok) return { ok: false, reason: "فشل تحليل حركة الوجه، حاول مرة أخرى" };
+  if (!res.ok) return null;
   const json: any = await res.json();
-  const text = String(json?.choices?.[0]?.message?.content ?? "");
-  const m = text.match(/\{[\s\S]*\}/);
+  const raw = String(json?.choices?.[0]?.message?.content ?? "");
+  const m = raw.match(/\{[\s\S]*\}/);
+  if (!m) return null;
   try {
-    const parsed = m ? JSON.parse(m[0]) : null;
-    if (parsed?.live !== true) return { ok: false, reason: "تم رفض المحاولة — يجب أن يكون الوجه حقيقيًا أمام الكاميرا" };
-    if (parsed?.samePerson !== true) return { ok: false, reason: "تعذّر التحقق من الوجه، حاول مرة أخرى" };
-    if (parsed?.turnedRight !== true) return { ok: false, reason: "لم يتم رصد الحركة — لُف وجهك ناحية اليمين ببطء" };
-    if (parsed?.turnedLeft !== true) return { ok: false, reason: "لم يتم رصد الحركة — لُف وجهك ناحية الشمال ببطء" };
-    return { ok: true };
+    return JSON.parse(m[0]) as any;
   } catch {
-    return { ok: false, reason: "تعذّر تحليل نتيجة التحقق" };
+    return null;
   }
+}
+
+/** Open-eye verification on the frontal frames: a sleeping/closed-eye face fails. */
+export async function checkEyesOpen(frames: string[]): Promise<{ ok: boolean; reason?: string }> {
+  const list = frames.slice(0, 2);
+  if (!list.length) return { ok: false, reason: "لم يتم التقاط أي صورة" };
+  const parsed = await askVision(
+    'You verify that a live person has their eyes open. Reply with strict JSON only: {"eyesOpen":true|false,"reason":"short"}. eyesOpen is true when both eyes are clearly open in at least one frame. Tolerate glasses, slight blur and low light.',
+    "Are the eyes open in these camera frames?",
+    list,
+  );
+  if (!parsed) return { ok: false, reason: "فشل تحليل الصورة، حاول مرة أخرى" };
+  if (parsed.eyesOpen !== true) return { ok: false, reason: "افتح عينيك جيدًا وانظر إلى الكاميرا" };
+  return { ok: true };
+}
+
+/**
+ * Active liveness following the SERVER-ISSUED movement sequence. All frames come
+ * from the same preview crop, so the analysed movement is exactly the movement
+ * the employee saw on screen.
+ */
+export async function checkHeadTurnLiveness(input: {
+  center: string;
+  steps: Array<{ dir: FaceDir; image: string }>;
+  back?: string;
+}): Promise<{ ok: boolean; reason?: string }> {
+  const steps = input.steps.slice(0, 4);
+  if (steps.length < 2) return { ok: false, reason: "لم يتم رصد الحركة — حاول مرة أخرى" };
+  const images = [input.center, ...steps.map((s) => s.image), ...(input.back ? [input.back] : [])];
+  const expected = steps
+    .map((s, i) => `frame ${i + 2}: head turned to the person's own ${s.dir}`)
+    .join("; ");
+
+  const parsed = await askVision(
+    'You are a face liveness service. Frame 1 is the person looking forward; the following frames should each show the requested head turn. Reply with strict JSON only: {"live":true|false,"samePerson":true|false,"followed":true|false,"reason":"short"}. "followed" is true when every requested turn direction is visible in its frame compared with frame 1, even if a turn is small. Tolerate slight motion blur. "live" is false only if the frames look like a printed photo, a screen replay, or identical static images.',
+    `Expected movement: ${expected}. Evaluate the frames in order.`,
+    images,
+  );
+  if (!parsed) return { ok: false, reason: "فشل تحليل حركة الوجه، حاول مرة أخرى" };
+  if (parsed.live !== true)
+    return { ok: false, reason: "تم رفض المحاولة — يجب أن يكون الوجه حقيقيًا أمام الكاميرا" };
+  if (parsed.samePerson !== true) return { ok: false, reason: "تعذّر التحقق من الوجه، حاول مرة أخرى" };
+  if (parsed.followed !== true)
+    return { ok: false, reason: "لم يتم رصد الحركة المطلوبة — اتبع السهم ببطء" };
+  return { ok: true };
 }
 
 
