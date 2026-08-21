@@ -75,16 +75,13 @@ export function FaceGate({
     };
   }, [open]);
 
-  // Live camera inside the frame.
+  // Live camera inside the frame (front camera, upright stream).
   useEffect(() => {
     if (!open || step !== "camera") return;
     let alive = true;
     (async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user", width: { ideal: 720 }, height: { ideal: 720 } },
-          audio: false,
-        });
+        const { stream } = await openFrontCamera();
         if (!alive) {
           stream.getTracks().forEach((t) => t.stop());
           return;
@@ -93,6 +90,7 @@ export function FaceGate({
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           await videoRef.current.play().catch(() => {});
+          await waitForVideoReady(videoRef.current);
         }
         setStatus(enrolled ? "ضع وجهك داخل الإطار ثم اضغط «تحقق» وستُطلب منك لف الوجه يمين وشمال" : "ضع وجهك داخل الإطار ثم اضغط «تسجيل الوجه»");
       } catch {
@@ -105,15 +103,12 @@ export function FaceGate({
     };
   }, [open, step, enrolled, stopCamera]);
 
-  const grabFrame = (): string | null => {
-    const v = videoRef.current;
-    if (!v || !v.videoWidth) return null;
-    const canvas = document.createElement("canvas");
-    canvas.width = v.videoWidth;
-    canvas.height = v.videoHeight;
-    canvas.getContext("2d")!.drawImage(v, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL("image/jpeg", 0.85);
-  };
+  /**
+   * One upright, un-mirrored frame cropped to the same square area the
+   * employee sees in the preview — so recognition analyses exactly that.
+   */
+  const grabFrame = (): string | null => captureUprightFrame(videoRef.current, { mirroredPreview: false });
+
 
   const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
