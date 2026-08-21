@@ -793,8 +793,13 @@ function ManualSection({
   const q = useQuery({
     queryKey: ["my-manual-txns"],
     queryFn: () => listFn({ data: undefined as any }),
+    // Always re-read the stored rows when the section is opened again.
+    staleTime: 0,
+    refetchOnMount: "always",
   });
   const all = (q.data as any)?.rows ?? [];
+  const serverNow = (q.data as any)?.serverNow ?? null;
+  const refresh = () => void qc.invalidateQueries({ queryKey: ["my-manual-txns"] });
 
   const add = async (card: ManualKind) => {
     setAdding(card);
