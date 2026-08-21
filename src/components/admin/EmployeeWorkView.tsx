@@ -845,7 +845,11 @@ export function EmployeeWorkView({ isAdmin = false }: { isAdmin?: boolean }) {
           ]}
         />
       ) : tab === "p2p" ? (
-        <P2POrdersTable rows={rows} loading={holding && txns.isLoading} onDetails={setDetailRow} />
+        <P2POrdersTable
+          rows={(p2pCompleted.data ?? []) as any[]}
+          loading={p2pCompleted.isLoading}
+          onDetails={setDetailRow}
+        />
       ) : (
 
       <div className="data-surface">
