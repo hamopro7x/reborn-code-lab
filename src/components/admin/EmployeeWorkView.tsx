@@ -21,7 +21,6 @@ import {
   ScanFace,
   Eye,
   ListOrdered,
-  Layers,
   AlertTriangle,
   ArrowLeftRight,
   Users,
@@ -66,7 +65,7 @@ type TabKey = "p2p" | "transfers" | "wrong" | "week" | "all" | "employee";
 /** DOM order = right-to-left order in the reference. */
 const TOP_TABS: { key: TabKey; label: string; icon: typeof ListOrdered }[] = [
   { key: "all", label: "المعاملات", icon: ListOrdered },
-  { key: "week", label: "الحسابات المتراكمة", icon: Layers },
+  
   { key: "wrong", label: "المعاملات الغلط والخاص بالموظف", icon: AlertTriangle },
   { key: "transfers", label: "الاستلم من والتحويل الي", icon: ArrowLeftRight },
   { key: "p2p", label: "طليات P2P", icon: Users },
