@@ -790,7 +790,7 @@ export async function saveEntryField(
     }
     const { error } = await db
       .from("work_txn_entries")
-      .update({ [field]: value, [stampCol]: savedAt })
+      .update({ [field]: value, [stampCol]: prevStamp ?? savedAt })
       .eq("ledger_id", ledgerId);
     if (error) return { ok: false as const, error: error.message };
   } else {
