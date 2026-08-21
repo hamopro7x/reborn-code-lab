@@ -1,8 +1,10 @@
 /**
- * «استلام الشغل» identity gate — camera + Face Recognition only.
- * First time: instructions screen → camera → face enrollment bound to the account.
- * Afterwards: camera box only → face verification against the account's face data.
+ * «استلام الشغل» identity gate — camera + Face Recognition + active liveness.
  * No fingerprint / WebAuthn anywhere in this flow.
+ *
+ * Pipeline guarantee: every analysed frame comes from `captureUprightFrame`,
+ * which crops exactly the region rendered inside the preview box (same
+ * object-cover math, same mirroring) — so Preview Frame == Recognition Frame.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -12,13 +14,22 @@ import { Loader2, ScanFace, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { claimWorkShift, enrollMyFace, getMyFaceStatus } from "@/lib/work.functions";
-import { captureUprightFrame, openFrontCamera, waitForVideoReady } from "@/lib/face-camera";
+import {
+  collectGoodFrames,
+  captureUprightFrame,
+  measureFrameQuality,
+  openFrontCamera,
+  waitForVideoReady,
+} from "@/lib/face-camera";
+
+/** The preview is mirrored (natural selfie feel); captures follow the same mirroring. */
+const MIRROR = true;
 
 const INSTRUCTIONS = [
-  "تأكد من أن ملامح وجهك واضحة دون أي عوائق كبيرة.",
-  "لا ترتدي أقنعة أو سماعات رأس أو أي أشياء قد تغطي وجهك.",
-  "نوصي بإزالة النظارات لتجنب انعكاسات العدسات أو الوجه.",
-  "يرجى التقاط الصورة في مكان مضاء جيدًا وبإضاءة متساوية.",
+  "تأكد من ظهور وجهك بالكامل داخل إطار التحقق.",
+  "تأكد من وجود إضاءة جيدة ومتساوية.",
+  "لا تغطِّ وجهك بكمامة أو غطاء، ويفضّل إزالة النظارات.",
+  "اتبع تعليمات الحركة التي تظهر على الشاشة.",
 ];
 
 type Step = "loading" | "intro" | "camera";
@@ -76,7 +87,7 @@ export function FaceGate({
     };
   }, [open]);
 
-  // Live camera inside the frame (front camera, upright stream).
+  // Live camera inside the frame (front camera, natural orientation).
   useEffect(() => {
     if (!open || step !== "camera") return;
     let alive = true;
@@ -93,7 +104,7 @@ export function FaceGate({
           await videoRef.current.play().catch(() => {});
           await waitForVideoReady(videoRef.current);
         }
-        setStatus(enrolled ? "ضع وجهك داخل الإطار ثم اضغط «تحقق» وستُطلب منك لف الوجه يمين وشمال" : "ضع وجهك داخل الإطار ثم اضغط «تسجيل الوجه»");
+        setStatus("ضع وجهك داخل إطار التحقق ثم اضغط الزر بالأسفل");
       } catch {
         setStatus("تعذّر تشغيل الكاميرا — اسمح بالوصول للكاميرا وحاول مرة أخرى");
       }
@@ -102,69 +113,90 @@ export function FaceGate({
       alive = false;
       stopCamera();
     };
-  }, [open, step, enrolled, stopCamera]);
-
-  /**
-   * One upright, un-mirrored frame cropped to the same square area the
-   * employee sees in the preview — so recognition analyses exactly that.
-   */
-  const grabFrame = (): string | null => captureUprightFrame(videoRef.current, { mirroredPreview: false });
-
+  }, [open, step, stopCamera]);
 
   const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-  /** Guided capture: straight → turn right → turn left (liveness). */
-  const captureLivenessFrames = async () => {
-    const shots: Record<"center" | "right" | "left", string> = { center: "", right: "", left: "" };
-    const steps: Array<[keyof typeof shots, string]> = [
-      ["center", "انظر أمام الكاميرا مباشرة..."],
-      ["right", "لُف وجهك ناحية اليمين ببطء..."],
-      ["left", "لُف وجهك ناحية الشمال ببطء..."],
-    ];
-    for (const [k, msg] of steps) {
-      for (let s = 3; s >= 1; s--) {
-        setStatus(`${msg} (${s})`);
-        await wait(700);
+  /** Waits until the preview shows a usable (sharp, well-lit) frame. */
+  const waitForUsableFrame = async (timeoutMs = 6000) => {
+    const start = Date.now();
+    let last = false;
+    while (Date.now() - start < timeoutMs) {
+      const q = measureFrameQuality(videoRef.current);
+      if (q?.usable) return true;
+      if (q && !last) {
+        setStatus(
+          q.brightness < 45
+            ? "الإضاءة ضعيفة — تأكد من إضاءة جيدة ومتساوية"
+            : "ثبّت وجهك قليلًا داخل إطار التحقق",
+        );
+        last = true;
       }
-      const f = grabFrame();
-      if (!f) return null;
-      shots[k] = f;
-      setStatus("تم ✓");
-      await wait(300);
+      await wait(150);
     }
-    return shots;
+    return !!captureUprightFrame(videoRef.current, { mirroredPreview: MIRROR });
+  };
+
+  /** Collects several good frames for one guided pose. */
+  const posePhase = async (msg: string, want: number) => {
+    for (let s = 3; s >= 1; s--) {
+      setStatus(`${msg} (${s})`);
+      await wait(650);
+    }
+    setStatus(msg);
+    const frames = await collectGoodFrames(videoRef.current, {
+      want,
+      mirroredPreview: MIRROR,
+      onProgress: (got, total) => setStatus(`${msg} — ${got}/${total}`),
+    });
+    setStatus("تم ✓");
+    await wait(250);
+    return frames;
   };
 
   const run = async () => {
-    if (!grabFrame()) {
+    if (!captureUprightFrame(videoRef.current, { mirroredPreview: MIRROR })) {
       setStatus("الكاميرا لم تجهز بعد، انتظر لحظة");
       return;
     }
     setWorking(true);
     try {
+      setStatus("جاري كشف الوجه داخل إطار التحقق...");
+      await waitForUsableFrame();
+
       if (!enrolled) {
-        setStatus("جاري تسجيل بيانات الوجه...");
-        const frame = grabFrame()!;
-        const res = await enrollFn({ data: { faceImage: frame } });
+        const frames = await posePhase("انظر أمام الكاميرا مباشرة...", 3);
+        setStatus("جاري إنشاء بيانات الوجه...");
+        const res = await enrollFn({ data: { faceImages: frames } });
         if (!res.ok) {
           setStatus(res.error);
           toast.error(res.error);
           return;
         }
         setEnrolled(true);
-        setStatus("تم تسجيل بيانات وجهك — اضغط «تحقق» لاستلام الشغل");
+        setStatus("تم إعداد التحقق من الوجه — اضغط «تحقق» لاستلام الشغل");
         toast.success("تم إنشاء بيانات الوجه");
         return;
       }
 
-      const shots = await captureLivenessFrames();
-      if (!shots) {
-        setStatus("تعذّر التقاط الصور، حاول مرة أخرى");
+      const center = await posePhase("انظر أمام الكاميرا مباشرة...", 3);
+      const right = await posePhase("لُف وجهك ناحية اليمين ببطء...", 1);
+      const left = await posePhase("لُف وجهك ناحية الشمال ببطء...", 1);
+      const back = await posePhase("عد بوجهك للأمام...", 1);
+
+      if (!center.length || !right.length || !left.length) {
+        setStatus("لم يتم رصد الحركة — حاول مرة أخرى");
         return;
       }
-      setStatus("جاري التحقق من الوجه والحركة...");
+
+      setStatus("جاري التحقق من الحيوية ومطابقة الوجه...");
       const res = await claimFn({
-        data: { faceImage: shots.center, faceRight: shots.right, faceLeft: shots.left },
+        data: {
+          faceImages: center,
+          faceRight: right[0]!,
+          faceLeft: left[0]!,
+          ...(back[0] ? { faceBack: back[0] } : {}),
+        },
       });
       if (!res.ok) {
         if (res.error === "NO_FACE_DATA") {
@@ -177,19 +209,18 @@ export function FaceGate({
         toast.error(res.error);
         return;
       }
-      toast.success("تم استلام الشغل");
+      toast.success("تم التحقق من الوجه بنجاح");
       stopCamera();
       onOpenChange(false);
       onClaimed();
     } catch (e) {
-      const msg = (e as Error).message || "فشل التحقق من الوجه";
+      const msg = (e as Error).message || "تعذّر التحقق من الوجه، حاول مرة أخرى";
       setStatus(msg);
       toast.error(msg);
     } finally {
       setWorking(false);
     }
   };
-
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -223,14 +254,22 @@ export function FaceGate({
             </ul>
             <Button className="w-full" onClick={() => setStep("camera")}>
               <ScanFace className="size-4" />
-              التحقق من الوجه
+              متابعة التحقق
             </Button>
           </div>
         ) : (
           <div className="space-y-3">
-            <div className="relative mx-auto aspect-square w-full max-w-[320px] overflow-hidden rounded-2xl border border-border/60 bg-black">
-              <video ref={videoRef} muted playsInline className="size-full object-cover" />
-              <div className="pointer-events-none absolute inset-6 rounded-[42%] border-2 border-primary/80 shadow-[0_0_24px_oklch(0.7_0.15_220/0.5)]" />
+            {/* Portrait box (3:4) matching the natural front-camera framing. */}
+            <div className="relative mx-auto aspect-[3/4] w-full max-w-[300px] overflow-hidden rounded-2xl border border-border/60 bg-black">
+              <video
+                ref={videoRef}
+                muted
+                playsInline
+                className="size-full object-cover"
+                style={{ transform: MIRROR ? "scaleX(-1)" : undefined, objectPosition: "center" }}
+              />
+              {/* Guide oval: head-sized and centred on the analysed crop. */}
+              <div className="pointer-events-none absolute inset-x-[14%] inset-y-[10%] rounded-[50%] border-2 border-primary/80 shadow-[0_0_24px_oklch(0.7_0.15_220/0.45)]" />
             </div>
             <div className="min-h-5 text-center text-[11px] font-bold text-muted-foreground">{status}</div>
             <Button className="w-full" onClick={() => void run()} disabled={working}>
