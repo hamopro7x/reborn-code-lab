@@ -78,6 +78,7 @@ export function readFace(
   video: HTMLVideoElement | null,
   mirrored: boolean,
 ): FaceReading {
+  void mirrored;
   if (!landmarker || !video || !video.videoWidth) return EMPTY;
   let res: any;
   try {
