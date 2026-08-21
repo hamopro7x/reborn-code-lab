@@ -358,6 +358,16 @@ export async function shiftsOfUser(userId: string, limit = 40) {
   }));
 }
 
+/** Caller's own shifts + his display name — the P2P «ربط» picker source. */
+export async function myShiftsForLink(userId: string, limit = 40) {
+  const db = await admin();
+  const [shifts, names] = await Promise.all([
+    shiftsOfUser(userId, limit),
+    namesFor(db, [userId]),
+  ]);
+  return { name: names.get(userId) ?? "موظف", shifts };
+}
+
 /**
  * Links one P2P ledger row to an employee + one of his shifts.
  * The original ledger row is never touched. Double linking is impossible: the
@@ -381,6 +391,11 @@ export async function linkP2P(ledgerId: string, shiftId: string, actorId: string
     .eq("id", shiftId)
     .maybeSingle();
   if (!shift) return { ok: false as const, error: "الشفت غير موجود." };
+  // Server-side ownership guard: a caller can only link to HIS own shift,
+  // whatever shift_id the request carries.
+  if (String((shift as any).user_id) !== String(actorId)) {
+    return { ok: false as const, error: "لا يمكنك ربط الطلب بهذا الشفت." };
+  }
 
   const { error } = await db.from("work_txn_assignments").insert({
     ledger_id: ledgerId,

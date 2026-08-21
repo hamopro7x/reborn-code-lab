@@ -32,7 +32,7 @@ import {
   DollarSign,
   Wallet,
   Trash2,
-  Check,
+  
 
 } from "lucide-react";
 import { toast } from "sonner";
@@ -47,8 +47,7 @@ import {
   saveMyManualTxn,
   clearMyManualTxns,
   getWorkP2PCompleted,
-  getWorkStaffList,
-  getStaffShifts,
+  getMyShiftsForLink,
   linkP2POrder,
 
 
@@ -121,14 +120,6 @@ const AR_MONTHS = [
 ];
 const AR_DAYS = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
 
-/** Compact start date/time for the shift picker card. */
-const shiftStartTime = (ms: number) => {
-  const d = new Date(ms);
-  const p = (n: number) => String(n).padStart(2, "0");
-  const h24 = d.getHours();
-  const h = ((h24 + 11) % 12) + 1;
-  return `${AR_DAYS[d.getDay()]} ${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(h)}:${p(d.getMinutes())} ${h24 < 12 ? "ص" : "م"}`;
-};
 
 const P2P_COLUMNS = [
   "النوع",
@@ -140,40 +131,28 @@ const P2P_COLUMNS = [
   "صاحب الطلب",
 ];
 
-/** Mega-menu picker: employee column stays visible while his shifts open beside it. */
+/** Shift picker for the current employee only — no employee selection step. */
 function P2PLinkMenu({ ledgerId, onLinked }: { ledgerId: string; onLinked?: () => void }) {
-  const staffFn = useServerFn(getWorkStaffList);
-  const shiftsFn = useServerFn(getStaffShifts);
+  const myShiftsFn = useServerFn(getMyShiftsForLink);
   const linkFn = useServerFn(linkP2POrder);
   const [open, setOpen] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    if (!open) setUserId(null);
-  }, [open]);
-
-  const staff = useQuery({
-    queryKey: ["work-staff-list"],
-    queryFn: () => staffFn({ data: undefined as any }),
+  const mine = useQuery({
+    queryKey: ["work-my-shifts-link"],
+    queryFn: () => myShiftsFn({ data: undefined as any }),
     enabled: open,
   });
-  const shifts = useQuery({
-    queryKey: ["work-staff-shifts", userId],
-    queryFn: () => shiftsFn({ data: { userId: userId! } }),
-    enabled: open && !!userId,
-  });
 
-  const staffRows = (staff.data ?? []) as any[];
-  const shiftRows = (shifts.data ?? []) as any[];
-  const activeName = staffRows.find((s) => s.userId === userId)?.name ?? "";
+  const myName = (mine.data as any)?.name ?? "";
+  const shiftRows = ((mine.data as any)?.shifts ?? []) as any[];
 
   const link = async (shiftId: string) => {
     if (busy) return;
     setBusy(true);
     try {
       const res: any = await linkFn({ data: { ledgerId, shiftId } });
-      if (res?.ok) toast.success("تم ربط الطلب بالموظف والشفت");
+      if (res?.ok) toast.success("تم ربط الطلب بالشفت");
       else toast.error(res?.error ?? "هذا الطلب تم ربطه بالفعل.");
       setOpen(false);
       onLinked?.();
@@ -196,98 +175,64 @@ function P2PLinkMenu({ ledgerId, onLinked }: { ledgerId: string; onLinked?: () =
         </button>
       </PopoverTrigger>
       <PopoverContent
-        dir="ltr"
+        dir="rtl"
         align="center"
         className="w-auto max-w-[92vw] border-0 bg-transparent p-0 shadow-none"
       >
-        <div className="flex flex-row items-start gap-2">
-          {/* level 1 — employees */}
-          <div
-            dir="rtl"
-            className="w-[190px] shrink-0 overflow-hidden rounded-xl border border-border/50 bg-[oklch(0.135_0_0)] shadow-2xl"
-          >
-            <div className="data-table-head px-3 py-2 text-center text-[11px] font-bold">اختر الموظف</div>
-            <div className="max-h-64 overflow-y-auto p-1.5">
-              {staff.isLoading ? (
-                <Loader2 className="mx-auto my-4 size-4 animate-spin text-muted-foreground" />
-              ) : staffRows.length ? (
-                staffRows.map((s) => {
-                  const on = s.userId === userId;
-                  return (
-                    <button
-                      key={s.userId}
-                      type="button"
-                      onClick={() => setUserId(s.userId)}
-                      className={`flex w-full items-center justify-between gap-2 rounded-md px-2.5 py-2 text-right text-xs font-bold transition ${
-                        on
-                          ? "bg-[oklch(0.42_0.16_264/0.35)] text-foreground"
-                          : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
-                      }`}
-                    >
-                      <span className="truncate">{s.name}</span>
-                      {on && <Check className="size-3.5 shrink-0 text-emerald-400" />}
-                    </button>
-                  );
-                })
-              ) : (
-                <p className="py-4 text-center text-[11px] text-muted-foreground">لا يوجد موظفين</p>
-              )}
-            </div>
+        <div className="w-[330px] overflow-hidden rounded-xl border border-border/50 bg-[oklch(0.135_0_0)] shadow-2xl">
+          <div className="data-table-head truncate px-3 py-1.5 text-center text-[11px] font-bold">
+            شفتات {myName || "الموظف"}
           </div>
-
-          {/* level 2 — shifts of the chosen employee */}
-          {userId && (
-            <div
-              dir="rtl"
-              className="w-[360px] shrink-0 animate-slide-up overflow-hidden rounded-xl border border-border/50 bg-[oklch(0.135_0_0)] shadow-2xl"
-            >
-              <div className="data-table-head truncate px-3 py-1.5 text-center text-[11px] font-bold">
-                شفتات {activeName}
-              </div>
-              <div className="max-h-52 overflow-y-auto">
-                {shifts.isLoading ? (
-                  <Loader2 className="mx-auto my-4 size-4 animate-spin text-muted-foreground" />
-                ) : shiftRows.length ? (
-                  <table className="data-table w-full text-right">
-                    <thead className="data-table-head">
-                      <tr>
-                        <th className="w-10 px-2 py-1 text-[10px]">#</th>
-                        <th className="px-2 py-1 text-[10px]">الحالة</th>
-                        <th className="px-2 py-1 text-[10px]">البداية</th>
-                        <th className="w-14 px-2 py-1 text-[10px]">ربط</th>
+          <div className="max-h-52 overflow-y-auto">
+            {mine.isLoading ? (
+              <Loader2 className="mx-auto my-4 size-4 animate-spin text-muted-foreground" />
+            ) : shiftRows.length ? (
+              <table className="data-table w-full text-right">
+                <thead className="data-table-head">
+                  <tr>
+                    <th className="w-10 px-2 py-1 text-[10px]">#</th>
+                    <th className="px-2 py-1 text-[10px]">الحالة</th>
+                    <th className="px-2 py-1 text-[10px]">الشفت</th>
+                    <th className="w-14 px-2 py-1 text-[10px]">ربط</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {shiftRows.map((s, i) => {
+                    const d = new Date(s.startedAt);
+                    const p = (n: number) => String(n).padStart(2, "0");
+                    const h24 = d.getHours();
+                    const h = ((h24 + 11) % 12) + 1;
+                    return (
+                      <tr key={s.id} className="hover:bg-white/5">
+                        <td className="px-2 py-0.5 text-[10px] font-bold tabular-nums">{i + 1}</td>
+                        <td className="px-2 py-0.5 text-[10px] font-bold">
+                          {s.endedAt ? "منتهي" : "مفتوح"}
+                        </td>
+                        <td className="px-2 py-0.5 text-[10px] leading-4 text-muted-foreground">
+                          <span className="block font-bold text-foreground">{AR_DAYS[d.getDay()]}</span>
+                          <span className="block tabular-nums">
+                            {`${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} - ${p(h)}:${p(d.getMinutes())} ${h24 < 12 ? "ص" : "م"}`}
+                          </span>
+                        </td>
+                        <td className="px-2 py-0.5">
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => link(s.id)}
+                            className="rounded-full border border-[oklch(0.82_0.15_85/0.5)] bg-[oklch(0.82_0.15_85/0.12)] px-2 py-0.5 text-[10px] font-bold text-[oklch(0.82_0.15_85)] transition hover:bg-[oklch(0.82_0.15_85/0.22)] disabled:opacity-50"
+                          >
+                            ربط
+                          </button>
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {shiftRows.map((s, i) => (
-                        <tr key={s.id} className="hover:bg-white/5">
-                          <td className="px-2 py-0.5 text-[10px] font-bold tabular-nums">{i + 1}</td>
-                          <td className="px-2 py-0.5 text-[10px] font-bold">
-                            {s.endedAt ? "منتهي" : "مفتوح"}
-                          </td>
-                          <td className="px-2 py-0.5 text-[10px] leading-4 text-muted-foreground">
-                            {shiftStartTime(s.startedAt)}
-                          </td>
-                          <td className="px-2 py-0.5">
-                            <button
-                              type="button"
-                              disabled={busy}
-                              onClick={() => link(s.id)}
-                              className="rounded-full border border-[oklch(0.82_0.15_85/0.5)] bg-[oklch(0.82_0.15_85/0.12)] px-2 py-0.5 text-[10px] font-bold text-[oklch(0.82_0.15_85)] transition hover:bg-[oklch(0.82_0.15_85/0.22)] disabled:opacity-50"
-                            >
-                              ربط
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                ) : (
-                  <p className="py-4 text-center text-[11px] text-muted-foreground">لا توجد شفتات لهذا الموظف</p>
-                )}
-              </div>
-            </div>
-          )}
-
+                    );
+                  })}
+                </tbody>
+              </table>
+            ) : (
+              <p className="py-4 text-center text-[11px] text-muted-foreground">لا توجد شفتات</p>
+            )}
+          </div>
         </div>
       </PopoverContent>
     </Popover>
