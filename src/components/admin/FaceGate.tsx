@@ -40,6 +40,7 @@ import {
   readFace,
   yawDir,
 } from "@/lib/face-mesh";
+import { motionSensorsAvailable, requestMotionPermission, waitForShake } from "@/lib/phone-motion";
 
 /** The preview is mirrored (natural selfie feel); captures follow the same mirroring. */
 const MIRROR = true;
