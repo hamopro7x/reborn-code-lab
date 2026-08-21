@@ -289,6 +289,22 @@ export function FaceGate({
               />
               {/* Guide oval: head-sized and centred on the analysed crop. */}
               <div className="pointer-events-none absolute inset-x-[14%] inset-y-[10%] rounded-[50%] border-2 border-primary/80 shadow-[0_0_24px_oklch(0.7_0.15_220/0.45)]" />
+              {/* Movement challenge: a big arrow instead of a text instruction.
+                  The preview is mirrored, so the employee's own right side is
+                  rendered on the screen's left. */}
+              {arrow ? (
+                <div
+                  className={`pointer-events-none absolute top-1/2 -translate-y-1/2 ${
+                    arrow === "right" ? "left-1" : "right-1"
+                  } animate-pulse text-destructive drop-shadow-[0_0_18px_rgba(255,60,60,0.8)]`}
+                >
+                  {arrow === "right" ? (
+                    <ArrowLeft className="size-16" strokeWidth={3} />
+                  ) : (
+                    <ArrowRight className="size-16" strokeWidth={3} />
+                  )}
+                </div>
+              ) : null}
             </div>
             <div className="min-h-5 text-center text-[11px] font-bold text-muted-foreground">{status}</div>
             <Button className="w-full" onClick={() => void run()} disabled={working}>
