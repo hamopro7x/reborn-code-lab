@@ -701,9 +701,15 @@ export async function myShiftRows(userId: string, page = 1, pageSize = 50) {
   const entries = await myEntries(res.rows.map((r: any) => r.ledgerId));
   const rows = res.rows.map((r: any) => {
     const e = entries.get(r.ledgerId);
-    return { ...r, egp: e?.egp ?? null, quantity: e?.quantity ?? null };
+    return {
+      ...r,
+      egp: e?.egp ?? null,
+      quantity: e?.quantity ?? null,
+      egpAt: e?.egpAt ?? null,
+      quantityAt: e?.quantityAt ?? null,
+    };
   });
-  return { ...res, rows, holding: true as const };
+  return { ...res, rows, holding: true as const, serverNow: new Date().toISOString() };
 }
 
 /* ------------------ employee-entered values (جنيه / الكمية) ------------------ */
