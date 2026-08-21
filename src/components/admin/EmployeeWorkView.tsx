@@ -209,7 +209,17 @@ function P2PLinkMenu({ ledgerId, onLinked }: { ledgerId: string; onLinked?: () =
                           {s.endedAt ? "منتهي" : "مفتوح"}
                         </td>
                         <td className="px-2 py-0.5 text-[10px] leading-4 text-muted-foreground">
-                          <span className="block font-bold text-foreground">{AR_DAYS[d.getDay()]}</span>
+                          <span className="flex items-center gap-1.5 font-bold text-foreground">
+                            <span
+                              title={s.hasP2P ? "تم ربط طلب P2P بهذا الشفت" : "لم يتم ربط أي طلب بهذا الشفت"}
+                              className={`inline-block size-2 shrink-0 rounded-full ${
+                                s.hasP2P
+                                  ? "bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.8)]"
+                                  : "bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.8)]"
+                              }`}
+                            />
+                            {AR_DAYS[d.getDay()]}
+                          </span>
                           <span className="block tabular-nums">
                             {`${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} - ${p(h)}:${p(d.getMinutes())} ${h24 < 12 ? "ص" : "م"}`}
                           </span>
