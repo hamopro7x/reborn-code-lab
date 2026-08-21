@@ -410,24 +410,57 @@ function Last4Cell({
 /** «المعاملات» in the employee view = card (visa) transactions only. */
 const isCardTxn = (kind: unknown) => /^(card|refund)$/i.test(String(kind ?? ""));
 
-/** One employee-entered cell: auto-saved while typing (debounce + blur +
- * tab-hide flush), then locked once the server stored the value. */
+/** 10-minute edit window, measured against the SERVER clock (a client clock
+ *  that is wrong or tampered with cannot widen it — the server re-checks too). */
+const EDIT_WINDOW_MS = 10 * 60 * 1000;
+
+function useEditWindow(savedAt: string | null | undefined, serverNow: string | null | undefined) {
+  const skewRef = useRef(0);
+  useEffect(() => {
+    if (serverNow) skewRef.current = new Date(serverNow).getTime() - Date.now();
+  }, [serverNow]);
+
+  const expired = () => {
+    if (!savedAt) return false;
+    return Date.now() + skewRef.current - new Date(savedAt).getTime() >= EDIT_WINDOW_MS;
+  };
+  const [locked, setLocked] = useState(expired);
+  useEffect(() => {
+    setLocked(expired());
+    if (!savedAt) return;
+    const t = window.setInterval(() => setLocked(expired()), 5000);
+    return () => window.clearInterval(t);
+  }, [savedAt, serverNow]);
+  return locked;
+}
+
+/** One employee-entered cell: saved on blur/Enter, editable for 10 minutes
+ *  after the server-side save time, then permanently locked (🔒). */
 function EntryCell({
   row,
   field,
+  serverNow,
   onSaved,
 }: {
   row: any;
   field: "egp" | "quantity";
+  serverNow?: string | null;
   onSaved: () => void;
 }) {
   const saveFn = useServerFn(saveMyTxnEntry);
   const saved = row[field];
-  const [value, setValue] = useState("");
+  const savedAt = (field === "egp" ? row.egpAt : row.quantityAt) ?? null;
+  const locked = useEditWindow(savedAt, serverNow);
+  const initial = saved === null || saved === undefined ? "" : String(saved);
+  const [value, setValue] = useState(initial);
   const [busy, setBusy] = useState(false);
-  const valueRef = useRef("");
-  const sentRef = useRef("");
-  
+  const sentRef = useRef(initial);
+
+  // Keep the input in sync with the freshest server value (query refetch).
+  useEffect(() => {
+    setValue(initial);
+    sentRef.current = initial;
+  }, [initial]);
 
   const commit = (raw: string) => {
     const txt = String(raw).replace(/,/g, "").trim();
@@ -442,41 +475,28 @@ function EntryCell({
           toast.success("تم الحفظ");
           onSaved();
         } else {
-          sentRef.current = "";
+          sentRef.current = initial;
           toast.error(String(res?.error ?? "تعذر الحفظ"));
+          onSaved();
         }
       })
       .catch((e) => {
-        sentRef.current = "";
+        sentRef.current = initial;
         toast.error(e instanceof Error ? e.message : "تعذر الحفظ");
       })
       .finally(() => setBusy(false));
   };
-  const commitRef = useRef(commit);
-  commitRef.current = commit;
 
-  useEffect(() => {
-    valueRef.current = value;
-  }, [value]);
-
-  // Never lose a value the employee typed then walked away from.
-  useEffect(() => {
-    const onHide = () => commitRef.current(valueRef.current);
-    document.addEventListener("visibilitychange", onHide);
-    window.addEventListener("pagehide", onHide);
-    window.addEventListener("beforeunload", onHide);
-    return () => {
-      document.removeEventListener("visibilitychange", onHide);
-      window.removeEventListener("pagehide", onHide);
-      window.removeEventListener("beforeunload", onHide);
-      commitRef.current(valueRef.current);
-    };
-  }, []);
-
-  if (saved !== null && saved !== undefined) {
+  if (locked) {
     return (
-      <span className="tabular-nums">
-        {Number(saved).toLocaleString("en-US", { maximumFractionDigits: 4 })}
+      <span
+        title="انتهت مدة التعديل المسموحة لهذه القيمة."
+        className="inline-flex items-center justify-center gap-1 tabular-nums"
+      >
+        {saved === null || saved === undefined
+          ? "—"
+          : Number(saved).toLocaleString("en-US", { maximumFractionDigits: 4 })}
+        <Lock className="size-3 text-muted-foreground" />
       </span>
     );
   }
@@ -498,6 +518,7 @@ function EntryCell({
     </div>
   );
 }
+
 
 
 /** Original transaction details, rendered exactly like the central ledger. */
