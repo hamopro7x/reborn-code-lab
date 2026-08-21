@@ -164,62 +164,46 @@ export const saveMyTxnEntry = createServerFn({ method: "POST" })
 
 /* ------------------------------- claiming ------------------------------- */
 
-export const getWorkAuthChallenge = createServerFn({ method: "POST" })
+/** Is the current employee's face already enrolled? */
+export const getMyFaceStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { purpose?: string } | undefined) => ({
-    purpose: input?.purpose === "register" ? ("register" as const) : ("auth" as const),
-  }))
+  .handler(async ({ context }) => {
+    await assertAccess(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    return { enrolled: await mod.faceEnrolled(context.userId) };
+  });
+
+const faceSchema = z.object({ faceImage: z.string().min(100).max(4_000_000) });
+
+/** First-time face enrollment, bound to the signed-in employee only. */
+export const enrollMyFace = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => faceSchema.parse(input))
   .handler(async ({ data, context }) => {
     await assertAccess(context.supabase, context.userId);
     const mod = await import("./work.server");
-    const [{ challenge }, credentials] = await Promise.all([
-      mod.newChallenge(context.userId, data.purpose),
-      mod.listCredentials(context.userId),
-    ]);
-    return { challenge, credentials, userId: context.userId };
+    return mod.enrollMyFace(context.userId, data.faceImage);
   });
 
-const regSchema = z.object({
-  credentialId: z.string().min(8).max(500),
-  publicKey: z.string().min(20).max(2000),
-  label: z.string().trim().max(80).optional(),
-});
-
-export const registerWorkDevice = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => regSchema.parse(input))
-  .handler(async ({ data, context }) => {
-    await assertAccess(context.supabase, context.userId);
-    const mod = await import("./work.server");
-    return mod.registerCredential(context.userId, data);
-  });
-
-const claimSchema = z.object({
-  faceImage: z.string().min(100).max(4_000_000),
-  credentialId: z.string().min(8).max(500),
-  clientDataJSON: z.string().min(10).max(10_000),
-  authenticatorData: z.string().min(10).max(10_000),
-  signature: z.string().min(10).max(10_000),
-});
-
-/** Face verification + device biometric, then the shift handover. */
+/** Face verification only (no fingerprint / WebAuthn), then the shift handover. */
 export const claimWorkShift = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => claimSchema.parse(input))
+  .inputValidator((input: unknown) => faceSchema.parse(input))
   .handler(async ({ data, context }) => {
     await assertAccess(context.supabase, context.userId);
     const mod = await import("./work.server");
 
-    const device = await mod.verifyDeviceAssertion(context.userId, {
-      credentialId: data.credentialId,
-      clientDataJSON: data.clientDataJSON,
-      authenticatorData: data.authenticatorData,
-      signature: data.signature,
-    });
-    if (!device.ok) return { ok: false as const, error: device.reason ?? "فشلت مصادقة الجهاز" };
+    if (!(await mod.faceEnrolled(context.userId))) {
+      return { ok: false as const, error: "NO_FACE_DATA" };
+    }
 
     const face = await mod.verifyFace(context.userId, data.faceImage);
-    if (!face.ok) return { ok: false as const, error: face.reason ?? "فشل تحقق الوجه" };
+    if (!face.ok) {
+      return {
+        ok: false as const,
+        error: face.reason ?? "لم يتم التعرف على الوجه، يرجى التأكد من ظهور الوجه بالكامل والمحاولة مرة أخرى.",
+      };
+    }
 
     const { data: shift, error } = await context.supabase.rpc("work_claim_shift", {
       p_face: true,
