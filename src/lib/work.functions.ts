@@ -185,10 +185,15 @@ export const enrollMyFace = createServerFn({ method: "POST" })
     return mod.enrollMyFace(context.userId, data.faceImage);
   });
 
-/** Face verification only (no fingerprint / WebAuthn), then the shift handover. */
+const claimSchema = faceSchema.extend({
+  faceRight: z.string().min(100).max(4_000_000),
+  faceLeft: z.string().min(100).max(4_000_000),
+});
+
+/** Face verification + head-turn liveness, then the shift handover. */
 export const claimWorkShift = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => faceSchema.parse(input))
+  .inputValidator((input: unknown) => claimSchema.parse(input))
   .handler(async ({ data, context }) => {
     await assertAccess(context.supabase, context.userId);
     const mod = await import("./work.server");
@@ -197,6 +202,13 @@ export const claimWorkShift = createServerFn({ method: "POST" })
       return { ok: false as const, error: "NO_FACE_DATA" };
     }
 
+    const live = await mod.checkHeadTurnLiveness({
+      center: data.faceImage,
+      right: data.faceRight,
+      left: data.faceLeft,
+    });
+    if (!live.ok) return { ok: false as const, error: live.reason ?? "فشل التحقق من حركة الوجه" };
+
     const face = await mod.verifyFace(context.userId, data.faceImage);
     if (!face.ok) {
       return {
@@ -204,6 +216,7 @@ export const claimWorkShift = createServerFn({ method: "POST" })
         error: face.reason ?? "لم يتم التعرف على الوجه، يرجى التأكد من ظهور الوجه بالكامل والمحاولة مرة أخرى.",
       };
     }
+
 
     const { data: shift, error } = await context.supabase.rpc("work_claim_shift", {
       p_face: true,
