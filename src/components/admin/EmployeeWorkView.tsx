@@ -459,8 +459,9 @@ function ManualCard({
         <table className="data-table text-center">
           <thead className="sticky top-0 z-10">
             <tr>
-              <th className="w-[26%]">المبلغ</th>
+              <th className="w-[24%]">المبلغ</th>
               <th>التفاصيل</th>
+              <th className="w-[34%]">التاريخ والوقت</th>
             </tr>
           </thead>
           <tbody>
@@ -472,6 +473,7 @@ function ManualCard({
                 <td className="!p-0">
                   <ManualCell id={r.id} field="details" initial={r.details} />
                 </td>
+                <td className="text-[11px] text-muted-foreground">{formatDateTime(r.createdAt)}</td>
               </tr>
             ))}
           </tbody>
