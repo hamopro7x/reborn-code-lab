@@ -543,40 +543,51 @@ function TxnDetailsDialog({ row, onClose }: { row: any | null; onClose: () => vo
 
 /* ---------------- «المعاملات الغلط» + «خاص بالموظف» (manual) ---------------- */
 
-/** One manual cell: autosaved while typing (debounced) and flushed on blur. */
+/** One manual cell: saved to the database immediately on blur/Enter, editable
+ *  for 10 minutes after the server-side save time, then locked (🔒). */
 function ManualCell({
   id,
   field,
   initial,
+  savedAt,
+  serverNow,
   numeric,
   autoFocus,
+  onSaved,
 }: {
   id: string;
   field: "amount" | "details";
   initial: string;
+  savedAt: string | null;
+  serverNow?: string | null;
   numeric?: boolean;
   autoFocus?: boolean;
+  onSaved: () => void;
 }) {
   const saveFn = useServerFn(saveMyManualTxn);
+  const locked = useEditWindow(savedAt, serverNow);
   const [value, setValue] = useState(initial);
-  const [locked, setLocked] = useState(initial.trim() !== "");
   const savedRef = useRef(initial);
   const valueRef = useRef(initial);
 
+  // Always show the freshest value coming back from the database.
+  useEffect(() => {
+    setValue(initial);
+    savedRef.current = initial;
+    valueRef.current = initial;
+  }, [initial]);
+
   const flush = (v: string) => {
-    if (v === savedRef.current) {
-      if (v.trim() !== "") setLocked(true);
-      return;
-    }
+    if (v === savedRef.current) return;
     savedRef.current = v;
     void saveFn({ data: { id, field, value: v } })
       .then((res: any) => {
         if (res && res.ok === false) {
           savedRef.current = "\u0000";
           toast.error(String(res.error ?? "تعذر الحفظ"));
-          return;
         }
-        if (v.trim() !== "") setLocked(true);
+        // Refresh from the DB only after the save resolved (no race).
+        onSaved();
       })
       .catch(() => {
         savedRef.current = "\u0000";
@@ -621,12 +632,13 @@ function ManualCell({
   if (locked) {
     return (
       <div
-        title="محفوظ — لا يمكن التعديل"
-        className={`h-full w-full px-3 py-2.5 text-xs text-foreground/90 ${
-          numeric ? "text-center tabular-nums" : "text-right"
+        title="انتهت مدة التعديل المسموحة لهذه القيمة."
+        className={`flex h-full w-full items-center gap-1 px-3 py-2.5 text-xs text-foreground/90 ${
+          numeric ? "justify-center tabular-nums" : "justify-end text-right"
         }`}
       >
-        {value}
+        <span>{value}</span>
+        <LockIcon className="size-3 shrink-0 text-muted-foreground" />
       </div>
     );
   }
@@ -648,6 +660,7 @@ function ManualCell({
     />
   );
 }
+
 
 function ManualCard({
   card,
