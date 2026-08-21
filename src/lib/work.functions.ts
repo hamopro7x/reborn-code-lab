@@ -173,21 +173,24 @@ export const getMyFaceStatus = createServerFn({ method: "POST" })
     return { enrolled: await mod.faceEnrolled(context.userId) };
   });
 
-const faceSchema = z.object({ faceImage: z.string().min(100).max(4_000_000) });
+const frame = z.string().min(100).max(4_000_000);
+const enrollSchema = z.object({ faceImages: z.array(frame).min(1).max(4) });
 
-/** First-time face enrollment, bound to the signed-in employee only. */
+/** First-time face enrollment from multiple frames, bound to this employee. */
 export const enrollMyFace = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => faceSchema.parse(input))
+  .inputValidator((input: unknown) => enrollSchema.parse(input))
   .handler(async ({ data, context }) => {
     await assertAccess(context.supabase, context.userId);
     const mod = await import("./work.server");
-    return mod.enrollMyFace(context.userId, data.faceImage);
+    return mod.enrollMyFace(context.userId, data.faceImages);
   });
 
-const claimSchema = faceSchema.extend({
-  faceRight: z.string().min(100).max(4_000_000),
-  faceLeft: z.string().min(100).max(4_000_000),
+const claimSchema = z.object({
+  faceImages: z.array(frame).min(1).max(3),
+  faceRight: frame,
+  faceLeft: frame,
+  faceBack: frame.optional(),
 });
 
 /** Face verification + head-turn liveness, then the shift handover. */
@@ -203,19 +206,21 @@ export const claimWorkShift = createServerFn({ method: "POST" })
     }
 
     const live = await mod.checkHeadTurnLiveness({
-      center: data.faceImage,
+      center: data.faceImages[0]!,
       right: data.faceRight,
       left: data.faceLeft,
+      back: data.faceBack,
     });
     if (!live.ok) return { ok: false as const, error: live.reason ?? "فشل التحقق من حركة الوجه" };
 
-    const face = await mod.verifyFace(context.userId, data.faceImage);
+    const face = await mod.verifyFace(context.userId, data.faceImages);
     if (!face.ok) {
       return {
         ok: false as const,
-        error: face.reason ?? "لم يتم التعرف على الوجه، يرجى التأكد من ظهور الوجه بالكامل والمحاولة مرة أخرى.",
+        error: face.reason ?? "تعذّر التحقق من الوجه، حاول مرة أخرى",
       };
     }
+
 
 
     const { data: shift, error } = await context.supabase.rpc("work_claim_shift", {
