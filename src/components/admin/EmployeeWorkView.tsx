@@ -840,8 +840,10 @@ function ManualSection({
           card={c.card}
           title={c.title}
           rows={all.filter((r: any) => r.card === c.card)}
+          serverNow={serverNow}
           onAdd={add}
           onClear={clear}
+          onSaved={refresh}
           adding={adding === c.card}
           clearing={clearing === c.card}
           newestId={newestId}
