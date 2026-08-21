@@ -967,6 +967,8 @@ export function EmployeeWorkView({ isAdmin = false }: { isAdmin?: boolean }) {
           rows={(p2pCompleted.data ?? []) as any[]}
           loading={p2pCompleted.isLoading}
           onDetails={setDetailRow}
+          onLinked={() => p2pCompleted.refetch()}
+
         />
       ) : (
 
