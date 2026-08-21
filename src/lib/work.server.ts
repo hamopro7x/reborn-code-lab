@@ -286,11 +286,23 @@ export async function pendingP2P(limit = 100) {
  */
 export async function completedP2P(limit = 200) {
   const db = await admin();
-  const { data } = await db
+
+  // Only orders that happened after the admin reset point are shown to employees.
+  const { data: setting } = await db
+    .from("site_settings")
+    .select("value")
+    .eq("key", "p2p_orders_cutoff")
+    .maybeSingle();
+  const cutoff = typeof (setting as any)?.value === "string" ? String((setting as any).value) : null;
+
+  let q = db
     .from("bybit_ledger")
     .select("*")
     .in("kind", P2P_KINDS)
-    .eq("status", "اكتملت")
+    .eq("status", "اكتملت");
+  if (cutoff) q = q.gt("occurred_at", cutoff);
+
+  const { data } = await q
     .order("occurred_at", { ascending: false })
     .limit(Math.min(Math.max(limit, 1), 500));
 
