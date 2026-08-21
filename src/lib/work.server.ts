@@ -670,11 +670,10 @@ export type FaceDir = "right" | "left";
  */
 export async function startFaceChallenge(userId: string) {
   const db = await admin();
+  // Exactly TWO movements per attempt, in a random order.
   const pool: FaceDir[][] = [
     ["right", "left"],
     ["left", "right"],
-    ["right", "left", "right"],
-    ["left", "right", "left"],
   ];
   const steps = pool[Math.floor(Math.random() * pool.length)]!;
   await db.from("work_auth_challenges").delete().eq("user_id", userId).eq("purpose", "liveness");
@@ -741,17 +740,27 @@ async function askVision(system: string, text: string, images: string[]) {
   }
 }
 
-/** Open-eye verification on the frontal frames: a sleeping/closed-eye face fails. */
+/**
+ * Open-eye verification on the frontal frames.
+ *
+ * The precise, per-frame eye measurement now happens on the device (geometric
+ * landmarks, smoothed over time — see `src/lib/face-mesh.ts`), so this server
+ * pass is a deliberately TOLERANT backstop: it only rejects when the model is
+ * confident the eyes are fully closed in EVERY frame. Head angle, motion,
+ * lighting, low camera quality and a natural blink never fail it.
+ */
 export async function checkEyesOpen(frames: string[]): Promise<{ ok: boolean; reason?: string }> {
-  const list = frames.slice(0, 2);
+  const list = frames.slice(0, 3);
   if (!list.length) return { ok: false, reason: "لم يتم التقاط أي صورة" };
   const parsed = await askVision(
-    'You verify that a live person has their eyes open. Reply with strict JSON only: {"eyesOpen":true|false,"reason":"short"}. eyesOpen is true when both eyes are clearly open in at least one frame. Tolerate glasses, slight blur and low light.',
-    "Are the eyes open in these camera frames?",
+    'You check whether a person is awake with eyes open. Reply with strict JSON only: {"allFramesFullyClosed":true|false,"reason":"short"}. Set allFramesFullyClosed to true ONLY when you are highly confident the eyelids are completely shut in every single frame (a sleeping person or a blink held across all frames). If the eyes are open, partly open, squinting, hidden behind glasses/reflections, the head is turned, the frame is blurry, dark, low quality, or you are unsure — set it to false.',
+    "Are the eyes fully closed in all of these camera frames?",
     list,
   );
-  if (!parsed) return { ok: false, reason: "فشل تحليل الصورة، حاول مرة أخرى" };
-  if (parsed.eyesOpen !== true) return { ok: false, reason: "افتح عينيك جيدًا وانظر إلى الكاميرا" };
+  // Undecided / gateway failure must not block a legitimate employee.
+  if (!parsed) return { ok: true };
+  if (parsed.allFramesFullyClosed === true)
+    return { ok: false, reason: "افتح عينيك وانظر إلى الكاميرا ثم حاول مرة أخرى" };
   return { ok: true };
 }
 

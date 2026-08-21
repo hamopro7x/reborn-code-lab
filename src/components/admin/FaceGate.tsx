@@ -2,9 +2,15 @@
  * «استلام الشغل» identity gate — camera + Face Recognition + active liveness.
  * No fingerprint / WebAuthn anywhere in this flow.
  *
+ * Liveness is measured ON DEVICE with facial landmarks (see `face-mesh.ts`):
+ * - real head yaw must reach the requested side (not a small nudge)
+ * - the pose must be HELD for 10 seconds with a visible countdown
+ * - eyes must stay open (smoothed over time, so a natural blink is fine)
+ * The direction order is issued by the server and only ONE direction is ever
+ * shown at a time.
+ *
  * Pipeline guarantee: every analysed frame comes from `captureUprightFrame`,
- * which crops exactly the region rendered inside the preview box (same
- * object-cover math, same mirroring) — so Preview Frame == Recognition Frame.
+ * which crops exactly the region rendered inside the preview box.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -26,9 +32,19 @@ import {
   openFrontCamera,
   waitForVideoReady,
 } from "@/lib/face-camera";
+import {
+  EYE_CLOSED,
+  YAW_HOLD,
+  YAW_TARGET,
+  loadFaceLandmarker,
+  readFace,
+  yawDir,
+} from "@/lib/face-mesh";
 
 /** The preview is mirrored (natural selfie feel); captures follow the same mirroring. */
 const MIRROR = true;
+/** Hold duration per movement, in seconds. */
+const HOLD_SECONDS = 10;
 
 const INSTRUCTIONS = [
   "تأكد من ظهور وجهك بالكامل داخل إطار التحقق.",
@@ -39,6 +55,13 @@ const INSTRUCTIONS = [
 
 type Step = "loading" | "intro" | "camera";
 type Dir = "right" | "left";
+
+const DIR_TEXT: Record<Dir, string> = {
+  right: "انظر إلى اليمين وثبّت وجهك",
+  left: "انظر إلى الشمال وثبّت وجهك",
+};
+
+class LivenessError extends Error {}
 
 export function FaceGate({
   open,
@@ -56,11 +79,15 @@ export function FaceGate({
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const meshRef = useRef<Awaited<ReturnType<typeof loadFaceLandmarker>>>(null);
   const [step, setStep] = useState<Step>("loading");
   const [enrolled, setEnrolled] = useState(false);
   const [status, setStatus] = useState("");
+  const [instruction, setInstruction] = useState("");
   const [working, setWorking] = useState(false);
   const [arrow, setArrow] = useState<Dir | null>(null);
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const [failed, setFailed] = useState(false);
 
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -73,9 +100,16 @@ export function FaceGate({
       stopCamera();
       setStep("loading");
       setStatus("");
+      setInstruction("");
+      setCountdown(null);
+      setArrow(null);
+      setFailed(false);
       setWorking(false);
       return;
     }
+    void loadFaceLandmarker().then((lm) => {
+      meshRef.current = lm;
+    });
     let alive = true;
     (async () => {
       try {
@@ -112,7 +146,8 @@ export function FaceGate({
           await videoRef.current.play().catch(() => {});
           await waitForVideoReady(videoRef.current);
         }
-        setStatus("ضع وجهك داخل إطار التحقق ثم اضغط الزر بالأسفل");
+        setInstruction("ضع وجهك داخل الإطار");
+        setStatus("اضغط الزر بالأسفل للبدء");
       } catch {
         setStatus("تعذّر تشغيل الكاميرا — اسمح بالوصول للكاميرا وحاول مرة أخرى");
       }
@@ -124,6 +159,7 @@ export function FaceGate({
   }, [open, step, stopCamera]);
 
   const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  const read = () => readFace(meshRef.current, videoRef.current, MIRROR);
 
   /** Waits until the preview shows a usable (sharp, well-lit) frame. */
   const waitForUsableFrame = async (timeoutMs = 6000) => {
@@ -136,7 +172,7 @@ export function FaceGate({
         setStatus(
           q.brightness < 45
             ? "الإضاءة ضعيفة — تأكد من إضاءة جيدة ومتساوية"
-            : "ثبّت وجهك قليلًا داخل إطار التحقق",
+            : "ثبّت وجهك قليلًا داخل الإطار",
         );
         last = true;
       }
@@ -145,22 +181,125 @@ export function FaceGate({
     return !!captureUprightFrame(videoRef.current, { mirroredPreview: MIRROR });
   };
 
-  /** Collects several good frames for one guided pose. */
-  const posePhase = async (msg: string, want: number, dir: Dir | null = null) => {
-    setArrow(dir);
-    for (let s = 3; s >= 1; s--) {
-      setStatus(`${msg} (${s})`);
-      await wait(650);
+  /** Waits for a face looking forward with the eyes clearly open. */
+  const waitForOpenEyes = async (timeoutMs = 12000) => {
+    if (!meshRef.current) return true; // detector unavailable → server decides
+    const start = Date.now();
+    let good = 0;
+    while (Date.now() - start < timeoutMs) {
+      const r = read();
+      if (!r.face) setStatus("لم يتم رصد الوجه — ضع وجهك داخل الإطار");
+      else if (r.eyeOpen <= EYE_CLOSED) setStatus("افتح عينيك وانظر إلى الكاميرا");
+      else if (Math.abs(r.yaw) > YAW_HOLD) setStatus("انظر أمام الكاميرا مباشرة");
+      else {
+        good++;
+        setStatus("تم رصد الوجه ✓");
+        if (good >= 4) return true;
+      }
+      await wait(120);
     }
-    setStatus(msg);
+    return false;
+  };
+
+  /** Collects several good frames for the frontal / enrollment poses. */
+  const posePhase = async (msg: string, want: number) => {
+    setInstruction(msg);
+    setArrow(null);
+    for (let s = 3; s >= 1; s--) {
+      setCountdown(s);
+      await wait(600);
+    }
+    setCountdown(null);
     const frames = await collectGoodFrames(videoRef.current, {
       want,
       mirroredPreview: MIRROR,
-      onProgress: (got, total) => setStatus(`${msg} — ${got}/${total}`),
+      onProgress: (got, total) => setStatus(`${got}/${total}`),
     });
     setStatus("تم ✓");
-    await wait(250);
+    await wait(200);
+    return frames;
+  };
+
+  /**
+   * One guided movement: reach the requested yaw, then HOLD it for 10s.
+   * Losing the pose (or closing the eyes) during the hold fails the attempt.
+   */
+  const holdPhase = async (dir: Dir): Promise<string[]> => {
+    setArrow(dir);
+    setInstruction(DIR_TEXT[dir]);
+    setStatus("");
+    setCountdown(null);
+
+    if (!meshRef.current) {
+      // Detector unavailable: fall back to timed capture + server-side check.
+      for (let s = 3; s >= 1; s--) {
+        setCountdown(s);
+        await wait(700);
+      }
+      setCountdown(null);
+      const f = await collectGoodFrames(videoRef.current, { want: 1, mirroredPreview: MIRROR });
+      if (!f.length) throw new LivenessError("لم يتم رصد الحركة المطلوبة — حاول مرة أخرى");
+      return f;
+    }
+
+    // 1) Acquire the pose.
+    const acquireStart = Date.now();
+    let inPose = 0;
+    while (Date.now() - acquireStart < 20000) {
+      const r = read();
+      if (!r.face) setStatus("لم يتم رصد الوجه — ضع وجهك داخل الإطار");
+      else if (yawDir(r.yaw, YAW_TARGET) === dir) {
+        inPose++;
+        setStatus("ممتاز — ثبّت وجهك الآن");
+        if (inPose >= 3) break;
+      } else {
+        inPose = 0;
+        setStatus(dir === "right" ? "لِف وجهك أكثر ناحية اليمين" : "لِف وجهك أكثر ناحية الشمال");
+      }
+      await wait(110);
+    }
+    if (inPose < 3) throw new LivenessError("لم يتم الوصول للاتجاه المطلوب — حاول مرة أخرى");
+
+    // 2) Hold for HOLD_SECONDS with continuous verification.
+    const frames: string[] = [];
+    const first = captureUprightFrame(videoRef.current, { mirroredPreview: MIRROR });
+    if (first) frames.push(first);
+    const holdStart = Date.now();
+    let bad = 0;
+    let mid = false;
+    while (true) {
+      const elapsed = (Date.now() - holdStart) / 1000;
+      const left = Math.ceil(HOLD_SECONDS - elapsed);
+      if (left <= 0) break;
+      setCountdown(left);
+      setStatus("ثبّت وجهك — لا تحرّكه");
+
+      const r = read();
+      const held = r.face && yawDir(r.yaw, YAW_HOLD) === dir;
+      const eyesOk = !r.face || r.eyeOpen > EYE_CLOSED * 0.6;
+      if (held && eyesOk) bad = 0;
+      else {
+        bad++;
+        // ~0.9s of grace absorbs blinks, blur and camera hiccups.
+        if (bad >= 8) {
+          setCountdown(null);
+          throw new LivenessError(
+            held ? "افتح عينيك وحافظ على الوضع المطلوب — فشل التحقق" : "تحرّك وجهك عن الاتجاه المطلوب — فشل التحقق",
+          );
+        }
+      }
+
+      if (!mid && elapsed >= HOLD_SECONDS / 2) {
+        mid = true;
+        const f = captureUprightFrame(videoRef.current, { mirroredPreview: MIRROR });
+        if (f) frames.push(f);
+      }
+      await wait(110);
+    }
+    setCountdown(null);
     setArrow(null);
+    setStatus("تم ✓");
+    await wait(250);
     return frames;
   };
 
@@ -170,12 +309,14 @@ export function FaceGate({
       return;
     }
     setWorking(true);
+    setFailed(false);
     try {
-      setStatus("جاري كشف الوجه داخل إطار التحقق...");
+      setInstruction("انظر أمام الكاميرا مباشرة");
+      setStatus("جاري كشف الوجه...");
       await waitForUsableFrame();
 
       if (!enrolled) {
-        const frames = await posePhase("انظر أمام الكاميرا مباشرة...", 3);
+        const frames = await posePhase("انظر أمام الكاميرا مباشرة", 3);
         setStatus("جاري إنشاء بيانات الوجه...");
         const res = await enrollFn({ data: { faceImages: frames } });
         if (!res.ok) {
@@ -184,31 +325,29 @@ export function FaceGate({
           return;
         }
         setEnrolled(true);
-        setStatus("تم إعداد التحقق من الوجه — اضغط «تحقق» لاستلام الشغل");
+        setInstruction("تم إعداد التحقق من الوجه");
+        setStatus("اضغط «تحقق» لاستلام الشغل");
         toast.success("تم إنشاء بيانات الوجه");
         return;
       }
 
-      // Dynamic movement challenge: the order comes from the server.
+      const eyesOk = await waitForOpenEyes();
+      if (!eyesOk) throw new LivenessError("افتح عينيك وانظر إلى الكاميرا ثم حاول مرة أخرى");
+
+      // Movement order comes from the server; only ONE direction is shown at a time.
       const chal = await challengeFn({ data: undefined as any });
-      const center = await posePhase("انظر أمام الكاميرا مباشرة...", 3);
-      if (!center.length) {
-        setStatus("لم يتم رصد الوجه — حاول مرة أخرى");
-        return;
-      }
+      const center = await posePhase("انظر أمام الكاميرا مباشرة", 3);
+      if (!center.length) throw new LivenessError("لم يتم رصد الوجه — حاول مرة أخرى");
 
       const steps: Array<{ dir: Dir; image: string }> = [];
       for (const dir of chal.steps as Dir[]) {
-        const got = await posePhase("اتبع السهم ببطء", 1, dir);
-        if (!got.length) {
-          setStatus("لم يتم رصد الحركة المطلوبة — اتبع السهم ببطء");
-          return;
-        }
-        steps.push({ dir, image: got[0]! });
+        const got = await holdPhase(dir);
+        steps.push({ dir, image: got[got.length - 1]! });
       }
-      const back = await posePhase("عد بوجهك للأمام...", 1);
+      const back = await posePhase("عد بوجهك للأمام", 1);
 
-      setStatus("جاري التحقق من الحيوية ومطابقة الوجه...");
+      setInstruction("جاري التحقق");
+      setStatus("مطابقة الوجه والتحقق من الحيوية...");
       const res = await claimFn({
         data: {
           faceImages: center,
@@ -223,6 +362,7 @@ export function FaceGate({
           setStatus("");
           return;
         }
+        setFailed(true);
         setStatus(res.error);
         toast.error(res.error);
         return;
@@ -233,10 +373,13 @@ export function FaceGate({
       onClaimed();
     } catch (e) {
       const msg = (e as Error).message || "تعذّر التحقق من الوجه، حاول مرة أخرى";
+      setFailed(true);
+      setInstruction("فشل التحقق");
       setStatus(msg);
       toast.error(msg);
     } finally {
       setArrow(null);
+      setCountdown(null);
       setWorking(false);
     }
   };
@@ -278,7 +421,24 @@ export function FaceGate({
           </div>
         ) : (
           <div className="space-y-3">
-            {/* Portrait box (3:4) matching the natural front-camera framing. */}
+            {/* 1) Instruction for the CURRENT step — above the camera, large and clear. */}
+            <div className="rounded-2xl border border-primary/30 bg-primary/10 px-3 py-2.5 text-center">
+              <div className="text-base font-black leading-7 text-foreground">
+                {instruction || "ضع وجهك داخل الإطار"}
+              </div>
+              {/* 2) Direction arrow, big and obvious (preview is mirrored). */}
+              {arrow ? (
+                <div className="mt-1 flex justify-center text-destructive">
+                  {arrow === "right" ? (
+                    <ArrowLeft className="animate-arrow-nudge size-12" strokeWidth={3} style={{ "--nudge": "14px" } as React.CSSProperties} />
+                  ) : (
+                    <ArrowRight className="animate-arrow-nudge size-12" strokeWidth={3} style={{ "--nudge": "-14px" } as React.CSSProperties} />
+                  )}
+                </div>
+              ) : null}
+            </div>
+
+            {/* 3) Camera (portrait 3:4, natural front-camera framing). */}
             <div className="relative mx-auto aspect-[3/4] w-full max-w-[300px] overflow-hidden rounded-2xl border border-border/60 bg-black">
               <video
                 ref={videoRef}
@@ -287,27 +447,26 @@ export function FaceGate({
                 className="size-full object-cover"
                 style={{ transform: MIRROR ? "scaleX(-1)" : undefined, objectPosition: "center" }}
               />
-              {/* Guide oval: head-sized and centred on the analysed crop. */}
               <div className="pointer-events-none absolute inset-x-[14%] inset-y-[10%] rounded-[50%] border-2 border-primary/80 shadow-[0_0_24px_oklch(0.7_0.15_220/0.45)]" />
-              {/* Movement challenge: a big arrow instead of a text instruction.
-                  The preview is mirrored, so the employee's own right side is
-                  rendered on the screen's left. */}
-              {arrow ? (
-                <div
-                  className={`pointer-events-none absolute top-1/2 ${
-                    arrow === "right" ? "left-1" : "right-1"
-                  } animate-arrow-nudge text-destructive drop-shadow-[0_0_18px_rgba(255,60,60,0.8)]`}
-                  style={{ "--nudge": arrow === "right" ? "14px" : "-14px" } as React.CSSProperties}
-                >
-                  {arrow === "right" ? (
-                    <ArrowLeft className="size-16" strokeWidth={3} />
-                  ) : (
-                    <ArrowRight className="size-16" strokeWidth={3} />
-                  )}
-                </div>
-              ) : null}
             </div>
-            <div className="min-h-5 text-center text-[11px] font-bold text-muted-foreground">{status}</div>
+
+            {/* 4) Big, unmistakable countdown for the current step. */}
+            {countdown !== null ? (
+              <div className="flex items-center justify-center gap-2">
+                <span className="grid size-16 place-items-center rounded-full border-4 border-primary bg-primary/15 text-3xl font-black tabular-nums text-primary shadow-[0_0_28px_oklch(0.7_0.15_220/0.45)]">
+                  {countdown}
+                </span>
+                <span className="text-xs font-bold text-muted-foreground">ثانية</span>
+              </div>
+            ) : null}
+
+            {/* 5) Status / warning line. */}
+            <div
+              className={`min-h-5 text-center text-[13px] font-bold ${failed ? "text-destructive" : "text-muted-foreground"}`}
+            >
+              {status}
+            </div>
+
             <Button className="w-full" onClick={() => void run()} disabled={working}>
               {working ? <Loader2 className="size-4 animate-spin" /> : <ScanFace className="size-4" />}
               {enrolled ? "تحقق" : "تسجيل الوجه"}
