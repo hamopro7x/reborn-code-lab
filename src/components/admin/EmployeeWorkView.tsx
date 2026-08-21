@@ -155,6 +155,7 @@ function P2PLinkMenu({ ledgerId, onLinked }: { ledgerId: string; onLinked?: () =
       if (res?.ok) toast.success("تم ربط الطلب بالشفت");
       else toast.error(res?.error ?? "هذا الطلب تم ربطه بالفعل.");
       setOpen(false);
+      void mine.refetch();
       onLinked?.();
     } catch (e: any) {
       toast.error(e?.message ?? "فشل الربط");
