@@ -34,6 +34,7 @@ import {
 } from "@/lib/face-camera";
 import {
   EYE_CLOSED,
+  YAW_HOLD,
   YAW_TARGET,
   loadFaceLandmarker,
   readFace,
