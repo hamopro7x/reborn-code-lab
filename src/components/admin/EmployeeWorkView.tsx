@@ -702,6 +702,14 @@ export function EmployeeWorkView({ isAdmin = false }: { isAdmin?: boolean }) {
     refetchInterval: 20_000,
   });
 
+  // Completed P2P orders of all accounts — shared with every employee.
+  const p2pCompleted = useQuery({
+    queryKey: ["work-p2p-completed"],
+    queryFn: () => p2pFn({ data: undefined as any }),
+    refetchInterval: 30_000,
+  });
+
+
   const brandsQ = useQuery({
     queryKey: ["bybit-card-brands"],
     queryFn: () => brandsFn({ data: undefined as any }),
