@@ -32,6 +32,7 @@ import {
   DollarSign,
   Wallet,
   Trash2,
+  Lock as LockIcon,
   
 
 } from "lucide-react";
