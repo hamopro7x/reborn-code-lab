@@ -637,6 +637,7 @@ export async function listManualTxns(userId: string) {
       card: r.card as ManualCard,
       amount: r.amount === null ? "" : String(r.amount),
       details: r.details ?? "",
+      createdAt: r.created_at as string,
     })),
   };
 }
