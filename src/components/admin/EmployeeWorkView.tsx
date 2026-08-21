@@ -733,7 +733,10 @@ export function EmployeeWorkView({ isAdmin = false }: { isAdmin?: boolean }) {
             { card: "transfer", title: "التحويل الي" },
           ]}
         />
+      ) : tab === "p2p" ? (
+        <P2POrdersTable rows={rows} loading={holding && txns.isLoading} onDetails={setDetailRow} />
       ) : (
+
       <div className="data-surface">
         <div className="overflow-x-auto">
           <table className="data-table text-center">
