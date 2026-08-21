@@ -365,7 +365,21 @@ export async function myShiftsForLink(userId: string, limit = 40) {
     shiftsOfUser(userId, limit),
     namesFor(db, [userId]),
   ]);
-  return { name: names.get(userId) ?? "موظف", shifts };
+  // Visual indicator only: does this shift already carry at least one P2P link?
+  const ids = shifts.map((s) => s.id);
+  const linked = new Set<string>();
+  if (ids.length) {
+    const { data } = await db
+      .from("work_txn_assignments")
+      .select("shift_id")
+      .in("shift_id", ids)
+      .in("kind", P2P_KINDS);
+    for (const r of data ?? []) if ((r as any).shift_id) linked.add(String((r as any).shift_id));
+  }
+  return {
+    name: names.get(userId) ?? "موظف",
+    shifts: shifts.map((s) => ({ ...s, hasP2P: linked.has(s.id) })),
+  };
 }
 
 /**
