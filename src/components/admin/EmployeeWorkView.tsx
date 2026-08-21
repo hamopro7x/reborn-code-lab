@@ -178,14 +178,11 @@ function P2POrdersTable({
                       </span>
                     </td>
                     <td>
-                      <button
-                        type="button"
-                        onClick={() => onDetails(r)}
-                        className="font-bold text-[oklch(0.82_0.15_85)] underline-offset-4 hover:underline"
-                      >
-                        ربط
-                      </button>
+                      <span className="font-bold text-[oklch(0.82_0.15_85)]">
+                        {String(r.accountName ?? "—") || "—"}
+                      </span>
                     </td>
+
                   </tr>
                 );
               })
