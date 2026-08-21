@@ -361,9 +361,13 @@ export function FaceGate({
       if (!center.length) throw new LivenessError("لم يتم رصد الوجه — حاول مرة أخرى");
 
       const steps: Array<{ dir: Dir; image: string }> = [];
-      for (const dir of chal.steps as Dir[]) {
+      const dirs = chal.steps as Dir[];
+      for (let i = 0; i < dirs.length; i++) {
+        const dir = dirs[i]!;
         const got = await holdPhase(dir);
         steps.push({ dir, image: got[got.length - 1]! });
+        // After the FIRST successful face movement: phone-movement check.
+        if (i === 0) await shakePhase();
       }
       const back = await posePhase("عد بوجهك للأمام", 1);
 
