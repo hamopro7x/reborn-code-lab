@@ -32,7 +32,6 @@ import {
   DollarSign,
   Wallet,
   Trash2,
-  Lock as LockIcon,
   
 
 } from "lucide-react";
@@ -497,7 +496,7 @@ function EntryCell({
         {saved === null || saved === undefined
           ? "—"
           : Number(saved).toLocaleString("en-US", { maximumFractionDigits: 4 })}
-        <LockIcon className="size-3 text-muted-foreground" />
+        
       </span>
     );
   }
@@ -638,7 +637,6 @@ function ManualCell({
         }`}
       >
         <span>{value}</span>
-        <LockIcon className="size-3 shrink-0 text-muted-foreground" />
       </div>
     );
   }
