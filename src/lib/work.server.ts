@@ -613,6 +613,57 @@ export async function verifyFace(userId: string, liveDataUrl: string): Promise<{
   }
 }
 
+/**
+ * Liveness check: the employee must turn the head right then left.
+ * The three frames (center / right / left) are analysed together so a still
+ * photo held in front of the camera cannot pass.
+ */
+export async function checkHeadTurnLiveness(frames: {
+  center: string;
+  right: string;
+  left: string;
+}): Promise<{ ok: boolean; reason?: string }> {
+  const key = process.env["LOVABLE_API_KEY"];
+  if (!key) return { ok: false, reason: "خدمة التحقق غير متاحة" };
+  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-flash",
+      messages: [
+        {
+          role: "system",
+          content:
+            'You are a face liveness service. You get 3 camera frames of one person: (1) looking straight at the camera, (2) head turned to their right, (3) head turned to their left. Reply with strict JSON only: {"live":true|false,"samePerson":true|false,"turnedRight":true|false,"turnedLeft":true|false,"reason":"short"}. "turnedRight"/"turnedLeft" are true only if the head yaw clearly changed to that side compared to frame 1. "live" is false if any frame looks like a printed photo, a screen, or a static identical image.',
+        },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "Frame 1 = center, Frame 2 = turned right, Frame 3 = turned left." },
+            { type: "image_url", image_url: { url: frames.center } },
+            { type: "image_url", image_url: { url: frames.right } },
+            { type: "image_url", image_url: { url: frames.left } },
+          ],
+        },
+      ],
+    }),
+  });
+  if (!res.ok) return { ok: false, reason: "فشل تحليل حركة الوجه، حاول مرة أخرى" };
+  const json: any = await res.json();
+  const text = String(json?.choices?.[0]?.message?.content ?? "");
+  const m = text.match(/\{[\s\S]*\}/);
+  try {
+    const parsed = m ? JSON.parse(m[0]) : null;
+    if (parsed?.live !== true) return { ok: false, reason: "تم رفض المحاولة — يجب أن يكون الوجه حقيقيًا أمام الكاميرا" };
+    if (parsed?.samePerson !== true) return { ok: false, reason: "الصور ليست لنفس الشخص" };
+    if (parsed?.turnedRight !== true) return { ok: false, reason: "لم يتم رصد لف الوجه إلى اليمين" };
+    if (parsed?.turnedLeft !== true) return { ok: false, reason: "لم يتم رصد لف الوجه إلى الشمال" };
+    return { ok: true };
+  } catch {
+    return { ok: false, reason: "تعذّر تحليل نتيجة التحقق" };
+  }
+}
+
 /* ------------------- device biometric (WebAuthn) ------------------- */
 
 export async function newChallenge(userId: string, purpose: "register" | "auth") {
