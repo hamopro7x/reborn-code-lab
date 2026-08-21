@@ -709,22 +709,34 @@ export async function myShiftRows(userId: string, page = 1, pageSize = 50) {
 /* ------------------ employee-entered values (جنيه / الكمية) ------------------ */
 /**
  * Employee-entered columns live in their own table (work_txn_entries) so the
- * original transaction row is never touched. Each field can be written exactly
- * once: a value that already exists is returned as-is (locked).
+ * original transaction row is never touched. A value stays editable for
+ * EDIT_WINDOW_MS after the SERVER-side save time, then it is locked for good.
  */
 
+/** Edit window for employee-entered values: 10 minutes, server-clock based. */
+export const EDIT_WINDOW_MS = 10 * 60 * 1000;
+
 export async function myEntries(ledgerIds: string[]) {
-  if (!ledgerIds.length) return new Map<string, { egp: number | null; quantity: number | null }>();
+  if (!ledgerIds.length)
+    return new Map<
+      string,
+      { egp: number | null; quantity: number | null; egpAt: string | null; quantityAt: string | null }
+    >();
   const db = await admin();
   const { data } = await db
     .from("work_txn_entries")
-    .select("ledger_id,egp,quantity")
+    .select("ledger_id,egp,quantity,egp_at,quantity_at")
     .in("ledger_id", ledgerIds);
-  const map = new Map<string, { egp: number | null; quantity: number | null }>();
+  const map = new Map<
+    string,
+    { egp: number | null; quantity: number | null; egpAt: string | null; quantityAt: string | null }
+  >();
   for (const r of data ?? []) {
     map.set(r.ledger_id as string, {
       egp: r.egp === null || r.egp === undefined ? null : Number(r.egp),
       quantity: r.quantity === null || r.quantity === undefined ? null : Number(r.quantity),
+      egpAt: (r as any).egp_at ?? null,
+      quantityAt: (r as any).quantity_at ?? null,
     });
   }
   return map;
@@ -752,24 +764,38 @@ export async function saveEntryField(
 
   const { data: existing } = await db
     .from("work_txn_entries")
-    .select("ledger_id,egp,quantity")
+    .select("ledger_id,egp,quantity,egp_at,quantity_at")
     .eq("ledger_id", ledgerId)
     .maybeSingle();
 
+  const stampCol = field === "egp" ? "egp_at" : "quantity_at";
+  const now = new Date();
+  const savedAt = now.toISOString();
+
   if (existing) {
-    if (existing[field] !== null && existing[field] !== undefined) {
-      return { ok: false as const, error: "القيمة محفوظة بالفعل ولا يمكن تعديلها", locked: true as const };
+    const prevStamp = (existing as any)[stampCol] as string | null;
+    const hasValue = (existing as any)[field] !== null && (existing as any)[field] !== undefined;
+    if (hasValue && prevStamp && now.getTime() - new Date(prevStamp).getTime() >= EDIT_WINDOW_MS) {
+      return {
+        ok: false as const,
+        error: "انتهت مدة التعديل المسموحة لهذه القيمة.",
+        locked: true as const,
+      };
     }
-    const { error } = await db.from("work_txn_entries").update({ [field]: value }).eq("ledger_id", ledgerId);
+    const { error } = await db
+      .from("work_txn_entries")
+      .update({ [field]: value, [stampCol]: savedAt })
+      .eq("ledger_id", ledgerId);
     if (error) return { ok: false as const, error: error.message };
   } else {
     const { error } = await db
       .from("work_txn_entries")
-      .insert({ ledger_id: ledgerId, user_id: userId, [field]: value });
+      .insert({ ledger_id: ledgerId, user_id: userId, [field]: value, [stampCol]: savedAt });
     if (error) return { ok: false as const, error: error.message };
   }
-  return { ok: true as const, field, value };
+  return { ok: true as const, field, value, savedAt, serverNow: savedAt };
 }
+
 
 /* ---------------- manual rows: «المعاملات الغلط» / «خاص بالموظف» ---------------- */
 
