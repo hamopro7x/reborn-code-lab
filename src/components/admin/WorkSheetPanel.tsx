@@ -17,16 +17,14 @@ import {
   getWorkTable,
   getWorkProductivity,
   getWorkP2PPending,
-  getWorkAuthChallenge,
-  registerWorkDevice,
-  claimWorkShift,
   assignWorkTxn,
   saveEmployeeFace,
   listEmployeeFaces,
 } from "@/lib/work.functions";
 import { adminListEmployees } from "@/lib/courses.functions";
 import { EmployeeWorkView } from "@/components/admin/EmployeeWorkView";
-import { biometricSupported, registerBiometric, assertBiometric, captureFace } from "@/lib/work-client";
+import { useFaceClaim } from "@/components/admin/FaceGate";
+import { captureFace } from "@/lib/work-client";
 
 type TabKey = "now" | "shifts" | "table" | "productivity" | "p2p" | "faces" | "employee";
 
