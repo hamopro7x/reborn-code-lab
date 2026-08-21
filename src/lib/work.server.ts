@@ -491,16 +491,33 @@ export async function faceEnrolled(userId: string): Promise<boolean> {
 }
 
 /**
- * First-time self enrollment. Runs a real quality/liveness check on the frame
- * before storing it as the employee's reference face.
+ * First-time self enrollment from MULTIPLE frames.
+ * Every frame is quality-checked; a single blurred frame is tolerated as long
+ * as enough frames show one clear face. The sharpest accepted frame becomes the
+ * stored reference, bound to this employee's account only.
  */
-export async function enrollMyFace(userId: string, dataUrl: string) {
+export async function enrollMyFace(userId: string, frames: string[]) {
   if (await faceEnrolled(userId)) {
     return { ok: false as const, error: "بيانات الوجه مسجّلة بالفعل لهذا الحساب" };
   }
-  const check = await faceQualityCheck(dataUrl);
-  if (!check.ok) return { ok: false as const, error: check.reason ?? "تعذّر تسجيل الوجه" };
-  await saveFaceEnroll(userId, dataUrl, userId);
+  const list = frames.slice(0, 4);
+  if (!list.length) return { ok: false as const, error: "لم يتم التقاط أي صورة" };
+
+  const checks = await Promise.all(list.map((f) => faceQualityCheck(f)));
+  const good = list.filter((_, i) => checks[i]!.ok);
+  if (good.length === 0) {
+    const reason = checks.find((c) => c.reason)?.reason;
+    return { ok: false as const, error: reason ?? "تعذّر تسجيل الوجه" };
+  }
+  // Need more than one usable frame when several were sent, so enrollment never
+  // rests on a single lucky screenshot.
+  if (list.length >= 3 && good.length < 2) {
+    return {
+      ok: false as const,
+      error: "تأكد من وضوح الوجه بالكامل وجودة الإضاءة ثم حاول مرة أخرى",
+    };
+  }
+  await saveFaceEnroll(userId, good[0]!, userId);
   return { ok: true as const };
 }
 
@@ -517,7 +534,7 @@ async function faceQualityCheck(dataUrl: string): Promise<{ ok: boolean; reason?
         {
           role: "system",
           content:
-            'You are a face enrollment quality service. Reply with strict JSON only: {"face":true|false,"clear":true|false,"reason":"short"}. "face" is true only if exactly one real human face is visible (not a photo of a screen). "clear" is true only if the face is unobstructed (no mask, no covering), well lit and fully inside the frame.',
+            'You are a face enrollment quality service. Reply with strict JSON only: {"face":true|false,"clear":true|false,"reason":"short"}. "face" is true only if exactly one real human face is visible (not a photo of a screen). "clear" is true if the face is unobstructed (no mask, no covering) and recognizable: tolerate slight motion blur, moderate head tilt or rotation, and imperfect lighting as long as the facial features are identifiable.',
         },
         {
           role: "user",
@@ -535,14 +552,15 @@ async function faceQualityCheck(dataUrl: string): Promise<{ ok: boolean; reason?
   const m = text.match(/\{[\s\S]*\}/);
   try {
     const parsed = m ? JSON.parse(m[0]) : null;
-    if (parsed?.face !== true) return { ok: false, reason: "لم يتم اكتشاف وجه واضح داخل الإطار" };
+    if (parsed?.face !== true) return { ok: false, reason: "لم يتم اكتشاف وجه داخل إطار التحقق" };
     if (parsed?.clear !== true)
-      return { ok: false, reason: "الوجه غير واضح — أزل أي غطاء وتأكد من الإضاءة الجيدة" };
+      return { ok: false, reason: "تأكد من ظهور وجهك بالكامل وبإضاءة جيدة" };
     return { ok: true };
   } catch {
     return { ok: false, reason: "تعذّر تحليل نتيجة التحقق" };
   }
 }
+
 
 function dataUrlToBytes(dataUrl: string): Uint8Array {
   const b64 = dataUrl.includes(",") ? dataUrl.split(",")[1]! : dataUrl;
@@ -559,10 +577,17 @@ const bytesToB64 = (bytes: Uint8Array) => {
 };
 
 /**
- * Face verification: compares the live camera frame against the reference photo
- * enrolled for this employee. Only a pass/fail result is kept.
+ * Face verification against THIS employee's enrolled reference only.
+ * Several live frames are compared; a single blurred frame cannot fail the
+ * attempt, but the identity threshold itself is not relaxed.
  */
-export async function verifyFace(userId: string, liveDataUrl: string): Promise<{ ok: boolean; reason?: string }> {
+export async function verifyFace(
+  userId: string,
+  liveFrames: string | string[],
+): Promise<{ ok: boolean; reason?: string }> {
+  const frames = (Array.isArray(liveFrames) ? liveFrames : [liveFrames]).slice(0, 3);
+  if (!frames.length) return { ok: false, reason: "لم يتم التقاط أي صورة" };
+
   const db = await admin();
   const { data: enroll } = await db
     .from("employee_face_enroll")
@@ -573,58 +598,82 @@ export async function verifyFace(userId: string, liveDataUrl: string): Promise<{
 
   const dl = await db.storage.from(FACE_BUCKET).download(enroll.image_path);
   if (dl.error || !dl.data) return { ok: false, reason: "تعذّر قراءة الصورة المرجعية" };
-  const refB64 = bytesToB64(new Uint8Array(await dl.data.arrayBuffer()));
+  const refUrl = `data:image/jpeg;base64,${bytesToB64(new Uint8Array(await dl.data.arrayBuffer()))}`;
 
+  const results = await Promise.all(frames.map((f) => compareOnePair(refUrl, f)));
+  const usable = results.filter((r) => r.decided);
+  if (!usable.length) return { ok: false, reason: "لم يتم التعرف على الوجه، حاول مرة أخرى" };
+
+  const strong = usable.filter((r) => r.same && r.confidence >= 0.75).length;
+  const soft = usable.filter((r) => r.same && r.confidence >= 0.6).length;
+  const mismatch = usable.filter((r) => !r.same && r.confidence >= 0.6).length;
+
+  // Identity must win on evidence, not on a lowered threshold: one strong match
+  // or two moderate matches, and no confident mismatch.
+  if (mismatch > 0 && strong === 0) return { ok: false, reason: "تعذّر التحقق من الوجه، حاول مرة أخرى" };
+  if (strong >= 1 || soft >= 2) return { ok: true };
+  return { ok: false, reason: "تعذّر التحقق من الوجه، حاول مرة أخرى" };
+}
+
+async function compareOnePair(
+  refUrl: string,
+  liveUrl: string,
+): Promise<{ decided: boolean; same: boolean; confidence: number }> {
   const key = process.env["LOVABLE_API_KEY"];
-  if (!key) return { ok: false, reason: "خدمة التحقق غير متاحة" };
-
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
-    body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
-      messages: [
-        {
-          role: "system",
-          content:
-            'You are a face verification service. Compare the two photos. Reply with strict JSON only: {"same":true|false,"confidence":0-1}. "same" is true only if both photos clearly show the same person and the second photo shows a real live face.',
-        },
-        {
-          role: "user",
-          content: [
-            { type: "text", text: "Photo 1 = enrolled reference. Photo 2 = live camera frame." },
-            { type: "image_url", image_url: { url: `data:image/jpeg;base64,${refB64}` } },
-            { type: "image_url", image_url: { url: liveDataUrl } },
-          ],
-        },
-      ],
-    }),
-  });
-  if (!res.ok) return { ok: false, reason: "فشل التحقق من الوجه" };
-  const json: any = await res.json();
-  const text = String(json?.choices?.[0]?.message?.content ?? "");
-  const m = text.match(/\{[\s\S]*\}/);
+  if (!key) return { decided: false, same: false, confidence: 0 };
   try {
-    const parsed = m ? JSON.parse(m[0]) : null;
-    const same = parsed?.same === true && Number(parsed?.confidence ?? 0) >= 0.6;
-    return same ? { ok: true } : { ok: false, reason: "الوجه غير مطابق" };
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          {
+            role: "system",
+            content:
+              'You are a face verification service. Compare the two photos of possibly different people. Reply with strict JSON only: {"same":true|false,"confidence":0-1}. Judge identity from facial structure; ignore mirroring, head tilt/rotation, slight motion blur, lighting and background differences. Set a high confidence only when you are sure.',
+          },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Photo 1 = enrolled reference. Photo 2 = live camera frame." },
+              { type: "image_url", image_url: { url: refUrl } },
+              { type: "image_url", image_url: { url: liveUrl } },
+            ],
+          },
+        ],
+      }),
+    });
+    if (!res.ok) return { decided: false, same: false, confidence: 0 };
+    const json: any = await res.json();
+    const text = String(json?.choices?.[0]?.message?.content ?? "");
+    const m = text.match(/\{[\s\S]*\}/);
+    if (!m) return { decided: false, same: false, confidence: 0 };
+    const parsed = JSON.parse(m[0]);
+    return {
+      decided: typeof parsed?.same === "boolean",
+      same: parsed?.same === true,
+      confidence: Number(parsed?.confidence ?? 0),
+    };
   } catch {
-    return { ok: false, reason: "تعذّر تحليل نتيجة التحقق" };
+    return { decided: false, same: false, confidence: 0 };
   }
 }
 
 /**
- * Liveness check: the employee must turn the head right then left.
- * The three frames (center / right / left) are analysed together so a still
- * photo held in front of the camera cannot pass.
+ * Active liveness: the employee looks forward, turns right, turns left and
+ * returns forward. All frames come from the same preview crop, so the analysed
+ * movement is exactly the movement the employee saw on screen.
  */
 export async function checkHeadTurnLiveness(frames: {
   center: string;
   right: string;
   left: string;
+  back?: string;
 }): Promise<{ ok: boolean; reason?: string }> {
   const key = process.env["LOVABLE_API_KEY"];
   if (!key) return { ok: false, reason: "خدمة التحقق غير متاحة" };
+  const images = [frames.center, frames.right, frames.left, ...(frames.back ? [frames.back] : [])];
   const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
@@ -634,15 +683,13 @@ export async function checkHeadTurnLiveness(frames: {
         {
           role: "system",
           content:
-            'You are a face liveness service. You get 3 camera frames of one person: (1) looking straight at the camera, (2) head turned to their right, (3) head turned to their left. Reply with strict JSON only: {"live":true|false,"samePerson":true|false,"turnedRight":true|false,"turnedLeft":true|false,"reason":"short"}. "turnedRight"/"turnedLeft" are true only if the head yaw clearly changed to that side compared to frame 1. "live" is false if any frame looks like a printed photo, a screen, or a static identical image.',
+            'You are a face liveness service. Frames of one person in order: (1) looking forward, (2) head turned to their right, (3) head turned to their left, (4 optional) forward again. Reply with strict JSON only: {"live":true|false,"samePerson":true|false,"turnedRight":true|false,"turnedLeft":true|false,"reason":"short"}. "turnedRight"/"turnedLeft" are true when the head yaw clearly changed to that side compared to frame 1, even if the turn is small. Tolerate slight motion blur. "live" is false only if the frames look like a printed photo, a screen replay, or identical static images.',
         },
         {
           role: "user",
           content: [
-            { type: "text", text: "Frame 1 = center, Frame 2 = turned right, Frame 3 = turned left." },
-            { type: "image_url", image_url: { url: frames.center } },
-            { type: "image_url", image_url: { url: frames.right } },
-            { type: "image_url", image_url: { url: frames.left } },
+            { type: "text", text: "Evaluate the head movement across these frames in order." },
+            ...images.map((url) => ({ type: "image_url", image_url: { url } })),
           ],
         },
       ],
@@ -655,14 +702,15 @@ export async function checkHeadTurnLiveness(frames: {
   try {
     const parsed = m ? JSON.parse(m[0]) : null;
     if (parsed?.live !== true) return { ok: false, reason: "تم رفض المحاولة — يجب أن يكون الوجه حقيقيًا أمام الكاميرا" };
-    if (parsed?.samePerson !== true) return { ok: false, reason: "الصور ليست لنفس الشخص" };
-    if (parsed?.turnedRight !== true) return { ok: false, reason: "لم يتم رصد لف الوجه إلى اليمين" };
-    if (parsed?.turnedLeft !== true) return { ok: false, reason: "لم يتم رصد لف الوجه إلى الشمال" };
+    if (parsed?.samePerson !== true) return { ok: false, reason: "تعذّر التحقق من الوجه، حاول مرة أخرى" };
+    if (parsed?.turnedRight !== true) return { ok: false, reason: "لم يتم رصد الحركة — لُف وجهك ناحية اليمين ببطء" };
+    if (parsed?.turnedLeft !== true) return { ok: false, reason: "لم يتم رصد الحركة — لُف وجهك ناحية الشمال ببطء" };
     return { ok: true };
   } catch {
     return { ok: false, reason: "تعذّر تحليل نتيجة التحقق" };
   }
 }
+
 
 /* ------------------- device biometric (WebAuthn) ------------------- */
 
