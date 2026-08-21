@@ -33,6 +33,7 @@ const INSTRUCTIONS = [
 ];
 
 type Step = "loading" | "intro" | "camera";
+type Dir = "right" | "left";
 
 export function FaceGate({
   open,
