@@ -125,34 +125,10 @@ function P2POrdersTable({
   loading?: boolean;
   onDetails: (row: any) => void;
 }) {
-  const [side, setSide] = useState<"buy" | "sell">("buy");
-  const filtered = rows.filter((r) =>
-    side === "buy" ? !/sell/i.test(String(r.kind)) : /sell/i.test(String(r.kind)),
-  );
-  const emptyRows = Math.max(8 - filtered.length, 0);
+  const emptyRows = Math.max(8 - rows.length, 0);
 
   return (
     <div className="data-surface">
-      <div className="flex items-center justify-end gap-2 p-3">
-        {(
-          [
-            { key: "buy" as const, label: "شراء" },
-            { key: "sell" as const, label: "بيع" },
-          ]
-        ).map((s) => (
-          <button
-            key={s.key}
-            type="button"
-            onClick={() => setSide(s.key)}
-            className={`rounded-full border px-5 py-2 text-xs font-bold transition ${
-              side === s.key ? GLOW_ACTIVE : GLOW_IDLE
-            }`}
-          >
-            {s.label}
-          </button>
-        ))}
-      </div>
-
       <div className="overflow-x-auto">
         <table className="data-table min-w-[900px] text-center">
           <thead>
@@ -170,7 +146,7 @@ function P2POrdersTable({
                 </td>
               </tr>
             ) : (
-              filtered.map((r) => {
+              rows.map((r) => {
                 const d = (r.detail ?? {}) as Record<string, unknown>;
                 const badge = statusBadge(String(r.kind), String(r.status ?? ""));
                 const fiat = String(d["fiat"] ?? "");
