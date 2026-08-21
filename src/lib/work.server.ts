@@ -306,22 +306,99 @@ export async function completedP2P(limit = 200) {
     .order("occurred_at", { ascending: false })
     .limit(Math.min(Math.max(limit, 1), 500));
 
+  // Already linked to an employee/shift → no longer offered for linking.
+  const { data: assigned } = await db
+    .from("work_txn_assignments")
+    .select("ledger_id")
+    .in("kind", P2P_KINDS);
+  const taken = new Set((assigned ?? []).map((a: any) => a.ledger_id));
+
   const accounts = await accountNames(db);
+  return (data ?? [])
+    .filter((r: any) => !taken.has(r.id))
+    .map((r: any) => ({
+      ledgerId: r.id as string,
+      kind: r.kind as string,
+      refId: r.ref_id as string,
+      title: r.title as string,
+      amount: Number(r.amount ?? 0),
+      currency: r.currency ?? "USDT",
+      status: String(r.status ?? ""),
+      time: new Date(r.occurred_at).getTime(),
+      accountName: accounts.get(r.account_id) ?? "—",
+      detail: (r.detail ?? {}) as Record<string, string | number | boolean | null>,
+    }));
+}
+
+/** Real staff list (admins + employees) used by the P2P «ربط» picker. */
+export async function staffList() {
+  const db = await admin();
+  const { data: roles } = await db.from("user_roles").select("user_id,role").in("role", ["admin", "employee"]);
+  const ids = [...new Set((roles ?? []).map((r: any) => r.user_id))];
+  const names = await namesFor(db, ids);
+  return ids
+    .map((id) => ({ userId: id as string, name: names.get(id as string) ?? "موظف" }))
+    .sort((a, b) => a.name.localeCompare(b.name, "ar"));
+}
+
+/** Shifts that belong to ONE employee only. */
+export async function shiftsOfUser(userId: string, limit = 40) {
+  const db = await admin();
+  const { data } = await db
+    .from("work_shifts")
+    .select("id,user_id,started_at,ended_at")
+    .eq("user_id", userId)
+    .order("started_at", { ascending: false })
+    .limit(Math.min(Math.max(limit, 1), 100));
   return (data ?? []).map((r: any) => ({
-    ledgerId: r.id as string,
-    kind: r.kind as string,
-    refId: r.ref_id as string,
-    title: r.title as string,
-    amount: Number(r.amount ?? 0),
-    currency: r.currency ?? "USDT",
-    status: String(r.status ?? ""),
-    time: new Date(r.occurred_at).getTime(),
-    accountName: accounts.get(r.account_id) ?? "—",
-    detail: (r.detail ?? {}) as Record<string, string | number | boolean | null>,
+    id: r.id as string,
+    userId: r.user_id as string,
+    startedAt: new Date(r.started_at).getTime(),
+    endedAt: r.ended_at ? new Date(r.ended_at).getTime() : null,
   }));
 }
 
+/**
+ * Links one P2P ledger row to an employee + one of his shifts.
+ * The original ledger row is never touched. Double linking is impossible: the
+ * unique (ledger_id) constraint makes the second concurrent insert fail.
+ */
+export async function linkP2P(ledgerId: string, shiftId: string, actorId: string) {
+  const db = await admin();
 
+  const { data: led } = await db
+    .from("bybit_ledger")
+    .select("id,kind,occurred_at")
+    .eq("id", ledgerId)
+    .maybeSingle();
+  if (!led || !P2P_KINDS.includes(String((led as any).kind))) {
+    return { ok: false as const, error: "هذا الطلب غير متاح للربط." };
+  }
+
+  const { data: shift } = await db
+    .from("work_shifts")
+    .select("id,user_id")
+    .eq("id", shiftId)
+    .maybeSingle();
+  if (!shift) return { ok: false as const, error: "الشفت غير موجود." };
+
+  const { error } = await db.from("work_txn_assignments").insert({
+    ledger_id: ledgerId,
+    shift_id: (shift as any).id,
+    user_id: (shift as any).user_id,
+    occurred_at: (led as any).occurred_at,
+    kind: (led as any).kind,
+    assign_mode: "manual",
+    assigned_by: actorId,
+  });
+  if (error) {
+    if (/duplicate|unique/i.test(error.message)) {
+      return { ok: false as const, error: "هذا الطلب تم ربطه بالفعل." };
+    }
+    return { ok: false as const, error: error.message };
+  }
+  return { ok: true as const };
+}
 
 /** Shift options offered by the "ربط بالشفت" button. */
 export async function shiftOptions(limit = 40) {
@@ -334,6 +411,7 @@ export async function shiftOptions(limit = 40) {
     endedAt: s.endedAt,
   }));
 }
+
 
 /* --------------------------- face enrollment --------------------------- */
 
