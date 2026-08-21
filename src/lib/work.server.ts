@@ -479,6 +479,71 @@ export async function faceEnrollList() {
   return (data ?? []).map((r: any) => ({ userId: r.user_id, updatedAt: new Date(r.updated_at).getTime() }));
 }
 
+/** Does this employee already have face data enrolled? */
+export async function faceEnrolled(userId: string): Promise<boolean> {
+  const db = await admin();
+  const { data } = await db
+    .from("employee_face_enroll")
+    .select("user_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+  return !!data?.user_id;
+}
+
+/**
+ * First-time self enrollment. Runs a real quality/liveness check on the frame
+ * before storing it as the employee's reference face.
+ */
+export async function enrollMyFace(userId: string, dataUrl: string) {
+  if (await faceEnrolled(userId)) {
+    return { ok: false as const, error: "بيانات الوجه مسجّلة بالفعل لهذا الحساب" };
+  }
+  const check = await faceQualityCheck(dataUrl);
+  if (!check.ok) return { ok: false as const, error: check.reason ?? "تعذّر تسجيل الوجه" };
+  await saveFaceEnroll(userId, dataUrl, userId);
+  return { ok: true as const };
+}
+
+/** AI check that the frame really contains one clear, unobstructed live face. */
+async function faceQualityCheck(dataUrl: string): Promise<{ ok: boolean; reason?: string }> {
+  const key = process.env["LOVABLE_API_KEY"];
+  if (!key) return { ok: false, reason: "خدمة التحقق غير متاحة" };
+  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-flash",
+      messages: [
+        {
+          role: "system",
+          content:
+            'You are a face enrollment quality service. Reply with strict JSON only: {"face":true|false,"clear":true|false,"reason":"short"}. "face" is true only if exactly one real human face is visible (not a photo of a screen). "clear" is true only if the face is unobstructed (no mask, no covering), well lit and fully inside the frame.',
+        },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "Evaluate this camera frame for face enrollment." },
+            { type: "image_url", image_url: { url: dataUrl } },
+          ],
+        },
+      ],
+    }),
+  });
+  if (!res.ok) return { ok: false, reason: "فشل تحليل الصورة، حاول مرة أخرى" };
+  const json: any = await res.json();
+  const text = String(json?.choices?.[0]?.message?.content ?? "");
+  const m = text.match(/\{[\s\S]*\}/);
+  try {
+    const parsed = m ? JSON.parse(m[0]) : null;
+    if (parsed?.face !== true) return { ok: false, reason: "لم يتم اكتشاف وجه واضح داخل الإطار" };
+    if (parsed?.clear !== true)
+      return { ok: false, reason: "الوجه غير واضح — أزل أي غطاء وتأكد من الإضاءة الجيدة" };
+    return { ok: true };
+  } catch {
+    return { ok: false, reason: "تعذّر تحليل نتيجة التحقق" };
+  }
+}
+
 function dataUrlToBytes(dataUrl: string): Uint8Array {
   const b64 = dataUrl.includes(",") ? dataUrl.split(",")[1]! : dataUrl;
   const raw = atob(b64);
