@@ -12,6 +12,7 @@ import { Loader2, ScanFace, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { claimWorkShift, enrollMyFace, getMyFaceStatus } from "@/lib/work.functions";
+import { captureUprightFrame, openFrontCamera, waitForVideoReady } from "@/lib/face-camera";
 
 const INSTRUCTIONS = [
   "تأكد من أن ملامح وجهك واضحة دون أي عوائق كبيرة.",
