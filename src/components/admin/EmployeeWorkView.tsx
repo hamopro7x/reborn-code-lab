@@ -54,6 +54,7 @@ import {
 import { useClaimWork } from "@/lib/use-claim-work";
 import { getViewerIdentity } from "@/lib/courses.functions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { getBybitCardBrands } from "@/lib/bybit.functions";
 import { BrandBadge, LedgerRowDetails, statusBadge } from "@/components/admin/BybitLedgerPanel";
 
@@ -268,7 +269,6 @@ function P2POrdersTable({
   onLinked?: () => void;
 }) {
   const emptyRows = Math.max(8 - rows.length, 0);
-  const [linkId, setLinkId] = useState<string | null>(null);
 
   return (
     <div className="data-surface">
@@ -319,13 +319,7 @@ function P2POrdersTable({
                       </span>
                     </td>
                     <td>
-                      <button
-                        type="button"
-                        onClick={() => setLinkId(String(r.ledgerId))}
-                        className="rounded-full border border-[oklch(0.82_0.15_85/0.5)] bg-[oklch(0.82_0.15_85/0.12)] px-4 py-1 text-xs font-bold text-[oklch(0.82_0.15_85)] transition hover:bg-[oklch(0.82_0.15_85/0.22)]"
-                      >
-                        ربط
-                      </button>
+                      <P2PLinkMenu ledgerId={String(r.ledgerId)} onLinked={onLinked} />
                     </td>
 
                   </tr>
@@ -342,7 +336,6 @@ function P2POrdersTable({
           </tbody>
         </table>
       </div>
-      <P2PLinkDialog ledgerId={linkId} onClose={() => setLinkId(null)} onLinked={() => onLinked?.()} />
     </div>
   );
 }
