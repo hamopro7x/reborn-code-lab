@@ -115,16 +115,40 @@ export function FaceGate({
     return canvas.toDataURL("image/jpeg", 0.85);
   };
 
+  const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+  /** Guided capture: straight → turn right → turn left (liveness). */
+  const captureLivenessFrames = async () => {
+    const shots: Record<"center" | "right" | "left", string> = { center: "", right: "", left: "" };
+    const steps: Array<[keyof typeof shots, string]> = [
+      ["center", "انظر أمام الكاميرا مباشرة..."],
+      ["right", "لُف وجهك ناحية اليمين ببطء..."],
+      ["left", "لُف وجهك ناحية الشمال ببطء..."],
+    ];
+    for (const [k, msg] of steps) {
+      for (let s = 3; s >= 1; s--) {
+        setStatus(`${msg} (${s})`);
+        await wait(700);
+      }
+      const f = grabFrame();
+      if (!f) return null;
+      shots[k] = f;
+      setStatus("تم ✓");
+      await wait(300);
+    }
+    return shots;
+  };
+
   const run = async () => {
-    const frame = grabFrame();
-    if (!frame) {
+    if (!grabFrame()) {
       setStatus("الكاميرا لم تجهز بعد، انتظر لحظة");
       return;
     }
     setWorking(true);
-    setStatus(enrolled ? "جاري التحقق..." : "جاري تسجيل بيانات الوجه...");
     try {
       if (!enrolled) {
+        setStatus("جاري تسجيل بيانات الوجه...");
+        const frame = grabFrame()!;
         const res = await enrollFn({ data: { faceImage: frame } });
         if (!res.ok) {
           setStatus(res.error);
@@ -136,7 +160,16 @@ export function FaceGate({
         toast.success("تم إنشاء بيانات الوجه");
         return;
       }
-      const res = await claimFn({ data: { faceImage: frame } });
+
+      const shots = await captureLivenessFrames();
+      if (!shots) {
+        setStatus("تعذّر التقاط الصور، حاول مرة أخرى");
+        return;
+      }
+      setStatus("جاري التحقق من الوجه والحركة...");
+      const res = await claimFn({
+        data: { faceImage: shots.center, faceRight: shots.right, faceLeft: shots.left },
+      });
       if (!res.ok) {
         if (res.error === "NO_FACE_DATA") {
           setEnrolled(false);
@@ -160,6 +193,7 @@ export function FaceGate({
       setWorking(false);
     }
   };
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
