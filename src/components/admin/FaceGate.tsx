@@ -40,6 +40,7 @@ import {
   readFace,
   yawDir,
 } from "@/lib/face-mesh";
+import { motionSensorsAvailable, requestMotionPermission, waitForShake } from "@/lib/phone-motion";
 
 /** The preview is mirrored (natural selfie feel); captures follow the same mirroring. */
 const MIRROR = true;
@@ -303,6 +304,26 @@ export function FaceGate({
     return frames;
   };
 
+  /**
+   * Extra liveness layer: the physical phone must actually move.
+   * Runs between the face movements and never replaces any face check.
+   */
+  const shakePhase = async () => {
+    if (!motionSensorsAvailable()) return; // desktop / no sensors → skip silently
+    setArrow(null);
+    setCountdown(null);
+    setInstruction("هز الهاتف الآن");
+    const allowed = await requestMotionPermission();
+    if (!allowed) return; // permission denied → do not block the face flow
+    const res = await waitForShake(8000);
+    if (!res.ok) {
+      if (res.reason === "unsupported") return;
+      throw new LivenessError("لم يتم رصد حركة الهاتف — هز الهاتف وحاول مرة أخرى");
+    }
+    setInstruction("تم التحقق من حركة الهاتف");
+    await wait(400);
+  };
+
   const run = async () => {
     if (!captureUprightFrame(videoRef.current, { mirroredPreview: MIRROR })) {
       setStatus("الكاميرا لم تجهز بعد، انتظر لحظة");
@@ -340,9 +361,13 @@ export function FaceGate({
       if (!center.length) throw new LivenessError("لم يتم رصد الوجه — حاول مرة أخرى");
 
       const steps: Array<{ dir: Dir; image: string }> = [];
-      for (const dir of chal.steps as Dir[]) {
+      const dirs = chal.steps as Dir[];
+      for (let i = 0; i < dirs.length; i++) {
+        const dir = dirs[i]!;
         const got = await holdPhase(dir);
         steps.push({ dir, image: got[got.length - 1]! });
+        // After the FIRST successful face movement: phone-movement check.
+        if (i === 0) await shakePhase();
       }
       const back = await posePhase("عد بوجهك للأمام", 1);
 
@@ -426,19 +451,9 @@ export function FaceGate({
               <div className="text-base font-black leading-7 text-foreground">
                 {instruction || "ضع وجهك داخل الإطار"}
               </div>
-              {/* 2) Direction arrow, big and obvious (preview is mirrored). */}
-              {arrow ? (
-                <div className="mt-1 flex justify-center text-destructive">
-                  {arrow === "right" ? (
-                    <ArrowLeft className="animate-arrow-nudge size-12" strokeWidth={3} style={{ "--nudge": "14px" } as React.CSSProperties} />
-                  ) : (
-                    <ArrowRight className="animate-arrow-nudge size-12" strokeWidth={3} style={{ "--nudge": "-14px" } as React.CSSProperties} />
-                  )}
-                </div>
-              ) : null}
             </div>
 
-            {/* 3) Camera (portrait 3:4, natural front-camera framing). */}
+            {/* 2) Camera (portrait 3:4) — the direction arrow lives in its center. */}
             <div className="relative mx-auto aspect-[3/4] w-full max-w-[300px] overflow-hidden rounded-2xl border border-border/60 bg-black">
               <video
                 ref={videoRef}
@@ -448,24 +463,17 @@ export function FaceGate({
                 style={{ transform: MIRROR ? "scaleX(-1)" : undefined, objectPosition: "center" }}
               />
               <div className="pointer-events-none absolute inset-x-[14%] inset-y-[10%] rounded-[50%] border-2 border-primary/80 shadow-[0_0_24px_oklch(0.7_0.15_220/0.45)]" />
+              {arrow ? (
+                <div className="pointer-events-none absolute inset-0 grid place-items-center text-destructive drop-shadow-[0_0_10px_rgba(0,0,0,0.65)]">
+                  {arrow === "right" ? (
+                    <ArrowLeft className="animate-arrow-nudge size-16" strokeWidth={3} style={{ "--nudge": "14px" } as React.CSSProperties} />
+                  ) : (
+                    <ArrowRight className="animate-arrow-nudge size-16" strokeWidth={3} style={{ "--nudge": "-14px" } as React.CSSProperties} />
+                  )}
+                </div>
+              ) : null}
             </div>
 
-            {/* 4) Big, unmistakable countdown for the current step. */}
-            {countdown !== null ? (
-              <div className="flex items-center justify-center gap-2">
-                <span className="grid size-16 place-items-center rounded-full border-4 border-primary bg-primary/15 text-3xl font-black tabular-nums text-primary shadow-[0_0_28px_oklch(0.7_0.15_220/0.45)]">
-                  {countdown}
-                </span>
-                <span className="text-xs font-bold text-muted-foreground">ثانية</span>
-              </div>
-            ) : null}
-
-            {/* 5) Status / warning line. */}
-            <div
-              className={`min-h-5 text-center text-[13px] font-bold ${failed ? "text-destructive" : "text-muted-foreground"}`}
-            >
-              {status}
-            </div>
 
             <Button className="w-full" onClick={() => void run()} disabled={working}>
               {working ? <Loader2 className="size-4 animate-spin" /> : <ScanFace className="size-4" />}
