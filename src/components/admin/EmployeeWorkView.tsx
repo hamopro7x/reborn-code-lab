@@ -413,7 +413,7 @@ const isCardTxn = (kind: unknown) => /^(card|refund)$/i.test(String(kind ?? ""))
 
 /** 10-minute edit window, measured against the SERVER clock (a client clock
  *  that is wrong or tampered with cannot widen it — the server re-checks too). */
-const EDIT_WINDOW_MS = 10 * 60 * 1000;
+const EDIT_WINDOW_MS = 5 * 60 * 1000;
 
 function useEditWindow(savedAt: string | null | undefined, serverNow: string | null | undefined) {
   const skewRef = useRef(0);
