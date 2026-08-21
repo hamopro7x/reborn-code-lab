@@ -198,11 +198,14 @@ function P2PLinkMenu({ ledgerId, onLinked }: { ledgerId: string; onLinked?: () =
       <PopoverContent
         dir="ltr"
         align="center"
-        className="w-auto max-w-[92vw] border-border/60 bg-[oklch(0.135_0_0)] p-0 shadow-2xl"
+        className="w-auto max-w-[92vw] border-0 bg-transparent p-0 shadow-none"
       >
-        <div className="flex flex-row items-stretch divide-x divide-border/50">
+        <div className="flex flex-row items-start gap-2">
           {/* level 1 — employees */}
-          <div dir="rtl" className="w-[190px] shrink-0">
+          <div
+            dir="rtl"
+            className="w-[190px] shrink-0 overflow-hidden rounded-xl border border-border/50 bg-[oklch(0.135_0_0)] shadow-2xl"
+          >
             <div className="data-table-head px-3 py-2 text-center text-[11px] font-bold">اختر الموظف</div>
             <div className="max-h-64 overflow-y-auto p-1.5">
               {staff.isLoading ? (
@@ -234,7 +237,10 @@ function P2PLinkMenu({ ledgerId, onLinked }: { ledgerId: string; onLinked?: () =
 
           {/* level 2 — shifts of the chosen employee */}
           {userId && (
-            <div dir="rtl" className="w-[360px] shrink-0 animate-slide-up">
+            <div
+              dir="rtl"
+              className="w-[360px] shrink-0 animate-slide-up overflow-hidden rounded-xl border border-border/50 bg-[oklch(0.135_0_0)] shadow-2xl"
+            >
               <div className="data-table-head truncate px-3 py-1.5 text-center text-[11px] font-bold">
                 شفتات {activeName}
               </div>
