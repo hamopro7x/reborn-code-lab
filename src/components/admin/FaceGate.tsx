@@ -47,6 +47,7 @@ export function FaceGate({
   const statusFn = useServerFn(getMyFaceStatus);
   const enrollFn = useServerFn(enrollMyFace);
   const claimFn = useServerFn(claimWorkShift);
+  const challengeFn = useServerFn(startFaceChallenge);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -54,6 +55,7 @@ export function FaceGate({
   const [enrolled, setEnrolled] = useState(false);
   const [status, setStatus] = useState("");
   const [working, setWorking] = useState(false);
+  const [arrow, setArrow] = useState<Dir | null>(null);
 
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
