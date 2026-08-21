@@ -44,6 +44,8 @@ import {
   addMyManualTxn,
   saveMyManualTxn,
   clearMyManualTxns,
+  getWorkP2PCompleted,
+
 } from "@/lib/work.functions";
 import { useClaimWork } from "@/lib/use-claim-work";
 import { getViewerIdentity } from "@/lib/courses.functions";
