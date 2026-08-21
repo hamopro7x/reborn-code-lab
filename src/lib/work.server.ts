@@ -773,6 +773,18 @@ export async function saveEntryField(
 ) {
   const db = await admin();
 
+  // Successful transactions only: no «جنية»/«الكمية» on a failed transaction.
+  const { data: led } = await db
+    .from("bybit_ledger")
+    .select("status")
+    .eq("id", ledgerId)
+    .maybeSingle();
+  if (!led || !(SUCCESS_STATUSES as unknown as string[]).includes(String((led as any).status))) {
+    return { ok: false as const, error: "هذه المعاملة غير ناجحة." };
+  }
+
+
+
   // The transaction must belong to an assignment of the caller's OWN open shift.
   const state = await myWorkState(userId);
   if (!state.holding) return { ok: false as const, error: "لست مستلمًا للشغل حاليًا" };
