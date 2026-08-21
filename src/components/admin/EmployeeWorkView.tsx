@@ -51,7 +51,7 @@ import {
 
 
 } from "@/lib/work.functions";
-import { useClaimWork } from "@/lib/use-claim-work";
+import { useFaceClaim } from "@/components/admin/FaceGate";
 import { getViewerIdentity } from "@/lib/courses.functions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -911,7 +911,7 @@ export function EmployeeWorkView({ isAdmin = false }: { isAdmin?: boolean }) {
   });
   const brands = (brandsQ.data?.brands ?? {}) as Record<string, string>;
 
-  const { busy, claim } = useClaimWork(() => {
+  const faceClaim = useFaceClaim(() => {
     qc.invalidateQueries({ queryKey: ["my-work-state"] });
     qc.invalidateQueries({ queryKey: ["my-shift-txns"] });
   });
@@ -967,17 +967,13 @@ export function EmployeeWorkView({ isAdmin = false }: { isAdmin?: boolean }) {
 
         <button
           type="button"
-          onClick={() => void claim()}
-          disabled={busy !== null}
+          onClick={faceClaim.start}
           className="flex w-[96px] shrink-0 flex-col items-center gap-1 rounded-2xl border border-[oklch(0.55_0.14_250)] bg-card/70 px-2 py-2 text-[10px] font-bold transition hover:bg-card disabled:opacity-60"
         >
-          {busy === "claim" ? (
-            <Loader2 className="size-5 animate-spin text-foreground" />
-          ) : (
-            <ScanFace className="size-5" />
-          )}
+          <ScanFace className="size-5" />
           <span>استلم الشغل</span>
         </button>
+        {faceClaim.node}
 
 
         <div className="flex shrink-0 items-center gap-3">
