@@ -95,6 +95,15 @@ export const getStaffShifts = createServerFn({ method: "POST" })
     return mod.shiftsOfUser(data.userId);
   });
 
+/** The caller's OWN shifts only — resolved from the authenticated session. */
+export const getMyShiftsForLink = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAccess(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    return mod.myShiftsForLink(context.userId);
+  });
+
 /** Employee-side P2P linking: order → employee → shift. */
 export const linkP2POrder = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
