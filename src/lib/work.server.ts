@@ -279,6 +279,38 @@ export async function pendingP2P(limit = 100) {
     }));
 }
 
+/**
+ * Completed P2P orders of ALL Bybit accounts — shared with every employee.
+ * Read-only: no shift/assignment filter, so any newly completed order shows up
+ * for everybody in «طلبات P2P».
+ */
+export async function completedP2P(limit = 200) {
+  const db = await admin();
+  const { data } = await db
+    .from("bybit_ledger")
+    .select("*")
+    .in("kind", P2P_KINDS)
+    .eq("status", "اكتملت")
+    .order("occurred_at", { ascending: false })
+    .limit(Math.min(Math.max(limit, 1), 500));
+
+  const accounts = await accountNames(db);
+  return (data ?? []).map((r: any) => ({
+    ledgerId: r.id as string,
+    kind: r.kind as string,
+    refId: r.ref_id as string,
+    title: r.title as string,
+    amount: Number(r.amount ?? 0),
+    currency: r.currency ?? "USDT",
+    status: String(r.status ?? ""),
+    time: new Date(r.occurred_at).getTime(),
+    accountName: accounts.get(r.account_id) ?? "—",
+    detail: (r.detail ?? {}) as Record<string, string | number | boolean | null>,
+  }));
+}
+
+
+
 /** Shift options offered by the "ربط بالشفت" button. */
 export async function shiftOptions(limit = 40) {
   const shifts = await listShifts(limit);

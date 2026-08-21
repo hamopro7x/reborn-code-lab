@@ -67,6 +67,16 @@ export const getWorkP2PPending = createServerFn({ method: "POST" })
     return { orders, shifts };
   });
 
+/** Completed P2P orders of ALL accounts — readable by any employee. */
+export const getWorkP2PCompleted = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAccess(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    return mod.completedP2P(200);
+  });
+
+
 /* ------------------------- employee-scoped reads ------------------------- */
 
 /** Only the caller's own open shift: no other employee's data is returned. */

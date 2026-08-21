@@ -44,6 +44,8 @@ import {
   addMyManualTxn,
   saveMyManualTxn,
   clearMyManualTxns,
+  getWorkP2PCompleted,
+
 } from "@/lib/work.functions";
 import { useClaimWork } from "@/lib/use-claim-work";
 import { getViewerIdentity } from "@/lib/courses.functions";
@@ -176,14 +178,11 @@ function P2POrdersTable({
                       </span>
                     </td>
                     <td>
-                      <button
-                        type="button"
-                        onClick={() => onDetails(r)}
-                        className="font-bold text-[oklch(0.82_0.15_85)] underline-offset-4 hover:underline"
-                      >
-                        ربط
-                      </button>
+                      <span className="font-bold text-[oklch(0.82_0.15_85)]">
+                        {String(r.accountName ?? "—") || "—"}
+                      </span>
                     </td>
+
                   </tr>
                 );
               })
@@ -662,6 +661,8 @@ export function EmployeeWorkView({ isAdmin = false }: { isAdmin?: boolean }) {
   const stateFn = useServerFn(getMyWorkState);
   const txnsFn = useServerFn(getMyShiftTxns);
   const brandsFn = useServerFn(getBybitCardBrands);
+  const p2pFn = useServerFn(getWorkP2PCompleted);
+
   const [tab, setTab] = useState<TabKey>("all");
   const now = useNow();
   const clock = clockParts(now);
@@ -699,6 +700,14 @@ export function EmployeeWorkView({ isAdmin = false }: { isAdmin?: boolean }) {
     enabled: holding,
     refetchInterval: 20_000,
   });
+
+  // Completed P2P orders of all accounts — shared with every employee.
+  const p2pCompleted = useQuery({
+    queryKey: ["work-p2p-completed"],
+    queryFn: () => p2pFn({ data: undefined as any }),
+    refetchInterval: 30_000,
+  });
+
 
   const brandsQ = useQuery({
     queryKey: ["bybit-card-brands"],
@@ -833,7 +842,11 @@ export function EmployeeWorkView({ isAdmin = false }: { isAdmin?: boolean }) {
           ]}
         />
       ) : tab === "p2p" ? (
-        <P2POrdersTable rows={rows} loading={holding && txns.isLoading} onDetails={setDetailRow} />
+        <P2POrdersTable
+          rows={(p2pCompleted.data ?? []) as any[]}
+          loading={p2pCompleted.isLoading}
+          onDetails={setDetailRow}
+        />
       ) : (
 
       <div className="data-surface">
