@@ -259,7 +259,7 @@ function P2PLinkMenu({ ledgerId, onLinked }: { ledgerId: string; onLinked?: () =
                             {s.endedAt ? "منتهي" : "مفتوح"}
                           </td>
                           <td className="px-2 py-0.5 text-[10px] leading-4 text-muted-foreground">
-                            {formatDateTime(s.startedAt)}
+                            {shiftStartTime(s.startedAt)}
                           </td>
                           <td className="px-2 py-0.5">
                             <button
