@@ -88,28 +88,24 @@ export function readFace(
   const marks = res?.faceLandmarks?.[0];
   if (!marks || marks.length < 400) return EMPTY;
 
-  // Yaw from the facial transformation matrix when available (most stable),
-  // otherwise from nose/eye-corner geometry.
-  let yaw = 0;
-  let pitch = 0;
-  const m = res?.facialTransformationMatrixes?.[0]?.data as number[] | undefined;
-  if (m && m.length === 16) {
-    // column-major 4x4
-    yaw = (Math.atan2(-m[8]!, m[10]!) * 180) / Math.PI;
-    pitch = (Math.asin(Math.max(-1, Math.min(1, m[9]!))) * 180) / Math.PI;
-  } else {
-    const nose = marks[1];
-    const left = marks[33];
-    const right = marks[263];
-    const mid = (left.x + right.x) / 2;
-    const span = Math.abs(right.x - left.x) || 1;
-    yaw = ((nose.x - mid) / span) * 120;
-    pitch = 0;
-  }
-  // Mediapipe operates on the raw (unmirrored) video pixels; the sign is
-  // already in the person's own reference. Mirroring the *preview* does not
-  // change the underlying pixels, so no flip is needed — kept explicit here.
-  if (mirrored) yaw = yaw;
+  /**
+   * Yaw from stable facial geometry (nose bridge vs the eye-corner midpoint),
+   * measured on the RAW camera pixels. In an unmirrored camera image the
+   * person's own right side sits on the image's left, so turning right moves
+   * the nose toward smaller x -> negative yaw. Mirroring the preview does not
+   * change the pixels fed to the detector, so the sign stays correct on mobile.
+   */
+  const nose = marks[1];
+  const eyeL = marks[33];
+  const eyeR = marks[263];
+  const chin = marks[152];
+  const brow = marks[10];
+  const mid = (eyeL.x + eyeR.x) / 2;
+  const span = Math.abs(eyeR.x - eyeL.x) || 1;
+  const yaw = Math.max(-90, Math.min(90, ((nose.x - mid) / span) * 130));
+  const vSpan = Math.abs(chin.y - brow.y) || 1;
+  const vMid = (brow.y + chin.y) / 2;
+  const pitch = Math.max(-60, Math.min(60, ((nose.y - vMid) / vSpan) * 120));
 
   const shapes = res?.faceBlendshapes?.[0]?.categories as any[] | undefined;
   let eyeOpen = 1;
