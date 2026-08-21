@@ -84,7 +84,7 @@ export function FaceGate({
       try {
         const { stream } = await openFrontCamera();
         if (!alive) {
-          stream.getTracks().forEach((t) => t.stop());
+          stream.getTracks().forEach((t: MediaStreamTrack) => t.stop());
           return;
         }
         streamRef.current = stream;
