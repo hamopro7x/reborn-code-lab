@@ -921,6 +921,7 @@ export function EmployeeWorkView({ isAdmin = false }: { isAdmin?: boolean }) {
 
 
   const allRows: any[] = (txns.data as any)?.rows ?? [];
+  const txnServerNow: string | null = (txns.data as any)?.serverNow ?? null;
   const rows = useMemo(() => {
     const weekAgo = Date.now() - 7 * 86400_000;
     switch (tab) {
