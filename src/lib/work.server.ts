@@ -171,6 +171,15 @@ export type WorkRow = {
   detail: Record<string, string | number | boolean | null>;
 };
 
+/**
+ * The ONLY definition of a "successful" transaction used by «جدول بيانات الشغل».
+ * These are the real status values stored in public.bybit_ledger
+ * (card → success, on-chain/internal → ناجحة, P2P → اكتملت).
+ * Anything else (failed / ملغاة / pending …) is never shown or counted in the
+ * employee work data. The original rows are never modified or deleted.
+ */
+export const SUCCESS_STATUSES = ["success", "ناجحة", "اكتملت"] as const;
+
 export async function workTable(opts: {
   userId?: string;
   shiftId?: string;
@@ -178,6 +187,8 @@ export async function workTable(opts: {
   week?: string;
   page?: number;
   pageSize?: number;
+  /** Employee work data layer: keep successful transactions only. */
+  successOnly?: boolean;
 }) {
   const db = await admin();
   const pageSize = Math.min(Math.max(opts.pageSize ?? 50, 10), 200);
@@ -186,8 +197,11 @@ export async function workTable(opts: {
 
   let q: any = db
     .from("work_txn_assignments")
-    .select("*, bybit_ledger(*)", { count: "exact" })
+    .select(opts.successOnly ? "*, bybit_ledger!inner(*)" : "*, bybit_ledger(*)", { count: "exact" })
     .order("occurred_at", { ascending: false });
+
+  if (opts.successOnly) q = q.in("bybit_ledger.status", SUCCESS_STATUSES as unknown as string[]);
+
 
   if (opts.userId) q = q.eq("user_id", opts.userId);
   if (opts.shiftId) q = q.eq("shift_id", opts.shiftId);
@@ -681,10 +695,12 @@ export async function myWorkState(userId: string) {
   const db = await admin();
   const { data } = await db.from("work_shifts").select("id,user_id,started_at").is("ended_at", null).maybeSingle();
   if (!data || data.user_id !== userId) return { holding: false as const };
+  // Successful transactions only — same rule as the rows shown below.
   const { count } = await db
     .from("work_txn_assignments")
-    .select("id", { count: "exact", head: true })
-    .eq("shift_id", data.id);
+    .select("id, bybit_ledger!inner(status)", { count: "exact", head: true })
+    .eq("shift_id", data.id)
+    .in("bybit_ledger.status", SUCCESS_STATUSES as unknown as string[]);
   return {
     holding: true as const,
     shiftId: data.id as string,
@@ -697,7 +713,8 @@ export async function myWorkState(userId: string) {
 export async function myShiftRows(userId: string, page = 1, pageSize = 50) {
   const state = await myWorkState(userId);
   if (!state.holding) return { page: 1, pageSize, total: 0, rows: [] as any[], holding: false as const };
-  const res = await workTable({ userId, shiftId: state.shiftId, page, pageSize });
+  const res = await workTable({ userId, shiftId: state.shiftId, page, pageSize, successOnly: true });
+
   const entries = await myEntries(res.rows.map((r: any) => r.ledgerId));
   const rows = res.rows.map((r: any) => {
     const e = entries.get(r.ledgerId);
@@ -755,6 +772,18 @@ export async function saveEntryField(
   value: number,
 ) {
   const db = await admin();
+
+  // Successful transactions only: no «جنية»/«الكمية» on a failed transaction.
+  const { data: led } = await db
+    .from("bybit_ledger")
+    .select("status")
+    .eq("id", ledgerId)
+    .maybeSingle();
+  if (!led || !(SUCCESS_STATUSES as unknown as string[]).includes(String((led as any).status))) {
+    return { ok: false as const, error: "هذه المعاملة غير ناجحة." };
+  }
+
+
 
   // The transaction must belong to an assignment of the caller's OWN open shift.
   const state = await myWorkState(userId);
