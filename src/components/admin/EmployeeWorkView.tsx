@@ -118,16 +118,127 @@ const P2P_COLUMNS = [
   "صاحب الطلب",
 ];
 
+/** Two-step picker: employee → his own shifts → link. */
+function P2PLinkDialog({
+  ledgerId,
+  onClose,
+  onLinked,
+}: {
+  ledgerId: string | null;
+  onClose: () => void;
+  onLinked: () => void;
+}) {
+  const staffFn = useServerFn(getWorkStaffList);
+  const shiftsFn = useServerFn(getStaffShifts);
+  const linkFn = useServerFn(linkP2POrder);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!ledgerId) setUserId(null);
+  }, [ledgerId]);
+
+  const staff = useQuery({
+    queryKey: ["work-staff-list"],
+    queryFn: () => staffFn({ data: undefined as any }),
+    enabled: !!ledgerId,
+  });
+  const shifts = useQuery({
+    queryKey: ["work-staff-shifts", userId],
+    queryFn: () => shiftsFn({ data: { userId: userId! } }),
+    enabled: !!ledgerId && !!userId,
+  });
+
+  const link = async (shiftId: string) => {
+    if (!ledgerId || busy) return;
+    setBusy(true);
+    try {
+      const res: any = await linkFn({ data: { ledgerId, shiftId } });
+      if (res?.ok) toast.success("تم ربط الطلب بالموظف والشفت");
+      else toast.error(res?.error ?? "فشل الربط");
+      onLinked();
+      onClose();
+    } catch (e: any) {
+      toast.error(e?.message ?? "فشل الربط");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog open={!!ledgerId} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md" dir="rtl">
+        <DialogHeader>
+          <DialogTitle>{userId ? "اختار الشفت" : "اختار الموظف"}</DialogTitle>
+        </DialogHeader>
+        {!userId ? (
+          staff.isLoading ? (
+            <Loader2 className="mx-auto size-4 animate-spin text-muted-foreground" />
+          ) : (
+            <div className="max-h-[50vh] space-y-2 overflow-y-auto no-scrollbar">
+              {((staff.data ?? []) as any[]).map((s) => (
+                <button
+                  key={s.userId}
+                  type="button"
+                  onClick={() => setUserId(s.userId)}
+                  className={`w-full rounded-lg border px-3 py-2 text-right text-sm font-bold ${GLOW_IDLE}`}
+                >
+                  {s.name}
+                </button>
+              ))}
+              {!((staff.data ?? []) as any[]).length && (
+                <p className="text-center text-xs text-muted-foreground">لا يوجد موظفين</p>
+              )}
+            </div>
+          )
+        ) : shifts.isLoading ? (
+          <Loader2 className="mx-auto size-4 animate-spin text-muted-foreground" />
+        ) : (
+          <div className="max-h-[50vh] space-y-2 overflow-y-auto no-scrollbar">
+            {((shifts.data ?? []) as any[]).map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                disabled={busy}
+                onClick={() => link(s.id)}
+                className={`w-full rounded-lg border px-3 py-2 text-right text-sm disabled:opacity-50 ${GLOW_IDLE}`}
+              >
+                <div className="font-bold">{s.endedAt ? "شفت منتهي" : "شفت مفتوح"}</div>
+                <div className="text-[11px] text-muted-foreground">
+                  {formatDateTime(s.startedAt)} → {s.endedAt ? formatDateTime(s.endedAt) : "الآن"}
+                </div>
+              </button>
+            ))}
+            {!((shifts.data ?? []) as any[]).length && (
+              <p className="text-center text-xs text-muted-foreground">لا توجد شفتات لهذا الموظف</p>
+            )}
+            <button
+              type="button"
+              onClick={() => setUserId(null)}
+              className="w-full rounded-lg border border-border/40 px-3 py-1.5 text-xs text-muted-foreground"
+            >
+              رجوع
+            </button>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function P2POrdersTable({
   rows,
   loading,
   onDetails,
+  onLinked,
 }: {
   rows: any[];
   loading?: boolean;
   onDetails: (row: any) => void;
+  onLinked?: () => void;
 }) {
   const emptyRows = Math.max(8 - rows.length, 0);
+  const [linkId, setLinkId] = useState<string | null>(null);
 
   return (
     <div className="data-surface">
@@ -178,9 +289,13 @@ function P2POrdersTable({
                       </span>
                     </td>
                     <td>
-                      <span className="font-bold text-[oklch(0.82_0.15_85)]">
-                        {String(r.accountName ?? "—") || "—"}
-                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setLinkId(String(r.ledgerId))}
+                        className="rounded-full border border-[oklch(0.82_0.15_85/0.5)] bg-[oklch(0.82_0.15_85/0.12)] px-4 py-1 text-xs font-bold text-[oklch(0.82_0.15_85)] transition hover:bg-[oklch(0.82_0.15_85/0.22)]"
+                      >
+                        ربط
+                      </button>
                     </td>
 
                   </tr>
@@ -197,9 +312,11 @@ function P2POrdersTable({
           </tbody>
         </table>
       </div>
+      <P2PLinkDialog ledgerId={linkId} onClose={() => setLinkId(null)} onLinked={() => onLinked?.()} />
     </div>
   );
 }
+
 
 
 
