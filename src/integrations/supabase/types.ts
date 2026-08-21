@@ -1420,27 +1420,33 @@ export type Database = {
       work_manual_txns: {
         Row: {
           amount: number | null
+          amount_saved_at: string | null
           card: string
           created_at: string
           details: string | null
+          details_saved_at: string | null
           id: string
           updated_at: string
           user_id: string
         }
         Insert: {
           amount?: number | null
+          amount_saved_at?: string | null
           card: string
           created_at?: string
           details?: string | null
+          details_saved_at?: string | null
           id?: string
           updated_at?: string
           user_id: string
         }
         Update: {
           amount?: number | null
+          amount_saved_at?: string | null
           card?: string
           created_at?: string
           details?: string | null
+          details_saved_at?: string | null
           id?: string
           updated_at?: string
           user_id?: string

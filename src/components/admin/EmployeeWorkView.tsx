@@ -32,6 +32,7 @@ import {
   DollarSign,
   Wallet,
   Trash2,
+  Lock as LockIcon,
   
 
 } from "lucide-react";
@@ -410,24 +411,57 @@ function Last4Cell({
 /** «المعاملات» in the employee view = card (visa) transactions only. */
 const isCardTxn = (kind: unknown) => /^(card|refund)$/i.test(String(kind ?? ""));
 
-/** One employee-entered cell: auto-saved while typing (debounce + blur +
- * tab-hide flush), then locked once the server stored the value. */
+/** 10-minute edit window, measured against the SERVER clock (a client clock
+ *  that is wrong or tampered with cannot widen it — the server re-checks too). */
+const EDIT_WINDOW_MS = 10 * 60 * 1000;
+
+function useEditWindow(savedAt: string | null | undefined, serverNow: string | null | undefined) {
+  const skewRef = useRef(0);
+  useEffect(() => {
+    if (serverNow) skewRef.current = new Date(serverNow).getTime() - Date.now();
+  }, [serverNow]);
+
+  const expired = () => {
+    if (!savedAt) return false;
+    return Date.now() + skewRef.current - new Date(savedAt).getTime() >= EDIT_WINDOW_MS;
+  };
+  const [locked, setLocked] = useState(expired);
+  useEffect(() => {
+    setLocked(expired());
+    if (!savedAt) return;
+    const t = window.setInterval(() => setLocked(expired()), 5000);
+    return () => window.clearInterval(t);
+  }, [savedAt, serverNow]);
+  return locked;
+}
+
+/** One employee-entered cell: saved on blur/Enter, editable for 10 minutes
+ *  after the server-side save time, then permanently locked (🔒). */
 function EntryCell({
   row,
   field,
+  serverNow,
   onSaved,
 }: {
   row: any;
   field: "egp" | "quantity";
+  serverNow?: string | null;
   onSaved: () => void;
 }) {
   const saveFn = useServerFn(saveMyTxnEntry);
   const saved = row[field];
-  const [value, setValue] = useState("");
+  const savedAt = (field === "egp" ? row.egpAt : row.quantityAt) ?? null;
+  const locked = useEditWindow(savedAt, serverNow);
+  const initial = saved === null || saved === undefined ? "" : String(saved);
+  const [value, setValue] = useState(initial);
   const [busy, setBusy] = useState(false);
-  const valueRef = useRef("");
-  const sentRef = useRef("");
-  
+  const sentRef = useRef(initial);
+
+  // Keep the input in sync with the freshest server value (query refetch).
+  useEffect(() => {
+    setValue(initial);
+    sentRef.current = initial;
+  }, [initial]);
 
   const commit = (raw: string) => {
     const txt = String(raw).replace(/,/g, "").trim();
@@ -442,41 +476,28 @@ function EntryCell({
           toast.success("تم الحفظ");
           onSaved();
         } else {
-          sentRef.current = "";
+          sentRef.current = initial;
           toast.error(String(res?.error ?? "تعذر الحفظ"));
+          onSaved();
         }
       })
       .catch((e) => {
-        sentRef.current = "";
+        sentRef.current = initial;
         toast.error(e instanceof Error ? e.message : "تعذر الحفظ");
       })
       .finally(() => setBusy(false));
   };
-  const commitRef = useRef(commit);
-  commitRef.current = commit;
 
-  useEffect(() => {
-    valueRef.current = value;
-  }, [value]);
-
-  // Never lose a value the employee typed then walked away from.
-  useEffect(() => {
-    const onHide = () => commitRef.current(valueRef.current);
-    document.addEventListener("visibilitychange", onHide);
-    window.addEventListener("pagehide", onHide);
-    window.addEventListener("beforeunload", onHide);
-    return () => {
-      document.removeEventListener("visibilitychange", onHide);
-      window.removeEventListener("pagehide", onHide);
-      window.removeEventListener("beforeunload", onHide);
-      commitRef.current(valueRef.current);
-    };
-  }, []);
-
-  if (saved !== null && saved !== undefined) {
+  if (locked) {
     return (
-      <span className="tabular-nums">
-        {Number(saved).toLocaleString("en-US", { maximumFractionDigits: 4 })}
+      <span
+        title="انتهت مدة التعديل المسموحة لهذه القيمة."
+        className="inline-flex items-center justify-center gap-1 tabular-nums"
+      >
+        {saved === null || saved === undefined
+          ? "—"
+          : Number(saved).toLocaleString("en-US", { maximumFractionDigits: 4 })}
+        <LockIcon className="size-3 text-muted-foreground" />
       </span>
     );
   }
@@ -500,6 +521,7 @@ function EntryCell({
 }
 
 
+
 /** Original transaction details, rendered exactly like the central ledger. */
 function TxnDetailsDialog({ row, onClose }: { row: any | null; onClose: () => void }) {
   return (
@@ -521,40 +543,51 @@ function TxnDetailsDialog({ row, onClose }: { row: any | null; onClose: () => vo
 
 /* ---------------- «المعاملات الغلط» + «خاص بالموظف» (manual) ---------------- */
 
-/** One manual cell: autosaved while typing (debounced) and flushed on blur. */
+/** One manual cell: saved to the database immediately on blur/Enter, editable
+ *  for 10 minutes after the server-side save time, then locked (🔒). */
 function ManualCell({
   id,
   field,
   initial,
+  savedAt,
+  serverNow,
   numeric,
   autoFocus,
+  onSaved,
 }: {
   id: string;
   field: "amount" | "details";
   initial: string;
+  savedAt: string | null;
+  serverNow?: string | null;
   numeric?: boolean;
   autoFocus?: boolean;
+  onSaved: () => void;
 }) {
   const saveFn = useServerFn(saveMyManualTxn);
+  const locked = useEditWindow(savedAt, serverNow);
   const [value, setValue] = useState(initial);
-  const [locked, setLocked] = useState(initial.trim() !== "");
   const savedRef = useRef(initial);
   const valueRef = useRef(initial);
 
+  // Always show the freshest value coming back from the database.
+  useEffect(() => {
+    setValue(initial);
+    savedRef.current = initial;
+    valueRef.current = initial;
+  }, [initial]);
+
   const flush = (v: string) => {
-    if (v === savedRef.current) {
-      if (v.trim() !== "") setLocked(true);
-      return;
-    }
+    if (v === savedRef.current) return;
     savedRef.current = v;
     void saveFn({ data: { id, field, value: v } })
       .then((res: any) => {
         if (res && res.ok === false) {
           savedRef.current = "\u0000";
           toast.error(String(res.error ?? "تعذر الحفظ"));
-          return;
         }
-        if (v.trim() !== "") setLocked(true);
+        // Refresh from the DB only after the save resolved (no race).
+        onSaved();
       })
       .catch(() => {
         savedRef.current = "\u0000";
@@ -599,12 +632,13 @@ function ManualCell({
   if (locked) {
     return (
       <div
-        title="محفوظ — لا يمكن التعديل"
-        className={`h-full w-full px-3 py-2.5 text-xs text-foreground/90 ${
-          numeric ? "text-center tabular-nums" : "text-right"
+        title="انتهت مدة التعديل المسموحة لهذه القيمة."
+        className={`flex h-full w-full items-center gap-1 px-3 py-2.5 text-xs text-foreground/90 ${
+          numeric ? "justify-center tabular-nums" : "justify-end text-right"
         }`}
       >
-        {value}
+        <span>{value}</span>
+        <LockIcon className="size-3 shrink-0 text-muted-foreground" />
       </div>
     );
   }
@@ -627,12 +661,15 @@ function ManualCell({
   );
 }
 
+
 function ManualCard({
   card,
   title,
   rows,
+  serverNow,
   onAdd,
   onClear,
+  onSaved,
   adding,
   clearing,
   newestId,
@@ -640,9 +677,18 @@ function ManualCard({
 }: {
   card: ManualKind;
   title: string;
-  rows: { id: string; amount: string; details: string; createdAt?: string }[];
+  rows: {
+    id: string;
+    amount: string;
+    details: string;
+    createdAt?: string;
+    amountSavedAt?: string | null;
+    detailsSavedAt?: string | null;
+  }[];
+  serverNow?: string | null;
   onAdd: (card: ManualKind) => void;
   onClear: (card: ManualKind) => void;
+  onSaved: () => void;
   adding: boolean;
   clearing: boolean;
   newestId: string | null;
@@ -696,10 +742,26 @@ function ManualCard({
             {rows.map((r) => (
               <tr key={r.id}>
                 <td className="!p-0">
-                  <ManualCell id={r.id} field="amount" initial={r.amount} numeric autoFocus={r.id === newestId} />
+                  <ManualCell
+                    id={r.id}
+                    field="amount"
+                    initial={r.amount}
+                    savedAt={r.amountSavedAt ?? null}
+                    serverNow={serverNow}
+                    numeric
+                    autoFocus={r.id === newestId}
+                    onSaved={onSaved}
+                  />
                 </td>
                 <td className="!p-0">
-                  <ManualCell id={r.id} field="details" initial={r.details} />
+                  <ManualCell
+                    id={r.id}
+                    field="details"
+                    initial={r.details}
+                    savedAt={r.detailsSavedAt ?? null}
+                    serverNow={serverNow}
+                    onSaved={onSaved}
+                  />
                 </td>
                 <td className="text-[11px] text-muted-foreground">{formatDateTime(r.createdAt)}</td>
               </tr>
@@ -731,8 +793,13 @@ function ManualSection({
   const q = useQuery({
     queryKey: ["my-manual-txns"],
     queryFn: () => listFn({ data: undefined as any }),
+    // Always re-read the stored rows when the section is opened again.
+    staleTime: 0,
+    refetchOnMount: "always",
   });
   const all = (q.data as any)?.rows ?? [];
+  const serverNow = (q.data as any)?.serverNow ?? null;
+  const refresh = () => void qc.invalidateQueries({ queryKey: ["my-manual-txns"] });
 
   const add = async (card: ManualKind) => {
     setAdding(card);
@@ -773,8 +840,10 @@ function ManualSection({
           card={c.card}
           title={c.title}
           rows={all.filter((r: any) => r.card === c.card)}
+          serverNow={serverNow}
           onAdd={add}
           onClear={clear}
+          onSaved={refresh}
           adding={adding === c.card}
           clearing={clearing === c.card}
           newestId={newestId}
@@ -852,6 +921,7 @@ export function EmployeeWorkView({ isAdmin = false }: { isAdmin?: boolean }) {
 
 
   const allRows: any[] = (txns.data as any)?.rows ?? [];
+  const txnServerNow: string | null = (txns.data as any)?.serverNow ?? null;
   const rows = useMemo(() => {
     const weekAgo = Date.now() - 7 * 86400_000;
     switch (tab) {
@@ -1014,10 +1084,10 @@ export function EmployeeWorkView({ isAdmin = false }: { isAdmin?: boolean }) {
                       {num(Math.abs(Number(r.amount)))} {r.currency}
                     </td>
                     <td className="tabular-nums">
-                      <EntryCell row={r} field="egp" onSaved={refetchRows} />
+                      <EntryCell row={r} field="egp" serverNow={txnServerNow} onSaved={refetchRows} />
                     </td>
                     <td className="tabular-nums">
-                      <EntryCell row={r} field="quantity" onSaved={refetchRows} />
+                      <EntryCell row={r} field="quantity" serverNow={txnServerNow} onSaved={refetchRows} />
                     </td>
                     <td>{txnTime(Number(r.time))}</td>
                     <td className="tabular-nums">
