@@ -219,7 +219,7 @@ function P2PLinkMenu({ ledgerId, onLinked }: { ledgerId: string; onLinked?: () =
 
           {/* level 2 — shifts of the chosen employee */}
           {userId && (
-            <div className="w-[420px] shrink-0 animate-slide-up">
+            <div dir="rtl" className="w-[420px] shrink-0 animate-slide-up">
               <div className="data-table-head truncate px-3 py-2 text-center text-[11px] font-bold">
                 شفتات {activeName}
               </div>
