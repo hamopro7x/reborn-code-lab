@@ -294,9 +294,10 @@ export function FaceGate({
                   rendered on the screen's left. */}
               {arrow ? (
                 <div
-                  className={`pointer-events-none absolute top-1/2 -translate-y-1/2 ${
+                  className={`pointer-events-none absolute top-1/2 ${
                     arrow === "right" ? "left-1" : "right-1"
-                  } animate-pulse text-destructive drop-shadow-[0_0_18px_rgba(255,60,60,0.8)]`}
+                  } animate-arrow-nudge text-destructive drop-shadow-[0_0_18px_rgba(255,60,60,0.8)]`}
+                  style={{ "--nudge": arrow === "right" ? "14px" : "-14px" } as React.CSSProperties}
                 >
                   {arrow === "right" ? (
                     <ArrowLeft className="size-16" strokeWidth={3} />
