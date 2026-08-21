@@ -1083,10 +1083,10 @@ export function EmployeeWorkView({ isAdmin = false }: { isAdmin?: boolean }) {
                       {num(Math.abs(Number(r.amount)))} {r.currency}
                     </td>
                     <td className="tabular-nums">
-                      <EntryCell row={r} field="egp" onSaved={refetchRows} />
+                      <EntryCell row={r} field="egp" serverNow={txnServerNow} onSaved={refetchRows} />
                     </td>
                     <td className="tabular-nums">
-                      <EntryCell row={r} field="quantity" onSaved={refetchRows} />
+                      <EntryCell row={r} field="quantity" serverNow={txnServerNow} onSaved={refetchRows} />
                     </td>
                     <td>{txnTime(Number(r.time))}</td>
                     <td className="tabular-nums">
