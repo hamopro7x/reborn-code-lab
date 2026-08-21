@@ -13,7 +13,12 @@ import { toast } from "sonner";
 import { Loader2, ScanFace, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { claimWorkShift, enrollMyFace, getMyFaceStatus } from "@/lib/work.functions";
+import {
+  claimWorkShift,
+  enrollMyFace,
+  getMyFaceStatus,
+  startFaceChallenge,
+} from "@/lib/work.functions";
 import {
   collectGoodFrames,
   captureUprightFrame,
