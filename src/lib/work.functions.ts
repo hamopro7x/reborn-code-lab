@@ -76,6 +76,38 @@ export const getWorkP2PCompleted = createServerFn({ method: "POST" })
     return mod.completedP2P(200);
   });
 
+/** Real staff names for the «ربط» picker. */
+export const getWorkStaffList = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAccess(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    return mod.staffList();
+  });
+
+/** Shifts of ONE chosen employee. */
+export const getStaffShifts = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ userId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAccess(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    return mod.shiftsOfUser(data.userId);
+  });
+
+/** Employee-side P2P linking: order → employee → shift. */
+export const linkP2POrder = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ ledgerId: z.string().uuid(), shiftId: z.string().uuid() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAccess(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    return mod.linkP2P(data.ledgerId, data.shiftId, context.userId);
+  });
+
+
 
 /* ------------------------- employee-scoped reads ------------------------- */
 
