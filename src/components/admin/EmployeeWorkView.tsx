@@ -219,39 +219,58 @@ function P2PLinkMenu({ ledgerId, onLinked }: { ledgerId: string; onLinked?: () =
 
           {/* level 2 — shifts of the chosen employee */}
           {userId && (
-            <div className="w-[240px] shrink-0 animate-slide-up">
+            <div className="w-[420px] shrink-0 animate-slide-up">
               <div className="data-table-head truncate px-3 py-2 text-center text-[11px] font-bold">
                 شفتات {activeName}
               </div>
-              <div className="max-h-64 overflow-y-auto p-1.5">
+              <div className="max-h-64 overflow-y-auto">
                 {shifts.isLoading ? (
                   <Loader2 className="mx-auto my-4 size-4 animate-spin text-muted-foreground" />
                 ) : shiftRows.length ? (
-                  shiftRows.map((s, i) => (
-                    <button
-                      key={s.id}
-                      type="button"
-                      disabled={busy}
-                      onClick={() => link(s.id)}
-                      className="flex w-full items-start gap-2 rounded-md px-2.5 py-2 text-right transition hover:bg-white/5 disabled:opacity-50"
-                    >
-                      <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border border-border/60 text-[10px] font-bold tabular-nums">
-                        {i + 1}
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block text-xs font-bold">{s.endedAt ? "شفت منتهي" : "شفت مفتوح"}</span>
-                        <span className="block text-[10px] text-muted-foreground">
-                          {formatDateTime(s.startedAt)} → {s.endedAt ? formatDateTime(s.endedAt) : "الآن"}
-                        </span>
-                      </span>
-                    </button>
-                  ))
+                  <table className="data-table w-full text-right">
+                    <thead>
+                      <tr>
+                        <th className="w-10 px-2 py-1.5 text-[10px]">#</th>
+                        <th className="px-2 py-1.5 text-[10px]">الحالة</th>
+                        <th className="px-2 py-1.5 text-[10px]">البداية</th>
+                        <th className="px-2 py-1.5 text-[10px]">النهاية</th>
+                        <th className="w-16 px-2 py-1.5 text-[10px]">ربط</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {shiftRows.map((s, i) => (
+                        <tr key={s.id} className="hover:bg-white/5">
+                          <td className="px-2 py-1.5 text-[10px] font-bold tabular-nums">{i + 1}</td>
+                          <td className="px-2 py-1.5 text-[10px] font-bold">
+                            {s.endedAt ? "منتهي" : "مفتوح"}
+                          </td>
+                          <td className="px-2 py-1.5 text-[10px] text-muted-foreground">
+                            {formatDateTime(s.startedAt)}
+                          </td>
+                          <td className="px-2 py-1.5 text-[10px] text-muted-foreground">
+                            {s.endedAt ? formatDateTime(s.endedAt) : "الآن"}
+                          </td>
+                          <td className="px-2 py-1.5">
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => link(s.id)}
+                              className="rounded-full border border-[oklch(0.82_0.15_85/0.5)] bg-[oklch(0.82_0.15_85/0.12)] px-2.5 py-0.5 text-[10px] font-bold text-[oklch(0.82_0.15_85)] transition hover:bg-[oklch(0.82_0.15_85/0.22)] disabled:opacity-50"
+                            >
+                              ربط
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 ) : (
                   <p className="py-4 text-center text-[11px] text-muted-foreground">لا توجد شفتات لهذا الموظف</p>
                 )}
               </div>
             </div>
           )}
+
         </div>
       </PopoverContent>
     </Popover>
