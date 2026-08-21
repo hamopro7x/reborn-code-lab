@@ -412,7 +412,7 @@ function ManualCard({
 }: {
   card: ManualKind;
   title: string;
-  rows: { id: string; amount: string; details: string }[];
+  rows: { id: string; amount: string; details: string; createdAt?: string }[];
   onAdd: (card: ManualKind) => void;
   onClear: (card: ManualKind) => void;
   adding: boolean;
