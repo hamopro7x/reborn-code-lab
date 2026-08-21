@@ -221,10 +221,6 @@ export function FaceGate({
     return frames;
   };
 
-  /**
-   * One guided movement: reach the requested yaw, then HOLD it for 10s.
-   * Losing the pose (or closing the eyes) during the hold fails the attempt.
-   */
   const holdPhase = async (dir: Dir): Promise<string[]> => {
     setArrow(dir);
     setInstruction(DIR_TEXT[dir]);
@@ -243,7 +239,8 @@ export function FaceGate({
       return f;
     }
 
-    // 1) Acquire the pose.
+    // Confirm the requested direction with a few consecutive frames to avoid
+    // accidental detection, then succeed immediately — no 10-second hold.
     const acquireStart = Date.now();
     let inPose = 0;
     while (Date.now() - acquireStart < 20000) {
@@ -251,7 +248,7 @@ export function FaceGate({
       if (!r.face) setStatus("لم يتم رصد الوجه — ضع وجهك داخل الإطار");
       else if (yawDir(r.yaw, YAW_TARGET) === dir) {
         inPose++;
-        setStatus("ممتاز — ثبّت وجهك الآن");
+        setStatus("تم رصد الاتجاه ✓");
         if (inPose >= 3) break;
       } else {
         inPose = 0;
@@ -261,47 +258,12 @@ export function FaceGate({
     }
     if (inPose < 3) throw new LivenessError("لم يتم الوصول للاتجاه المطلوب — حاول مرة أخرى");
 
-    // 2) Hold for HOLD_SECONDS with continuous verification.
-    const frames: string[] = [];
-    const first = captureUprightFrame(videoRef.current, { mirroredPreview: MIRROR });
-    if (first) frames.push(first);
-    const holdStart = Date.now();
-    let bad = 0;
-    let mid = false;
-    while (true) {
-      const elapsed = (Date.now() - holdStart) / 1000;
-      const left = Math.ceil(HOLD_SECONDS - elapsed);
-      if (left <= 0) break;
-      setCountdown(left);
-      setStatus("ثبّت وجهك — لا تحرّكه");
-
-      const r = read();
-      const held = r.face && yawDir(r.yaw, YAW_HOLD) === dir;
-      const eyesOk = !r.face || r.eyeOpen > EYE_CLOSED * 0.6;
-      if (held && eyesOk) bad = 0;
-      else {
-        bad++;
-        // ~0.9s of grace absorbs blinks, blur and camera hiccups.
-        if (bad >= 8) {
-          setCountdown(null);
-          throw new LivenessError(
-            held ? "افتح عينيك وحافظ على الوضع المطلوب — فشل التحقق" : "تحرّك وجهك عن الاتجاه المطلوب — فشل التحقق",
-          );
-        }
-      }
-
-      if (!mid && elapsed >= HOLD_SECONDS / 2) {
-        mid = true;
-        const f = captureUprightFrame(videoRef.current, { mirroredPreview: MIRROR });
-        if (f) frames.push(f);
-      }
-      await wait(110);
-    }
-    setCountdown(null);
-    setArrow(null);
+    const f = captureUprightFrame(videoRef.current, { mirroredPreview: MIRROR });
+    if (!f) throw new LivenessError("لم يتم التقاط صورة للاتجاه — حاول مرة أخرى");
     setStatus("تم ✓");
-    await wait(250);
-    return frames;
+    setArrow(null);
+    await wait(200);
+    return [f];
   };
 
   /**
