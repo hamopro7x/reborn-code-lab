@@ -491,16 +491,33 @@ export async function faceEnrolled(userId: string): Promise<boolean> {
 }
 
 /**
- * First-time self enrollment. Runs a real quality/liveness check on the frame
- * before storing it as the employee's reference face.
+ * First-time self enrollment from MULTIPLE frames.
+ * Every frame is quality-checked; a single blurred frame is tolerated as long
+ * as enough frames show one clear face. The sharpest accepted frame becomes the
+ * stored reference, bound to this employee's account only.
  */
-export async function enrollMyFace(userId: string, dataUrl: string) {
+export async function enrollMyFace(userId: string, frames: string[]) {
   if (await faceEnrolled(userId)) {
     return { ok: false as const, error: "بيانات الوجه مسجّلة بالفعل لهذا الحساب" };
   }
-  const check = await faceQualityCheck(dataUrl);
-  if (!check.ok) return { ok: false as const, error: check.reason ?? "تعذّر تسجيل الوجه" };
-  await saveFaceEnroll(userId, dataUrl, userId);
+  const list = frames.slice(0, 4);
+  if (!list.length) return { ok: false as const, error: "لم يتم التقاط أي صورة" };
+
+  const checks = await Promise.all(list.map((f) => faceQualityCheck(f)));
+  const good = list.filter((_, i) => checks[i]!.ok);
+  if (good.length === 0) {
+    const reason = checks.find((c) => c.reason)?.reason;
+    return { ok: false as const, error: reason ?? "تعذّر تسجيل الوجه" };
+  }
+  // Need more than one usable frame when several were sent, so enrollment never
+  // rests on a single lucky screenshot.
+  if (list.length >= 3 && good.length < 2) {
+    return {
+      ok: false as const,
+      error: "تأكد من وضوح الوجه بالكامل وجودة الإضاءة ثم حاول مرة أخرى",
+    };
+  }
+  await saveFaceEnroll(userId, good[0]!, userId);
   return { ok: true as const };
 }
 
@@ -517,7 +534,7 @@ async function faceQualityCheck(dataUrl: string): Promise<{ ok: boolean; reason?
         {
           role: "system",
           content:
-            'You are a face enrollment quality service. Reply with strict JSON only: {"face":true|false,"clear":true|false,"reason":"short"}. "face" is true only if exactly one real human face is visible (not a photo of a screen). "clear" is true only if the face is unobstructed (no mask, no covering), well lit and fully inside the frame.',
+            'You are a face enrollment quality service. Reply with strict JSON only: {"face":true|false,"clear":true|false,"reason":"short"}. "face" is true only if exactly one real human face is visible (not a photo of a screen). "clear" is true if the face is unobstructed (no mask, no covering) and recognizable: tolerate slight motion blur, moderate head tilt or rotation, and imperfect lighting as long as the facial features are identifiable.',
         },
         {
           role: "user",
@@ -535,14 +552,15 @@ async function faceQualityCheck(dataUrl: string): Promise<{ ok: boolean; reason?
   const m = text.match(/\{[\s\S]*\}/);
   try {
     const parsed = m ? JSON.parse(m[0]) : null;
-    if (parsed?.face !== true) return { ok: false, reason: "لم يتم اكتشاف وجه واضح داخل الإطار" };
+    if (parsed?.face !== true) return { ok: false, reason: "لم يتم اكتشاف وجه داخل إطار التحقق" };
     if (parsed?.clear !== true)
-      return { ok: false, reason: "الوجه غير واضح — أزل أي غطاء وتأكد من الإضاءة الجيدة" };
+      return { ok: false, reason: "تأكد من ظهور وجهك بالكامل وبإضاءة جيدة" };
     return { ok: true };
   } catch {
     return { ok: false, reason: "تعذّر تحليل نتيجة التحقق" };
   }
 }
+
 
 function dataUrlToBytes(dataUrl: string): Uint8Array {
   const b64 = dataUrl.includes(",") ? dataUrl.split(",")[1]! : dataUrl;
