@@ -742,10 +742,26 @@ function ManualCard({
             {rows.map((r) => (
               <tr key={r.id}>
                 <td className="!p-0">
-                  <ManualCell id={r.id} field="amount" initial={r.amount} numeric autoFocus={r.id === newestId} />
+                  <ManualCell
+                    id={r.id}
+                    field="amount"
+                    initial={r.amount}
+                    savedAt={r.amountSavedAt ?? null}
+                    serverNow={serverNow}
+                    numeric
+                    autoFocus={r.id === newestId}
+                    onSaved={onSaved}
+                  />
                 </td>
                 <td className="!p-0">
-                  <ManualCell id={r.id} field="details" initial={r.details} />
+                  <ManualCell
+                    id={r.id}
+                    field="details"
+                    initial={r.details}
+                    savedAt={r.detailsSavedAt ?? null}
+                    serverNow={serverNow}
+                    onSaved={onSaved}
+                  />
                 </td>
                 <td className="text-[11px] text-muted-foreground">{formatDateTime(r.createdAt)}</td>
               </tr>
