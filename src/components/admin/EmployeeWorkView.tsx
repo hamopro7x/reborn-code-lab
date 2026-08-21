@@ -666,8 +666,10 @@ function ManualCard({
   card,
   title,
   rows,
+  serverNow,
   onAdd,
   onClear,
+  onSaved,
   adding,
   clearing,
   newestId,
@@ -675,9 +677,18 @@ function ManualCard({
 }: {
   card: ManualKind;
   title: string;
-  rows: { id: string; amount: string; details: string; createdAt?: string }[];
+  rows: {
+    id: string;
+    amount: string;
+    details: string;
+    createdAt?: string;
+    amountSavedAt?: string | null;
+    detailsSavedAt?: string | null;
+  }[];
+  serverNow?: string | null;
   onAdd: (card: ManualKind) => void;
   onClear: (card: ManualKind) => void;
+  onSaved: () => void;
   adding: boolean;
   clearing: boolean;
   newestId: string | null;
