@@ -720,7 +720,7 @@ export async function myShiftRows(userId: string, page = 1, pageSize = 50) {
  */
 
 /** Edit window for employee-entered values: 10 minutes, server-clock based. */
-export const EDIT_WINDOW_MS = 10 * 60 * 1000;
+export const EDIT_WINDOW_MS = 5 * 60 * 1000;
 
 export async function myEntries(ledgerIds: string[]) {
   if (!ledgerIds.length)
