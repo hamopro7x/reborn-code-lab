@@ -133,36 +133,32 @@ function P2POrdersTable({
 
   return (
     <div className="data-surface">
+      <div className="flex items-center justify-end gap-2 p-3">
+        {(
+          [
+            { key: "buy" as const, label: "شراء" },
+            { key: "sell" as const, label: "بيع" },
+          ]
+        ).map((s) => (
+          <button
+            key={s.key}
+            type="button"
+            onClick={() => setSide(s.key)}
+            className={`rounded-full border px-5 py-2 text-xs font-bold transition ${
+              side === s.key ? GLOW_ACTIVE : GLOW_IDLE
+            }`}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
+
       <div className="overflow-x-auto">
         <table className="data-table min-w-[900px] text-center">
           <thead>
             <tr>
-              {P2P_COLUMNS.map((c, i) => (
-                <th key={c}>
-                  {i === 0 ? (
-                    <div className="flex items-center justify-center gap-2">
-                      {(
-                        [
-                          { key: "buy" as const, label: "شراء" },
-                          { key: "sell" as const, label: "بيع" },
-                        ]
-                      ).map((s) => (
-                        <button
-                          key={s.key}
-                          type="button"
-                          onClick={() => setSide(s.key)}
-                          className={`rounded-full border px-4 py-1.5 text-xs font-bold transition ${
-                            side === s.key ? GLOW_ACTIVE : GLOW_IDLE
-                          }`}
-                        >
-                          {s.label}
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    c
-                  )}
-                </th>
+              {P2P_COLUMNS.map((c) => (
+                <th key={c}>{c}</th>
               ))}
             </tr>
           </thead>
