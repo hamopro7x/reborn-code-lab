@@ -34,7 +34,6 @@ import {
 } from "@/lib/face-camera";
 import {
   EYE_CLOSED,
-  YAW_HOLD,
   YAW_TARGET,
   loadFaceLandmarker,
   readFace,
@@ -44,8 +43,6 @@ import { motionSensorsAvailable, requestMotionPermission, waitForShake } from "@
 
 /** The preview is mirrored (natural selfie feel); captures follow the same mirroring. */
 const MIRROR = true;
-/** Hold duration per movement, in seconds. */
-const HOLD_SECONDS = 10;
 
 const INSTRUCTIONS = [
   "تأكد من ظهور وجهك بالكامل داخل إطار التحقق.",
