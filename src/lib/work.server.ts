@@ -695,10 +695,12 @@ export async function myWorkState(userId: string) {
   const db = await admin();
   const { data } = await db.from("work_shifts").select("id,user_id,started_at").is("ended_at", null).maybeSingle();
   if (!data || data.user_id !== userId) return { holding: false as const };
+  // Successful transactions only — same rule as the rows shown below.
   const { count } = await db
     .from("work_txn_assignments")
-    .select("id", { count: "exact", head: true })
-    .eq("shift_id", data.id);
+    .select("id, bybit_ledger!inner(status)", { count: "exact", head: true })
+    .eq("shift_id", data.id)
+    .in("bybit_ledger.status", SUCCESS_STATUSES as unknown as string[]);
   return {
     holding: true as const,
     shiftId: data.id as string,
@@ -711,7 +713,8 @@ export async function myWorkState(userId: string) {
 export async function myShiftRows(userId: string, page = 1, pageSize = 50) {
   const state = await myWorkState(userId);
   if (!state.holding) return { page: 1, pageSize, total: 0, rows: [] as any[], holding: false as const };
-  const res = await workTable({ userId, shiftId: state.shiftId, page, pageSize });
+  const res = await workTable({ userId, shiftId: state.shiftId, page, pageSize, successOnly: true });
+
   const entries = await myEntries(res.rows.map((r: any) => r.ledgerId));
   const rows = res.rows.map((r: any) => {
     const e = entries.get(r.ledgerId);
