@@ -811,16 +811,19 @@ export async function listManualTxns(userId: string) {
   const db = await admin();
   const { data } = await db
     .from("work_manual_txns")
-    .select("id,card,amount,details,created_at")
+    .select("id,card,amount,details,created_at,amount_saved_at,details_saved_at")
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
   return {
+    serverNow: new Date().toISOString(),
     rows: (data ?? []).map((r: any) => ({
       id: r.id as string,
       card: r.card as ManualCard,
       amount: r.amount === null ? "" : String(r.amount),
       details: r.details ?? "",
       createdAt: r.created_at as string,
+      amountSavedAt: (r.amount_saved_at ?? null) as string | null,
+      detailsSavedAt: (r.details_saved_at ?? null) as string | null,
     })),
   };
 }
@@ -843,6 +846,30 @@ export async function saveManualTxn(
   value: string,
 ) {
   const db = await admin();
+  const stampCol = field === "amount" ? "amount_saved_at" : "details_saved_at";
+
+  const { data: row } = await db
+    .from("work_manual_txns")
+    .select("id,amount,details,amount_saved_at,details_saved_at")
+    .eq("id", id)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!row) return { ok: false as const, error: "الصف غير موجود" };
+
+  // 10-minute edit window enforced on the SERVER clock, never the client's.
+  const prevStamp = (row as any)[stampCol] as string | null;
+  const now = new Date();
+  if (prevStamp && now.getTime() - new Date(prevStamp).getTime() >= EDIT_WINDOW_MS) {
+    return {
+      ok: false as const,
+      error: "انتهت مدة التعديل المسموحة لهذه القيمة.",
+      locked: true as const,
+      savedAt: prevStamp,
+      serverNow: now.toISOString(),
+    };
+  }
+
+  const savedAt = now.toISOString();
   let patch: Record<string, unknown>;
   if (field === "amount") {
     // Lenient parsing: Arabic-Indic digits, thousand separators, stray symbols.
@@ -857,11 +884,19 @@ export async function saveManualTxn(
   } else {
     patch = { details: value };
   }
+  // Only a real value starts the edit window; clearing a cell resets it.
+  const hasValue = field === "amount" ? patch["amount"] !== null : String(value).trim() !== "";
+  patch[stampCol] = hasValue ? (prevStamp ?? savedAt) : null;
 
   const { error } = await db.from("work_manual_txns").update(patch).eq("id", id).eq("user_id", userId);
   if (error) return { ok: false as const, error: error.message };
-  return { ok: true as const };
+  return {
+    ok: true as const,
+    savedAt: (patch[stampCol] ?? null) as string | null,
+    serverNow: savedAt,
+  };
 }
+
 
 /** Admin-only: delete every manual row in one card for a user. */
 export async function clearManualTxns(userId: string, card: ManualCard) {
