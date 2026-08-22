@@ -40,7 +40,7 @@ import {
   readFace,
   yawDir,
 } from "@/lib/face-mesh";
-import { motionSensorsAvailable, requestMotionPermission, waitForShake } from "@/lib/phone-motion";
+
 
 /** The preview is mirrored (natural selfie feel); captures follow the same mirroring. */
 const MIRROR = true;
@@ -265,23 +265,18 @@ export function FaceGate({
   };
 
   /**
-   * Extra liveness layer: the physical phone must actually move.
-   * Runs between the face movements and never replaces any face check.
+   * Haptic feedback only: the phone vibrates automatically when a face
+   * movement step succeeds. This is a signal for the employee, NOT a
+   * verification condition. If vibration is unsupported, we continue silently.
    */
-  const shakePhase = async () => {
-    if (!motionSensorsAvailable()) return; // desktop / no sensors → skip silently
-    setArrow(null);
-    setCountdown(null);
-    setInstruction("هز الهاتف الآن");
-    const allowed = await requestMotionPermission();
-    if (!allowed) return; // permission denied → do not block the face flow
-    const res = await waitForShake(8000);
-    if (!res.ok) {
-      if (res.reason === "unsupported") return;
-      throw new LivenessError("لم يتم رصد حركة الهاتف — هز الهاتف وحاول مرة أخرى");
+  const vibrate = (pattern: number[] = [90, 60, 90]) => {
+    if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+      try {
+        navigator.vibrate(pattern);
+      } catch {
+        // ignore unsupported patterns
+      }
     }
-    setInstruction("تم التحقق من حركة الهاتف");
-    await wait(400);
   };
 
   const run = async () => {
@@ -325,9 +320,8 @@ export function FaceGate({
       for (let i = 0; i < dirs.length; i++) {
         const dir = dirs[i]!;
         const got = await holdPhase(dir);
+        vibrate(); // automatic haptic signal that this step succeeded
         steps.push({ dir, image: got[got.length - 1]! });
-        // After the FIRST successful face movement: phone-movement check.
-        if (i === 0) await shakePhase();
       }
       const back = await posePhase("عد بوجهك للأمام", 1);
 
