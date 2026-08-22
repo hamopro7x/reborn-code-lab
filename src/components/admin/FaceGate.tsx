@@ -457,7 +457,7 @@ export function FaceGate({
             <Button
               className="w-full"
               onClick={() => {
-                vibrate(1); // gesture-time priming so later feedback works
+                vibrate(10); // gesture-time priming so later feedback is allowed
                 void run();
               }}
               disabled={working}
