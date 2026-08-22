@@ -202,7 +202,6 @@ export function FaceGate({
     setInstruction(msg);
     setArrow(null);
     await wait(400);
-    setCountdown(null);
     const frames = await collectGoodFrames(videoRef.current, {
       want,
       mirroredPreview: MIRROR,
