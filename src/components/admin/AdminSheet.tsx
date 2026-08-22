@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Plus, Table2, Loader2 } from "lucide-react";
+import { Plus, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -96,23 +96,19 @@ export function AdminSheet() {
   const cols = useMemo(() => data.columns, [data.columns]);
 
   return (
-    <div dir="rtl" className="space-y-3">
-      <div className="flex items-center justify-between gap-2">
-        <div className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-bold text-foreground">
-          <Table2 className="h-4 w-4 text-primary" />
-          جدول بيانات
-        </div>
-        <div className="flex items-center gap-2">
-          {saving && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
-          <button
-            type="button"
-            onClick={addColumn}
-            className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground shadow hover:opacity-90"
-          >
-            اضافة
-            <Plus className="h-3.5 w-3.5" />
-          </button>
-        </div>
+    <div dir="rtl" className="admin-sheet">
+      <div className="flex items-center justify-start gap-2 pb-1.5">
+        {saving && <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />}
+        <button
+          type="button"
+          onClick={addColumn}
+          className="inline-flex flex-row-reverse items-center gap-1.5 rounded-md bg-[#1d4ed8] px-2.5 py-1 text-[13px] font-bold text-white shadow hover:brightness-110"
+        >
+          <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white/25">
+            <Plus className="h-3 w-3" />
+          </span>
+          اضافة
+        </button>
       </div>
 
       {loading ? (
@@ -120,12 +116,12 @@ export function AdminSheet() {
           <Loader2 className="h-5 w-5 animate-spin text-primary" />
         </div>
       ) : cols.length === 0 ? (
-        <div className="flex min-h-[30vh] items-center justify-center rounded-md border border-white/10 text-sm text-muted-foreground">
+        <div className="flex min-h-[30vh] items-center justify-center border border-white/10 text-sm text-muted-foreground">
           اضغط «اضافة +» لإضافة أول عمود
         </div>
       ) : (
-        <div className="data-surface overflow-x-auto">
-          <table className="data-table min-w-max">
+        <div className="admin-sheet-surface">
+          <table className="data-table admin-sheet-table w-full table-fixed">
             <thead>
               <tr>
                 {cols.map((c) => (
@@ -135,7 +131,7 @@ export function AdminSheet() {
                       onChange={(e) => renameColumn(c.id, e.target.value)}
                       placeholder=""
                       data-no-autosave
-                      className="h-9 w-[200px] rounded-md border-0 bg-transparent px-3 text-center text-xs font-extrabold text-white outline-none placeholder:text-white/60"
+                      className="h-9 w-full border-0 bg-transparent px-3 text-center text-xs font-extrabold text-white outline-none placeholder:text-white/60"
                     />
                   </th>
                 ))}
@@ -150,7 +146,7 @@ export function AdminSheet() {
                         value={row[c.id] ?? ""}
                         onChange={(e) => setCell(rowIndex, c.id, e.target.value)}
                         data-no-autosave
-                        className="h-[46px] w-[200px] bg-transparent px-3 text-center text-xs text-foreground outline-none focus:bg-white/5"
+                        className="h-[54px] w-full bg-transparent px-3 text-center text-xs text-foreground outline-none focus:bg-white/5"
                       />
                     </td>
                   ))}
