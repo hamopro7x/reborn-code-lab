@@ -217,38 +217,46 @@ export function FaceGate({
     setInstruction(DIR_TEXT[dir]);
     setStatus("");
 
+    // The detector is guaranteed ready before the challenge starts (see run()).
     if (!meshRef.current) {
-      // Detector unavailable: fall back to timed capture + server-side check.
-      await wait(500);
+      await wait(400);
       const f = await collectGoodFrames(videoRef.current, { want: 1, mirroredPreview: MIRROR });
       if (!f.length) throw new LivenessError("لم يتم رصد الحركة المطلوبة — حاول مرة أخرى");
       return f;
     }
 
-    // The first frame that reaches the requested yaw succeeds immediately.
+    /**
+     * Instant acceptance: two consecutive readings past the yaw target (about
+     * 130ms) are enough to prove the turn is real — no holding, no countdown.
+     * The frame is grabbed the moment the direction is reached, so the image
+     * sent to the server actually shows the detected turn.
+     */
     const acquireStart = Date.now();
     let inPose = 0;
+    let shot: string | null = null;
     while (Date.now() - acquireStart < 20000) {
       const r = read();
-      if (!r.face) setStatus("لم يتم رصد الوجه — ضع وجهك داخل الإطار");
-      else if (yawDir(r.yaw, YAW_TARGET) === dir) {
+      if (!r.face) {
+        inPose = 0;
+        setStatus("لم يتم رصد الوجه — ضع وجهك داخل الإطار");
+      } else if (yawDir(r.yaw, YAW_TARGET) === dir) {
         inPose++;
         setStatus("تم رصد الاتجاه ✓");
-        break;
+        const f = captureUprightFrame(videoRef.current, { mirroredPreview: MIRROR });
+        if (f) shot = f;
+        if (inPose >= 2 && shot) break;
       } else {
         inPose = 0;
         setStatus(dir === "right" ? "لِف وجهك أكثر ناحية اليمين" : "لِف وجهك أكثر ناحية الشمال");
       }
-      await wait(110);
+      await wait(60);
     }
-    if (inPose < 1) throw new LivenessError("لم يتم الوصول للاتجاه المطلوب — حاول مرة أخرى");
+    if (inPose < 2 || !shot)
+      throw new LivenessError("لم يتم الوصول للاتجاه المطلوب — حاول مرة أخرى");
 
-    const f = captureUprightFrame(videoRef.current, { mirroredPreview: MIRROR });
-    if (!f) throw new LivenessError("لم يتم التقاط صورة للاتجاه — حاول مرة أخرى");
     setStatus("تم ✓");
     setArrow(null);
-    await wait(200);
-    return [f];
+    return [shot];
   };
 
   /**
