@@ -244,7 +244,11 @@ export function FaceGate({
         setStatus("تم رصد الاتجاه ✓");
         const f = captureUprightFrame(videoRef.current, { mirroredPreview: MIRROR });
         if (f) shot = f;
-        if (inPose >= 2 && shot) break;
+        if (inPose >= 2 && shot) {
+          // Haptic signal fires exactly at success, once, before any transition.
+          vibrate();
+          break;
+        }
       } else {
         inPose = 0;
         setStatus(dir === "right" ? "لِف وجهك أكثر ناحية اليمين" : "لِف وجهك أكثر ناحية الشمال");
@@ -256,6 +260,7 @@ export function FaceGate({
 
     setStatus("تم ✓");
     setArrow(null);
+
     return [shot];
   };
 
