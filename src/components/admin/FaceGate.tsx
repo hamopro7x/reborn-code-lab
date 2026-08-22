@@ -341,8 +341,8 @@ export function FaceGate({
       const dirs = chal.steps as Dir[];
       for (let i = 0; i < dirs.length; i++) {
         const dir = dirs[i]!;
-        const got = await holdPhase(dir);
-        vibrate(); // automatic haptic signal that this step succeeded
+        const got = await holdPhase(dir); // haptic fires inside, at the success moment
+
         steps.push({ dir, image: got[got.length - 1]! });
       }
       const back = await posePhase("عد بوجهك للأمام", 1);
