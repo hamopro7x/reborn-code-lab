@@ -217,60 +217,71 @@ export function FaceGate({
     setInstruction(DIR_TEXT[dir]);
     setStatus("");
 
+    // The detector is guaranteed ready before the challenge starts (see run()).
     if (!meshRef.current) {
-      // Detector unavailable: fall back to timed capture + server-side check.
-      await wait(500);
+      await wait(400);
       const f = await collectGoodFrames(videoRef.current, { want: 1, mirroredPreview: MIRROR });
       if (!f.length) throw new LivenessError("لم يتم رصد الحركة المطلوبة — حاول مرة أخرى");
       return f;
     }
 
-    // The first frame that reaches the requested yaw succeeds immediately.
+    /**
+     * Instant acceptance: two consecutive readings past the yaw target (about
+     * 130ms) are enough to prove the turn is real — no holding, no countdown.
+     * The frame is grabbed the moment the direction is reached, so the image
+     * sent to the server actually shows the detected turn.
+     */
     const acquireStart = Date.now();
     let inPose = 0;
+    let shot: string | null = null;
     while (Date.now() - acquireStart < 20000) {
       const r = read();
-      if (!r.face) setStatus("لم يتم رصد الوجه — ضع وجهك داخل الإطار");
-      else if (yawDir(r.yaw, YAW_TARGET) === dir) {
+      if (!r.face) {
+        inPose = 0;
+        setStatus("لم يتم رصد الوجه — ضع وجهك داخل الإطار");
+      } else if (yawDir(r.yaw, YAW_TARGET) === dir) {
         inPose++;
         setStatus("تم رصد الاتجاه ✓");
-        break;
+        const f = captureUprightFrame(videoRef.current, { mirroredPreview: MIRROR });
+        if (f) shot = f;
+        if (inPose >= 2 && shot) break;
       } else {
         inPose = 0;
         setStatus(dir === "right" ? "لِف وجهك أكثر ناحية اليمين" : "لِف وجهك أكثر ناحية الشمال");
       }
-      await wait(110);
+      await wait(60);
     }
-    if (inPose < 1) throw new LivenessError("لم يتم الوصول للاتجاه المطلوب — حاول مرة أخرى");
+    if (inPose < 2 || !shot)
+      throw new LivenessError("لم يتم الوصول للاتجاه المطلوب — حاول مرة أخرى");
 
-    const f = captureUprightFrame(videoRef.current, { mirroredPreview: MIRROR });
-    if (!f) throw new LivenessError("لم يتم التقاط صورة للاتجاه — حاول مرة أخرى");
     setStatus("تم ✓");
     setArrow(null);
-    await wait(200);
-    return [f];
+    return [shot];
   };
 
   /**
    * Haptic feedback only: the phone vibrates automatically when a face
    * movement step succeeds. This is a signal for the employee, NOT a
    * verification condition. If vibration is unsupported, we continue silently.
+   *
+   * Reliability notes: `navigator.vibrate` needs a secure context, a visible
+   * page and previous user activation — so we prime it inside the button press
+   * and prefer a single duration (patterns are ignored by some browsers).
    */
-  const vibrate = (pattern: number | number[] = [90, 60, 90]) => {
+  const vibrate = (ms = 200) => {
     if (typeof navigator === "undefined" || typeof navigator.vibrate !== "function") return;
+    if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
     try {
-      // Some mobile browsers ignore a pattern but honour a single duration.
-      if (!navigator.vibrate(pattern) && Array.isArray(pattern)) {
-        navigator.vibrate(pattern.reduce((a, b) => a + b, 0));
-      }
+      navigator.vibrate(0); // cancel any queued pattern so the next one is felt
+      if (!navigator.vibrate(ms)) navigator.vibrate([ms]);
     } catch {
-      // ignore unsupported patterns
+      // unsupported → silently continue, vibration is never a requirement
     }
   };
 
   const run = async () => {
     // Unlock haptics inside the user gesture (mobile browsers require this).
-    vibrate(1);
+    vibrate(15);
     if (!captureUprightFrame(videoRef.current, { mirroredPreview: MIRROR })) {
       setStatus("الكاميرا لم تجهز بعد، انتظر لحظة");
       return;
@@ -281,6 +292,12 @@ export function FaceGate({
       setInstruction("انظر أمام الكاميرا مباشرة");
       setStatus("جاري كشف الوجه...");
       await waitForUsableFrame();
+
+      // Never start the real challenge before the landmarker is actually ready.
+      if (!meshRef.current) {
+        setStatus("جاري تهيئة التعرف على الوجه...");
+        meshRef.current = await loadFaceLandmarker();
+      }
 
       if (!enrolled) {
         const frames = await posePhase("انظر أمام الكاميرا مباشرة", 3);
@@ -406,12 +423,16 @@ export function FaceGate({
                 style={{ transform: MIRROR ? "scaleX(-1)" : undefined, objectPosition: "center" }}
               />
               <div className="pointer-events-none absolute inset-x-[14%] inset-y-[10%] rounded-[50%] border-2 border-primary/80 shadow-[0_0_24px_oklch(0.7_0.15_220/0.45)]" />
+              {/*
+                The preview is mirrored, so the employee's own right side is the
+                right side of the screen: "turn right" => arrow pointing right.
+              */}
               {arrow ? (
-                <div className="pointer-events-none absolute inset-0 grid place-items-center text-destructive drop-shadow-[0_0_10px_rgba(0,0,0,0.65)]">
+                <div dir="ltr" className="pointer-events-none absolute inset-0 grid place-items-center text-destructive drop-shadow-[0_0_10px_rgba(0,0,0,0.65)]">
                   {arrow === "right" ? (
-                    <ArrowLeft className="animate-arrow-nudge size-16" strokeWidth={3} style={{ "--nudge": "14px" } as React.CSSProperties} />
+                    <ArrowRight className="animate-arrow-nudge size-16" strokeWidth={3} style={{ "--nudge": "14px" } as React.CSSProperties} />
                   ) : (
-                    <ArrowRight className="animate-arrow-nudge size-16" strokeWidth={3} style={{ "--nudge": "-14px" } as React.CSSProperties} />
+                    <ArrowLeft className="animate-arrow-nudge size-16" strokeWidth={3} style={{ "--nudge": "-14px" } as React.CSSProperties} />
                   )}
                 </div>
               ) : null}

@@ -90,20 +90,49 @@ export function readFace(
   if (!marks || marks.length < 400) return EMPTY;
 
   /**
-   * Yaw from stable facial geometry (nose bridge vs the eye-corner midpoint),
-   * measured on the RAW camera pixels. In an unmirrored camera image the
-   * person's own right side sits on the image's left, so turning right moves
-   * the nose toward smaller x -> negative yaw. Mirroring the preview does not
-   * change the pixels fed to the detector, so the sign stays correct on mobile.
+   * Head yaw from THREE independent signals on the RAW camera pixels
+   * (mirroring the preview never changes the pixels the detector sees):
+   *
+   * 1. cheek asymmetry — nose tip distance to the left/right face edges
+   *    (landmarks 234 / 454). This is the strongest, most reliable signal.
+   * 2. nose offset against the eye-corner midpoint.
+   * 3. the 4x4 facial transformation matrix, when the model emits it.
+   *
+   * Sign convention: negative = the person turned to their OWN right. In an
+   * unmirrored camera image the person's own right side sits on the image's
+   * left (smaller x), so turning right pulls the nose toward smaller x.
    */
   const nose = marks[1];
   const eyeL = marks[33];
   const eyeR = marks[263];
   const chin = marks[152];
   const brow = marks[10];
+  const edgeL = marks[234];
+  const edgeR = marks[454];
+
+  const dL = Math.abs(nose.x - edgeL.x);
+  const dR = Math.abs(edgeR.x - nose.x);
+  const cheek = (dL - dR) / (dL + dR || 1); // >0 => nose toward image right => own left
+
   const mid = (eyeL.x + eyeR.x) / 2;
   const span = Math.abs(eyeR.x - eyeL.x) || 1;
-  const yaw = Math.max(-90, Math.min(90, ((nose.x - mid) / span) * 130));
+  const offset = (nose.x - mid) / span;
+
+  // Both normalised signals map to degrees with their own sensitivity, then we
+  // keep the larger magnitude (a real turn shows up strongly in at least one).
+  const yawCheek = cheek * 95;
+  const yawOffset = offset * 130;
+  let yaw = Math.abs(yawCheek) >= Math.abs(yawOffset) ? yawCheek : yawOffset;
+
+  const m: number[] | undefined = res?.facialTransformationMatrixes?.[0]?.data;
+  if (m && m.length === 16) {
+    // Column-major 4x4; yaw around the vertical axis.
+    const matYaw = (Math.atan2(-m[8]!, m[10]!) * 180) / Math.PI;
+    // Trust the matrix magnitude only when it agrees with the geometric sign.
+    if (Math.sign(matYaw) === Math.sign(yaw) && Math.abs(matYaw) > Math.abs(yaw)) yaw = matYaw;
+  }
+  yaw = Math.max(-90, Math.min(90, yaw));
+
   const vSpan = Math.abs(chin.y - brow.y) || 1;
   const vMid = (brow.y + chin.y) / 2;
   const pitch = Math.max(-60, Math.min(60, ((nose.y - vMid) / vSpan) * 120));
@@ -133,9 +162,9 @@ export function readFace(
 }
 
 /** Yaw threshold (degrees) that counts as "really turned" toward a side. */
-export const YAW_TARGET = 18;
-/** Tolerance band: once in pose, the head may drift back to this angle. */
-export const YAW_HOLD = 12;
+export const YAW_TARGET = 15;
+/** Tolerance band: "looking forward" is anything inside this angle. */
+export const YAW_HOLD = 11;
 /** Below this the eyes are considered closed (blink-tolerant when smoothed). */
 export const EYE_CLOSED = 0.35;
 
