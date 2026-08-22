@@ -264,31 +264,16 @@ export function FaceGate({
     return [shot];
   };
 
-  /**
-   * Haptic feedback only: the phone vibrates automatically when a face
-   * movement step succeeds. This is a signal for the employee, NOT a
-   * verification condition. If vibration is unsupported we continue silently.
-   *
-   * Notes that make it actually fire on phones:
-   * - no `vibrate(0)` before the real call (that cancels the buzz)
-   * - no visibility/permission style guards that silently skip it
-   * - a short clear pattern (two quick pulses) with a single-duration fallback
-   * - fired synchronously at the success moment, before any state change
-   */
-  const vibrate = (ms = 220) => {
+  /** Haptic feedback only; it never participates in the verification result. */
+  const vibrate = (ms = 400) => {
     try {
       const nav = typeof navigator === "undefined" ? null : (navigator as any);
       const fn = nav?.vibrate ?? nav?.mozVibrate ?? nav?.webkitVibrate;
       if (typeof fn !== "function") return;
-      const call = (p: number | number[]) => {
-        try {
-          return fn.call(nav, p) !== false;
-        } catch {
-          return false;
-        }
-      };
-      // clear + short pattern is the most widely felt combination
-      if (!call([ms, 60, ms])) call(ms);
+      // A single duration is more reliable than a pattern in Android browsers
+      // and installed PWAs. The earlier gesture-time "priming" vibration was
+      // removed because it could consume/cancel the later success vibration.
+      fn.call(nav, ms);
     } catch {
       // unsupported → silently continue, vibration is never a requirement
     }
@@ -368,6 +353,7 @@ export function FaceGate({
         toast.error(res.error);
         return;
       }
+      vibrate(500);
       toast.success("تم التحقق من الوجه بنجاح");
       stopCamera();
       onOpenChange(false);
@@ -457,7 +443,6 @@ export function FaceGate({
             <Button
               className="w-full"
               onClick={() => {
-                vibrate(10); // gesture-time priming so later feedback is allowed
                 void run();
               }}
               disabled={working}
