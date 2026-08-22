@@ -51,12 +51,12 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
             قائمة الموظفين
           </button>
         </div>
-        <div className="relative px-4 pb-2 md:px-6">
-          {tab === "sheet" ? null : null}
-        </div>
+        <div className="h-10" />
       </div>
 
-      {tab === "sheet" ? <AdminSheet /> : <EmployeesList />}
+      <div className="-mt-10 px-4 md:px-6">
+        {tab === "sheet" ? <AdminSheet /> : <EmployeesList />}
+      </div>
     </div>
   );
 }
