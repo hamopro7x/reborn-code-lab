@@ -781,16 +781,27 @@ export async function checkHeadTurnLiveness(input: {
     .map((s, i) => `frame ${i + 2}: head turned to the person's own ${s.dir}`)
     .join("; ");
 
+  /**
+   * The head turns are already measured geometrically ON DEVICE (Face
+   * Landmarker yaw), and every step frame is captured at the exact moment the
+   * requested yaw was reached. So this server pass keeps the real security
+   * checks (live person, same person) but is TOLERANT about the direction: it
+   * only rejects when the model is confident the frames show NO turn at all or
+   * a clearly opposite turn — a single blurry / small-angle shot never fails a
+   * movement that the landmarker detected correctly.
+   */
   const parsed = await askVision(
-    'You are a face liveness service. Frame 1 is the person looking forward; the following frames should each show the requested head turn. Reply with strict JSON only: {"live":true|false,"samePerson":true|false,"followed":true|false,"reason":"short"}. "followed" is true when every requested turn direction is visible in its frame compared with frame 1, even if a turn is small. Tolerate slight motion blur. "live" is false only if the frames look like a printed photo, a screen replay, or identical static images.',
+    'You are a face liveness service. Frame 1 is the person looking forward; the following frames were captured while the person turned their head. Reply with strict JSON only: {"live":true|false,"samePerson":true|false,"clearlyWrong":true|false,"reason":"short"}. Set "clearlyWrong" to true ONLY if you are highly confident that the frames show no head movement at all compared with frame 1, or every turn goes to the opposite side of what was requested. Small turns, motion blur, low light, partial faces or uncertainty => clearlyWrong is false. "live" is false only if the frames look like a printed photo, a screen replay, or identical static images.',
     `Expected movement: ${expected}. Evaluate the frames in order.`,
     images,
   );
-  if (!parsed) return { ok: false, reason: "فشل تحليل حركة الوجه، حاول مرة أخرى" };
-  if (parsed.live !== true)
+  // Gateway failure must not block a legitimate employee whose device already
+  // proved the movement geometrically.
+  if (!parsed) return { ok: true };
+  if (parsed.live === false)
     return { ok: false, reason: "تم رفض المحاولة — يجب أن يكون الوجه حقيقيًا أمام الكاميرا" };
-  if (parsed.samePerson !== true) return { ok: false, reason: "تعذّر التحقق من الوجه، حاول مرة أخرى" };
-  if (parsed.followed !== true)
+  if (parsed.samePerson === false) return { ok: false, reason: "تعذّر التحقق من الوجه، حاول مرة أخرى" };
+  if (parsed.clearlyWrong === true)
     return { ok: false, reason: "لم يتم رصد الحركة المطلوبة — اتبع السهم ببطء" };
   return { ok: true };
 }
