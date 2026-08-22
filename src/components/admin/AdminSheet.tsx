@@ -124,18 +124,18 @@ export function AdminSheet() {
           اضغط «اضافة +» لإضافة أول عمود
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-max border-collapse">
+        <div className="data-surface overflow-x-auto">
+          <table className="data-table min-w-max">
             <thead>
               <tr>
                 {cols.map((c) => (
-                  <th key={c.id} className="p-0.5 align-bottom">
+                  <th key={c.id} className="p-0">
                     <input
                       value={c.name}
                       onChange={(e) => renameColumn(c.id, e.target.value)}
                       placeholder=""
                       data-no-autosave
-                      className="data-table-head h-11 w-[200px] rounded-md border-0 bg-transparent px-3 text-center text-sm font-extrabold text-white outline-none placeholder:text-white/60"
+                      className="h-9 w-[200px] rounded-md border-0 bg-transparent px-3 text-center text-xs font-extrabold text-white outline-none placeholder:text-white/60"
                     />
                   </th>
                 ))}
@@ -145,12 +145,12 @@ export function AdminSheet() {
               {data.rows.map((row, rowIndex) => (
                 <tr key={rowIndex}>
                   {cols.map((c) => (
-                    <td key={c.id} className="border border-white/15 p-0">
+                    <td key={c.id} className="p-0">
                       <input
                         value={row[c.id] ?? ""}
                         onChange={(e) => setCell(rowIndex, c.id, e.target.value)}
                         data-no-autosave
-                        className="h-[54px] w-[200px] bg-transparent px-3 text-center text-sm text-foreground outline-none focus:bg-white/5"
+                        className="h-[46px] w-[200px] bg-transparent px-3 text-center text-xs text-foreground outline-none focus:bg-white/5"
                       />
                     </td>
                   ))}
