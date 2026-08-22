@@ -263,22 +263,25 @@ export function FaceGate({
    * Haptic feedback only: the phone vibrates automatically when a face
    * movement step succeeds. This is a signal for the employee, NOT a
    * verification condition. If vibration is unsupported, we continue silently.
+   *
+   * Reliability notes: `navigator.vibrate` needs a secure context, a visible
+   * page and previous user activation — so we prime it inside the button press
+   * and prefer a single duration (patterns are ignored by some browsers).
    */
-  const vibrate = (pattern: number | number[] = [90, 60, 90]) => {
+  const vibrate = (ms = 200) => {
     if (typeof navigator === "undefined" || typeof navigator.vibrate !== "function") return;
+    if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
     try {
-      // Some mobile browsers ignore a pattern but honour a single duration.
-      if (!navigator.vibrate(pattern) && Array.isArray(pattern)) {
-        navigator.vibrate(pattern.reduce((a, b) => a + b, 0));
-      }
+      navigator.vibrate(0); // cancel any queued pattern so the next one is felt
+      if (!navigator.vibrate(ms)) navigator.vibrate([ms]);
     } catch {
-      // ignore unsupported patterns
+      // unsupported → silently continue, vibration is never a requirement
     }
   };
 
   const run = async () => {
     // Unlock haptics inside the user gesture (mobile browsers require this).
-    vibrate(1);
+    vibrate(15);
     if (!captureUprightFrame(videoRef.current, { mirroredPreview: MIRROR })) {
       setStatus("الكاميرا لم تجهز بعد، انتظر لحظة");
       return;
@@ -289,6 +292,12 @@ export function FaceGate({
       setInstruction("انظر أمام الكاميرا مباشرة");
       setStatus("جاري كشف الوجه...");
       await waitForUsableFrame();
+
+      // Never start the real challenge before the landmarker is actually ready.
+      if (!meshRef.current) {
+        setStatus("جاري تهيئة التعرف على الوجه...");
+        meshRef.current = await loadFaceLandmarker();
+      }
 
       if (!enrolled) {
         const frames = await posePhase("انظر أمام الكاميرا مباشرة", 3);
