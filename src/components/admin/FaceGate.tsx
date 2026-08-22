@@ -56,8 +56,8 @@ type Step = "loading" | "intro" | "camera";
 type Dir = "right" | "left";
 
 const DIR_TEXT: Record<Dir, string> = {
-  right: "انظر إلى اليمين وثبّت وجهك",
-  left: "انظر إلى الشمال وثبّت وجهك",
+  right: "لِف وجهك ناحية اليمين",
+  left: "لِف وجهك ناحية الشمال",
 };
 
 class LivenessError extends Error {}
@@ -85,7 +85,6 @@ export function FaceGate({
   const [instruction, setInstruction] = useState("");
   const [working, setWorking] = useState(false);
   const [arrow, setArrow] = useState<Dir | null>(null);
-  const [countdown, setCountdown] = useState<number | null>(null);
   const [failed, setFailed] = useState(false);
 
   const stopCamera = useCallback(() => {
@@ -100,7 +99,6 @@ export function FaceGate({
       setStep("loading");
       setStatus("");
       setInstruction("");
-      setCountdown(null);
       setArrow(null);
       setFailed(false);
       setWorking(false);
@@ -146,8 +144,7 @@ export function FaceGate({
           await waitForVideoReady(videoRef.current);
         }
         setInstruction("ضع وجهك داخل الإطار");
-        setStatus("اضغط الزر بالأسفل للبدء");
-      } catch {
+        } catch {
         setStatus("تعذّر تشغيل الكاميرا — اسمح بالوصول للكاميرا وحاول مرة أخرى");
       }
     })();
@@ -204,10 +201,7 @@ export function FaceGate({
   const posePhase = async (msg: string, want: number) => {
     setInstruction(msg);
     setArrow(null);
-    for (let s = 3; s >= 1; s--) {
-      setCountdown(s);
-      await wait(600);
-    }
+    await wait(400);
     setCountdown(null);
     const frames = await collectGoodFrames(videoRef.current, {
       want,
@@ -227,11 +221,7 @@ export function FaceGate({
 
     if (!meshRef.current) {
       // Detector unavailable: fall back to timed capture + server-side check.
-      for (let s = 3; s >= 1; s--) {
-        setCountdown(s);
-        await wait(700);
-      }
-      setCountdown(null);
+      await wait(500);
       const f = await collectGoodFrames(videoRef.current, { want: 1, mirroredPreview: MIRROR });
       if (!f.length) throw new LivenessError("لم يتم رصد الحركة المطلوبة — حاول مرة أخرى");
       return f;
@@ -247,14 +237,14 @@ export function FaceGate({
       else if (yawDir(r.yaw, YAW_TARGET) === dir) {
         inPose++;
         setStatus("تم رصد الاتجاه ✓");
-        if (inPose >= 3) break;
+        break;
       } else {
         inPose = 0;
         setStatus(dir === "right" ? "لِف وجهك أكثر ناحية اليمين" : "لِف وجهك أكثر ناحية الشمال");
       }
       await wait(110);
     }
-    if (inPose < 3) throw new LivenessError("لم يتم الوصول للاتجاه المطلوب — حاول مرة أخرى");
+    if (inPose < 1) throw new LivenessError("لم يتم الوصول للاتجاه المطلوب — حاول مرة أخرى");
 
     const f = captureUprightFrame(videoRef.current, { mirroredPreview: MIRROR });
     if (!f) throw new LivenessError("لم يتم التقاط صورة للاتجاه — حاول مرة أخرى");
@@ -269,17 +259,21 @@ export function FaceGate({
    * movement step succeeds. This is a signal for the employee, NOT a
    * verification condition. If vibration is unsupported, we continue silently.
    */
-  const vibrate = (pattern: number[] = [90, 60, 90]) => {
-    if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
-      try {
-        navigator.vibrate(pattern);
-      } catch {
-        // ignore unsupported patterns
+  const vibrate = (pattern: number | number[] = [90, 60, 90]) => {
+    if (typeof navigator === "undefined" || typeof navigator.vibrate !== "function") return;
+    try {
+      // Some mobile browsers ignore a pattern but honour a single duration.
+      if (!navigator.vibrate(pattern) && Array.isArray(pattern)) {
+        navigator.vibrate(pattern.reduce((a, b) => a + b, 0));
       }
+    } catch {
+      // ignore unsupported patterns
     }
   };
 
   const run = async () => {
+    // Unlock haptics inside the user gesture (mobile browsers require this).
+    vibrate(1);
     if (!captureUprightFrame(videoRef.current, { mirroredPreview: MIRROR })) {
       setStatus("الكاميرا لم تجهز بعد، انتظر لحظة");
       return;
@@ -302,7 +296,6 @@ export function FaceGate({
         }
         setEnrolled(true);
         setInstruction("تم إعداد التحقق من الوجه");
-        setStatus("اضغط «تحقق» لاستلام الشغل");
         toast.success("تم إنشاء بيانات الوجه");
         return;
       }
@@ -358,7 +351,6 @@ export function FaceGate({
       toast.error(msg);
     } finally {
       setArrow(null);
-      setCountdown(null);
       setWorking(false);
     }
   };
@@ -429,7 +421,14 @@ export function FaceGate({
             </div>
 
 
-            <Button className="w-full" onClick={() => void run()} disabled={working}>
+            <Button
+              className="w-full"
+              onClick={() => {
+                vibrate(1); // gesture-time priming so later feedback works
+                void run();
+              }}
+              disabled={working}
+            >
               {working ? <Loader2 className="size-4 animate-spin" /> : <ScanFace className="size-4" />}
               {enrolled ? "تحقق" : "تسجيل الوجه"}
             </Button>
