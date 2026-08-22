@@ -162,9 +162,9 @@ export function readFace(
 }
 
 /** Yaw threshold (degrees) that counts as "really turned" toward a side. */
-export const YAW_TARGET = 18;
-/** Tolerance band: once in pose, the head may drift back to this angle. */
-export const YAW_HOLD = 12;
+export const YAW_TARGET = 15;
+/** Tolerance band: "looking forward" is anything inside this angle. */
+export const YAW_HOLD = 11;
 /** Below this the eyes are considered closed (blink-tolerant when smoothed). */
 export const EYE_CLOSED = 0.35;
 
