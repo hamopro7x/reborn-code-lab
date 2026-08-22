@@ -21,20 +21,20 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
   return (
     <div className="min-h-[40vh]" dir="rtl">
       <div
-        className="relative -mx-4 mb-2 h-[113px] overflow-hidden md:-mx-6"
+        className="relative -mx-4 -mt-4 md:-mx-6 md:-mt-6"
         style={{
           backgroundImage: `url(${sheetBg.url})`,
           backgroundSize: "cover",
-          backgroundPosition: "center left",
+          backgroundPosition: "top left",
           backgroundRepeat: "no-repeat",
         }}
       >
-        <div className="relative flex h-full items-center justify-start gap-5 px-4 md:px-6">
+        <div className="relative flex items-center justify-start gap-3 px-4 pb-1 pt-5 md:px-6">
           <button
             type="button"
             onClick={() => setTab("sheet")}
-            className={`inline-flex flex-row-reverse items-center gap-2 rounded-full px-5 py-2.5 text-sm font-extrabold text-white transition ${
-              tab === "sheet" ? "border-2 border-[#2b62ff] bg-black/45" : "border-2 border-transparent hover:bg-black/30"
+            className={`inline-flex flex-row-reverse items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-extrabold text-white transition ${
+              tab === "sheet" ? "bg-[#151515]/90 shadow-lg" : "bg-[#151515]/60 text-white/85 hover:bg-[#151515]/85"
             }`}
           >
             <span className="text-base leading-none">🗂️</span>
@@ -43,13 +43,16 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
           <button
             type="button"
             onClick={() => setTab("employees")}
-            className={`inline-flex flex-row-reverse items-center gap-2 rounded-full px-5 py-2.5 text-sm font-extrabold text-white transition ${
-              tab === "employees" ? "border-2 border-[#2b62ff] bg-black/45" : "border-2 border-transparent hover:bg-black/30"
+            className={`inline-flex flex-row-reverse items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-extrabold text-white transition ${
+              tab === "employees" ? "bg-[#151515]/90 shadow-lg" : "bg-[#151515]/60 text-white/85 hover:bg-[#151515]/85"
             }`}
           >
             <Users className="h-4 w-4" />
             قائمة الموظفين
           </button>
+        </div>
+        <div className="relative px-4 pb-2 md:px-6">
+          {tab === "sheet" ? null : null}
         </div>
       </div>
 
