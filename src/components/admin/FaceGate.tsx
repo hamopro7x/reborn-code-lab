@@ -320,9 +320,8 @@ export function FaceGate({
       for (let i = 0; i < dirs.length; i++) {
         const dir = dirs[i]!;
         const got = await holdPhase(dir);
+        vibrate(); // automatic haptic signal that this step succeeded
         steps.push({ dir, image: got[got.length - 1]! });
-        // After the FIRST successful face movement: phone-movement check.
-        if (i === 0) await shakePhase();
       }
       const back = await posePhase("عد بوجهك للأمام", 1);
 
