@@ -262,18 +262,28 @@ export function FaceGate({
   /**
    * Haptic feedback only: the phone vibrates automatically when a face
    * movement step succeeds. This is a signal for the employee, NOT a
-   * verification condition. If vibration is unsupported, we continue silently.
+   * verification condition. If vibration is unsupported we continue silently.
    *
-   * Reliability notes: `navigator.vibrate` needs a secure context, a visible
-   * page and previous user activation — so we prime it inside the button press
-   * and prefer a single duration (patterns are ignored by some browsers).
+   * Notes that make it actually fire on phones:
+   * - no `vibrate(0)` before the real call (that cancels the buzz)
+   * - no visibility/permission style guards that silently skip it
+   * - a short clear pattern (two quick pulses) with a single-duration fallback
+   * - fired synchronously at the success moment, before any state change
    */
-  const vibrate = (ms = 200) => {
-    if (typeof navigator === "undefined" || typeof navigator.vibrate !== "function") return;
-    if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+  const vibrate = (ms = 220) => {
     try {
-      navigator.vibrate(0); // cancel any queued pattern so the next one is felt
-      if (!navigator.vibrate(ms)) navigator.vibrate([ms]);
+      const nav = typeof navigator === "undefined" ? null : (navigator as any);
+      const fn = nav?.vibrate ?? nav?.mozVibrate ?? nav?.webkitVibrate;
+      if (typeof fn !== "function") return;
+      const call = (p: number | number[]) => {
+        try {
+          return fn.call(nav, p) !== false;
+        } catch {
+          return false;
+        }
+      };
+      // clear + short pattern is the most widely felt combination
+      if (!call([ms, 60, ms])) call(ms);
     } catch {
       // unsupported → silently continue, vibration is never a requirement
     }
@@ -281,11 +291,11 @@ export function FaceGate({
 
   const run = async () => {
     // Unlock haptics inside the user gesture (mobile browsers require this).
-    vibrate(15);
     if (!captureUprightFrame(videoRef.current, { mirroredPreview: MIRROR })) {
       setStatus("الكاميرا لم تجهز بعد، انتظر لحظة");
       return;
     }
+
     setWorking(true);
     setFailed(false);
     try {
