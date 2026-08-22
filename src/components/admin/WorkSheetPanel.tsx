@@ -4,8 +4,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { Loader2, Users } from "lucide-react";
 import { EmployeeWorkView } from "@/components/admin/EmployeeWorkView";
 import { AdminSheet } from "@/components/admin/AdminSheet";
-import { FintechBackdrop } from "@/components/admin/FintechBackdrop";
 import { adminListEmployees } from "@/lib/courses.functions";
+import sheetBg from "@/assets/sheet-bg.jpg.asset.json";
 
 type TabKey = "sheet" | "employees";
 
@@ -20,28 +20,31 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
 
   return (
     <div className="min-h-[40vh]" dir="rtl">
-      <div className="relative -mx-4 mb-2 overflow-hidden md:-mx-6">
-        <FintechBackdrop className="absolute inset-0" />
-        <div className="relative flex items-center justify-start gap-3 px-4 py-4 md:px-6">
+      <div
+        className="relative -mx-4 mb-2 h-[113px] overflow-hidden md:-mx-6"
+        style={{
+          backgroundImage: `url(${sheetBg.url})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center left",
+          backgroundRepeat: "no-repeat",
+        }}
+      >
+        <div className="relative flex h-full items-center justify-start gap-5 px-4 md:px-6">
           <button
             type="button"
             onClick={() => setTab("sheet")}
-            className={`inline-flex flex-row-reverse items-center gap-2 rounded-2xl px-4 py-3 text-sm font-extrabold transition ${
-              tab === "sheet"
-                ? "border border-white/15 bg-black/70 text-white shadow-[0_0_0_1px_oklch(0.55_0.2_265/0.5),0_10px_30px_-12px_oklch(0_0_0/0.8)]"
-                : "border border-white/10 bg-black/50 text-white/80 hover:text-white"
+            className={`inline-flex flex-row-reverse items-center gap-2 rounded-full px-5 py-2.5 text-sm font-extrabold text-white transition ${
+              tab === "sheet" ? "border-2 border-[#2b62ff] bg-black/45" : "border-2 border-transparent hover:bg-black/30"
             }`}
           >
-            <span className="text-lg leading-none">🗂️</span>
+            <span className="text-base leading-none">🗂️</span>
             جدول بيانات
           </button>
           <button
             type="button"
             onClick={() => setTab("employees")}
-            className={`inline-flex flex-row-reverse items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-extrabold transition ${
-              tab === "employees"
-                ? "border border-white/15 bg-black/70 text-white shadow-[0_0_0_1px_oklch(0.55_0.2_265/0.5),0_10px_30px_-12px_oklch(0_0_0/0.8)]"
-                : "border border-white/10 bg-black/50 text-white/80 hover:text-white"
+            className={`inline-flex flex-row-reverse items-center gap-2 rounded-full px-5 py-2.5 text-sm font-extrabold text-white transition ${
+              tab === "employees" ? "border-2 border-[#2b62ff] bg-black/45" : "border-2 border-transparent hover:bg-black/30"
             }`}
           >
             <Users className="h-4 w-4" />
