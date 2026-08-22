@@ -74,7 +74,7 @@ function EmployeesList() {
   }
 
   return (
-    <div className="admin-sheet-surface">
+    <div className="admin-sheet-surface -mx-4 md:-mx-6">
       <table className="data-table admin-sheet-table w-full table-fixed">
         <thead>
           <tr>
