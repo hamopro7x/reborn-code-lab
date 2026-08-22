@@ -4,7 +4,7 @@
  *
  * Liveness is measured ON DEVICE with facial landmarks (see `face-mesh.ts`):
  * - real head yaw must reach the requested side (not a small nudge)
- * - the pose must be HELD for 10 seconds with a visible countdown
+ * - reaching the requested side succeeds instantly (no hold, no countdown)
  * - eyes must stay open (smoothed over time, so a natural blink is fine)
  * The direction order is issued by the server and only ONE direction is ever
  * shown at a time.
@@ -217,7 +217,6 @@ export function FaceGate({
     setArrow(dir);
     setInstruction(DIR_TEXT[dir]);
     setStatus("");
-    setCountdown(null);
 
     if (!meshRef.current) {
       // Detector unavailable: fall back to timed capture + server-side check.
@@ -227,8 +226,7 @@ export function FaceGate({
       return f;
     }
 
-    // Confirm the requested direction with a few consecutive frames to avoid
-    // accidental detection, then succeed immediately — no 10-second hold.
+    // The first frame that reaches the requested yaw succeeds immediately.
     const acquireStart = Date.now();
     let inPose = 0;
     while (Date.now() - acquireStart < 20000) {
