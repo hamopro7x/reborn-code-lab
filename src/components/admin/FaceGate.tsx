@@ -423,12 +423,16 @@ export function FaceGate({
                 style={{ transform: MIRROR ? "scaleX(-1)" : undefined, objectPosition: "center" }}
               />
               <div className="pointer-events-none absolute inset-x-[14%] inset-y-[10%] rounded-[50%] border-2 border-primary/80 shadow-[0_0_24px_oklch(0.7_0.15_220/0.45)]" />
+              {/*
+                The preview is mirrored, so the employee's own right side is the
+                right side of the screen: "turn right" => arrow pointing right.
+              */}
               {arrow ? (
-                <div className="pointer-events-none absolute inset-0 grid place-items-center text-destructive drop-shadow-[0_0_10px_rgba(0,0,0,0.65)]">
+                <div dir="ltr" className="pointer-events-none absolute inset-0 grid place-items-center text-destructive drop-shadow-[0_0_10px_rgba(0,0,0,0.65)]">
                   {arrow === "right" ? (
-                    <ArrowLeft className="animate-arrow-nudge size-16" strokeWidth={3} style={{ "--nudge": "14px" } as React.CSSProperties} />
+                    <ArrowRight className="animate-arrow-nudge size-16" strokeWidth={3} style={{ "--nudge": "14px" } as React.CSSProperties} />
                   ) : (
-                    <ArrowRight className="animate-arrow-nudge size-16" strokeWidth={3} style={{ "--nudge": "-14px" } as React.CSSProperties} />
+                    <ArrowLeft className="animate-arrow-nudge size-16" strokeWidth={3} style={{ "--nudge": "-14px" } as React.CSSProperties} />
                   )}
                 </div>
               ) : null}
