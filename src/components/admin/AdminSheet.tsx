@@ -97,15 +97,15 @@ export function AdminSheet() {
 
   return (
     <div dir="rtl" className="admin-sheet">
-      <div className="flex items-center justify-start gap-2 pb-1">
-        {saving && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
+      <div className="flex items-center justify-start gap-2 pb-1.5">
+        {saving && <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />}
         <button
           type="button"
           onClick={addColumn}
-          className="inline-flex flex-row-reverse items-center gap-1 rounded-md bg-[#1d4ed8] px-2 py-0.5 text-[11px] font-bold text-white shadow hover:brightness-110"
+          className="inline-flex flex-row-reverse items-center gap-1.5 rounded-md bg-[#1d4ed8] px-2.5 py-1 text-[13px] font-bold text-white shadow hover:brightness-110"
         >
-          <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-white/25">
-            <Plus className="h-2.5 w-2.5" />
+          <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white/25">
+            <Plus className="h-3 w-3" />
           </span>
           اضافة
         </button>
@@ -131,7 +131,7 @@ export function AdminSheet() {
                       onChange={(e) => renameColumn(c.id, e.target.value)}
                       placeholder=""
                       data-no-autosave
-                      className="h-7 w-full border-0 bg-transparent px-2 text-center text-[11px] font-extrabold text-white outline-none placeholder:text-white/60"
+                      className="h-9 w-full border-0 bg-transparent px-3 text-center text-xs font-extrabold text-white outline-none placeholder:text-white/60"
                     />
                   </th>
                 ))}
@@ -146,7 +146,7 @@ export function AdminSheet() {
                         value={row[c.id] ?? ""}
                         onChange={(e) => setCell(rowIndex, c.id, e.target.value)}
                         data-no-autosave
-                        className="h-9 w-full bg-transparent px-2 text-center text-[11px] text-foreground outline-none focus:bg-white/5"
+                        className="h-[54px] w-full bg-transparent px-3 text-center text-xs text-foreground outline-none focus:bg-white/5"
                       />
                     </td>
                   ))}

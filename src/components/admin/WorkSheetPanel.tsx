@@ -29,25 +29,25 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
           backgroundRepeat: "no-repeat",
         }}
       >
-        <div className="relative flex items-center justify-start gap-2 px-4 pb-1 pt-4 md:px-6">
+        <div className="relative flex items-center justify-start gap-3 px-4 pb-1 pt-5 md:px-6">
           <button
             type="button"
             onClick={() => setTab("sheet")}
-            className={`inline-flex flex-row-reverse items-center gap-1.5 rounded-2xl px-3 py-2 text-[12px] font-extrabold text-white transition ${
+            className={`inline-flex flex-row-reverse items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-extrabold text-white transition ${
               tab === "sheet" ? "bg-[#151515]/90 shadow-lg" : "bg-[#151515]/60 text-white/85 hover:bg-[#151515]/85"
             }`}
           >
-            <span className="text-sm leading-none">🗂️</span>
+            <span className="text-base leading-none">🗂️</span>
             جدول بيانات
           </button>
           <button
             type="button"
             onClick={() => setTab("employees")}
-            className={`inline-flex flex-row-reverse items-center gap-1.5 rounded-2xl px-3 py-2 text-[12px] font-extrabold text-white transition ${
+            className={`inline-flex flex-row-reverse items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-extrabold text-white transition ${
               tab === "employees" ? "bg-[#151515]/90 shadow-lg" : "bg-[#151515]/60 text-white/85 hover:bg-[#151515]/85"
             }`}
           >
-            <Users className="h-3.5 w-3.5" />
+            <Users className="h-4 w-4" />
             قائمة الموظفين
           </button>
         </div>
