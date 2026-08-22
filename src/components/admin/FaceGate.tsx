@@ -244,7 +244,11 @@ export function FaceGate({
         setStatus("تم رصد الاتجاه ✓");
         const f = captureUprightFrame(videoRef.current, { mirroredPreview: MIRROR });
         if (f) shot = f;
-        if (inPose >= 2 && shot) break;
+        if (inPose >= 2 && shot) {
+          // Haptic signal fires exactly at success, once, before any transition.
+          vibrate();
+          break;
+        }
       } else {
         inPose = 0;
         setStatus(dir === "right" ? "لِف وجهك أكثر ناحية اليمين" : "لِف وجهك أكثر ناحية الشمال");
@@ -256,24 +260,35 @@ export function FaceGate({
 
     setStatus("تم ✓");
     setArrow(null);
+
     return [shot];
   };
 
   /**
    * Haptic feedback only: the phone vibrates automatically when a face
    * movement step succeeds. This is a signal for the employee, NOT a
-   * verification condition. If vibration is unsupported, we continue silently.
+   * verification condition. If vibration is unsupported we continue silently.
    *
-   * Reliability notes: `navigator.vibrate` needs a secure context, a visible
-   * page and previous user activation — so we prime it inside the button press
-   * and prefer a single duration (patterns are ignored by some browsers).
+   * Notes that make it actually fire on phones:
+   * - no `vibrate(0)` before the real call (that cancels the buzz)
+   * - no visibility/permission style guards that silently skip it
+   * - a short clear pattern (two quick pulses) with a single-duration fallback
+   * - fired synchronously at the success moment, before any state change
    */
-  const vibrate = (ms = 200) => {
-    if (typeof navigator === "undefined" || typeof navigator.vibrate !== "function") return;
-    if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+  const vibrate = (ms = 220) => {
     try {
-      navigator.vibrate(0); // cancel any queued pattern so the next one is felt
-      if (!navigator.vibrate(ms)) navigator.vibrate([ms]);
+      const nav = typeof navigator === "undefined" ? null : (navigator as any);
+      const fn = nav?.vibrate ?? nav?.mozVibrate ?? nav?.webkitVibrate;
+      if (typeof fn !== "function") return;
+      const call = (p: number | number[]) => {
+        try {
+          return fn.call(nav, p) !== false;
+        } catch {
+          return false;
+        }
+      };
+      // clear + short pattern is the most widely felt combination
+      if (!call([ms, 60, ms])) call(ms);
     } catch {
       // unsupported → silently continue, vibration is never a requirement
     }
@@ -281,11 +296,11 @@ export function FaceGate({
 
   const run = async () => {
     // Unlock haptics inside the user gesture (mobile browsers require this).
-    vibrate(15);
     if (!captureUprightFrame(videoRef.current, { mirroredPreview: MIRROR })) {
       setStatus("الكاميرا لم تجهز بعد، انتظر لحظة");
       return;
     }
+
     setWorking(true);
     setFailed(false);
     try {
@@ -326,8 +341,8 @@ export function FaceGate({
       const dirs = chal.steps as Dir[];
       for (let i = 0; i < dirs.length; i++) {
         const dir = dirs[i]!;
-        const got = await holdPhase(dir);
-        vibrate(); // automatic haptic signal that this step succeeded
+        const got = await holdPhase(dir); // haptic fires inside, at the success moment
+
         steps.push({ dir, image: got[got.length - 1]! });
       }
       const back = await posePhase("عد بوجهك للأمام", 1);
@@ -442,7 +457,7 @@ export function FaceGate({
             <Button
               className="w-full"
               onClick={() => {
-                vibrate(1); // gesture-time priming so later feedback works
+                vibrate(10); // gesture-time priming so later feedback is allowed
                 void run();
               }}
               disabled={working}
