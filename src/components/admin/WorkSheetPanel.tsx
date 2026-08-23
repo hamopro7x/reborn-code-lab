@@ -57,7 +57,7 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
         <div className="h-10" />
       </div>
 
-      <div className="-mt-10 px-4 md:px-6">
+      <div className="relative z-10 -mt-11 px-4 md:px-6">
         {tab === "sheet" ? <AdminSheet /> : <EmployeesList />}
       </div>
     </div>
