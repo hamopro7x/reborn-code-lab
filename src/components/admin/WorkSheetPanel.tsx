@@ -6,6 +6,8 @@ import { EmployeeWorkView } from "@/components/admin/EmployeeWorkView";
 import { AdminSheet } from "@/components/admin/AdminSheet";
 import { adminListEmployees } from "@/lib/courses.functions";
 import sheetBg from "@/assets/sheet-bg2.jpg.asset.json";
+import iconDatasheet from "@/assets/icon-datasheet.png";
+import iconEmployees from "@/assets/icon-employees.png";
 
 type TabKey = "sheet" | "employees";
 
@@ -29,28 +31,29 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
           backgroundRepeat: "no-repeat",
         }}
       >
-        <div className="relative flex items-center justify-start gap-3 px-4 pb-1 pt-5 md:px-6">
+        <div className="relative flex items-center justify-start gap-6 px-4 pb-1 pt-5 md:px-6">
           <button
             type="button"
             onClick={() => setTab("sheet")}
-            className={`inline-flex flex-row-reverse items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-extrabold text-white transition ${
-              tab === "sheet" ? "bg-[#151515]/90 shadow-lg" : "bg-[#151515]/60 text-white/85 hover:bg-[#151515]/85"
+            className={`inline-flex flex-row-reverse items-center gap-3 rounded-full bg-[#0d0d0d] px-7 py-3 text-xl font-extrabold text-white shadow-[0_6px_20px_-6px_rgba(0,0,0,0.9)] transition ${
+              tab === "sheet" ? "opacity-100" : "opacity-80 hover:opacity-95"
             }`}
           >
-            <span className="text-base leading-none">🗂️</span>
+            <img src={iconDatasheet} alt="" loading="lazy" width={36} height={36} className="h-9 w-9 object-contain" />
             جدول بيانات
           </button>
           <button
             type="button"
             onClick={() => setTab("employees")}
-            className={`inline-flex flex-row-reverse items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-extrabold text-white transition ${
-              tab === "employees" ? "bg-[#151515]/90 shadow-lg" : "bg-[#151515]/60 text-white/85 hover:bg-[#151515]/85"
+            className={`inline-flex flex-row-reverse items-center gap-3 rounded-full bg-[#0d0d0d] px-7 py-3 text-xl font-extrabold text-white shadow-[0_6px_20px_-6px_rgba(0,0,0,0.9)] transition ${
+              tab === "employees" ? "opacity-100" : "opacity-80 hover:opacity-95"
             }`}
           >
-            <Users className="h-4 w-4" />
+            <img src={iconEmployees} alt="" loading="lazy" width={36} height={36} className="h-9 w-9 object-contain" />
             قائمة الموظفين
           </button>
         </div>
+
         <div className="h-10" />
       </div>
 
