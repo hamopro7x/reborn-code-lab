@@ -442,8 +442,8 @@ export async function saveTransferNote(userId: string, ledgerId: string, note: s
     .select("kind,status")
     .eq("id", ledgerId)
     .maybeSingle();
-  if (!led || String((led as any).kind) !== "internal_out") {
-    return { ok: false as const, error: "هذه الخانة خاصة بالسحب الداخلي فقط." };
+  if (!led || String((led as any).kind) !== "withdraw") {
+    return { ok: false as const, error: "هذه الخانة خاصة بالسحب الخارجي فقط." };
   }
   if (!(SUCCESS_STATUSES as unknown as string[]).includes(String((led as any).status))) {
     return { ok: false as const, error: "هذه المعاملة غير ناجحة." };
