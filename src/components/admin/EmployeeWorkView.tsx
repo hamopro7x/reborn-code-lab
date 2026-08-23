@@ -554,27 +554,6 @@ function TransfersTable({
 
 
 
-function useNow() {
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(t);
-  }, []);
-  return now;
-}
-
-
-function clockParts(d: Date) {
-  const h24 = d.getHours();
-  const h = ((h24 + 11) % 12) + 1;
-  const p = (n: number) => String(n).padStart(2, "0");
-  return {
-    time: `${p(h)}:${p(d.getMinutes())}:${p(d.getSeconds())}`,
-    ampm: h24 < 12 ? "صباح" : "مساء",
-    date: `${AR_DAYS[d.getDay()]} ${d.getDate()} ${AR_MONTHS[d.getMonth()]} ${d.getFullYear()}`,
-  };
-}
-
 function txnTime(ms: number) {
   const d = new Date(ms);
   const p = (n: number) => String(n).padStart(2, "0");
