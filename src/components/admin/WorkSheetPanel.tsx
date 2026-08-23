@@ -6,6 +6,8 @@ import { EmployeeWorkView } from "@/components/admin/EmployeeWorkView";
 import { AdminSheet } from "@/components/admin/AdminSheet";
 import { listEmployees } from "@/lib/admin.functions";
 import { getEmployeeShiftList } from "@/lib/work.functions";
+import employeesBg from "@/assets/employees-bg.png.asset.json";
+
 
 type TabKey = "sheet" | "employees";
 
