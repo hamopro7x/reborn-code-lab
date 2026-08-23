@@ -5,8 +5,6 @@ import { X } from "lucide-react";
 import { EmployeeWorkView } from "@/components/admin/EmployeeWorkView";
 import { AdminSheet } from "@/components/admin/AdminSheet";
 import { listEmployees } from "@/lib/admin.functions";
-import sheetBg from "@/assets/sheet-bg3.png.asset.json";
-import employeesBg from "@/assets/employees-bg.png.asset.json";
 
 type TabKey = "sheet" | "employees";
 
