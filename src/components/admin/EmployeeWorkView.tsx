@@ -60,6 +60,7 @@ import {
   getShiftTransfers,
   getShiftP2P,
 
+  getMyAvatarUrl,
 } from "@/lib/work.functions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
