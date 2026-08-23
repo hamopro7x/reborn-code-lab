@@ -276,6 +276,9 @@ function P2POrdersTable({
   readOnly?: boolean;
 }) {
   const emptyRows = Math.max(8 - rows.length, 0);
+  const columns = readOnly
+    ? P2P_COLUMNS.filter((c) => c !== "صاحب الطلب")
+    : P2P_COLUMNS;
 
   return (
     <div className="data-surface">
@@ -283,7 +286,7 @@ function P2POrdersTable({
         <table className="data-table min-w-[900px] text-center">
           <thead>
             <tr>
-              {P2P_COLUMNS.map((c) => (
+              {columns.map((c) => (
                 <th key={c}>{c}</th>
               ))}
             </tr>
@@ -291,7 +294,7 @@ function P2POrdersTable({
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={P2P_COLUMNS.length} className="py-8">
+                <td colSpan={columns.length} className="py-8">
                   <Loader2 className="mx-auto size-4 animate-spin text-muted-foreground" />
                 </td>
               </tr>
@@ -325,23 +328,18 @@ function P2POrdersTable({
                         {badge.text}
                       </span>
                     </td>
-                    <td>
-                      {readOnly ? (
-                        <span className="text-xs text-muted-foreground">
-                          {String(r.employeeName ?? "—") || "—"}
-                        </span>
-                      ) : (
+                    {!readOnly && (
+                      <td>
                         <P2PLinkMenu ledgerId={String(r.ledgerId)} onLinked={onLinked} />
-                      )}
-                    </td>
-
+                      </td>
+                    )}
                   </tr>
                 );
               })
             )}
             {Array.from({ length: emptyRows }).map((_, i) => (
               <tr key={`p2p-empty-${i}`}>
-                {P2P_COLUMNS.map((c) => (
+                {columns.map((c) => (
                   <td key={c}>&nbsp;</td>
                 ))}
               </tr>
