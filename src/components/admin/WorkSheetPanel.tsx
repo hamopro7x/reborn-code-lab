@@ -117,6 +117,7 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
           backgroundSize: isEmployees ? "cover" : "100% auto",
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat",
+          backgroundAttachment: "fixed",
         }}
       >
         <div className="relative flex items-center justify-start gap-3 px-4 pb-0 pt-4 md:px-6">
@@ -156,7 +157,7 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
         {isEmployees ? (
           <div className="relative flex-1">
             {selected && (
-              <div className="px-4 pb-6 pt-4 md:px-6">
+              <div className="pb-6 pt-4">
                 {/* نفس جدول بيانات الشغل الموجود عند الموظف — بيانات الموظف المختار فقط */}
                 <EmployeeWorkView
                   key={selected.user_id}
