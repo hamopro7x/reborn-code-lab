@@ -1090,12 +1090,30 @@ function ManualSection({
   );
 }
 
-export function EmployeeWorkView({ isAdmin = false }: { isAdmin?: boolean }) {
+/**
+ * نفس الواجهة تُستخدم في الحالتين:
+ *  - الموظف: بدون `viewUserId` → بياناته الخاصة (قابلة للتعديل كما هي).
+ *  - الأدمن بعد اختيار موظف: `viewUserId` → بيانات ذلك الموظف فقط (قراءة).
+ */
+export function EmployeeWorkView({
+  isAdmin = false,
+  viewUserId,
+  viewName,
+  viewAvatar,
+}: {
+  isAdmin?: boolean;
+  viewUserId?: string;
+  viewName?: string;
+  viewAvatar?: string;
+}) {
   const qc = useQueryClient();
   const stateFn = useServerFn(getMyWorkState);
   const txnsFn = useServerFn(getMyShiftTxns);
+  const empStateFn = useServerFn(getEmployeeWorkState);
+  const empTxnsFn = useServerFn(getEmployeeShiftTxns);
   const brandsFn = useServerFn(getBybitCardBrands);
   const p2pFn = useServerFn(getWorkP2PCompleted);
+  const viewing = !!viewUserId;
 
   const [tab, setTab] = useState<TabKey>("all");
   // إيداع / سحب داخل قسمي التحويلات (فلترة عرض فقط)
@@ -1103,10 +1121,15 @@ export function EmployeeWorkView({ isAdmin = false }: { isAdmin?: boolean }) {
   const now = useNow();
   const clock = clockParts(now);
 
-  const [name, setName] = useState("موظف");
-  const [avatar, setAvatar] = useState("");
+  const [name, setName] = useState(viewName || "موظف");
+  const [avatar, setAvatar] = useState(viewAvatar || "");
   const identityFn = useServerFn(getViewerIdentity);
   useEffect(() => {
+    if (viewing) {
+      setName(viewName || "موظف");
+      setAvatar(viewAvatar || "");
+      return;
+    }
     void (async () => {
       try {
         const v: any = await identityFn();
@@ -1121,18 +1144,22 @@ export function EmployeeWorkView({ isAdmin = false }: { isAdmin?: boolean }) {
       const { data } = await supabase.from("profiles").select("full_name").eq("id", auth.user.id).maybeSingle();
       setName((data?.full_name as string) || auth.user.email?.split("@")[0] || "موظف");
     })();
-  }, [identityFn]);
+  }, [identityFn, viewing, viewName, viewAvatar]);
 
   const st = useQuery({
-    queryKey: ["my-work-state"],
-    queryFn: () => stateFn({ data: undefined as any }),
+    queryKey: viewing ? ["emp-work-state", viewUserId] : ["my-work-state"],
+    queryFn: () =>
+      viewing ? empStateFn({ data: { userId: viewUserId! } }) : stateFn({ data: undefined as any }),
     refetchInterval: 20_000,
   });
   const holding = (st.data as any)?.holding === true;
 
   const txns = useQuery({
-    queryKey: ["my-shift-txns"],
-    queryFn: () => txnsFn({ data: { page: 1 } }),
+    queryKey: viewing ? ["emp-shift-txns", viewUserId] : ["my-shift-txns"],
+    queryFn: () =>
+      viewing
+        ? empTxnsFn({ data: { userId: viewUserId!, page: 1 } })
+        : txnsFn({ data: { page: 1 } }),
     enabled: holding,
     refetchInterval: 20_000,
   });
