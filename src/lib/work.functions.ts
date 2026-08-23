@@ -453,3 +453,26 @@ export const getShiftP2P = createServerFn({ method: "POST" })
     const mod = await import("./work.server");
     return mod.shiftP2P(data.shiftId);
   });
+
+/** رابط موقّع لصورة الموظف الحالي (bucket خاص). */
+export const getMyAvatarUrl = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("full_name, email, avatar_url")
+      .eq("id", context.userId)
+      .maybeSingle();
+    let url: string | null = null;
+    if (profile?.avatar_url) {
+      const { data: signed } = await supabaseAdmin.storage
+        .from("avatars")
+        .createSignedUrl(profile.avatar_url, 60 * 60 * 24);
+      url = signed?.signedUrl ?? null;
+    }
+    return {
+      name: profile?.full_name || profile?.email || "موظف",
+      avatar: url,
+    };
+  });
