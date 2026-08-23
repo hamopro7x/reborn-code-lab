@@ -411,7 +411,7 @@ export async function transfersLedger(scope: "external" | "internal", limit = 20
   }
 
   // خانة «تحويل الي» التي يكتبها الموظف يدويًا (طبقة منفصلة، لا تلمس السجل الأصلي)
-  if (scope === "internal" && out.length) {
+  if (scope === "external" && out.length) {
     const { data: notes } = await db
       .from("work_transfer_notes")
       .select("ledger_id,note,saved_at")
