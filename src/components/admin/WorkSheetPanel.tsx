@@ -31,7 +31,7 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
           backgroundRepeat: "no-repeat",
         }}
       >
-        <div className="relative flex items-center justify-start gap-4 px-4 pb-1 pt-5 md:px-6">
+        <div className="relative flex items-center justify-start gap-6 px-4 pb-2 pt-5 md:px-6">
           <button
             type="button"
             onClick={() => setTab("sheet")}
@@ -54,7 +54,7 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
           </button>
         </div>
 
-        <div className="h-10" />
+        <div className="h-12" />
       </div>
 
       <div className="relative z-10 -mt-11 px-4 md:px-6">
