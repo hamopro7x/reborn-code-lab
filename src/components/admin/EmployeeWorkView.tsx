@@ -661,16 +661,18 @@ function EntryCell({
   field,
   serverNow,
   onSaved,
+  readOnly,
 }: {
   row: any;
   field: "egp" | "quantity";
   serverNow?: string | null;
   onSaved: () => void;
+  readOnly?: boolean;
 }) {
   const saveFn = useServerFn(saveMyTxnEntry);
   const saved = row[field];
   const savedAt = (field === "egp" ? row.egpAt : row.quantityAt) ?? null;
-  const locked = useEditWindow(savedAt, serverNow);
+  const locked = useEditWindow(savedAt, serverNow) || !!readOnly;
   const initial = saved === null || saved === undefined ? "" : String(saved);
   const [value, setValue] = useState(initial);
   const [busy, setBusy] = useState(false);
