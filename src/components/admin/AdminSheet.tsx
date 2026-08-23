@@ -144,7 +144,7 @@ export function AdminSheet() {
   const addColumn = () =>
     update((prev) => ({
       ...prev,
-      columns: [...prev.columns, { id: uid(), name: "", width: DEFAULT_WIDTH }],
+      columns: [...prev.columns, { id: uid(), name: "" }],
     }));
 
   const renameColumn = (id: string, name: string) =>
