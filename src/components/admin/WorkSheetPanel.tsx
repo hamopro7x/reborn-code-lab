@@ -47,7 +47,7 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
             <button
               type="button"
               onClick={() => setTab("employees")}
-              className={`inline-flex flex-row-reverse items-center gap-2 rounded-full bg-[#0d0d0d] px-4 py-2 text-sm font-extrabold text-white shadow-[0_6px_20px_-6px_rgba(0,0,0,0.9)] transition ${
+              className={`inline-flex flex-row-reverse items-center gap-2 rounded-full px-4 py-2 text-sm font-extrabold text-white transition ${
                 tab === "employees" ? "opacity-100" : "opacity-80 hover:opacity-95"
               }`}
             >
