@@ -97,7 +97,7 @@ export function AdminSheet() {
 
   return (
     <div dir="rtl" className="admin-sheet">
-      <div className="-mx-4 md:-mx-6 flex items-center justify-start gap-2 px-4 pb-0 md:px-6">
+      <div className="flex items-center justify-start gap-2 px-4 pb-0 md:px-6">
         {saving && <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />}
         <button
           type="button"
@@ -120,7 +120,7 @@ export function AdminSheet() {
           اضغط «اضافة +» لإضافة أول عمود
         </div>
       ) : (
-        <div className="admin-sheet-surface -mx-4 md:-mx-6">
+        <div className="admin-sheet-surface">
           <table className="data-table admin-sheet-table admin-sheet-fixed">
             <colgroup>
               {cols.map((c) => (
