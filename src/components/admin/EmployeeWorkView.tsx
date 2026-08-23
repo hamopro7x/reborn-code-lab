@@ -1083,6 +1083,7 @@ function ManualSection({
           clearing={clearing === c.card}
           newestId={newestId}
           isAdmin={isAdmin}
+          readOnly={readOnly}
         />
       ))}
     </div>
