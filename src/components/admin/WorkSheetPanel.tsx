@@ -142,10 +142,38 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
           >
             قائمة الموظفين
           </button>
+          {isEmployees && (
+            <button
+              type="button"
+              onClick={() => setPickerOpen(true)}
+              className={`${CHIP_BASE} ${pickerOpen ? CHIP_ON : CHIP_OFF}`}
+            >
+              اختيار الموظف
+            </button>
+          )}
         </div>
 
         {isEmployees ? (
-          <div className="flex-1" />
+          <div className="relative flex-1">
+            {selected && (
+              <div className="px-4 pt-4 md:px-6">
+                <div className="inline-flex items-center gap-2 rounded-full bg-black/60 px-4 py-2 text-sm font-extrabold text-blue-300 ring-1 ring-blue-500/30">
+                  {selected.full_name || selected.email}
+                </div>
+                {/* منطقة عرض بيانات الموظف — تُستكمل في التعديل القادم */}
+                <div className="mt-3" data-employee-info-slot={selected.user_id} />
+              </div>
+            )}
+            <EmployeePickerSidebar
+              open={pickerOpen}
+              onClose={() => setPickerOpen(false)}
+              selectedId={selected?.user_id ?? null}
+              onSelect={(emp) => {
+                setSelected(emp);
+                setPickerOpen(false);
+              }}
+            />
+          </div>
         ) : (
           <>
             <div className="h-[57px]" />
