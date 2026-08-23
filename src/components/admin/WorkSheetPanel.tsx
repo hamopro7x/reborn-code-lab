@@ -21,9 +21,9 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
   if (!isAdmin) return <EmployeeWorkView />;
 
   return (
-    <div className="min-h-[40vh]" dir="rtl">
+    <div className="min-h-[40vh] -mx-4 md:-mx-6" dir="rtl">
       <div
-        className="relative -mx-4 -mt-4 md:-mx-6 md:-mt-6"
+        className="relative"
         style={{
           backgroundImage: `url(${sheetBg.url})`,
           backgroundSize: "100% 100%",
@@ -57,7 +57,7 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
         <div className="h-[57px]" />
       </div>
 
-      <div className="relative z-10 px-4 md:px-6">
+      <div className="relative z-10">
         {tab === "sheet" ? <AdminSheet /> : <EmployeesList />}
       </div>
     </div>
