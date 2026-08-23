@@ -360,13 +360,20 @@ export const TRANSFER_KINDS = {
   internal: ["internal_in", "internal_out"],
 } as const;
 
-export async function transfersLedger(scope: "external" | "internal", limit = 200) {
+export async function transfersLedger(
+  scope: "external" | "internal",
+  limit = 200,
+  sinceIso?: string | null,
+) {
   const db = await admin();
-  const { data } = await db
+  let q = db
     .from("bybit_ledger")
     .select("*")
     .in("kind", TRANSFER_KINDS[scope] as unknown as string[])
-    .in("status", SUCCESS_STATUSES as unknown as string[])
+    .in("status", SUCCESS_STATUSES as unknown as string[]);
+  // الموظف يرى الجديد فقط: ما حدث بعد بداية شفته الحالي.
+  if (sinceIso) q = q.gte("occurred_at", sinceIso);
+  const { data } = await q
     .order("occurred_at", { ascending: false })
     .limit(Math.min(Math.max(limit, 1), 500));
 
@@ -431,6 +438,18 @@ export async function transfersLedger(scope: "external" | "internal", limit = 20
 
 /** حفظ خانة «تحويل الي» — قابلة للتعديل 10 دقائق من وقت الحفظ على السيرفر ثم تُقفل. */
 export const NOTE_EDIT_WINDOW_MS = 10 * 60 * 1000;
+
+/** تحويلات شفت الموظف المفتوح فقط (فاضي لو مفيش شفت). */
+export async function myShiftTransfers(userId: string, scope: "external" | "internal") {
+  const db = await admin();
+  const { data } = await db
+    .from("work_shifts")
+    .select("id,user_id,started_at")
+    .is("ended_at", null)
+    .maybeSingle();
+  if (!data || (data as any).user_id !== userId) return [];
+  return transfersLedger(scope, 200, (data as any).started_at as string);
+}
 
 export async function saveTransferNote(userId: string, ledgerId: string, note: string) {
   const db = await admin();
