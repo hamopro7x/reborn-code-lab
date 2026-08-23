@@ -17,8 +17,6 @@ import { useServerFn } from "@tanstack/react-start";
 import {
   Loader2,
   User,
-  Clock,
-  ScanFace,
   ListOrdered,
   AlertTriangle,
   ArrowLeftRight,
@@ -57,8 +55,6 @@ import {
   getEmployeeManualTxns,
 
 } from "@/lib/work.functions";
-import { useFaceClaim } from "@/components/admin/FaceGate";
-import { getViewerIdentity } from "@/lib/courses.functions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { getBybitCardBrands } from "@/lib/bybit.functions";
@@ -557,27 +553,6 @@ function TransfersTable({
 
 
 
-
-function useNow() {
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(t);
-  }, []);
-  return now;
-}
-
-
-function clockParts(d: Date) {
-  const h24 = d.getHours();
-  const h = ((h24 + 11) % 12) + 1;
-  const p = (n: number) => String(n).padStart(2, "0");
-  return {
-    time: `${p(h)}:${p(d.getMinutes())}:${p(d.getSeconds())}`,
-    ampm: h24 < 12 ? "صباح" : "مساء",
-    date: `${AR_DAYS[d.getDay()]} ${d.getDate()} ${AR_MONTHS[d.getMonth()]} ${d.getFullYear()}`,
-  };
-}
 
 function txnTime(ms: number) {
   const d = new Date(ms);
@@ -1118,33 +1093,6 @@ export function EmployeeWorkView({
   const [tab, setTab] = useState<TabKey>("all");
   // إيداع / سحب داخل قسمي التحويلات (فلترة عرض فقط)
   const [flow, setFlow] = useState<"in" | "out">("in");
-  const now = useNow();
-  const clock = clockParts(now);
-
-  const [name, setName] = useState(viewName || "موظف");
-  const [avatar, setAvatar] = useState(viewAvatar || "");
-  const identityFn = useServerFn(getViewerIdentity);
-  useEffect(() => {
-    if (viewing) {
-      setName(viewName || "موظف");
-      setAvatar(viewAvatar || "");
-      return;
-    }
-    void (async () => {
-      try {
-        const v: any = await identityFn();
-        setName(v?.full_name || v?.email?.split("@")[0] || "موظف");
-        setAvatar(v?.avatar_url || "");
-        return;
-      } catch {
-        // fall back to the client session below
-      }
-      const { data: auth } = await supabase.auth.getUser();
-      if (!auth.user) return;
-      const { data } = await supabase.from("profiles").select("full_name").eq("id", auth.user.id).maybeSingle();
-      setName((data?.full_name as string) || auth.user.email?.split("@")[0] || "موظف");
-    })();
-  }, [identityFn, viewing, viewName, viewAvatar]);
 
   const st = useQuery({
     queryKey: viewing ? ["emp-work-state", viewUserId] : ["my-work-state"],
@@ -1196,12 +1144,6 @@ export function EmployeeWorkView({
   });
   const brands = (brandsQ.data?.brands ?? {}) as Record<string, string>;
 
-  const faceClaim = useFaceClaim(() => {
-    qc.invalidateQueries({ queryKey: ["my-work-state"] });
-    qc.invalidateQueries({ queryKey: ["my-shift-txns"] });
-  });
-
-
   const allRows: any[] = (txns.data as any)?.rows ?? [];
   const txnServerNow: string | null = (txns.data as any)?.serverNow ?? null;
   const rows = useMemo(() => {
@@ -1233,52 +1175,6 @@ export function EmployeeWorkView({
 
   return (
     <div dir="rtl" className="space-y-4">
-      {/* --------------------- identity / claim / clock --------------------- */}
-      <div className="flex flex-wrap items-center gap-4">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-full bg-secondary/80 text-muted-foreground">
-            {avatar ? (
-              <img src={avatar} alt={name} className="size-full object-cover" />
-            ) : (
-              <User className="size-8" />
-            )}
-          </div>
-          <div className="min-w-0">
-            <div className="truncate text-lg font-black">{name}</div>
-            <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-              <span>موظف</span>
-              <span className="size-1.5 rounded-full bg-emerald-500" />
-              <span className="text-emerald-500">متصل</span>
-            </div>
-          </div>
-        </div>
-
-        {!viewing && (
-          <>
-            <button
-              type="button"
-              onClick={faceClaim.start}
-              className="flex w-[96px] shrink-0 flex-col items-center gap-1 rounded-2xl border border-[oklch(0.55_0.14_250)] bg-card/70 px-2 py-2 text-[10px] font-bold transition hover:bg-card disabled:opacity-60"
-            >
-              <ScanFace className="size-5" />
-              <span>استلم الشغل</span>
-            </button>
-            {faceClaim.node}
-          </>
-        )}
-
-
-        <div className="flex shrink-0 items-center gap-3">
-          <div className="text-left leading-tight">
-            <div className="text-sm font-black tabular-nums">
-              {clock.ampm} {clock.time}
-            </div>
-            <div className="mt-1 text-[11px] text-muted-foreground">{clock.date}</div>
-          </div>
-          <Clock className="size-6 text-muted-foreground" />
-        </div>
-      </div>
-
       {/* ---------------------------- Top bar ---------------------------- */}
       <div className="flex flex-wrap items-center gap-2">
         {TOP_TABS.map((t) => {
