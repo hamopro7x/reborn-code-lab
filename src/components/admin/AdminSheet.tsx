@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 const SETTINGS_KEY = "admin_sheet";
 const MIN_ROWS = 9;
+const BASE_COLS = 4;
 const DEFAULT_WIDTH = 200;
 const MIN_WIDTH = 90;
 
@@ -18,7 +19,7 @@ type SheetData = {
 const uid = () => Math.random().toString(36).slice(2, 10);
 
 const emptySheet = (): SheetData => ({
-  columns: Array.from({ length: 7 }, () => ({ id: uid(), name: "", width: DEFAULT_WIDTH })),
+  columns: Array.from({ length: BASE_COLS }, () => ({ id: uid(), name: "" })),
   rows: Array.from({ length: MIN_ROWS }, () => ({})),
 });
 
@@ -66,6 +67,25 @@ export function AdminSheet() {
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const timer = useRef<number | null>(null);
   const drag = useRef<{ id: string; startX: number; startW: number } | null>(null);
+  const surfaceRef = useRef<HTMLDivElement | null>(null);
+  // عرض العمود الأساسي = عرض الواجهة ÷ 4 (يظهر 4 أعمدة فقط)
+  const [baseWidth, setBaseWidth] = useState(DEFAULT_WIDTH);
+
+  useEffect(() => {
+    const measure = () => {
+      const el = surfaceRef.current;
+      if (!el) return;
+      const w = el.clientWidth;
+      if (w > 0) setBaseWidth(Math.max(MIN_WIDTH, Math.floor(w / BASE_COLS)));
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    const id = window.setInterval(measure, 800);
+    return () => {
+      window.removeEventListener("resize", measure);
+      window.clearInterval(id);
+    };
+  }, [loading]);
 
   useEffect(() => {
     let alive = true;
@@ -78,10 +98,16 @@ export function AdminSheet() {
       if (!alive) return;
       const v = row?.value as SheetData | null;
       if (v && Array.isArray(v.columns) && Array.isArray(v.rows)) {
+        const columns = v.columns
+          .filter((c) => c && typeof c.id === "string")
+          // العرض الافتراضي القديم يُهمل ليأخذ العمود عرض الأساس المحسوب
+          .map((c) => ({
+            id: c.id,
+            name: c.name ?? "",
+            ...(typeof c.width === "number" && c.width !== DEFAULT_WIDTH ? { width: c.width } : {}),
+          }));
         setData({
-          columns: v.columns
-            .filter((c) => c && typeof c.id === "string")
-            .map((c) => ({ ...c, width: typeof c.width === "number" ? c.width : DEFAULT_WIDTH })),
+          columns: columns.length ? columns : emptySheet().columns,
           rows: v.rows.length < MIN_ROWS
             ? [...v.rows, ...Array.from({ length: MIN_ROWS - v.rows.length }, () => ({}))]
             : v.rows,
@@ -118,7 +144,7 @@ export function AdminSheet() {
   const addColumn = () =>
     update((prev) => ({
       ...prev,
-      columns: [...prev.columns, { id: uid(), name: "", width: DEFAULT_WIDTH }],
+      columns: [...prev.columns, { id: uid(), name: "" }],
     }));
 
   const renameColumn = (id: string, name: string) =>
@@ -146,23 +172,26 @@ export function AdminSheet() {
       setDeleteMode(false);
       return;
     }
-    update((prev) => ({
-      columns: prev.columns.filter((c) => !ids.includes(c.id)),
-      rows: prev.rows.map((r) => {
-        const next = { ...r };
-        ids.forEach((id) => delete next[id]);
-        return next;
-      }),
-    }));
+    update((prev) => {
+      let columns = prev.columns.filter((c) => !ids.includes(c.id));
+      // لا يقل الجدول عن 4 أعمدة أساسية
+      while (columns.length < BASE_COLS) columns = [...columns, { id: uid(), name: "" }];
+      return {
+        columns,
+        rows: prev.rows.map((r) => {
+          const next = { ...r };
+          ids.forEach((id) => delete next[id]);
+          return next;
+        }),
+      };
+    });
     setSelected({});
     setDeleteMode(false);
   };
 
+  // حذف الكل: مسح كل البيانات والأعمدة الإضافية والرجوع إلى 4 أعمدة فارغة
   const deleteAll = () => {
-    update((prev) => ({
-      columns: [],
-      rows: prev.rows.map(() => ({})),
-    }));
+    update(() => emptySheet());
     setSelected({});
     setDeleteMode(false);
   };
@@ -171,7 +200,7 @@ export function AdminSheet() {
   const startResize = (e: React.PointerEvent, col: SheetColumn) => {
     e.preventDefault();
     e.stopPropagation();
-    drag.current = { id: col.id, startX: e.clientX, startW: col.width ?? DEFAULT_WIDTH };
+    drag.current = { id: col.id, startX: e.clientX, startW: col.width ?? baseWidth };
 
     const move = (ev: PointerEvent) => {
       const d = drag.current;
@@ -199,8 +228,8 @@ export function AdminSheet() {
 
   const cols = useMemo(() => data.columns, [data.columns]);
   const totalWidth = useMemo(
-    () => cols.reduce((s, c) => s + (c.width ?? DEFAULT_WIDTH), 0),
-    [cols],
+    () => cols.reduce((s, c) => s + (c.width ?? baseWidth), 0),
+    [cols, baseWidth],
   );
 
   return (
@@ -249,14 +278,14 @@ export function AdminSheet() {
           اضغط «اضافة +» لإضافة أول عمود
         </div>
       ) : (
-        <div className="admin-sheet-surface">
+        <div ref={surfaceRef} className="admin-sheet-surface">
           {deleteMode && (
             <div className="flex px-0 pb-1" style={{ width: totalWidth, minWidth: "100%" }}>
               {cols.map((c) => (
                 <div
                   key={c.id}
                   className="flex flex-none items-center justify-center"
-                  style={{ width: c.width ?? DEFAULT_WIDTH }}
+                  style={{ width: c.width ?? baseWidth }}
                 >
                   <input
                     type="checkbox"
@@ -277,7 +306,7 @@ export function AdminSheet() {
           >
             <colgroup>
               {cols.map((c) => (
-                <col key={c.id} style={{ width: c.width ?? DEFAULT_WIDTH }} />
+                <col key={c.id} style={{ width: c.width ?? baseWidth }} />
               ))}
             </colgroup>
             <thead>
