@@ -1,22 +1,59 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Plus, Loader2 } from "lucide-react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Plus, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const SETTINGS_KEY = "admin_sheet";
 const MIN_ROWS = 9;
+const DEFAULT_WIDTH = 200;
+const MIN_WIDTH = 90;
+
+type SheetColumn = { id: string; name: string; width?: number };
 
 type SheetData = {
-  columns: { id: string; name: string }[];
+  columns: SheetColumn[];
   rows: Record<string, string>[];
 };
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 
 const emptySheet = (): SheetData => ({
-  columns: Array.from({ length: 7 }, () => ({ id: uid(), name: "" })),
+  columns: Array.from({ length: 7 }, () => ({ id: uid(), name: "", width: DEFAULT_WIDTH })),
   rows: Array.from({ length: MIN_ROWS }, () => ({})),
 });
+
+/** خلية نصية تلتف تلقائيًا وتزيد ارتفاعها حسب المحتوى */
+function AutoCell({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const ref = useRef<HTMLTextAreaElement | null>(null);
+
+  const resize = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.max(47, el.scrollHeight)}px`;
+  }, []);
+
+  useLayoutEffect(() => {
+    resize();
+  }, [value, resize]);
+
+  return (
+    <textarea
+      ref={ref}
+      rows={1}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      data-no-autosave
+      className="admin-sheet-cell block w-full resize-none bg-transparent px-3 py-[14px] text-right text-xs leading-5 text-foreground outline-none focus:bg-white/5"
+    />
+  );
+}
 
 /**
  * جدول بيانات حر (Spreadsheet) خاص بالأدمن فقط.
@@ -25,8 +62,10 @@ const emptySheet = (): SheetData => ({
 export function AdminSheet() {
   const [data, setData] = useState<SheetData>(() => emptySheet());
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [deleteMode, setDeleteMode] = useState(false);
+  const [selected, setSelected] = useState<Record<string, boolean>>({});
   const timer = useRef<number | null>(null);
+  const drag = useRef<{ id: string; startX: number; startW: number } | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -40,7 +79,9 @@ export function AdminSheet() {
       const v = row?.value as SheetData | null;
       if (v && Array.isArray(v.columns) && Array.isArray(v.rows)) {
         setData({
-          columns: v.columns.filter((c) => c && typeof c.id === "string"),
+          columns: v.columns
+            .filter((c) => c && typeof c.id === "string")
+            .map((c) => ({ ...c, width: typeof c.width === "number" ? c.width : DEFAULT_WIDTH })),
           rows: v.rows.length < MIN_ROWS
             ? [...v.rows, ...Array.from({ length: MIN_ROWS - v.rows.length }, () => ({}))]
             : v.rows,
@@ -56,11 +97,9 @@ export function AdminSheet() {
   const persist = useCallback((next: SheetData) => {
     if (timer.current) window.clearTimeout(timer.current);
     timer.current = window.setTimeout(async () => {
-      setSaving(true);
       const { error } = await supabase
         .from("site_settings")
         .upsert({ key: SETTINGS_KEY, value: next as never, updated_at: new Date().toISOString() });
-      setSaving(false);
       if (error) toast.error("تعذر الحفظ: " + error.message);
     }, 600);
   }, []);
@@ -77,7 +116,10 @@ export function AdminSheet() {
   );
 
   const addColumn = () =>
-    update((prev) => ({ ...prev, columns: [...prev.columns, { id: uid(), name: "" }] }));
+    update((prev) => ({
+      ...prev,
+      columns: [...prev.columns, { id: uid(), name: "", width: DEFAULT_WIDTH }],
+    }));
 
   const renameColumn = (id: string, name: string) =>
     update((prev) => ({
@@ -93,12 +135,68 @@ export function AdminSheet() {
       return { ...prev, rows };
     });
 
+  const handleDeleteClick = () => {
+    if (!deleteMode) {
+      setSelected({});
+      setDeleteMode(true);
+      return;
+    }
+    const ids = Object.keys(selected).filter((k) => selected[k]);
+    if (ids.length === 0) {
+      setDeleteMode(false);
+      return;
+    }
+    update((prev) => ({
+      columns: prev.columns.filter((c) => !ids.includes(c.id)),
+      rows: prev.rows.map((r) => {
+        const next = { ...r };
+        ids.forEach((id) => delete next[id]);
+        return next;
+      }),
+    }));
+    setSelected({});
+    setDeleteMode(false);
+  };
+
+  // سحب حدود العمود لتغيير عرضه (بدون التأثير على باقي الأعمدة)
+  const startResize = (e: React.PointerEvent, col: SheetColumn) => {
+    e.preventDefault();
+    e.stopPropagation();
+    drag.current = { id: col.id, startX: e.clientX, startW: col.width ?? DEFAULT_WIDTH };
+
+    const move = (ev: PointerEvent) => {
+      const d = drag.current;
+      if (!d) return;
+      // اتجاه RTL: السحب لليسار يزيد العرض
+      const delta = d.startX - ev.clientX;
+      const w = Math.max(MIN_WIDTH, Math.round(d.startW + delta));
+      setData((prev) => ({
+        ...prev,
+        columns: prev.columns.map((c) => (c.id === d.id ? { ...c, width: w } : c)),
+      }));
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      drag.current = null;
+      setData((prev) => {
+        persist(prev);
+        return prev;
+      });
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  };
+
   const cols = useMemo(() => data.columns, [data.columns]);
+  const totalWidth = useMemo(
+    () => cols.reduce((s, c) => s + (c.width ?? DEFAULT_WIDTH), 0),
+    [cols],
+  );
 
   return (
     <div dir="rtl" className="admin-sheet">
       <div className="flex items-center justify-start gap-2 px-4 pb-[0.2cm] md:px-6">
-        {saving && <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />}
         <button
           type="button"
           onClick={addColumn}
@@ -109,35 +207,76 @@ export function AdminSheet() {
           </span>
           اضافة
         </button>
+        <button
+          type="button"
+          onClick={handleDeleteClick}
+          className={`inline-flex flex-row-reverse items-center gap-1.5 rounded-md px-2.5 py-1 text-[13px] font-bold text-white shadow hover:brightness-110 ${
+            deleteMode ? "bg-[#b91c1c]" : "bg-[#1d4ed8]"
+          }`}
+        >
+          <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white/25">
+            <Trash2 className="h-3 w-3" />
+          </span>
+          حذف
+        </button>
       </div>
 
       {loading ? (
-        <div className="flex min-h-[40vh] items-center justify-center">
-          <Loader2 className="h-5 w-5 animate-spin text-primary" />
-        </div>
+        <div className="min-h-[40vh]" />
       ) : cols.length === 0 ? (
         <div className="flex min-h-[30vh] items-center justify-center border border-white/10 text-sm text-muted-foreground">
           اضغط «اضافة +» لإضافة أول عمود
         </div>
       ) : (
         <div className="admin-sheet-surface">
-          <table className="data-table admin-sheet-table admin-sheet-fixed">
+          {deleteMode && (
+            <div className="flex px-0 pb-1" style={{ width: totalWidth, minWidth: "100%" }}>
+              {cols.map((c) => (
+                <div
+                  key={c.id}
+                  className="flex flex-none items-center justify-center"
+                  style={{ width: c.width ?? DEFAULT_WIDTH }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={!!selected[c.id]}
+                    onChange={(e) =>
+                      setSelected((prev) => ({ ...prev, [c.id]: e.target.checked }))
+                    }
+                    data-no-autosave
+                    className="h-3.5 w-3.5 cursor-pointer accent-[#1636e6]"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+          <table
+            className="data-table admin-sheet-table admin-sheet-fixed"
+            style={{ width: totalWidth, minWidth: "100%", tableLayout: "fixed" }}
+          >
             <colgroup>
               {cols.map((c) => (
-                <col key={c.id} style={{ width: 200, minWidth: 200 }} />
+                <col key={c.id} style={{ width: c.width ?? DEFAULT_WIDTH }} />
               ))}
             </colgroup>
             <thead>
               <tr>
                 {cols.map((c) => (
                   <th key={c.id} className="p-0">
-                    <input
-                      value={c.name}
-                      onChange={(e) => renameColumn(c.id, e.target.value)}
-                      placeholder=""
-                      data-no-autosave
-                      className="w-full border-0 bg-transparent px-3 text-center text-xs font-extrabold text-white outline-none placeholder:text-white/60"
-                    />
+                    <div className="relative">
+                      <input
+                        value={c.name}
+                        onChange={(e) => renameColumn(c.id, e.target.value)}
+                        placeholder=""
+                        data-no-autosave
+                        className="h-full w-full border-0 bg-transparent px-3 text-center text-xs font-extrabold text-white outline-none placeholder:text-white/60"
+                      />
+                      <span
+                        onPointerDown={(e) => startResize(e, c)}
+                        className="absolute inset-y-0 left-0 w-2 cursor-col-resize"
+                        aria-hidden
+                      />
+                    </div>
                   </th>
                 ))}
               </tr>
@@ -146,12 +285,10 @@ export function AdminSheet() {
               {data.rows.map((row, rowIndex) => (
                 <tr key={rowIndex}>
                   {cols.map((c) => (
-                    <td key={c.id} className="p-0">
-                      <input
+                    <td key={c.id} className="p-0 align-top">
+                      <AutoCell
                         value={row[c.id] ?? ""}
-                        onChange={(e) => setCell(rowIndex, c.id, e.target.value)}
-                        data-no-autosave
-                        className="h-[47px] w-full bg-transparent px-3 text-center text-xs text-foreground outline-none focus:bg-white/5"
+                        onChange={(v) => setCell(rowIndex, c.id, v)}
                       />
                     </td>
                   ))}
