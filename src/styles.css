@@ -288,7 +288,7 @@
 
 /* ===== Admin free spreadsheet: exact reference look ===== */
 .admin-sheet-surface {
-  background-color: transparent;
+  background-color: oklch(0 0 0);
   border: none;
   border-radius: 0;
   overflow-x: auto;
