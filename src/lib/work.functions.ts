@@ -91,6 +91,18 @@ export const getWorkTransfers = createServerFn({ method: "POST" })
     return mod.transfersLedger(data.scope, 200);
   });
 
+/** حفظ خانة «تحويل الي» في قسم السحب الداخلي (نافذة تعديل 10 دقائق). */
+export const saveTransferNote = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ ledgerId: z.string().uuid(), note: z.string().min(1).max(200) }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAccess(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    return mod.saveTransferNote(context.userId, data.ledgerId, data.note);
+  });
+
 
 /** Real staff names for the «ربط» picker. */
 export const getWorkStaffList = createServerFn({ method: "POST" })
