@@ -64,8 +64,15 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
 
 function EmployeesPlaceholder() {
   return (
-    <div className="admin-sheet-surface flex min-h-[40vh] items-center justify-center">
-      <span className="text-sm font-semibold text-muted-foreground">هذا القسم محجوز لشغل لاحق</span>
-    </div>
+    <div
+      className="relative w-full bg-black"
+      style={{
+        aspectRatio: "1685 / 922",
+        backgroundImage: `url(${employeesBg.url})`,
+        backgroundSize: "100% 100%",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+      }}
+    />
   );
 }
