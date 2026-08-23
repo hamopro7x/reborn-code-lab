@@ -2,8 +2,6 @@ import { useState } from "react";
 import { EmployeeWorkView } from "@/components/admin/EmployeeWorkView";
 import { AdminSheet } from "@/components/admin/AdminSheet";
 import sheetBg from "@/assets/sheet-bg3.png.asset.json";
-import iconDatasheet from "@/assets/icon-datasheet.png";
-import iconEmployees from "@/assets/icon-employees.png";
 
 type TabKey = "sheet" | "employees";
 
@@ -38,7 +36,6 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
                   : "bg-[#0d0d0d] opacity-80 shadow-[0_6px_20px_-6px_rgba(0,0,0,0.9)] hover:opacity-95 hover:ring-1 hover:ring-blue-500/20"
               }`}
             >
-              <img src={iconDatasheet} alt="" loading="lazy" width={24} height={24} className="h-6 w-6 object-contain" />
               جدول بيانات
             </button>
             <button
@@ -50,7 +47,6 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
                   : "bg-[#0d0d0d] opacity-80 shadow-[0_6px_20px_-6px_rgba(0,0,0,0.9)] hover:opacity-95 hover:ring-1 hover:ring-blue-500/20"
               }`}
             >
-              <img src={iconEmployees} alt="" loading="lazy" width={24} height={24} className="h-6 w-6 object-contain" />
               قائمة الموظفين
             </button>
           </div>
