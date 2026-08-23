@@ -311,7 +311,7 @@
 }
 .admin-sheet-table thead th {
   padding: 0 5px;
-  background: transparent;
+  background-color: oklch(0.06 0 0);
   border: none;
   height: 50px;
 }
