@@ -54,7 +54,7 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
           </button>
         </div>
 
-        <div className="h-[113px]" />
+        <div className="h-[57px]" />
       </div>
 
       <div className="relative z-10 px-4 md:px-6">
