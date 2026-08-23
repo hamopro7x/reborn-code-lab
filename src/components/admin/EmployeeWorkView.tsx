@@ -524,7 +524,7 @@ function TransfersTable({
                     </td>
                     {noteColumn ? (
                       <td>
-                        <TransferNoteCell row={r} onSaved={() => onSaved?.()} />
+                        <TransferNoteCell row={r} onSaved={() => onSaved?.()} readOnly={readOnly} />
                       </td>
                     ) : (
                       <td className="text-[11px] text-muted-foreground" dir="ltr">
