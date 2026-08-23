@@ -314,6 +314,7 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
                   viewUserId={selected.user_id}
                   {...(selectedShift ? { viewShiftId: selectedShift.id } : {})}
                   viewName={selected.full_name || selected.email}
+                  viewAvatar={selected.avatar_signed_url || undefined}
                 />
               </div>
             )}
