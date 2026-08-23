@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 const SETTINGS_KEY = "admin_sheet";
 const MIN_ROWS = 9;
+const BASE_COLS = 4;
 const DEFAULT_WIDTH = 200;
 const MIN_WIDTH = 90;
 
@@ -18,7 +19,7 @@ type SheetData = {
 const uid = () => Math.random().toString(36).slice(2, 10);
 
 const emptySheet = (): SheetData => ({
-  columns: Array.from({ length: 7 }, () => ({ id: uid(), name: "", width: DEFAULT_WIDTH })),
+  columns: Array.from({ length: BASE_COLS }, () => ({ id: uid(), name: "" })),
   rows: Array.from({ length: MIN_ROWS }, () => ({})),
 });
 
