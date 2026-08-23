@@ -224,7 +224,7 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
       <div className="relative flex min-h-[calc(100vh-80px)] flex-col">
         {isEmployees && (
           <div
-            className="pointer-events-none absolute inset-0 opacity-10"
+            className="pointer-events-none absolute inset-0 opacity-20"
             style={{
               backgroundImage: `url(${employeesBg.url})`,
               backgroundSize: "cover",
