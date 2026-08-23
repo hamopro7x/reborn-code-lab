@@ -76,6 +76,22 @@ export const getWorkP2PCompleted = createServerFn({ method: "POST" })
     return mod.completedP2P(200);
   });
 
+/**
+ * Read-only filter over the SAME central ledger: external (on-chain) or
+ * internal deposits & withdrawals. No new records are created.
+ */
+export const getWorkTransfers = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ scope: z.enum(["external", "internal"]) }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAccess(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    return mod.transfersLedger(data.scope, 200);
+  });
+
+
 /** Real staff names for the «ربط» picker. */
 export const getWorkStaffList = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

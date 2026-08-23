@@ -344,6 +344,74 @@ export async function completedP2P(limit = 200) {
     }));
 }
 
+/* ------------ external / internal deposits & withdrawals ------------ */
+/**
+ * READ-ONLY view over the SAME central ledger (public.bybit_ledger) used by
+ * «معاملات الفيزا». Nothing is created, copied or modified here: the two
+ * employee sections «الإيداع والسحب الخارجي» / «الداخلي» are pure filters on
+ * the real transaction kind:
+ *   external → deposit / withdraw   (on-chain)
+ *   internal → internal_in / internal_out
+ * Rows keep their original ledger id, account (visa), amount, time and status,
+ * and are de-duplicated by that ledger id.
+ */
+export const TRANSFER_KINDS = {
+  external: ["deposit", "withdraw"],
+  internal: ["internal_in", "internal_out"],
+} as const;
+
+export async function transfersLedger(scope: "external" | "internal", limit = 200) {
+  const db = await admin();
+  const { data } = await db
+    .from("bybit_ledger")
+    .select("*")
+    .in("kind", TRANSFER_KINDS[scope] as unknown as string[])
+    .in("status", SUCCESS_STATUSES as unknown as string[])
+    .order("occurred_at", { ascending: false })
+    .limit(Math.min(Math.max(limit, 1), 500));
+
+  const accounts = await accountNames(db);
+  const seen = new Set<string>();
+  const out: Array<{
+    ledgerId: string;
+    kind: string;
+    direction: "in" | "out";
+    refId: string;
+    title: string;
+    amount: number;
+    currency: string;
+    fee: number;
+    status: string;
+    time: number;
+    accountId: string | null;
+    accountName: string;
+    detail: Record<string, string | number | boolean | null>;
+  }> = [];
+  for (const r of (data ?? []) as any[]) {
+    const id = String(r.id);
+    if (seen.has(id)) continue;
+    seen.add(id);
+    out.push({
+      ledgerId: id,
+      kind: String(r.kind),
+      direction: r.direction === "in" ? "in" : "out",
+      refId: String(r.ref_id ?? ""),
+      title: String(r.title ?? "—"),
+      amount: Number(r.amount ?? 0),
+      currency: r.currency ?? "USDT",
+      fee: Number(r.fee ?? 0),
+      status: String(r.status ?? ""),
+      time: new Date(r.occurred_at).getTime(),
+      accountId: r.account_id ?? null,
+      accountName: accounts.get(r.account_id) ?? "—",
+      detail: (r.detail ?? {}) as Record<string, string | number | boolean | null>,
+    });
+  }
+  return out;
+}
+
+
+
 /** Real staff list (admins + employees) used by the P2P «ربط» picker. */
 export async function staffList() {
   const db = await admin();
