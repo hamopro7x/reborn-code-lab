@@ -172,14 +172,19 @@ export function AdminSheet() {
       setDeleteMode(false);
       return;
     }
-    update((prev) => ({
-      columns: prev.columns.filter((c) => !ids.includes(c.id)),
-      rows: prev.rows.map((r) => {
-        const next = { ...r };
-        ids.forEach((id) => delete next[id]);
-        return next;
-      }),
-    }));
+    update((prev) => {
+      let columns = prev.columns.filter((c) => !ids.includes(c.id));
+      // لا يقل الجدول عن 4 أعمدة أساسية
+      while (columns.length < BASE_COLS) columns = [...columns, { id: uid(), name: "" }];
+      return {
+        columns,
+        rows: prev.rows.map((r) => {
+          const next = { ...r };
+          ids.forEach((id) => delete next[id]);
+          return next;
+        }),
+      };
+    });
     setSelected({});
     setDeleteMode(false);
   };
