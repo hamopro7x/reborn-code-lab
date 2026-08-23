@@ -310,18 +310,18 @@
   background-color: transparent;
 }
 .admin-sheet-table thead th {
-  padding: 0 3px;
+  padding: 0 5px;
   background: transparent;
   border: none;
-  height: 44px;
+  height: 50px;
 }
 .admin-sheet-table thead th::before {
   content: none;
 }
 .admin-sheet-table thead th > * {
   display: block;
-  height: 40px;
-  border-radius: 10px;
+  height: 44px;
+  border-radius: 14px;
   background-image: linear-gradient(180deg, #1636e6, #0a24c4);
   box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.18), 0 2px 6px oklch(0 0 0 / 0.55);
 }
