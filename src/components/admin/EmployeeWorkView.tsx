@@ -17,6 +17,8 @@ import { useServerFn } from "@tanstack/react-start";
 import {
   Loader2,
   User,
+  ScanFace,
+  Clock,
   ListOrdered,
   AlertTriangle,
   ArrowLeftRight,
@@ -62,6 +64,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { getBybitCardBrands } from "@/lib/bybit.functions";
+import { useFaceClaim } from "@/components/admin/FaceGate";
 import { BrandBadge, LedgerRowDetails, statusBadge } from "@/components/admin/BybitLedgerPanel";
 
 type ManualKind = "wrong" | "employee" | "receive" | "transfer";
