@@ -1006,28 +1006,35 @@ function ManualCard({
 function ManualSection({
   isAdmin,
   cards,
+  viewUserId,
 }: {
   isAdmin: boolean;
   cards: [{ card: ManualKind; title: string }, { card: ManualKind; title: string }];
+  /** أدمن يشاهد بيانات موظف محدد (قراءة فقط). */
+  viewUserId?: string;
 }) {
   const qc = useQueryClient();
   const listFn = useServerFn(getMyManualTxns);
+  const empListFn = useServerFn(getEmployeeManualTxns);
   const addFn = useServerFn(addMyManualTxn);
   const clearFn = useServerFn(clearMyManualTxns);
   const [adding, setAdding] = useState<ManualKind | null>(null);
   const [clearing, setClearing] = useState<ManualKind | null>(null);
   const [newestId, setNewestId] = useState<string | null>(null);
+  const readOnly = !!viewUserId;
+  const listKey = viewUserId ? ["emp-manual-txns", viewUserId] : ["my-manual-txns"];
 
   const q = useQuery({
-    queryKey: ["my-manual-txns"],
-    queryFn: () => listFn({ data: undefined as any }),
+    queryKey: listKey,
+    queryFn: () =>
+      viewUserId ? empListFn({ data: { userId: viewUserId } }) : listFn({ data: undefined as any }),
     // Always re-read the stored rows when the section is opened again.
     staleTime: 0,
     refetchOnMount: "always",
   });
   const all = (q.data as any)?.rows ?? [];
   const serverNow = (q.data as any)?.serverNow ?? null;
-  const refresh = () => void qc.invalidateQueries({ queryKey: ["my-manual-txns"] });
+  const refresh = () => void qc.invalidateQueries({ queryKey: listKey });
 
   const add = async (card: ManualKind) => {
     setAdding(card);
