@@ -22,16 +22,17 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
 
   return (
     <div className="min-h-[40vh] -mx-4 md:-mx-6 -mt-4 md:-mt-6" dir="rtl">
-      <div className="relative">
-        <div
-          className="relative"
-          style={{
-            backgroundImage: `url(${sheetBg.url})`,
-            backgroundSize: "100% auto",
-            backgroundPosition: "top center",
-            backgroundRepeat: "no-repeat",
-          }}
-        >
+      <div
+        className="relative"
+        style={{
+          backgroundImage: `url(${sheetBg.url})`,
+          backgroundSize: "100% auto",
+          backgroundPosition: "top center",
+          backgroundRepeat: "no-repeat",
+        }}
+      >
+        <div className="relative">
+
           <div className="relative flex items-center justify-start gap-3 px-4 pb-0 pt-4 md:px-6">
             <button
               type="button"
