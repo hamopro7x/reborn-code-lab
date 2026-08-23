@@ -21,6 +21,7 @@ type Employee = {
   role: string;
   email: string;
   full_name: string;
+  avatar_signed_url?: string | null;
 };
 
 /** الشريط الجانبي لاختيار الموظف — يظهر فوق التصميم الحالي دون تغييره. */
