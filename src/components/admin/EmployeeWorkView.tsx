@@ -384,20 +384,88 @@ function FlowChip({
   );
 }
 
+/** خانة «تحويل الي» — يكتبها الموظف يدويًا (حروف/أرقام/رموز) وتُقفل بعد 10 دقائق. */
+function TransferNoteCell({ row, onSaved }: { row: any; onSaved: () => void }) {
+  const saveFn = useServerFn(saveTransferNote);
+  const savedAt = row.noteAt ?? null;
+  const locked = useNoteEditWindow(savedAt);
+  const initial = row.note ? String(row.note) : "";
+  const [value, setValue] = useState(initial);
+  const [busy, setBusy] = useState(false);
+  const sentRef = useRef(initial);
+
+  useEffect(() => {
+    setValue(initial);
+    sentRef.current = initial;
+  }, [initial]);
+
+  const commit = (raw: string) => {
+    const txt = String(raw).trim();
+    if (!txt || txt === sentRef.current) return;
+    sentRef.current = txt;
+    setBusy(true);
+    void saveFn({ data: { ledgerId: row.ledgerId, note: txt } })
+      .then((res: any) => {
+        if (res?.ok) toast.success("تم الحفظ");
+        else {
+          sentRef.current = initial;
+          toast.error(String(res?.error ?? "تعذر الحفظ"));
+        }
+        onSaved();
+      })
+      .catch((e) => {
+        sentRef.current = initial;
+        toast.error(e instanceof Error ? e.message : "تعذر الحفظ");
+      })
+      .finally(() => setBusy(false));
+  };
+
+  if (locked) {
+    return (
+      <span title="انتهت مدة التعديل المسموحة لهذه الخانة." className="text-xs">
+        {initial || "—"}
+      </span>
+    );
+  }
+  return (
+    <div className="flex items-center justify-center gap-1">
+      <input
+        data-no-autosave
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={() => commit(value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+        }}
+        className="h-8 w-32 rounded-lg border border-border/60 bg-background/60 px-2 text-center text-xs outline-none focus:border-[oklch(0.62_0.18_250)]"
+      />
+      {busy ? <Loader2 className="size-3 animate-spin text-muted-foreground" /> : null}
+    </div>
+  );
+}
+
 function TransfersTable({
   rows,
   loading,
   onDetails,
+  noteColumn,
+  onSaved,
 }: {
   rows: any[];
   loading?: boolean;
   onDetails: (row: any) => void;
+  noteColumn?: boolean;
+  onSaved?: () => void;
 }) {
   const emptyRows = Math.max(10 - rows.length, 0);
+  const columns = noteColumn
+    ? TRANSFER_COLUMNS.map((c) => (c === "معرّف المعاملة" ? "تحويل الي" : c))
+    : TRANSFER_COLUMNS;
   return (
     <div className="data-surface">
       <div className="overflow-x-auto">
         <table className="data-table min-w-[900px] text-center">
+
           <thead>
             <tr>
               {TRANSFER_COLUMNS.map((c) => (
