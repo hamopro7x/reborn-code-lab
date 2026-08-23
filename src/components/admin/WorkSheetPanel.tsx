@@ -117,6 +117,7 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
           backgroundSize: isEmployees ? "cover" : "100% auto",
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat",
+          backgroundAttachment: "fixed",
         }}
       >
         <div className="relative flex items-center justify-start gap-3 px-4 pb-0 pt-4 md:px-6">
