@@ -121,7 +121,12 @@ export function AdminSheet() {
         </div>
       ) : (
         <div className="admin-sheet-surface -mx-4 md:-mx-6">
-          <table className="data-table admin-sheet-table w-full table-fixed">
+          <table className="data-table admin-sheet-table admin-sheet-fixed">
+            <colgroup>
+              {cols.map((c) => (
+                <col key={c.id} style={{ width: 200, minWidth: 200 }} />
+              ))}
+            </colgroup>
             <thead>
               <tr>
                 {cols.map((c) => (
