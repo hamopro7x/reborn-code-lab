@@ -88,7 +88,7 @@ export const getWorkTransfers = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAccess(context.supabase, context.userId);
     const mod = await import("./work.server");
-    return mod.transfersLedger(data.scope, 200);
+    return mod.myShiftTransfers(context.userId, data.scope);
   });
 
 /** حفظ خانة «تحويل الي» في قسم السحب الداخلي (نافذة تعديل 10 دقائق). */
