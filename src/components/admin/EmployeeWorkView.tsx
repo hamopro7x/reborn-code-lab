@@ -775,6 +775,7 @@ function ManualCell({
   numeric,
   autoFocus,
   onSaved,
+  readOnly,
 }: {
   id: string;
   field: "amount" | "details";
@@ -784,9 +785,10 @@ function ManualCell({
   numeric?: boolean;
   autoFocus?: boolean;
   onSaved: () => void;
+  readOnly?: boolean;
 }) {
   const saveFn = useServerFn(saveMyManualTxn);
-  const locked = useEditWindow(savedAt, serverNow);
+  const locked = useEditWindow(savedAt, serverNow) || !!readOnly;
   const [value, setValue] = useState(initial);
   const savedRef = useRef(initial);
   const valueRef = useRef(initial);
