@@ -896,6 +896,7 @@ function ManualCard({
   clearing,
   newestId,
   isAdmin,
+  readOnly,
 }: {
   card: ManualKind;
   title: string;
@@ -915,13 +916,14 @@ function ManualCard({
   clearing: boolean;
   newestId: string | null;
   isAdmin: boolean;
+  readOnly?: boolean;
 }) {
   return (
     <div className="data-surface">
       <div className="data-table-head relative flex items-center justify-center px-3 py-3">
         <span className="text-sm font-black">{title}</span>
         <div className="absolute left-3 flex items-center gap-2">
-          {isAdmin && rows.length > 0 && (
+          {!readOnly && isAdmin && rows.length > 0 && (
             <button
               type="button"
               onClick={() => onClear(card)}
@@ -937,17 +939,19 @@ function ManualCard({
               <span className="whitespace-nowrap">تصفير</span>
             </button>
           )}
-          <button
-            type="button"
-            onClick={() => onAdd(card)}
-            disabled={adding}
-            className="table-btn disabled:opacity-60"
-          >
-            <span className="grid size-4 place-items-center rounded-full bg-[oklch(0.5_0.14_255)] text-[11px] leading-none text-[oklch(0.98_0_0)]">
-              {adding ? <Loader2 className="size-2.5 animate-spin" /> : "+"}
-            </span>
-            <span className="whitespace-nowrap">إضافة معاملة جديدة</span>
-          </button>
+          {!readOnly && (
+            <button
+              type="button"
+              onClick={() => onAdd(card)}
+              disabled={adding}
+              className="table-btn disabled:opacity-60"
+            >
+              <span className="grid size-4 place-items-center rounded-full bg-[oklch(0.5_0.14_255)] text-[11px] leading-none text-[oklch(0.98_0_0)]">
+                {adding ? <Loader2 className="size-2.5 animate-spin" /> : "+"}
+              </span>
+              <span className="whitespace-nowrap">إضافة معاملة جديدة</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -971,8 +975,9 @@ function ManualCard({
                     savedAt={r.amountSavedAt ?? null}
                     serverNow={serverNow}
                     numeric
-                    autoFocus={r.id === newestId}
+                    autoFocus={!readOnly && r.id === newestId}
                     onSaved={onSaved}
+                    readOnly={readOnly}
                   />
                 </td>
                 <td className="!p-0">
@@ -983,6 +988,7 @@ function ManualCard({
                     savedAt={r.detailsSavedAt ?? null}
                     serverNow={serverNow}
                     onSaved={onSaved}
+                    readOnly={readOnly}
                   />
                 </td>
                 <td className="text-[11px] text-muted-foreground">{formatDateTime(r.createdAt)}</td>
