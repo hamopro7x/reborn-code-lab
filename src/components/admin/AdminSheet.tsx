@@ -120,7 +120,7 @@ export function AdminSheet() {
           اضغط «اضافة +» لإضافة أول عمود
         </div>
       ) : (
-        <div className="admin-sheet-surface">
+        <div className="admin-sheet-surface flex-1 min-h-[65vh]">
           <table className="data-table admin-sheet-table admin-sheet-fixed">
             <colgroup>
               {cols.map((c) => (
