@@ -19,7 +19,6 @@ import {
   User,
   Clock,
   ScanFace,
-  Eye,
   ListOrdered,
   AlertTriangle,
   ArrowLeftRight,
