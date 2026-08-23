@@ -293,17 +293,18 @@ export const getBybitAccountInfo = createServerFn({ method: "POST" })
   .inputValidator(accountInput)
   .handler(async ({ data, context }) => {
     const role = await assertAccess(context.supabase, context.userId);
-    // RLS on bybit_account_info is admin-only; employees are allowed read-only
-    // access here after the role check above.
-    const db =
-      role === "admin"
-        ? context.supabase
-        : (await import("@/integrations/supabase/client.server")).supabaseAdmin;
-    let q = (db as any).from("bybit_account_info").select("*");
+    let q = (context.supabase as any).from("bybit_account_info").select("*");
     if (data.accountId) q = q.eq("account_id", data.accountId);
     const { data: row } = await q.order("created_at", { ascending: true }).limit(1).maybeSingle();
-    return { info: row ?? null };
+    if (!row) return { info: null };
+    // Credentials (password / MFA) are admin-only.
+    if (role !== "admin") {
+      const { password, mfa_code, ...safe } = row as any;
+      return { info: safe };
+    }
+    return { info: row };
   });
+
 
 export const saveBybitAccountInfo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
