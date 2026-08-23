@@ -359,6 +359,31 @@ const TRANSFER_LABEL: Record<string, string> = {
   internal_out: "سحب داخلي",
 };
 
+/** كبسولة إيداع/سحب بنفس شكل القسم المركزي. */
+function FlowChip({
+  active,
+  children,
+  onClick,
+}: {
+  active?: boolean;
+  children: React.ReactNode;
+  onClick?: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-full border px-4 py-2 text-xs font-bold transition-colors ${
+        active
+          ? "border-blue-500/40 bg-blue-500/15 text-blue-400"
+          : "border-border/40 text-muted-foreground hover:border-blue-500/30 hover:text-foreground"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
 function TransfersTable({
   rows,
   loading,
@@ -964,6 +989,8 @@ export function EmployeeWorkView({ isAdmin = false }: { isAdmin?: boolean }) {
   const p2pFn = useServerFn(getWorkP2PCompleted);
 
   const [tab, setTab] = useState<TabKey>("all");
+  // إيداع / سحب داخل قسمي التحويلات (فلترة عرض فقط)
+  const [flow, setFlow] = useState<"in" | "out">("in");
   const now = useNow();
   const clock = clockParts(now);
 
@@ -1136,7 +1163,17 @@ export function EmployeeWorkView({ isAdmin = false }: { isAdmin?: boolean }) {
         })}
       </div>
 
-
+      {/* ----------- إيداع / سحب (نفس شكل القسم المركزي) ----------- */}
+      {(tab === "ext" || tab === "int") && (
+        <div className="flex flex-wrap items-center gap-2">
+          <FlowChip active={flow === "in"} onClick={() => setFlow("in")}>
+            إيداع
+          </FlowChip>
+          <FlowChip active={flow === "out"} onClick={() => setFlow("out")}>
+            سحب
+          </FlowChip>
+        </div>
+      )}
 
       {/* ------------------------- Transactions ------------------------- */}
       {tab === "wrong" ? (
@@ -1157,13 +1194,13 @@ export function EmployeeWorkView({ isAdmin = false }: { isAdmin?: boolean }) {
         />
       ) : tab === "ext" ? (
         <TransfersTable
-          rows={(extQ.data ?? []) as any[]}
+          rows={((extQ.data ?? []) as any[]).filter((r) => String(r.direction) === flow)}
           loading={extQ.isLoading}
           onDetails={setDetailRow}
         />
       ) : tab === "int" ? (
         <TransfersTable
-          rows={(intQ.data ?? []) as any[]}
+          rows={((intQ.data ?? []) as any[]).filter((r) => String(r.direction) === flow)}
           loading={intQ.isLoading}
           onDetails={setDetailRow}
         />
