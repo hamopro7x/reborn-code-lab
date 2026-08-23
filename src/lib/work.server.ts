@@ -1291,13 +1291,19 @@ export async function saveEntryField(
 
 export type ManualCard = "wrong" | "employee" | "receive" | "transfer";
 
-export async function listManualTxns(userId: string) {
+/**
+ * Manual rows are part of the SHIFT record: every row carries the shift it was
+ * written during (`shift_id`). Passing a shift id returns that shift's history
+ * only; ended shifts keep their rows for good (nothing is ever deleted).
+ */
+export async function listManualTxns(userId: string, shiftId?: string | null) {
   const db = await admin();
-  const { data } = await db
+  let q = db
     .from("work_manual_txns")
-    .select("id,card,amount,details,created_at,amount_saved_at,details_saved_at")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false });
+    .select("id,card,amount,details,created_at,amount_saved_at,details_saved_at,shift_id")
+    .eq("user_id", userId);
+  if (shiftId) q = q.eq("shift_id", shiftId);
+  const { data } = await q.order("created_at", { ascending: false });
   return {
     serverNow: new Date().toISOString(),
     rows: (data ?? []).map((r: any) => ({
@@ -1306,17 +1312,38 @@ export async function listManualTxns(userId: string) {
       amount: r.amount === null ? "" : String(r.amount),
       details: r.details ?? "",
       createdAt: r.created_at as string,
+      shiftId: (r.shift_id ?? null) as string | null,
       amountSavedAt: (r.amount_saved_at ?? null) as string | null,
       detailsSavedAt: (r.details_saved_at ?? null) as string | null,
     })),
   };
 }
 
+/** The employee's currently OPEN shift id (null when he holds none). */
+export async function openShiftId(userId: string): Promise<string | null> {
+  const db = await admin();
+  const { data } = await db
+    .from("work_shifts")
+    .select("id")
+    .eq("user_id", userId)
+    .is("ended_at", null)
+    .maybeSingle();
+  return data ? ((data as any).id as string) : null;
+}
+
+/** Manual rows of the employee's CURRENT shift only. */
+export async function listMyManualTxns(userId: string) {
+  const shiftId = await openShiftId(userId);
+  if (!shiftId) return { serverNow: new Date().toISOString(), rows: [] as any[] };
+  return listManualTxns(userId, shiftId);
+}
+
 export async function addManualTxn(userId: string, card: ManualCard) {
   const db = await admin();
+  const shiftId = await openShiftId(userId);
   const { data, error } = await db
     .from("work_manual_txns")
-    .insert({ user_id: userId, card })
+    .insert({ user_id: userId, card, shift_id: shiftId })
     .select("id")
     .maybeSingle();
   if (error) return { ok: false as const, error: error.message };
@@ -1382,10 +1409,180 @@ export async function saveManualTxn(
 }
 
 
-/** Admin-only: delete every manual row in one card for a user. */
+/**
+ * Admin-only: clear one card of the CURRENT shift only — closed shifts keep
+ * their historical rows.
+ */
 export async function clearManualTxns(userId: string, card: ManualCard) {
   const db = await admin();
-  const { error } = await db.from("work_manual_txns").delete().eq("user_id", userId).eq("card", card);
+  const shiftId = await openShiftId(userId);
+  if (!shiftId) return { ok: true as const };
+  const { error } = await db
+    .from("work_manual_txns")
+    .delete()
+    .eq("user_id", userId)
+    .eq("card", card)
+    .eq("shift_id", shiftId);
   if (error) return { ok: false as const, error: error.message };
   return { ok: true as const };
+}
+
+/* ======================= shift-scoped history (admin) =======================
+ * كل شفت سجل مستقل: نفس مصادر البيانات المستخدمة عند الموظف، لكن مفلترة
+ * بمعرّف الشفت الحقيقي (work_txn_assignments.shift_id / work_manual_txns.shift_id)
+ * وليس بالوقت — لذلك طلب P2P الذي تم ربطه بعد إغلاق الشفت يظل داخل شفته.
+ * قراءة فقط: لا يُحذف ولا يُعدّل أي سجل قديم. */
+
+/** شفتات موظف واحد + عدد المعاملات الناجحة المرتبطة بكل شفت. */
+export async function shiftHistory(userId: string, limit = 100) {
+  const db = await admin();
+  const { data } = await db
+    .from("work_shifts")
+    .select("id,started_at,ended_at,ended_reason")
+    .eq("user_id", userId)
+    .order("started_at", { ascending: false })
+    .limit(Math.min(Math.max(limit, 1), 200));
+
+  const shifts = (data ?? []) as any[];
+  const ids = shifts.map((s) => String(s.id));
+  const tally = new Map<string, number>();
+  if (ids.length) {
+    const { data: asg } = await db
+      .from("work_txn_assignments")
+      .select("shift_id, bybit_ledger!inner(status)")
+      .in("shift_id", ids)
+      .in("bybit_ledger.status", SUCCESS_STATUSES as unknown as string[]);
+    for (const a of (asg ?? []) as any[]) {
+      const k = String(a.shift_id);
+      tally.set(k, (tally.get(k) ?? 0) + 1);
+    }
+  }
+
+  return shifts.map((s) => ({
+    id: String(s.id),
+    startedAt: new Date(s.started_at).getTime(),
+    endedAt: s.ended_at ? new Date(s.ended_at).getTime() : null,
+    endedReason: (s.ended_reason ?? null) as string | null,
+    open: !s.ended_at,
+    txns: tally.get(String(s.id)) ?? 0,
+  }));
+}
+
+/** يتحقق أن الشفت يخص الموظف المطلوب (حماية ضد خلط بيانات الموظفين). */
+async function shiftOwner(shiftId: string): Promise<string | null> {
+  const db = await admin();
+  const { data } = await db.from("work_shifts").select("user_id").eq("id", shiftId).maybeSingle();
+  return data ? String((data as any).user_id) : null;
+}
+
+/** معاملات شفت معيّن (نفس شكل صفوف الموظف بالضبط). */
+export async function shiftRows(shiftId: string, page = 1, pageSize = 50) {
+  const userId = await shiftOwner(shiftId);
+  if (!userId) return { page: 1, pageSize, total: 0, rows: [] as any[], holding: false as const };
+  const res = await workTable({ userId, shiftId, page, pageSize, successOnly: true });
+  const entries = await myEntries(res.rows.map((r: any) => r.ledgerId));
+  const rows = res.rows.map((r: any) => {
+    const e = entries.get(r.ledgerId);
+    return {
+      ...r,
+      egp: e?.egp ?? null,
+      quantity: e?.quantity ?? null,
+      egpAt: e?.egpAt ?? null,
+      quantityAt: e?.quantityAt ?? null,
+    };
+  });
+  return { ...res, rows, holding: true as const, serverNow: new Date().toISOString() };
+}
+
+/** السجلات اليدوية (الغلط / خاص بالموظف / الاستلام / التحويل) لشفت معيّن. */
+export async function shiftManualTxns(shiftId: string) {
+  const userId = await shiftOwner(shiftId);
+  if (!userId) return { serverNow: new Date().toISOString(), rows: [] as any[] };
+  return listManualTxns(userId, shiftId);
+}
+
+/** الإيداع والسحب الخارجي / الداخلي المرتبط بشفت معيّن (نفس شكل صفوف الموظف). */
+export async function shiftTransfers(shiftId: string, scope: "external" | "internal") {
+  const db = await admin();
+  const { data } = await db
+    .from("work_txn_assignments")
+    .select("id, ledger_id, bybit_ledger!inner(*)")
+    .eq("shift_id", shiftId)
+    .in("bybit_ledger.kind", TRANSFER_KINDS[scope] as unknown as string[])
+    .in("bybit_ledger.status", SUCCESS_STATUSES as unknown as string[]);
+
+  const accounts = await accountNames(db);
+  const seen = new Set<string>();
+  const out: any[] = [];
+  for (const a of (data ?? []) as any[]) {
+    const r = a.bybit_ledger ?? {};
+    const id = String(r.id ?? a.ledger_id);
+    if (seen.has(id)) continue;
+    seen.add(id);
+    out.push({
+      ledgerId: id,
+      kind: String(r.kind),
+      direction: r.direction === "in" ? "in" : "out",
+      refId: String(r.ref_id ?? ""),
+      title: String(r.title ?? "—"),
+      amount: Number(r.amount ?? 0),
+      currency: r.currency ?? "USDT",
+      fee: Number(r.fee ?? 0),
+      status: String(r.status ?? ""),
+      time: r.occurred_at ? new Date(r.occurred_at).getTime() : 0,
+      accountId: r.account_id ?? null,
+      accountName: accounts.get(r.account_id) ?? "—",
+      detail: (r.detail ?? {}) as Record<string, string | number | boolean | null>,
+      note: null as string | null,
+      noteAt: null as string | null,
+    });
+  }
+  out.sort((a, b) => b.time - a.time);
+
+  if (scope === "external" && out.length) {
+    const { data: notes } = await db
+      .from("work_transfer_notes")
+      .select("ledger_id,note,saved_at")
+      .in("ledger_id", out.map((r) => r.ledgerId));
+    const map = new Map((notes ?? []).map((n: any) => [String(n.ledger_id), n]));
+    for (const r of out) {
+      const n = map.get(r.ledgerId);
+      r.note = n ? String((n as any).note ?? "") : null;
+      r.noteAt = n ? ((n as any).saved_at ?? null) : null;
+    }
+  }
+  return out;
+}
+
+/**
+ * طلبات P2P المرتبطة بشفت معيّن — المرجع هو الربط الفعلي (shift_id) وليس وقت
+ * وصول الطلب، فيظل الطلب داخل شفته حتى لو تم ربطه بعد إغلاق الشفت.
+ */
+export async function shiftP2P(shiftId: string) {
+  const db = await admin();
+  const { data } = await db
+    .from("work_txn_assignments")
+    .select("id, ledger_id, bybit_ledger!inner(*)")
+    .eq("shift_id", shiftId)
+    .in("bybit_ledger.kind", P2P_KINDS);
+
+  const accounts = await accountNames(db);
+  return ((data ?? []) as any[])
+    .map((a) => {
+      const r = a.bybit_ledger ?? {};
+      return {
+        assignmentId: String(a.id),
+        ledgerId: String(r.id ?? a.ledger_id),
+        kind: String(r.kind ?? ""),
+        refId: String(r.ref_id ?? ""),
+        title: String(r.title ?? "—"),
+        amount: Number(r.amount ?? 0),
+        currency: r.currency ?? "USDT",
+        status: String(r.status ?? ""),
+        time: r.occurred_at ? new Date(r.occurred_at).getTime() : 0,
+        accountName: accounts.get(r.account_id) ?? "—",
+        detail: (r.detail ?? {}) as Record<string, string | number | boolean | null>,
+      };
+    })
+    .sort((a, b) => b.time - a.time);
 }

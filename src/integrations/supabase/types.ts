@@ -1426,6 +1426,7 @@ export type Database = {
           details: string | null
           details_saved_at: string | null
           id: string
+          shift_id: string | null
           updated_at: string
           user_id: string
         }
@@ -1437,6 +1438,7 @@ export type Database = {
           details?: string | null
           details_saved_at?: string | null
           id?: string
+          shift_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -1448,10 +1450,19 @@ export type Database = {
           details?: string | null
           details_saved_at?: string | null
           id?: string
+          shift_id?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "work_manual_txns_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "work_shifts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       work_shifts: {
         Row: {

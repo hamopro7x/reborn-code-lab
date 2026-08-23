@@ -321,7 +321,8 @@ export const getMyManualTxns = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     await assertAccess(context.supabase, context.userId);
     const mod = await import("./work.server");
-    return mod.listManualTxns(context.userId);
+    // بيانات الشفت الحالي فقط — الشفتات المنتهية تبقى محفوظة كسجل تاريخي.
+    return mod.listMyManualTxns(context.userId);
   });
 
 export const addMyManualTxn = createServerFn({ method: "POST" })
@@ -394,6 +395,61 @@ export const getEmployeeManualTxns = createServerFn({ method: "POST" })
     const mod = await import("./work.server");
     const state = await mod.adminEmployeeWorkState(data.userId);
     // Nothing is exposed while the employee's shift is still running.
-    if (!state.holding) return [];
-    return mod.listManualTxns(data.userId);
+    if (!state.holding) return { serverNow: new Date().toISOString(), rows: [] as any[] };
+    return mod.listManualTxns(data.userId, state.shiftId);
+  });
+
+/* ------------------ admin: ONE employee + ONE shift (history) ------------------
+ * نفس دوال ومصادر بيانات الموظف، لكن مفلترة بمعرّف الشفت الحقيقي.
+ * قراءة فقط: لا تُعدّل ولا تُحذف أي بيانات. */
+
+const shiftSchema = z.object({ shiftId: z.string().uuid() });
+
+export const getEmployeeShiftList = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => empSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    return mod.shiftHistory(data.userId);
+  });
+
+export const getShiftTxns = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    shiftSchema.extend({ page: z.number().int().min(1).max(10_000).optional() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    return mod.shiftRows(data.shiftId, data.page ?? 1, 50);
+  });
+
+export const getShiftManualTxns = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => shiftSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    return mod.shiftManualTxns(data.shiftId);
+  });
+
+export const getShiftTransfers = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    shiftSchema.extend({ scope: z.enum(["external", "internal"]) }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    return mod.shiftTransfers(data.shiftId, data.scope);
+  });
+
+export const getShiftP2P = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => shiftSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    return mod.shiftP2P(data.shiftId);
   });
