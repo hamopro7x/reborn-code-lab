@@ -172,10 +172,10 @@ export function AdminSheet() {
   const setCell = (rowIndex: number, colId: string, value: string) =>
     update((prev) => {
       const rows = prev.rows.map((r, i) => (i === rowIndex ? { ...r, [colId]: value } : r));
-      // أضف صفًا جديدًا تلقائيًا عند الكتابة في الصف الأخير
-      if (rowIndex === rows.length - 1 && value) rows.push({});
-      return { ...prev, rows };
+      // صفوف لا تنتهي: يفضل دايمًا مخزون صفوف فاضية في الآخر
+      return { ...prev, rows: withBuffer(rows) };
     });
+
 
   const handleDeleteClick = () => {
     if (!deleteMode) {
