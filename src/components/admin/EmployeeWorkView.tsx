@@ -964,6 +964,8 @@ export function EmployeeWorkView({ isAdmin = false }: { isAdmin?: boolean }) {
   const p2pFn = useServerFn(getWorkP2PCompleted);
 
   const [tab, setTab] = useState<TabKey>("all");
+  // إيداع / سحب داخل قسمي التحويلات (فلترة عرض فقط)
+  const [flow, setFlow] = useState<"in" | "out">("in");
   const now = useNow();
   const clock = clockParts(now);
 
