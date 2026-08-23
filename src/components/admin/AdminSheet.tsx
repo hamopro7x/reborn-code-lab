@@ -200,7 +200,7 @@ export function AdminSheet() {
   const startResize = (e: React.PointerEvent, col: SheetColumn) => {
     e.preventDefault();
     e.stopPropagation();
-    drag.current = { id: col.id, startX: e.clientX, startW: col.width ?? DEFAULT_WIDTH };
+    drag.current = { id: col.id, startX: e.clientX, startW: col.width ?? baseWidth };
 
     const move = (ev: PointerEvent) => {
       const d = drag.current;
@@ -228,8 +228,8 @@ export function AdminSheet() {
 
   const cols = useMemo(() => data.columns, [data.columns]);
   const totalWidth = useMemo(
-    () => cols.reduce((s, c) => s + (c.width ?? DEFAULT_WIDTH), 0),
-    [cols],
+    () => cols.reduce((s, c) => s + (c.width ?? baseWidth), 0),
+    [cols, baseWidth],
   );
 
   return (
@@ -278,14 +278,14 @@ export function AdminSheet() {
           اضغط «اضافة +» لإضافة أول عمود
         </div>
       ) : (
-        <div className="admin-sheet-surface">
+        <div ref={surfaceRef} className="admin-sheet-surface">
           {deleteMode && (
             <div className="flex px-0 pb-1" style={{ width: totalWidth, minWidth: "100%" }}>
               {cols.map((c) => (
                 <div
                   key={c.id}
                   className="flex flex-none items-center justify-center"
-                  style={{ width: c.width ?? DEFAULT_WIDTH }}
+                  style={{ width: c.width ?? baseWidth }}
                 >
                   <input
                     type="checkbox"
@@ -306,7 +306,7 @@ export function AdminSheet() {
           >
             <colgroup>
               {cols.map((c) => (
-                <col key={c.id} style={{ width: c.width ?? DEFAULT_WIDTH }} />
+                <col key={c.id} style={{ width: c.width ?? baseWidth }} />
               ))}
             </colgroup>
             <thead>
