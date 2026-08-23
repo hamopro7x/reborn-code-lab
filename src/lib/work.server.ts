@@ -386,6 +386,8 @@ export async function transfersLedger(scope: "external" | "internal", limit = 20
     accountId: string | null;
     accountName: string;
     detail: Record<string, string | number | boolean | null>;
+    note?: string | null;
+    noteAt?: string | null;
   }> = [];
   for (const r of (data ?? []) as any[]) {
     const id = String(r.id);
