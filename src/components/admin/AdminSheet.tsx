@@ -8,6 +8,8 @@ const MIN_ROWS = 9;
 const BASE_COLS = 4;
 const DEFAULT_WIDTH = 200;
 const MIN_WIDTH = 90;
+/** عدد الصفوف الفاضية اللي تفضل دايمًا في آخر الجدول (خانات لا تنتهي) */
+const ROW_BUFFER = 25;
 
 type SheetColumn = { id: string; name: string; width?: number };
 
@@ -18,10 +20,25 @@ type SheetData = {
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 
+const isEmptyRow = (r: Record<string, string>) =>
+  !r || Object.values(r).every((v) => !v || !String(v).trim());
+
+/** يضمن وجود صفوف فاضية دايمًا في الآخر فلا ينتهي الجدول */
+const withBuffer = (rows: Record<string, string>[]): Record<string, string>[] => {
+  let last = -1;
+  rows.forEach((r, i) => {
+    if (!isEmptyRow(r)) last = i;
+  });
+  const needed = last + 1 + ROW_BUFFER;
+  if (rows.length >= needed) return rows;
+  return [...rows, ...Array.from({ length: needed - rows.length }, () => ({}))];
+};
+
 const emptySheet = (): SheetData => ({
   columns: Array.from({ length: BASE_COLS }, () => ({ id: uid(), name: "" })),
-  rows: Array.from({ length: MIN_ROWS }, () => ({})),
+  rows: withBuffer(Array.from({ length: MIN_ROWS }, () => ({}))),
 });
+
 
 /** خلية نصية تلتف تلقائيًا وتزيد ارتفاعها حسب المحتوى */
 function AutoCell({
