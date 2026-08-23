@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const SETTINGS_KEY = "admin_sheet";
-const MIN_ROWS = 9;
+const MIN_ROWS = 22;
 
 type SheetData = {
   columns: { id: string; name: string }[];
@@ -96,7 +96,7 @@ export function AdminSheet() {
   const cols = useMemo(() => data.columns, [data.columns]);
 
   return (
-    <div dir="rtl" className="admin-sheet">
+    <div dir="rtl" className="admin-sheet flex flex-col flex-1">
       <div className="flex items-center justify-start gap-2 px-4 pb-[0.2cm] md:px-6">
         {saving && <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />}
         <button
@@ -120,7 +120,7 @@ export function AdminSheet() {
           اضغط «اضافة +» لإضافة أول عمود
         </div>
       ) : (
-        <div className="admin-sheet-surface">
+        <div className="admin-sheet-surface flex-1 min-h-[65vh]">
           <table className="data-table admin-sheet-table admin-sheet-fixed">
             <colgroup>
               {cols.map((c) => (

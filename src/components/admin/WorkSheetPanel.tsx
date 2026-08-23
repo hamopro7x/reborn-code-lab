@@ -23,7 +23,7 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
   return (
     <div className="min-h-[40vh] -mx-4 md:-mx-6 -mt-4 md:-mt-6" dir="rtl">
       <div
-        className="relative"
+        className="relative flex flex-col"
         style={{
           backgroundImage: `url(${sheetBg.url})`,
           backgroundSize: "100% 100%",
