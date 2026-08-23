@@ -247,26 +247,30 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
           >
             جدول بيانات
           </button>
-          <button
-            type="button"
-            onClick={() => setTab("employees")}
-            className={`inline-flex flex-row-reverse items-center gap-2 rounded-full px-4 py-2 text-sm font-extrabold text-white transition ${
-              tab === "employees"
-                ? "bg-[#1a1a1a] text-blue-300 shadow-[0_0_20px_-4px_oklch(0.55_0.28_305/0.7),0_0_0_1px_oklch(0.55_0.28_305/0.5)] ring-1 ring-blue-500/40"
-                : "bg-[#0d0d0d] opacity-80 shadow-[0_6px_20px_-6px_rgba(0,0,0,0.9)] hover:opacity-95 hover:ring-1 hover:ring-blue-500/20"
-            }`}
+          <EmployeePickerMenu
+            open={pickerOpen}
+            onOpenChange={(v) => {
+              if (v) setTab("employees");
+              setPickerOpen(v);
+            }}
+            selectedId={selected?.user_id ?? null}
+            onSelect={(emp) => {
+              setSelected(emp);
+              setSelectedShift(null);
+              setPickerOpen(false);
+            }}
           >
-            قائمة الموظفين
-          </button>
-          {isEmployees && (
             <button
               type="button"
-              onClick={() => setPickerOpen(true)}
-              className={`${CHIP_BASE} ${pickerOpen ? CHIP_ON : CHIP_OFF}`}
+              className={`inline-flex flex-row-reverse items-center gap-2 rounded-full px-4 py-2 text-sm font-extrabold text-white transition ${
+                tab === "employees"
+                  ? "bg-[#1a1a1a] text-blue-300 shadow-[0_0_20px_-4px_oklch(0.55_0.28_305/0.7),0_0_0_1px_oklch(0.55_0.28_305/0.5)] ring-1 ring-blue-500/40"
+                  : "bg-[#0d0d0d] opacity-80 shadow-[0_6px_20px_-6px_rgba(0,0,0,0.9)] hover:opacity-95 hover:ring-1 hover:ring-blue-500/20"
+              }`}
             >
-              اختيار الموظف
+              قائمة الموظفين
             </button>
-          )}
+          </EmployeePickerMenu>
           {isEmployees && selected && (
             <button
               type="button"
