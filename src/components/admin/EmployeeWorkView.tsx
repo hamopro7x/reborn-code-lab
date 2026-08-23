@@ -1398,10 +1398,10 @@ export function EmployeeWorkView({
                       {num(Math.abs(Number(r.amount)))} {r.currency}
                     </td>
                     <td className="tabular-nums">
-                      <EntryCell row={r} field="egp" serverNow={txnServerNow} onSaved={refetchRows} />
+                      <EntryCell row={r} field="egp" serverNow={txnServerNow} onSaved={refetchRows} readOnly={viewing} />
                     </td>
                     <td className="tabular-nums">
-                      <EntryCell row={r} field="quantity" serverNow={txnServerNow} onSaved={refetchRows} />
+                      <EntryCell row={r} field="quantity" serverNow={txnServerNow} onSaved={refetchRows} readOnly={viewing} />
                     </td>
                     <td>{txnTime(Number(r.time))}</td>
                     <td className="tabular-nums">
