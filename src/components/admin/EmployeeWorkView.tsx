@@ -1253,15 +1253,19 @@ export function EmployeeWorkView({
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={faceClaim.start}
-          className="flex w-[96px] shrink-0 flex-col items-center gap-1 rounded-2xl border border-[oklch(0.55_0.14_250)] bg-card/70 px-2 py-2 text-[10px] font-bold transition hover:bg-card disabled:opacity-60"
-        >
-          <ScanFace className="size-5" />
-          <span>استلم الشغل</span>
-        </button>
-        {faceClaim.node}
+        {!viewing && (
+          <>
+            <button
+              type="button"
+              onClick={faceClaim.start}
+              className="flex w-[96px] shrink-0 flex-col items-center gap-1 rounded-2xl border border-[oklch(0.55_0.14_250)] bg-card/70 px-2 py-2 text-[10px] font-bold transition hover:bg-card disabled:opacity-60"
+            >
+              <ScanFace className="size-5" />
+              <span>استلم الشغل</span>
+            </button>
+            {faceClaim.node}
+          </>
+        )}
 
 
         <div className="flex shrink-0 items-center gap-3">
