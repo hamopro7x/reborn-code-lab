@@ -1138,7 +1138,17 @@ export function EmployeeWorkView({ isAdmin = false }: { isAdmin?: boolean }) {
         })}
       </div>
 
-
+      {/* ----------- إيداع / سحب (نفس شكل القسم المركزي) ----------- */}
+      {(tab === "ext" || tab === "int") && (
+        <div className="flex flex-wrap items-center gap-2">
+          <FlowChip active={flow === "in"} onClick={() => setFlow("in")}>
+            إيداع
+          </FlowChip>
+          <FlowChip active={flow === "out"} onClick={() => setFlow("out")}>
+            سحب
+          </FlowChip>
+        </div>
+      )}
 
       {/* ------------------------- Transactions ------------------------- */}
       {tab === "wrong" ? (
