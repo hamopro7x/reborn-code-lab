@@ -401,10 +401,10 @@ function useNoteEditWindow(savedAt: string | null | undefined) {
 }
 
 /** خانة «تحويل الي» — يكتبها الموظف يدويًا (حروف/أرقام/رموز) وتُقفل بعد 10 دقائق. */
-function TransferNoteCell({ row, onSaved }: { row: any; onSaved: () => void }) {
+function TransferNoteCell({ row, onSaved, readOnly }: { row: any; onSaved: () => void; readOnly?: boolean }) {
   const saveFn = useServerFn(saveTransferNote);
   const savedAt = row.noteAt ?? null;
-  const locked = useNoteEditWindow(savedAt);
+  const locked = useNoteEditWindow(savedAt) || !!readOnly;
   const initial = row.note ? String(row.note) : "";
   const [value, setValue] = useState(initial);
   const [busy, setBusy] = useState(false);
