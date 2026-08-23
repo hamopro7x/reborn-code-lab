@@ -21,6 +21,7 @@ type Employee = {
   role: string;
   email: string;
   full_name: string;
+  avatar_signed_url?: string | null;
 };
 
 /** الشريط الجانبي لاختيار الموظف — يظهر فوق التصميم الحالي دون تغييره. */
@@ -74,13 +75,24 @@ function EmployeePickerSidebar({
                     <button
                       type="button"
                       onClick={() => onSelect(emp)}
-                      className={`w-full truncate rounded-xl px-3 py-2 text-right text-xs font-bold transition ${
+                      className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-right text-xs font-bold transition ${
                         active
                           ? "bg-[#1a1a1a] text-blue-300 ring-1 ring-blue-500/40"
                           : "bg-[#111] text-white/85 hover:bg-[#181818]"
                       }`}
                     >
-                      {emp.full_name || emp.email}
+                      <span className="grid size-8 shrink-0 place-items-center overflow-hidden rounded-full bg-white/10 text-[10px] text-white/60">
+                        {emp.avatar_signed_url ? (
+                          <img
+                            src={emp.avatar_signed_url}
+                            alt={emp.full_name || emp.email}
+                            className="size-full object-cover"
+                          />
+                        ) : (
+                          (emp.full_name || emp.email || "?").slice(0, 1)
+                        )}
+                      </span>
+                      <span className="truncate">{emp.full_name || emp.email}</span>
                     </button>
                   </li>
                 );

@@ -60,6 +60,7 @@ import {
   getShiftTransfers,
   getShiftP2P,
 
+  getMyAvatarUrl,
 } from "@/lib/work.functions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -1232,23 +1233,11 @@ export function EmployeeWorkView({
     void qc.invalidateQueries({ queryKey: ["my-shift-txns"] });
   });
 
+  const myAvatarFn = useServerFn(getMyAvatarUrl);
   const meQ = useQuery({
     queryKey: ["my-profile-identity"],
     enabled: !viewing,
-    queryFn: async () => {
-      const { data: auth } = await supabase.auth.getUser();
-      const uid = auth.user?.id;
-      if (!uid) return { name: "", avatar: "" };
-      const { data } = await supabase
-        .from("profiles")
-        .select("full_name,email,avatar_url")
-        .eq("id", uid)
-        .maybeSingle();
-      return {
-        name: (data as any)?.full_name || (data as any)?.email || "موظف",
-        avatar: (data as any)?.avatar_url || "",
-      };
-    },
+    queryFn: () => myAvatarFn() as Promise<{ name: string; avatar: string | null }>,
     staleTime: 300_000,
   });
   const name = viewing ? (viewName ?? "") : (meQ.data?.name ?? "");
