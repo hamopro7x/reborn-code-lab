@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const SETTINGS_KEY = "admin_sheet";
-const MIN_ROWS = 9;
+const MIN_ROWS = 22;
 
 type SheetData = {
   columns: { id: string; name: string }[];
