@@ -1225,9 +1225,91 @@ export function EmployeeWorkView({
 
   const emptyRows = Math.max(12 - rows.length, 0);
 
+  /* --------------------- identity / claim / clock --------------------- */
+  const faceClaim = useFaceClaim(() => {
+    void qc.invalidateQueries({ queryKey: ["my-work-state"] });
+    void qc.invalidateQueries({ queryKey: ["my-shift-txns"] });
+  });
+
+  const meQ = useQuery({
+    queryKey: ["my-profile-identity"],
+    enabled: !viewing,
+    queryFn: async () => {
+      const { data: auth } = await supabase.auth.getUser();
+      const uid = auth.user?.id;
+      if (!uid) return { name: "", avatar: "" };
+      const { data } = await supabase
+        .from("profiles")
+        .select("full_name,email,avatar_url")
+        .eq("id", uid)
+        .maybeSingle();
+      return {
+        name: (data as any)?.full_name || (data as any)?.email || "موظف",
+        avatar: (data as any)?.avatar_url || "",
+      };
+    },
+    staleTime: 300_000,
+  });
+  const name = viewing ? (viewName ?? "") : (meQ.data?.name ?? "");
+  const avatar = viewing ? (viewAvatar ?? "") : (meQ.data?.avatar ?? "");
+
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const clock = {
+    time: now.toLocaleTimeString("ar-EG", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+    ampm: now.getHours() < 12 ? "صباحاً" : "مساء",
+    date: now.toLocaleDateString("ar-EG", { weekday: "long", day: "numeric", month: "long", year: "numeric" }),
+  };
+
   return (
     <div dir="rtl" className="space-y-4">
+      {!viewing && (
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-full bg-secondary/80 text-muted-foreground">
+              {avatar ? (
+                <img src={avatar} alt={name} className="size-full object-cover" />
+              ) : (
+                <User className="size-8" />
+              )}
+            </div>
+            <div className="min-w-0">
+              <div className="truncate text-lg font-black">{name}</div>
+              <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                <span>موظف</span>
+                <span className="size-1.5 rounded-full bg-emerald-500" />
+                <span className="text-emerald-500">متصل</span>
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={faceClaim.start}
+            className="flex w-[96px] shrink-0 flex-col items-center gap-1 rounded-2xl border border-[oklch(0.55_0.14_250)] bg-card/70 px-2 py-2 text-[10px] font-bold transition hover:bg-card disabled:opacity-60"
+          >
+            <ScanFace className="size-5" />
+            <span>استلم الشغل</span>
+          </button>
+          {faceClaim.node}
+
+          <div className="flex shrink-0 items-center gap-3">
+            <div className="text-left leading-tight">
+              <div className="text-sm font-black tabular-nums">
+                {clock.ampm} {clock.time}
+              </div>
+              <div className="mt-1 text-[11px] text-muted-foreground">{clock.date}</div>
+            </div>
+            <Clock className="size-6 text-muted-foreground" />
+          </div>
+        </div>
+      )}
+
       {/* ---------------------------- Top bar ---------------------------- */}
+
       <div className="flex flex-wrap items-center gap-2">
         {TOP_TABS.map((t) => {
           const Icon = t.icon;
