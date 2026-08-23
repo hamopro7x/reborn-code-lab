@@ -1093,33 +1093,6 @@ export function EmployeeWorkView({
   const [tab, setTab] = useState<TabKey>("all");
   // إيداع / سحب داخل قسمي التحويلات (فلترة عرض فقط)
   const [flow, setFlow] = useState<"in" | "out">("in");
-  const now = useNow();
-  const clock = clockParts(now);
-
-  const [name, setName] = useState(viewName || "موظف");
-  const [avatar, setAvatar] = useState(viewAvatar || "");
-  const identityFn = useServerFn(getViewerIdentity);
-  useEffect(() => {
-    if (viewing) {
-      setName(viewName || "موظف");
-      setAvatar(viewAvatar || "");
-      return;
-    }
-    void (async () => {
-      try {
-        const v: any = await identityFn();
-        setName(v?.full_name || v?.email?.split("@")[0] || "موظف");
-        setAvatar(v?.avatar_url || "");
-        return;
-      } catch {
-        // fall back to the client session below
-      }
-      const { data: auth } = await supabase.auth.getUser();
-      if (!auth.user) return;
-      const { data } = await supabase.from("profiles").select("full_name").eq("id", auth.user.id).maybeSingle();
-      setName((data?.full_name as string) || auth.user.email?.split("@")[0] || "موظف");
-    })();
-  }, [identityFn, viewing, viewName, viewAvatar]);
 
   const st = useQuery({
     queryKey: viewing ? ["emp-work-state", viewUserId] : ["my-work-state"],
