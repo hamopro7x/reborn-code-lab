@@ -96,7 +96,7 @@ export function AdminSheet() {
   const cols = useMemo(() => data.columns, [data.columns]);
 
   return (
-    <div dir="rtl" className="admin-sheet flex-1">
+    <div dir="rtl" className="admin-sheet flex flex-col flex-1">
       <div className="flex items-center justify-start gap-2 px-4 pb-[0.2cm] md:px-6">
         {saving && <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />}
         <button
