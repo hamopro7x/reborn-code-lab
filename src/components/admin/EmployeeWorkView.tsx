@@ -1155,6 +1155,18 @@ export function EmployeeWorkView({ isAdmin = false }: { isAdmin?: boolean }) {
             { card: "transfer", title: "التحويل الي" },
           ]}
         />
+      ) : tab === "ext" ? (
+        <TransfersTable
+          rows={(extQ.data ?? []) as any[]}
+          loading={extQ.isLoading}
+          onDetails={setDetailRow}
+        />
+      ) : tab === "int" ? (
+        <TransfersTable
+          rows={(intQ.data ?? []) as any[]}
+          loading={intQ.isLoading}
+          onDetails={setDetailRow}
+        />
       ) : tab === "p2p" ? (
         <P2POrdersTable
           rows={(p2pCompleted.data ?? []) as any[]}
@@ -1164,6 +1176,7 @@ export function EmployeeWorkView({ isAdmin = false }: { isAdmin?: boolean }) {
 
         />
       ) : (
+
 
       <div className="data-surface">
         <div className="overflow-x-auto">
