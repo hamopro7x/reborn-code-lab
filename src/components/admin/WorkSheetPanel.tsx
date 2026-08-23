@@ -59,7 +59,9 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
           <div className="h-[57px]" />
         </div>
 
-        {tab === "sheet" ? <AdminSheet /> : <EmployeesList />}
+        <div className="bg-black">
+          {tab === "sheet" ? <AdminSheet /> : <EmployeesList />}
+        </div>
       </div>
     </div>
   );
