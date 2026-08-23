@@ -372,7 +372,7 @@ export const getEmployeeWorkState = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
     const mod = await import("./work.server");
-    return mod.myWorkState(data.userId);
+    return mod.adminEmployeeWorkState(data.userId);
   });
 
 export const getEmployeeShiftTxns = createServerFn({ method: "POST" })
@@ -383,7 +383,7 @@ export const getEmployeeShiftTxns = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
     const mod = await import("./work.server");
-    return mod.myShiftRows(data.userId, data.page ?? 1, 50);
+    return mod.adminEmployeeShiftRows(data.userId, data.page ?? 1, 50);
   });
 
 export const getEmployeeManualTxns = createServerFn({ method: "POST" })
@@ -392,5 +392,8 @@ export const getEmployeeManualTxns = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
     const mod = await import("./work.server");
+    const state = await mod.adminEmployeeWorkState(data.userId);
+    // Nothing is exposed while the employee's shift is still running.
+    if (!state.holding) return [];
     return mod.listManualTxns(data.userId);
   });
