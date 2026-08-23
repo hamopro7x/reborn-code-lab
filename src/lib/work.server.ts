@@ -409,7 +409,71 @@ export async function transfersLedger(scope: "external" | "internal", limit = 20
       detail: (r.detail ?? {}) as Record<string, string | number | boolean | null>,
     });
   }
+
+  // خانة «تحويل الي» التي يكتبها الموظف يدويًا (طبقة منفصلة، لا تلمس السجل الأصلي)
+  if (scope === "internal" && out.length) {
+    const { data: notes } = await db
+      .from("work_transfer_notes")
+      .select("ledger_id,note,saved_at")
+      .in(
+        "ledger_id",
+        out.map((r) => r.ledgerId),
+      );
+    const map = new Map((notes ?? []).map((n: any) => [String(n.ledger_id), n]));
+    for (const r of out) {
+      const n = map.get(r.ledgerId);
+      r.note = n ? String((n as any).note ?? "") : null;
+      r.noteAt = n ? ((n as any).saved_at ?? null) : null;
+    }
+  }
   return out;
+}
+
+/** حفظ خانة «تحويل الي» — قابلة للتعديل 10 دقائق من وقت الحفظ على السيرفر ثم تُقفل. */
+export const NOTE_EDIT_WINDOW_MS = 10 * 60 * 1000;
+
+export async function saveTransferNote(userId: string, ledgerId: string, note: string) {
+  const db = await admin();
+  const text = String(note ?? "").trim().slice(0, 200);
+  if (!text) return { ok: false as const, error: "اكتب قيمة أولًا" };
+
+  const { data: led } = await db
+    .from("bybit_ledger")
+    .select("kind,status")
+    .eq("id", ledgerId)
+    .maybeSingle();
+  if (!led || String((led as any).kind) !== "internal_out") {
+    return { ok: false as const, error: "هذه الخانة خاصة بالسحب الداخلي فقط." };
+  }
+  if (!(SUCCESS_STATUSES as unknown as string[]).includes(String((led as any).status))) {
+    return { ok: false as const, error: "هذه المعاملة غير ناجحة." };
+  }
+
+  const { data: existing } = await db
+    .from("work_transfer_notes")
+    .select("ledger_id,saved_at")
+    .eq("ledger_id", ledgerId)
+    .maybeSingle();
+
+  const now = new Date();
+  const savedAt = now.toISOString();
+  if (existing) {
+    const prev = (existing as any).saved_at as string | null;
+    if (prev && now.getTime() - new Date(prev).getTime() >= NOTE_EDIT_WINDOW_MS) {
+      return { ok: false as const, error: "انتهت مدة التعديل المسموحة لهذه الخانة.", locked: true as const };
+    }
+    const { error } = await db
+      .from("work_transfer_notes")
+      .update({ note: text, saved_at: prev ?? savedAt })
+      .eq("ledger_id", ledgerId);
+    if (error) return { ok: false as const, error: error.message };
+    return { ok: true as const, note: text, savedAt: prev ?? savedAt, serverNow: savedAt };
+  }
+  const { error } = await db
+    .from("work_transfer_notes")
+    .insert({ ledger_id: ledgerId, user_id: userId, note: text, saved_at: savedAt });
+  if (error) return { ok: false as const, error: error.message };
+  return { ok: true as const, note: text, savedAt, serverNow: savedAt };
 }
 
 
