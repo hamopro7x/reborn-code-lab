@@ -280,6 +280,27 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
               اختيار الشفت
             </button>
           )}
+          {isEmployees && selected && (
+            <div
+              className="ml-auto flex items-center gap-2 rounded-full bg-[#0d0d0d]/80 px-2 py-1 ring-1 ring-blue-500/30"
+              title={selected.full_name || selected.email}
+            >
+              <span className="grid size-9 shrink-0 place-items-center overflow-hidden rounded-full bg-white/10 text-xs font-bold text-white/80 shadow-[0_0_12px_-2px_oklch(0.55_0.28_305/0.6)] ring-1 ring-blue-500/40">
+                {selected.avatar_signed_url ? (
+                  <img
+                    src={selected.avatar_signed_url}
+                    alt={selected.full_name || selected.email}
+                    className="size-full object-cover"
+                  />
+                ) : (
+                  (selected.full_name || selected.email || "?").slice(0, 1)
+                )}
+              </span>
+              <span className="hidden max-w-[120px] truncate text-xs font-bold text-white/90 sm:inline">
+                {selected.full_name || selected.email}
+              </span>
+            </div>
+          )}
         </div>
 
         {isEmployees ? (
@@ -293,6 +314,7 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
                   viewUserId={selected.user_id}
                   {...(selectedShift ? { viewShiftId: selectedShift.id } : {})}
                   viewName={selected.full_name || selected.email}
+                  viewAvatar={selected.avatar_signed_url || undefined}
                 />
               </div>
             )}
