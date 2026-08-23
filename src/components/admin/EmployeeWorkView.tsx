@@ -1335,10 +1335,12 @@ export function EmployeeWorkView({
             </thead>
 
             <tbody>
-              {viewing && (st.data as any)?.live === true ? (
+              {viewing && !shiftMode && (st.data as any)?.holding === false ? (
                 <tr>
                   <td colSpan={COLUMNS.length} className="py-8 text-center text-xs text-muted-foreground">
-                    الشفت الخاص بالموظف ما زال شغّال — المعاملات تظهر بعد إنهاء الشفت.
+                    {(st.data as any)?.live === true
+                      ? "الشفت الحالي شغّال ولا يوجد شفت منتهي بعد."
+                      : "لا توجد شفتات لهذا الموظف."}
                   </td>
                 </tr>
               ) : holding && txns.isLoading ? (

@@ -1129,14 +1129,14 @@ export async function myShiftRows(userId: string, page = 1, pageSize = 50) {
 
 export async function adminEmployeeWorkState(userId: string) {
   const db = await admin();
-  // Shift still running for this employee → nothing is exposed.
+  // الشفت الشغّال لا يُعرض للأدمن، لكن آخر شفت منتهي يُعرض دائمًا.
   const { data: open } = await db
     .from("work_shifts")
     .select("id")
     .eq("user_id", userId)
     .is("ended_at", null)
     .maybeSingle();
-  if (open) return { holding: false as const, live: true as const };
+  const live = !!open;
 
   const { data: last } = await db
     .from("work_shifts")
@@ -1146,7 +1146,7 @@ export async function adminEmployeeWorkState(userId: string) {
     .order("ended_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (!last) return { holding: false as const, live: false as const };
+  if (!last) return { holding: false as const, live };
 
   const { count } = await db
     .from("work_txn_assignments")
@@ -1156,7 +1156,7 @@ export async function adminEmployeeWorkState(userId: string) {
 
   return {
     holding: true as const,
-    live: false as const,
+    live,
     shiftId: (last as any).id as string,
     startedAt: new Date((last as any).started_at).getTime(),
     endedAt: new Date((last as any).ended_at).getTime(),
@@ -1164,7 +1164,7 @@ export async function adminEmployeeWorkState(userId: string) {
   };
 }
 
-/** Rows of the employee's last CLOSED shift; empty while his shift is open. */
+/** Rows of the employee's last CLOSED shift — تُعرض حتى لو عنده شفت شغّال. */
 export async function adminEmployeeShiftRows(userId: string, page = 1, pageSize = 50) {
   const state = await adminEmployeeWorkState(userId);
   if (!state.holding) return { page: 1, pageSize, total: 0, rows: [] as any[], holding: false as const };
