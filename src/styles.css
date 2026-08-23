@@ -297,6 +297,17 @@
   border-collapse: separate;
   border-spacing: 0;
 }
+/* Fixed column widths: adding a column widens the table, never shrinks others */
+.admin-sheet-fixed {
+  table-layout: fixed;
+  width: max-content;
+  min-width: 100%;
+}
+.admin-sheet-fixed th,
+.admin-sheet-fixed td {
+  width: 200px;
+  min-width: 200px;
+}
 .admin-sheet-table thead {
   background-color: transparent;
 }
