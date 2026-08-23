@@ -62,16 +62,18 @@ import { BrandBadge, LedgerRowDetails, statusBadge } from "@/components/admin/By
 
 type ManualKind = "wrong" | "employee" | "receive" | "transfer";
 
-type TabKey = "p2p" | "transfers" | "wrong" | "week" | "all" | "employee";
+type TabKey = "p2p" | "transfers" | "wrong" | "week" | "all" | "employee" | "ext" | "int";
 
 /** DOM order = right-to-left order in the reference. */
 const TOP_TABS: { key: TabKey; label: string; icon: typeof ListOrdered }[] = [
   { key: "all", label: "المعاملات", icon: ListOrdered },
-  
+  { key: "ext", label: "الإيداع والسحب الخارجي", icon: ArrowDownUp },
+  { key: "int", label: "الإيداع والسحب الداخلي", icon: ArrowLeftRight },
   { key: "wrong", label: "المعاملات الغلط والخاص بالموظف", icon: AlertTriangle },
   { key: "transfers", label: "الاستلم من والتحويل الي", icon: ArrowLeftRight },
   { key: "p2p", label: "طليات P2P", icon: Users },
 ];
+
 
 
 const COLUMNS: { label: string; icon: typeof ListOrdered }[] = [
