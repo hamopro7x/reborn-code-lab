@@ -125,9 +125,8 @@ export function AdminSheet() {
           }));
         setData({
           columns: columns.length ? columns : emptySheet().columns,
-          rows: v.rows.length < MIN_ROWS
-            ? [...v.rows, ...Array.from({ length: MIN_ROWS - v.rows.length }, () => ({}))]
-            : v.rows,
+          rows: withBuffer(v.rows),
+
         });
       }
       setLoading(false);
