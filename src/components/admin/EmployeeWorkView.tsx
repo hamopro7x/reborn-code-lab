@@ -1322,6 +1322,7 @@ export function EmployeeWorkView({
       {tab === "wrong" ? (
         <ManualSection
           isAdmin={isAdmin}
+          {...(viewUserId ? { viewUserId } : {})}
           cards={[
             { card: "employee", title: "خاص بالموظف" },
             { card: "wrong", title: "المعاملات الغلط" },
@@ -1330,6 +1331,7 @@ export function EmployeeWorkView({
       ) : tab === "transfers" ? (
         <ManualSection
           isAdmin={isAdmin}
+          {...(viewUserId ? { viewUserId } : {})}
           cards={[
             { card: "receive", title: "الاستلام من" },
             { card: "transfer", title: "التحويل الي" },
@@ -1342,12 +1344,14 @@ export function EmployeeWorkView({
           onDetails={setDetailRow}
           noteColumn={flow === "out"}
           onSaved={() => void extQ.refetch()}
+          readOnly={viewing}
         />
       ) : tab === "int" ? (
         <TransfersTable
           rows={((intQ.data ?? []) as any[]).filter((r) => String(r.direction) === flow)}
           loading={intQ.isLoading}
           onDetails={setDetailRow}
+          readOnly={viewing}
         />
       ) : tab === "p2p" ? (
         <P2POrdersTable
