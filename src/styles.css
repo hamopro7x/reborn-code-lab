@@ -298,14 +298,21 @@
   border-spacing: 0;
 }
 /* Fixed column widths: adding a column widens the table, never shrinks others */
-.admin-sheet-fixed {
-  table-layout: auto;
-  width: 100%;
-}
 .admin-sheet-fixed th,
 .admin-sheet-fixed td {
-  min-width: 200px;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  word-break: break-word;
 }
+.admin-sheet-table thead th > div > input {
+  height: 44px;
+}
+.admin-sheet-cell {
+  overflow: hidden;
+  min-height: 47px;
+}
+
 .admin-sheet-table thead {
   background-color: transparent;
 }
