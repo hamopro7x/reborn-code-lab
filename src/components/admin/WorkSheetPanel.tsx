@@ -26,7 +26,7 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
         className="relative"
         style={{
           backgroundImage: `url(${sheetBg.url})`,
-          backgroundSize: "100% 100%",
+          backgroundSize: "cover",
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat",
         }}
