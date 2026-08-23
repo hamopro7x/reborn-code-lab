@@ -1280,7 +1280,13 @@ export function EmployeeWorkView({
             </thead>
 
             <tbody>
-              {holding && txns.isLoading ? (
+              {viewing && (st.data as any)?.live === true ? (
+                <tr>
+                  <td colSpan={COLUMNS.length} className="py-8 text-center text-xs text-muted-foreground">
+                    الشفت الخاص بالموظف ما زال شغّال — المعاملات تظهر بعد إنهاء الشفت.
+                  </td>
+                </tr>
+              ) : holding && txns.isLoading ? (
                 <tr>
                   <td colSpan={COLUMNS.length} className="py-8">
                     <Loader2 className="mx-auto size-4 animate-spin text-muted-foreground" />
