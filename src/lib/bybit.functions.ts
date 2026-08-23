@@ -218,12 +218,21 @@ export const getBybitCards = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(accountInput)
   .handler(async ({ data, context }) => {
-    await assertAccess(context.supabase, context.userId);
+    const role = await assertAccess(context.supabase, context.userId);
     const mod = await import("./bybit.server");
-    return mod.readOp(data.accountId, async () => ({ cards: await mod.fetchCards(data.accountId) }), {
+    const res = await mod.readOp(data.accountId, async () => ({ cards: await mod.fetchCards(data.accountId) }), {
       cards: [] as Awaited<ReturnType<typeof mod.fetchCards>>,
     });
+    // Full PAN / CVV / expiry are admin-only; employees never receive them.
+    if (role !== "admin") {
+      return {
+        ...res,
+        cards: (res.cards ?? []).map((c: any) => ({ ...c, fullNumber: undefined, cvv: undefined, expiry: undefined })),
+      };
+    }
+    return res;
   });
+
 
 export const createBybitCard = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
