@@ -184,11 +184,9 @@ export function AdminSheet() {
     setDeleteMode(false);
   };
 
+  // حذف الكل: مسح كل البيانات والأعمدة الإضافية والرجوع إلى 4 أعمدة فارغة
   const deleteAll = () => {
-    update((prev) => ({
-      columns: [],
-      rows: prev.rows.map(() => ({})),
-    }));
+    update(() => emptySheet());
     setSelected({});
     setDeleteMode(false);
   };
