@@ -37,8 +37,10 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
             <button
               type="button"
               onClick={() => setTab("sheet")}
-              className={`inline-flex flex-row-reverse items-center gap-2 rounded-full bg-[#0d0d0d] px-4 py-2 text-sm font-extrabold text-white shadow-[0_6px_20px_-6px_rgba(0,0,0,0.9)] transition ${
-                tab === "sheet" ? "opacity-100" : "opacity-80 hover:opacity-95"
+              className={`inline-flex flex-row-reverse items-center gap-2 rounded-full px-4 py-2 text-sm font-extrabold text-white transition ${
+                tab === "sheet"
+                  ? "bg-[#1a1a1a] text-blue-300 shadow-[0_0_20px_-4px_oklch(0.55_0.28_305/0.7),0_0_0_1px_oklch(0.55_0.28_305/0.5)] ring-1 ring-blue-500/40"
+                  : "bg-[#0d0d0d] opacity-80 shadow-[0_6px_20px_-6px_rgba(0,0,0,0.9)] hover:opacity-95 hover:ring-1 hover:ring-blue-500/20"
               }`}
             >
               <img src={iconDatasheet} alt="" loading="lazy" width={24} height={24} className="h-6 w-6 object-contain" />
@@ -47,8 +49,10 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
             <button
               type="button"
               onClick={() => setTab("employees")}
-              className={`inline-flex flex-row-reverse items-center gap-2 rounded-full bg-[#0d0d0d] px-4 py-2 text-sm font-extrabold text-white shadow-[0_6px_20px_-6px_rgba(0,0,0,0.9)] transition ${
-                tab === "employees" ? "opacity-100" : "opacity-80 hover:opacity-95"
+              className={`inline-flex flex-row-reverse items-center gap-2 rounded-full px-4 py-2 text-sm font-extrabold text-white transition ${
+                tab === "employees"
+                  ? "bg-[#1a1a1a] text-blue-300 shadow-[0_0_20px_-4px_oklch(0.55_0.28_305/0.7),0_0_0_1px_oklch(0.55_0.28_305/0.5)] ring-1 ring-blue-500/40"
+                  : "bg-[#0d0d0d] opacity-80 shadow-[0_6px_20px_-6px_rgba(0,0,0,0.9)] hover:opacity-95 hover:ring-1 hover:ring-blue-500/20"
               }`}
             >
               <img src={iconEmployees} alt="" loading="lazy" width={24} height={24} className="h-6 w-6 object-contain" />
