@@ -411,7 +411,7 @@ export async function transfersLedger(scope: "external" | "internal", limit = 20
   }
 
   // خانة «تحويل الي» التي يكتبها الموظف يدويًا (طبقة منفصلة، لا تلمس السجل الأصلي)
-  if (scope === "internal" && out.length) {
+  if (scope === "external" && out.length) {
     const { data: notes } = await db
       .from("work_transfer_notes")
       .select("ledger_id,note,saved_at")
@@ -442,8 +442,8 @@ export async function saveTransferNote(userId: string, ledgerId: string, note: s
     .select("kind,status")
     .eq("id", ledgerId)
     .maybeSingle();
-  if (!led || String((led as any).kind) !== "internal_out") {
-    return { ok: false as const, error: "هذه الخانة خاصة بالسحب الداخلي فقط." };
+  if (!led || String((led as any).kind) !== "withdraw") {
+    return { ok: false as const, error: "هذه الخانة خاصة بالسحب الخارجي فقط." };
   }
   if (!(SUCCESS_STATUSES as unknown as string[]).includes(String((led as any).status))) {
     return { ok: false as const, error: "هذه المعاملة غير ناجحة." };
