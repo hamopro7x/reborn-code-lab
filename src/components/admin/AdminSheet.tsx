@@ -158,6 +158,15 @@ export function AdminSheet() {
     setDeleteMode(false);
   };
 
+  const deleteAll = () => {
+    update((prev) => ({
+      columns: [],
+      rows: prev.rows.map(() => ({})),
+    }));
+    setSelected({});
+    setDeleteMode(false);
+  };
+
   // سحب حدود العمود لتغيير عرضه (بدون التأثير على باقي الأعمدة)
   const startResize = (e: React.PointerEvent, col: SheetColumn) => {
     e.preventDefault();
