@@ -19,7 +19,6 @@ import {
   User,
   Clock,
   ScanFace,
-  Eye,
   ListOrdered,
   AlertTriangle,
   ArrowLeftRight,
@@ -530,7 +529,6 @@ function TransfersTable({
                     )}
                     <td>
                       <button type="button" onClick={() => onDetails(r)} className="table-btn mx-auto">
-                        <Eye className="size-3" />
                         التفاصيل
                       </button>
                     </td>
@@ -1351,7 +1349,6 @@ export function EmployeeWorkView({ isAdmin = false }: { isAdmin?: boolean }) {
                     </td>
                     <td>
                       <button type="button" onClick={() => setDetailRow(r)} className="table-btn mx-auto">
-                        <Eye className="size-3" />
                         التفاصيل
                       </button>
                     </td>
