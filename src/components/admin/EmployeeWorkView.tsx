@@ -52,7 +52,9 @@ import {
 
   getMyShiftsForLink,
   linkP2POrder,
-
+  getEmployeeWorkState,
+  getEmployeeShiftTxns,
+  getEmployeeManualTxns,
 
 } from "@/lib/work.functions";
 import { useFaceClaim } from "@/components/admin/FaceGate";
@@ -399,10 +401,10 @@ function useNoteEditWindow(savedAt: string | null | undefined) {
 }
 
 /** خانة «تحويل الي» — يكتبها الموظف يدويًا (حروف/أرقام/رموز) وتُقفل بعد 10 دقائق. */
-function TransferNoteCell({ row, onSaved }: { row: any; onSaved: () => void }) {
+function TransferNoteCell({ row, onSaved, readOnly }: { row: any; onSaved: () => void; readOnly?: boolean }) {
   const saveFn = useServerFn(saveTransferNote);
   const savedAt = row.noteAt ?? null;
-  const locked = useNoteEditWindow(savedAt);
+  const locked = useNoteEditWindow(savedAt) || !!readOnly;
   const initial = row.note ? String(row.note) : "";
   const [value, setValue] = useState(initial);
   const [busy, setBusy] = useState(false);
@@ -464,12 +466,14 @@ function TransfersTable({
   onDetails,
   noteColumn,
   onSaved,
+  readOnly,
 }: {
   rows: any[];
   loading?: boolean;
   onDetails: (row: any) => void;
   noteColumn?: boolean;
   onSaved?: () => void;
+  readOnly?: boolean;
 }) {
   const emptyRows = Math.max(10 - rows.length, 0);
   const columns = noteColumn
@@ -520,7 +524,7 @@ function TransfersTable({
                     </td>
                     {noteColumn ? (
                       <td>
-                        <TransferNoteCell row={r} onSaved={() => onSaved?.()} />
+                        <TransferNoteCell row={r} onSaved={() => onSaved?.()} readOnly={readOnly} />
                       </td>
                     ) : (
                       <td className="text-[11px] text-muted-foreground" dir="ltr">
@@ -657,16 +661,18 @@ function EntryCell({
   field,
   serverNow,
   onSaved,
+  readOnly,
 }: {
   row: any;
   field: "egp" | "quantity";
   serverNow?: string | null;
   onSaved: () => void;
+  readOnly?: boolean;
 }) {
   const saveFn = useServerFn(saveMyTxnEntry);
   const saved = row[field];
   const savedAt = (field === "egp" ? row.egpAt : row.quantityAt) ?? null;
-  const locked = useEditWindow(savedAt, serverNow);
+  const locked = useEditWindow(savedAt, serverNow) || !!readOnly;
   const initial = saved === null || saved === undefined ? "" : String(saved);
   const [value, setValue] = useState(initial);
   const [busy, setBusy] = useState(false);
@@ -769,6 +775,7 @@ function ManualCell({
   numeric,
   autoFocus,
   onSaved,
+  readOnly,
 }: {
   id: string;
   field: "amount" | "details";
@@ -778,9 +785,10 @@ function ManualCell({
   numeric?: boolean;
   autoFocus?: boolean;
   onSaved: () => void;
+  readOnly?: boolean;
 }) {
   const saveFn = useServerFn(saveMyManualTxn);
-  const locked = useEditWindow(savedAt, serverNow);
+  const locked = useEditWindow(savedAt, serverNow) || !!readOnly;
   const [value, setValue] = useState(initial);
   const savedRef = useRef(initial);
   const valueRef = useRef(initial);
@@ -888,6 +896,7 @@ function ManualCard({
   clearing,
   newestId,
   isAdmin,
+  readOnly,
 }: {
   card: ManualKind;
   title: string;
@@ -907,13 +916,14 @@ function ManualCard({
   clearing: boolean;
   newestId: string | null;
   isAdmin: boolean;
+  readOnly?: boolean;
 }) {
   return (
     <div className="data-surface">
       <div className="data-table-head relative flex items-center justify-center px-3 py-3">
         <span className="text-sm font-black">{title}</span>
         <div className="absolute left-3 flex items-center gap-2">
-          {isAdmin && rows.length > 0 && (
+          {!readOnly && isAdmin && rows.length > 0 && (
             <button
               type="button"
               onClick={() => onClear(card)}
@@ -929,17 +939,19 @@ function ManualCard({
               <span className="whitespace-nowrap">تصفير</span>
             </button>
           )}
-          <button
-            type="button"
-            onClick={() => onAdd(card)}
-            disabled={adding}
-            className="table-btn disabled:opacity-60"
-          >
-            <span className="grid size-4 place-items-center rounded-full bg-[oklch(0.5_0.14_255)] text-[11px] leading-none text-[oklch(0.98_0_0)]">
-              {adding ? <Loader2 className="size-2.5 animate-spin" /> : "+"}
-            </span>
-            <span className="whitespace-nowrap">إضافة معاملة جديدة</span>
-          </button>
+          {!readOnly && (
+            <button
+              type="button"
+              onClick={() => onAdd(card)}
+              disabled={adding}
+              className="table-btn disabled:opacity-60"
+            >
+              <span className="grid size-4 place-items-center rounded-full bg-[oklch(0.5_0.14_255)] text-[11px] leading-none text-[oklch(0.98_0_0)]">
+                {adding ? <Loader2 className="size-2.5 animate-spin" /> : "+"}
+              </span>
+              <span className="whitespace-nowrap">إضافة معاملة جديدة</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -963,8 +975,9 @@ function ManualCard({
                     savedAt={r.amountSavedAt ?? null}
                     serverNow={serverNow}
                     numeric
-                    autoFocus={r.id === newestId}
+                    autoFocus={!readOnly && r.id === newestId}
                     onSaved={onSaved}
+                    readOnly={readOnly}
                   />
                 </td>
                 <td className="!p-0">
@@ -975,6 +988,7 @@ function ManualCard({
                     savedAt={r.detailsSavedAt ?? null}
                     serverNow={serverNow}
                     onSaved={onSaved}
+                    readOnly={readOnly}
                   />
                 </td>
                 <td className="text-[11px] text-muted-foreground">{formatDateTime(r.createdAt)}</td>
@@ -992,28 +1006,35 @@ function ManualCard({
 function ManualSection({
   isAdmin,
   cards,
+  viewUserId,
 }: {
   isAdmin: boolean;
   cards: [{ card: ManualKind; title: string }, { card: ManualKind; title: string }];
+  /** أدمن يشاهد بيانات موظف محدد (قراءة فقط). */
+  viewUserId?: string;
 }) {
   const qc = useQueryClient();
   const listFn = useServerFn(getMyManualTxns);
+  const empListFn = useServerFn(getEmployeeManualTxns);
   const addFn = useServerFn(addMyManualTxn);
   const clearFn = useServerFn(clearMyManualTxns);
   const [adding, setAdding] = useState<ManualKind | null>(null);
   const [clearing, setClearing] = useState<ManualKind | null>(null);
   const [newestId, setNewestId] = useState<string | null>(null);
+  const readOnly = !!viewUserId;
+  const listKey = viewUserId ? ["emp-manual-txns", viewUserId] : ["my-manual-txns"];
 
   const q = useQuery({
-    queryKey: ["my-manual-txns"],
-    queryFn: () => listFn({ data: undefined as any }),
+    queryKey: listKey,
+    queryFn: () =>
+      viewUserId ? empListFn({ data: { userId: viewUserId } }) : listFn({ data: undefined as any }),
     // Always re-read the stored rows when the section is opened again.
     staleTime: 0,
     refetchOnMount: "always",
   });
   const all = (q.data as any)?.rows ?? [];
   const serverNow = (q.data as any)?.serverNow ?? null;
-  const refresh = () => void qc.invalidateQueries({ queryKey: ["my-manual-txns"] });
+  const refresh = () => void qc.invalidateQueries({ queryKey: listKey });
 
   const add = async (card: ManualKind) => {
     setAdding(card);

@@ -359,3 +359,38 @@ export const clearMyManualTxns = createServerFn({ method: "POST" })
     const mod = await import("./work.server");
     return mod.clearManualTxns(context.userId, data.card);
   });
+
+/* ------------------- admin: view ONE employee's work sheet -------------------
+ * Same data source and shapes used by the employee view; only the resolved
+ * user id differs (chosen employee instead of the caller). Read-only. */
+
+const empSchema = z.object({ userId: z.string().uuid() });
+
+export const getEmployeeWorkState = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => empSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    return mod.myWorkState(data.userId);
+  });
+
+export const getEmployeeShiftTxns = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    empSchema.extend({ page: z.number().int().min(1).max(10_000).optional() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    return mod.myShiftRows(data.userId, data.page ?? 1, 50);
+  });
+
+export const getEmployeeManualTxns = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => empSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    return mod.listManualTxns(data.userId);
+  });
