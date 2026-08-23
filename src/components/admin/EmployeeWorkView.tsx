@@ -1008,6 +1008,23 @@ export function EmployeeWorkView({ isAdmin = false }: { isAdmin?: boolean }) {
     refetchInterval: 30_000,
   });
 
+  // Read-only filters over the same central ledger: external / internal.
+  const transfersFn = useServerFn(getWorkTransfers);
+  const extQ = useQuery({
+    queryKey: ["work-transfers", "external"],
+    queryFn: () => transfersFn({ data: { scope: "external" as const } }),
+    enabled: tab === "ext",
+    refetchInterval: 30_000,
+  });
+  const intQ = useQuery({
+    queryKey: ["work-transfers", "internal"],
+    queryFn: () => transfersFn({ data: { scope: "internal" as const } }),
+    enabled: tab === "int",
+    refetchInterval: 30_000,
+  });
+
+
+
 
   const brandsQ = useQuery({
     queryKey: ["bybit-card-brands"],
