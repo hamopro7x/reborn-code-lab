@@ -466,12 +466,14 @@ function TransfersTable({
   onDetails,
   noteColumn,
   onSaved,
+  readOnly,
 }: {
   rows: any[];
   loading?: boolean;
   onDetails: (row: any) => void;
   noteColumn?: boolean;
   onSaved?: () => void;
+  readOnly?: boolean;
 }) {
   const emptyRows = Math.max(10 - rows.length, 0);
   const columns = noteColumn
