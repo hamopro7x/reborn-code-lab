@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const SETTINGS_KEY = "admin_sheet";
-const MIN_ROWS = 12;
+const MIN_ROWS = 9;
 
 type SheetData = {
   columns: { id: string; name: string }[];
@@ -14,7 +14,7 @@ type SheetData = {
 const uid = () => Math.random().toString(36).slice(2, 10);
 
 const emptySheet = (): SheetData => ({
-  columns: Array.from({ length: 4 }, () => ({ id: uid(), name: "" })),
+  columns: Array.from({ length: 7 }, () => ({ id: uid(), name: "" })),
   rows: Array.from({ length: MIN_ROWS }, () => ({})),
 });
 
@@ -131,7 +131,7 @@ export function AdminSheet() {
                       onChange={(e) => renameColumn(c.id, e.target.value)}
                       placeholder=""
                       data-no-autosave
-                      className="h-9 w-full border-0 bg-transparent px-3 text-center text-xs font-extrabold text-white outline-none placeholder:text-white/60"
+                      className="w-full border-0 bg-transparent px-3 text-center text-xs font-extrabold text-white outline-none placeholder:text-white/60"
                     />
                   </th>
                 ))}
@@ -146,7 +146,7 @@ export function AdminSheet() {
                         value={row[c.id] ?? ""}
                         onChange={(e) => setCell(rowIndex, c.id, e.target.value)}
                         data-no-autosave
-                        className="h-[54px] w-full bg-transparent px-3 text-center text-xs text-foreground outline-none focus:bg-white/5"
+                        className="h-[47px] w-full bg-transparent px-3 text-center text-xs text-foreground outline-none focus:bg-white/5"
                       />
                     </td>
                   ))}

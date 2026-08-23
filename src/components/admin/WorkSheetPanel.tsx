@@ -81,8 +81,8 @@ function EmployeesList() {
       <table className="data-table admin-sheet-table w-full table-fixed">
         <thead>
           <tr>
-            <th>الاسم</th>
-            <th>البريد</th>
+            <th><span className="flex h-full items-center justify-center text-xs font-extrabold text-white">الاسم</span></th>
+            <th><span className="flex h-full items-center justify-center text-xs font-extrabold text-white">البريد</span></th>
           </tr>
         </thead>
         <tbody>
