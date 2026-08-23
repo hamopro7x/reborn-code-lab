@@ -156,12 +156,14 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
         {isEmployees ? (
           <div className="relative flex-1">
             {selected && (
-              <div className="px-4 pt-4 md:px-6">
-                <div className="inline-flex items-center gap-2 rounded-full bg-black/60 px-4 py-2 text-sm font-extrabold text-blue-300 ring-1 ring-blue-500/30">
-                  {selected.full_name || selected.email}
-                </div>
-                {/* منطقة عرض بيانات الموظف — تُستكمل في التعديل القادم */}
-                <div className="mt-3" data-employee-info-slot={selected.user_id} />
+              <div className="px-4 pb-6 pt-4 md:px-6">
+                {/* نفس جدول بيانات الشغل الموجود عند الموظف — بيانات الموظف المختار فقط */}
+                <EmployeeWorkView
+                  key={selected.user_id}
+                  isAdmin
+                  viewUserId={selected.user_id}
+                  viewName={selected.full_name || selected.email}
+                />
               </div>
             )}
             <EmployeePickerSidebar
