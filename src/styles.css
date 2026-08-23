@@ -292,7 +292,15 @@
   border: none;
   border-radius: 0;
   overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
+.admin-sheet-surface::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
 .admin-sheet-table {
   border-collapse: separate;
   border-spacing: 0;
