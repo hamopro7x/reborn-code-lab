@@ -66,16 +66,3 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
   );
 }
 
-function EmployeesPlaceholder() {
-  return (
-    <div
-      className="relative w-full flex-1 bg-black"
-      style={{
-        backgroundImage: `url(${employeesBg.url})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundRepeat: "no-repeat",
-      }}
-    />
-  );
-}
