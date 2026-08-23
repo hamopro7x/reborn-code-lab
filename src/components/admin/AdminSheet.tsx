@@ -67,6 +67,25 @@ export function AdminSheet() {
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const timer = useRef<number | null>(null);
   const drag = useRef<{ id: string; startX: number; startW: number } | null>(null);
+  const surfaceRef = useRef<HTMLDivElement | null>(null);
+  // عرض العمود الأساسي = عرض الواجهة ÷ 4 (يظهر 4 أعمدة فقط)
+  const [baseWidth, setBaseWidth] = useState(DEFAULT_WIDTH);
+
+  useEffect(() => {
+    const measure = () => {
+      const el = surfaceRef.current;
+      if (!el) return;
+      const w = el.clientWidth;
+      if (w > 0) setBaseWidth(Math.max(MIN_WIDTH, Math.floor(w / BASE_COLS)));
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    const id = window.setInterval(measure, 800);
+    return () => {
+      window.removeEventListener("resize", measure);
+      window.clearInterval(id);
+    };
+  }, [loading]);
 
   useEffect(() => {
     let alive = true;
