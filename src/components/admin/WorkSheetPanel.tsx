@@ -296,16 +296,6 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
                 />
               </div>
             )}
-            <EmployeePickerSidebar
-              open={pickerOpen}
-              onClose={() => setPickerOpen(false)}
-              selectedId={selected?.user_id ?? null}
-              onSelect={(emp) => {
-                setSelected(emp);
-                setSelectedShift(null);
-                setPickerOpen(false);
-              }}
-            />
             <ShiftPickerSidebar
               open={shiftPickerOpen}
               onClose={() => setShiftPickerOpen(false)}
