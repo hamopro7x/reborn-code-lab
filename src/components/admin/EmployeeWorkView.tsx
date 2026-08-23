@@ -55,8 +55,6 @@ import {
   getEmployeeManualTxns,
 
 } from "@/lib/work.functions";
-import { useFaceClaim } from "@/components/admin/FaceGate";
-import { getViewerIdentity } from "@/lib/courses.functions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { getBybitCardBrands } from "@/lib/bybit.functions";
