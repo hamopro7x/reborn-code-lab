@@ -1083,18 +1083,37 @@ function ManualSection({
           clearing={clearing === c.card}
           newestId={newestId}
           isAdmin={isAdmin}
+          readOnly={readOnly}
         />
       ))}
     </div>
   );
 }
 
-export function EmployeeWorkView({ isAdmin = false }: { isAdmin?: boolean }) {
+/**
+ * نفس الواجهة تُستخدم في الحالتين:
+ *  - الموظف: بدون `viewUserId` → بياناته الخاصة (قابلة للتعديل كما هي).
+ *  - الأدمن بعد اختيار موظف: `viewUserId` → بيانات ذلك الموظف فقط (قراءة).
+ */
+export function EmployeeWorkView({
+  isAdmin = false,
+  viewUserId,
+  viewName,
+  viewAvatar,
+}: {
+  isAdmin?: boolean;
+  viewUserId?: string;
+  viewName?: string;
+  viewAvatar?: string;
+}) {
   const qc = useQueryClient();
   const stateFn = useServerFn(getMyWorkState);
   const txnsFn = useServerFn(getMyShiftTxns);
+  const empStateFn = useServerFn(getEmployeeWorkState);
+  const empTxnsFn = useServerFn(getEmployeeShiftTxns);
   const brandsFn = useServerFn(getBybitCardBrands);
   const p2pFn = useServerFn(getWorkP2PCompleted);
+  const viewing = !!viewUserId;
 
   const [tab, setTab] = useState<TabKey>("all");
   // إيداع / سحب داخل قسمي التحويلات (فلترة عرض فقط)
@@ -1102,10 +1121,15 @@ export function EmployeeWorkView({ isAdmin = false }: { isAdmin?: boolean }) {
   const now = useNow();
   const clock = clockParts(now);
 
-  const [name, setName] = useState("موظف");
-  const [avatar, setAvatar] = useState("");
+  const [name, setName] = useState(viewName || "موظف");
+  const [avatar, setAvatar] = useState(viewAvatar || "");
   const identityFn = useServerFn(getViewerIdentity);
   useEffect(() => {
+    if (viewing) {
+      setName(viewName || "موظف");
+      setAvatar(viewAvatar || "");
+      return;
+    }
     void (async () => {
       try {
         const v: any = await identityFn();
@@ -1120,18 +1144,22 @@ export function EmployeeWorkView({ isAdmin = false }: { isAdmin?: boolean }) {
       const { data } = await supabase.from("profiles").select("full_name").eq("id", auth.user.id).maybeSingle();
       setName((data?.full_name as string) || auth.user.email?.split("@")[0] || "موظف");
     })();
-  }, [identityFn]);
+  }, [identityFn, viewing, viewName, viewAvatar]);
 
   const st = useQuery({
-    queryKey: ["my-work-state"],
-    queryFn: () => stateFn({ data: undefined as any }),
+    queryKey: viewing ? ["emp-work-state", viewUserId] : ["my-work-state"],
+    queryFn: () =>
+      viewing ? empStateFn({ data: { userId: viewUserId! } }) : stateFn({ data: undefined as any }),
     refetchInterval: 20_000,
   });
   const holding = (st.data as any)?.holding === true;
 
   const txns = useQuery({
-    queryKey: ["my-shift-txns"],
-    queryFn: () => txnsFn({ data: { page: 1 } }),
+    queryKey: viewing ? ["emp-shift-txns", viewUserId] : ["my-shift-txns"],
+    queryFn: () =>
+      viewing
+        ? empTxnsFn({ data: { userId: viewUserId!, page: 1 } })
+        : txnsFn({ data: { page: 1 } }),
     enabled: holding,
     refetchInterval: 20_000,
   });
@@ -1196,7 +1224,10 @@ export function EmployeeWorkView({ isAdmin = false }: { isAdmin?: boolean }) {
   }, [allRows, tab]);
 
   const [detailRow, setDetailRow] = useState<any | null>(null);
-  const refetchRows = () => void qc.invalidateQueries({ queryKey: ["my-shift-txns"] });
+  const refetchRows = () =>
+    void qc.invalidateQueries({
+      queryKey: viewing ? ["emp-shift-txns", viewUserId] : ["my-shift-txns"],
+    });
 
   const emptyRows = Math.max(12 - rows.length, 0);
 
@@ -1222,15 +1253,19 @@ export function EmployeeWorkView({ isAdmin = false }: { isAdmin?: boolean }) {
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={faceClaim.start}
-          className="flex w-[96px] shrink-0 flex-col items-center gap-1 rounded-2xl border border-[oklch(0.55_0.14_250)] bg-card/70 px-2 py-2 text-[10px] font-bold transition hover:bg-card disabled:opacity-60"
-        >
-          <ScanFace className="size-5" />
-          <span>استلم الشغل</span>
-        </button>
-        {faceClaim.node}
+        {!viewing && (
+          <>
+            <button
+              type="button"
+              onClick={faceClaim.start}
+              className="flex w-[96px] shrink-0 flex-col items-center gap-1 rounded-2xl border border-[oklch(0.55_0.14_250)] bg-card/70 px-2 py-2 text-[10px] font-bold transition hover:bg-card disabled:opacity-60"
+            >
+              <ScanFace className="size-5" />
+              <span>استلم الشغل</span>
+            </button>
+            {faceClaim.node}
+          </>
+        )}
 
 
         <div className="flex shrink-0 items-center gap-3">
@@ -1287,6 +1322,7 @@ export function EmployeeWorkView({ isAdmin = false }: { isAdmin?: boolean }) {
       {tab === "wrong" ? (
         <ManualSection
           isAdmin={isAdmin}
+          {...(viewUserId ? { viewUserId } : {})}
           cards={[
             { card: "employee", title: "خاص بالموظف" },
             { card: "wrong", title: "المعاملات الغلط" },
@@ -1295,6 +1331,7 @@ export function EmployeeWorkView({ isAdmin = false }: { isAdmin?: boolean }) {
       ) : tab === "transfers" ? (
         <ManualSection
           isAdmin={isAdmin}
+          {...(viewUserId ? { viewUserId } : {})}
           cards={[
             { card: "receive", title: "الاستلام من" },
             { card: "transfer", title: "التحويل الي" },
@@ -1307,12 +1344,14 @@ export function EmployeeWorkView({ isAdmin = false }: { isAdmin?: boolean }) {
           onDetails={setDetailRow}
           noteColumn={flow === "out"}
           onSaved={() => void extQ.refetch()}
+          readOnly={viewing}
         />
       ) : tab === "int" ? (
         <TransfersTable
           rows={((intQ.data ?? []) as any[]).filter((r) => String(r.direction) === flow)}
           loading={intQ.isLoading}
           onDetails={setDetailRow}
+          readOnly={viewing}
         />
       ) : tab === "p2p" ? (
         <P2POrdersTable
@@ -1359,10 +1398,10 @@ export function EmployeeWorkView({ isAdmin = false }: { isAdmin?: boolean }) {
                       {num(Math.abs(Number(r.amount)))} {r.currency}
                     </td>
                     <td className="tabular-nums">
-                      <EntryCell row={r} field="egp" serverNow={txnServerNow} onSaved={refetchRows} />
+                      <EntryCell row={r} field="egp" serverNow={txnServerNow} onSaved={refetchRows} readOnly={viewing} />
                     </td>
                     <td className="tabular-nums">
-                      <EntryCell row={r} field="quantity" serverNow={txnServerNow} onSaved={refetchRows} />
+                      <EntryCell row={r} field="quantity" serverNow={txnServerNow} onSaved={refetchRows} readOnly={viewing} />
                     </td>
                     <td>{txnTime(Number(r.time))}</td>
                     <td className="tabular-nums">
