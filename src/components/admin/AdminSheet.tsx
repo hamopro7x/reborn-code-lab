@@ -97,7 +97,7 @@ export function AdminSheet() {
 
   return (
     <div dir="rtl" className="admin-sheet">
-      <div className="flex items-center justify-start gap-2 px-4 pb-0 md:px-6">
+      <div className="flex items-center justify-start gap-2 px-4 pb-[0.2cm] md:px-6">
         {saving && <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />}
         <button
           type="button"
