@@ -1122,6 +1122,68 @@ export async function myShiftRows(userId: string, page = 1, pageSize = 50) {
   return { ...res, rows, holding: true as const, serverNow: new Date().toISOString() };
 }
 
+/* ------------------------- admin view of one employee -------------------------
+ * The admin must NOT see anything while the employee's shift is still running.
+ * Data becomes visible only after that shift is closed — we then expose the
+ * employee's most recently ENDED shift. */
+
+export async function adminEmployeeWorkState(userId: string) {
+  const db = await admin();
+  // Shift still running for this employee → nothing is exposed.
+  const { data: open } = await db
+    .from("work_shifts")
+    .select("id")
+    .eq("user_id", userId)
+    .is("ended_at", null)
+    .maybeSingle();
+  if (open) return { holding: false as const, live: true as const };
+
+  const { data: last } = await db
+    .from("work_shifts")
+    .select("id,started_at,ended_at")
+    .eq("user_id", userId)
+    .not("ended_at", "is", null)
+    .order("ended_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!last) return { holding: false as const, live: false as const };
+
+  const { count } = await db
+    .from("work_txn_assignments")
+    .select("id, bybit_ledger!inner(status)", { count: "exact", head: true })
+    .eq("shift_id", (last as any).id)
+    .in("bybit_ledger.status", SUCCESS_STATUSES as unknown as string[]);
+
+  return {
+    holding: true as const,
+    live: false as const,
+    shiftId: (last as any).id as string,
+    startedAt: new Date((last as any).started_at).getTime(),
+    endedAt: new Date((last as any).ended_at).getTime(),
+    txns: Number(count ?? 0),
+  };
+}
+
+/** Rows of the employee's last CLOSED shift; empty while his shift is open. */
+export async function adminEmployeeShiftRows(userId: string, page = 1, pageSize = 50) {
+  const state = await adminEmployeeWorkState(userId);
+  if (!state.holding) return { page: 1, pageSize, total: 0, rows: [] as any[], holding: false as const };
+  const res = await workTable({ userId, shiftId: state.shiftId, page, pageSize, successOnly: true });
+
+  const entries = await myEntries(res.rows.map((r: any) => r.ledgerId));
+  const rows = res.rows.map((r: any) => {
+    const e = entries.get(r.ledgerId);
+    return {
+      ...r,
+      egp: e?.egp ?? null,
+      quantity: e?.quantity ?? null,
+      egpAt: e?.egpAt ?? null,
+      quantityAt: e?.quantityAt ?? null,
+    };
+  });
+  return { ...res, rows, holding: true as const, serverNow: new Date().toISOString() };
+}
+
 /* ------------------ employee-entered values (جنيه / الكمية) ------------------ */
 /**
  * Employee-entered columns live in their own table (work_txn_entries) so the
