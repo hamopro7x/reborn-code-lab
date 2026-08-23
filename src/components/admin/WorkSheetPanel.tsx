@@ -5,7 +5,7 @@ import { Loader2, Users } from "lucide-react";
 import { EmployeeWorkView } from "@/components/admin/EmployeeWorkView";
 import { AdminSheet } from "@/components/admin/AdminSheet";
 import { adminListEmployees } from "@/lib/courses.functions";
-import sheetBg from "@/assets/sheet-bg2.jpg.asset.json";
+import sheetBg from "@/assets/sheet-bg3.png.asset.json";
 import iconDatasheet from "@/assets/icon-datasheet.png";
 import iconEmployees from "@/assets/icon-employees.png";
 
@@ -26,8 +26,8 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
         className="relative -mx-4 -mt-4 md:-mx-6 md:-mt-6"
         style={{
           backgroundImage: `url(${sheetBg.url})`,
-          backgroundSize: "cover",
-          backgroundPosition: "top left",
+          backgroundSize: "100% 100%",
+          backgroundPosition: "center",
           backgroundRepeat: "no-repeat",
         }}
       >
