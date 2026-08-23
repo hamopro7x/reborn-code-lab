@@ -1157,30 +1157,43 @@ export async function adminEmployeeWorkState(userId: string) {
     .maybeSingle();
   const live = !!open;
 
-  const { data: last } = await db
+  // آخر الشفتات المنتهية — نختار أول شفت فيه معاملات ناجحة فعلاً حتى لا يفتح
+  // الأدمن على شفت فاضي فتظهر خانات «جنية / الكمية» كلها «—».
+  const { data: recent } = await db
     .from("work_shifts")
     .select("id,started_at,ended_at")
     .eq("user_id", userId)
     .not("ended_at", "is", null)
     .order("ended_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (!last) return { holding: false as const, live };
+    .limit(20);
 
-  const { count } = await db
-    .from("work_txn_assignments")
-    .select("id, bybit_ledger!inner(status)", { count: "exact", head: true })
-    .eq("shift_id", (last as any).id)
-    .in("bybit_ledger.status", SUCCESS_STATUSES as unknown as string[]);
+  const list = (recent ?? []) as any[];
+  if (!list.length) return { holding: false as const, live };
+
+  let picked: any = list[0];
+  let pickedCount = 0;
+  for (const s of list) {
+    const { count } = await db
+      .from("work_txn_assignments")
+      .select("id, bybit_ledger!inner(status)", { count: "exact", head: true })
+      .eq("shift_id", s.id)
+      .in("bybit_ledger.status", SUCCESS_STATUSES as unknown as string[]);
+    if (Number(count ?? 0) > 0) {
+      picked = s;
+      pickedCount = Number(count ?? 0);
+      break;
+    }
+  }
 
   return {
     holding: true as const,
     live,
-    shiftId: (last as any).id as string,
-    startedAt: new Date((last as any).started_at).getTime(),
-    endedAt: new Date((last as any).ended_at).getTime(),
-    txns: Number(count ?? 0),
+    shiftId: picked.id as string,
+    startedAt: new Date(picked.started_at).getTime(),
+    endedAt: new Date(picked.ended_at).getTime(),
+    txns: pickedCount,
   };
+
 }
 
 /** Rows of the employee's last CLOSED shift — تُعرض حتى لو عنده شفت شغّال. */
