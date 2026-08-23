@@ -228,6 +228,18 @@ export function AdminSheet() {
           </span>
           حذف
         </button>
+        {deleteMode && (
+          <button
+            type="button"
+            onClick={deleteAll}
+            className="inline-flex flex-row-reverse items-center gap-1.5 rounded-md bg-[#7f1d1d] px-2.5 py-1 text-[13px] font-bold text-white shadow hover:brightness-110"
+          >
+            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white/25">
+              <Trash2 className="h-3 w-3" />
+            </span>
+            حذف الكل
+          </button>
+        )}
       </div>
 
       {loading ? (
