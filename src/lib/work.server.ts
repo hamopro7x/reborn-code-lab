@@ -1129,14 +1129,14 @@ export async function myShiftRows(userId: string, page = 1, pageSize = 50) {
 
 export async function adminEmployeeWorkState(userId: string) {
   const db = await admin();
-  // Shift still running for this employee → nothing is exposed.
+  // الشفت الشغّال لا يُعرض للأدمن، لكن آخر شفت منتهي يُعرض دائمًا.
   const { data: open } = await db
     .from("work_shifts")
     .select("id")
     .eq("user_id", userId)
     .is("ended_at", null)
     .maybeSingle();
-  if (open) return { holding: false as const, live: true as const };
+  const live = !!open;
 
   const { data: last } = await db
     .from("work_shifts")
