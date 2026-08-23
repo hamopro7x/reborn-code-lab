@@ -21,41 +21,40 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
   if (!isAdmin) return <EmployeeWorkView />;
 
   return (
-    <div className="min-h-[40vh] -mx-4 md:-mx-6" dir="rtl">
-      <div
-        className="relative"
-        style={{
-          backgroundImage: `url(${sheetBg.url})`,
-          backgroundSize: "100% 100%",
-          backgroundPosition: "center",
-          backgroundRepeat: "no-repeat",
-        }}
-      >
-        <div className="relative flex items-center justify-start gap-3 px-4 pb-0 pt-4 md:px-6">
-          <button
-            type="button"
-            onClick={() => setTab("sheet")}
-            className={`inline-flex flex-row-reverse items-center gap-2 rounded-full bg-[#0d0d0d] px-4 py-2 text-sm font-extrabold text-white shadow-[0_6px_20px_-6px_rgba(0,0,0,0.9)] transition ${
-              tab === "sheet" ? "opacity-100" : "opacity-80 hover:opacity-95"
-            }`}
-          >
-            <img src={iconDatasheet} alt="" loading="lazy" width={24} height={24} className="h-6 w-6 object-contain" />
-            جدول بيانات
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab("employees")}
-            className={`inline-flex flex-row-reverse items-center gap-2 rounded-full bg-[#0d0d0d] px-4 py-2 text-sm font-extrabold text-white shadow-[0_6px_20px_-6px_rgba(0,0,0,0.9)] transition ${
-              tab === "employees" ? "opacity-100" : "opacity-80 hover:opacity-95"
-            }`}
-          >
-            <img src={iconEmployees} alt="" loading="lazy" width={24} height={24} className="h-6 w-6 object-contain" />
-            قائمة الموظفين
-          </button>
-        </div>
-
-        <div className="h-[57px]" />
+    <div
+      className="relative min-h-[40vh] -mx-4 md:-mx-6"
+      dir="rtl"
+      style={{
+        backgroundImage: `url(${sheetBg.url})`,
+        backgroundSize: "100% 100%",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+      }}
+    >
+      <div className="relative z-10 flex items-center justify-start gap-3 px-4 pb-0 pt-4 md:px-6">
+        <button
+          type="button"
+          onClick={() => setTab("sheet")}
+          className={`inline-flex flex-row-reverse items-center gap-2 rounded-full bg-[#0d0d0d] px-4 py-2 text-sm font-extrabold text-white shadow-[0_6px_20px_-6px_rgba(0,0,0,0.9)] transition ${
+            tab === "sheet" ? "opacity-100" : "opacity-80 hover:opacity-95"
+          }`}
+        >
+          <img src={iconDatasheet} alt="" loading="lazy" width={24} height={24} className="h-6 w-6 object-contain" />
+          جدول بيانات
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab("employees")}
+          className={`inline-flex flex-row-reverse items-center gap-2 rounded-full bg-[#0d0d0d] px-4 py-2 text-sm font-extrabold text-white shadow-[0_6px_20px_-6px_rgba(0,0,0,0.9)] transition ${
+            tab === "employees" ? "opacity-100" : "opacity-80 hover:opacity-95"
+          }`}
+        >
+          <img src={iconEmployees} alt="" loading="lazy" width={24} height={24} className="h-6 w-6 object-contain" />
+          قائمة الموظفين
+        </button>
       </div>
+
+      <div className="h-[57px]" />
 
       <div className="relative z-10">
         {tab === "sheet" ? <AdminSheet /> : <EmployeesList />}
