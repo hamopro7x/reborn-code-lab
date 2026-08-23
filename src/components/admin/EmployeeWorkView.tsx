@@ -359,6 +359,31 @@ const TRANSFER_LABEL: Record<string, string> = {
   internal_out: "سحب داخلي",
 };
 
+/** كبسولة إيداع/سحب بنفس شكل القسم المركزي. */
+function FlowChip({
+  active,
+  children,
+  onClick,
+}: {
+  active?: boolean;
+  children: React.ReactNode;
+  onClick?: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-full border px-4 py-2 text-xs font-bold transition-colors ${
+        active
+          ? "border-blue-500/40 bg-blue-500/15 text-blue-400"
+          : "border-border/40 text-muted-foreground hover:border-blue-500/30 hover:text-foreground"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
 function TransfersTable({
   rows,
   loading,
