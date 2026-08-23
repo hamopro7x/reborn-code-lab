@@ -2,6 +2,7 @@ import { useState } from "react";
 import { EmployeeWorkView } from "@/components/admin/EmployeeWorkView";
 import { AdminSheet } from "@/components/admin/AdminSheet";
 import sheetBg from "@/assets/sheet-bg3.png.asset.json";
+import employeesBg from "@/assets/employees-bg.png.asset.json";
 
 type TabKey = "sheet" | "employees";
 
