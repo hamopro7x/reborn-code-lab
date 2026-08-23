@@ -43,6 +43,7 @@ import {
   getMyWorkState,
   getMyShiftTxns,
   saveMyTxnEntry,
+  saveTransferNote,
   getMyManualTxns,
   addMyManualTxn,
   saveMyManualTxn,
@@ -384,23 +385,105 @@ function FlowChip({
   );
 }
 
+/** نافذة تعديل 10 دقائق لخانة «تحويل الي» (السيرفر يعيد التحقق أيضًا). */
+function useNoteEditWindow(savedAt: string | null | undefined) {
+  const expired = () =>
+    !!savedAt && Date.now() - new Date(savedAt).getTime() >= 10 * 60 * 1000;
+  const [locked, setLocked] = useState(expired);
+  useEffect(() => {
+    setLocked(expired());
+    if (!savedAt) return;
+    const t = window.setInterval(() => setLocked(expired()), 5000);
+    return () => window.clearInterval(t);
+  }, [savedAt]);
+  return locked;
+}
+
+/** خانة «تحويل الي» — يكتبها الموظف يدويًا (حروف/أرقام/رموز) وتُقفل بعد 10 دقائق. */
+function TransferNoteCell({ row, onSaved }: { row: any; onSaved: () => void }) {
+  const saveFn = useServerFn(saveTransferNote);
+  const savedAt = row.noteAt ?? null;
+  const locked = useNoteEditWindow(savedAt);
+  const initial = row.note ? String(row.note) : "";
+  const [value, setValue] = useState(initial);
+  const [busy, setBusy] = useState(false);
+  const sentRef = useRef(initial);
+
+  useEffect(() => {
+    setValue(initial);
+    sentRef.current = initial;
+  }, [initial]);
+
+  const commit = (raw: string) => {
+    const txt = String(raw).trim();
+    if (!txt || txt === sentRef.current) return;
+    sentRef.current = txt;
+    setBusy(true);
+    void saveFn({ data: { ledgerId: row.ledgerId, note: txt } })
+      .then((res: any) => {
+        if (res?.ok) toast.success("تم الحفظ");
+        else {
+          sentRef.current = initial;
+          toast.error(String(res?.error ?? "تعذر الحفظ"));
+        }
+        onSaved();
+      })
+      .catch((e: unknown) => {
+        sentRef.current = initial;
+        toast.error(e instanceof Error ? e.message : "تعذر الحفظ");
+      })
+      .finally(() => setBusy(false));
+  };
+
+  if (locked) {
+    return (
+      <span title="انتهت مدة التعديل المسموحة لهذه الخانة." className="text-xs">
+        {initial || "—"}
+      </span>
+    );
+  }
+  return (
+    <div className="flex items-center justify-center gap-1">
+      <input
+        data-no-autosave
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={() => commit(value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+        }}
+        className="h-8 w-32 rounded-lg border border-border/60 bg-background/60 px-2 text-center text-xs outline-none focus:border-[oklch(0.62_0.18_250)]"
+      />
+      {busy ? <Loader2 className="size-3 animate-spin text-muted-foreground" /> : null}
+    </div>
+  );
+}
+
 function TransfersTable({
   rows,
   loading,
   onDetails,
+  noteColumn,
+  onSaved,
 }: {
   rows: any[];
   loading?: boolean;
   onDetails: (row: any) => void;
+  noteColumn?: boolean;
+  onSaved?: () => void;
 }) {
   const emptyRows = Math.max(10 - rows.length, 0);
+  const columns = noteColumn
+    ? TRANSFER_COLUMNS.map((c) => (c === "معرّف المعاملة" ? "تحويل الي" : c))
+    : TRANSFER_COLUMNS;
   return (
     <div className="data-surface">
       <div className="overflow-x-auto">
         <table className="data-table min-w-[900px] text-center">
+
           <thead>
             <tr>
-              {TRANSFER_COLUMNS.map((c) => (
+              {columns.map((c) => (
                 <th key={c}>{c}</th>
               ))}
             </tr>
@@ -408,7 +491,7 @@ function TransfersTable({
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={TRANSFER_COLUMNS.length} className="py-8">
+                <td colSpan={columns.length} className="py-8">
                   <Loader2 className="mx-auto size-4 animate-spin text-muted-foreground" />
                 </td>
               </tr>
@@ -436,9 +519,15 @@ function TransfersTable({
                         {badge.text}
                       </span>
                     </td>
-                    <td className="text-[11px] text-muted-foreground" dir="ltr">
-                      {String(r.refId ?? "—") || "—"}
-                    </td>
+                    {noteColumn ? (
+                      <td>
+                        <TransferNoteCell row={r} onSaved={() => onSaved?.()} />
+                      </td>
+                    ) : (
+                      <td className="text-[11px] text-muted-foreground" dir="ltr">
+                        {String(r.refId ?? "—") || "—"}
+                      </td>
+                    )}
                     <td>
                       <button type="button" onClick={() => onDetails(r)} className="table-btn mx-auto">
                         <Eye className="size-3" />
@@ -451,7 +540,7 @@ function TransfersTable({
             )}
             {Array.from({ length: emptyRows }).map((_, i) => (
               <tr key={`tr-empty-${i}`}>
-                {TRANSFER_COLUMNS.map((c) => (
+                {columns.map((c) => (
                   <td key={c}>&nbsp;</td>
                 ))}
               </tr>
@@ -1203,6 +1292,8 @@ export function EmployeeWorkView({ isAdmin = false }: { isAdmin?: boolean }) {
           rows={((intQ.data ?? []) as any[]).filter((r) => String(r.direction) === flow)}
           loading={intQ.isLoading}
           onDetails={setDetailRow}
+          noteColumn={flow === "out"}
+          onSaved={() => void intQ.refetch()}
         />
       ) : tab === "p2p" ? (
         <P2POrdersTable

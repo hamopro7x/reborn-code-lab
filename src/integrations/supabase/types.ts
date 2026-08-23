@@ -1486,6 +1486,38 @@ export type Database = {
         }
         Relationships: []
       }
+      work_transfer_notes: {
+        Row: {
+          created_at: string
+          ledger_id: string
+          note: string
+          saved_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          ledger_id: string
+          note: string
+          saved_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          ledger_id?: string
+          note?: string
+          saved_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_transfer_notes_ledger_id_fkey"
+            columns: ["ledger_id"]
+            isOneToOne: true
+            referencedRelation: "bybit_ledger"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       work_txn_assignments: {
         Row: {
           assign_mode: string
