@@ -1144,12 +1144,6 @@ export function EmployeeWorkView({
   });
   const brands = (brandsQ.data?.brands ?? {}) as Record<string, string>;
 
-  const faceClaim = useFaceClaim(() => {
-    qc.invalidateQueries({ queryKey: ["my-work-state"] });
-    qc.invalidateQueries({ queryKey: ["my-shift-txns"] });
-  });
-
-
   const allRows: any[] = (txns.data as any)?.rows ?? [];
   const txnServerNow: string | null = (txns.data as any)?.serverNow ?? null;
   const rows = useMemo(() => {
