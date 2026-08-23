@@ -1194,7 +1194,7 @@ export function EmployeeWorkView({ isAdmin = false }: { isAdmin?: boolean }) {
         />
       ) : tab === "ext" ? (
         <TransfersTable
-          rows={(extQ.data ?? []) as any[]}
+          rows={((extQ.data ?? []) as any[]).filter((r) => String(r.direction) === flow)}
           loading={extQ.isLoading}
           onDetails={setDetailRow}
         />
