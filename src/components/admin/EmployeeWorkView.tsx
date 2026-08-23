@@ -1224,7 +1224,10 @@ export function EmployeeWorkView({
   }, [allRows, tab]);
 
   const [detailRow, setDetailRow] = useState<any | null>(null);
-  const refetchRows = () => void qc.invalidateQueries({ queryKey: ["my-shift-txns"] });
+  const refetchRows = () =>
+    void qc.invalidateQueries({
+      queryKey: viewing ? ["emp-shift-txns", viewUserId] : ["my-shift-txns"],
+    });
 
   const emptyRows = Math.max(12 - rows.length, 0);
 
