@@ -55,9 +55,6 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
         </div>
 
         <div className="h-[57px]" />
-      </div>
-
-      <div className="relative z-10">
         {tab === "sheet" ? <AdminSheet /> : <EmployeesList />}
       </div>
     </div>
