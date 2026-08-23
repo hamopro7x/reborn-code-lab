@@ -1200,7 +1200,7 @@ export function EmployeeWorkView({ isAdmin = false }: { isAdmin?: boolean }) {
         />
       ) : tab === "int" ? (
         <TransfersTable
-          rows={(intQ.data ?? []) as any[]}
+          rows={((intQ.data ?? []) as any[]).filter((r) => String(r.direction) === flow)}
           loading={intQ.isLoading}
           onDetails={setDetailRow}
         />
