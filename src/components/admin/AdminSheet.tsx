@@ -98,10 +98,16 @@ export function AdminSheet() {
       if (!alive) return;
       const v = row?.value as SheetData | null;
       if (v && Array.isArray(v.columns) && Array.isArray(v.rows)) {
+        const columns = v.columns
+          .filter((c) => c && typeof c.id === "string")
+          // العرض الافتراضي القديم يُهمل ليأخذ العمود عرض الأساس المحسوب
+          .map((c) => ({
+            id: c.id,
+            name: c.name ?? "",
+            ...(typeof c.width === "number" && c.width !== DEFAULT_WIDTH ? { width: c.width } : {}),
+          }));
         setData({
-          columns: v.columns
-            .filter((c) => c && typeof c.id === "string")
-            .map((c) => ({ ...c, width: typeof c.width === "number" ? c.width : DEFAULT_WIDTH })),
+          columns: columns.length ? columns : emptySheet().columns,
           rows: v.rows.length < MIN_ROWS
             ? [...v.rows, ...Array.from({ length: MIN_ROWS - v.rows.length }, () => ({}))]
             : v.rows,
