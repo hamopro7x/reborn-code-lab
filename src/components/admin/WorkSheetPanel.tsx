@@ -27,17 +27,19 @@ type Employee = {
   avatar_signed_url?: string | null;
 };
 
-/** الشريط الجانبي لاختيار الموظف — يظهر فوق التصميم الحالي دون تغييره. */
-function EmployeePickerSidebar({
+/** لوحة اختيار الموظف — بنفس أسلوب شريط «ربط طلبات P2P» (Popover فوق الواجهة). */
+function EmployeePickerMenu({
   open,
-  onClose,
+  onOpenChange,
   selectedId,
   onSelect,
+  children,
 }: {
   open: boolean;
-  onClose: () => void;
+  onOpenChange: (v: boolean) => void;
   selectedId: string | null;
   onSelect: (emp: Employee) => void;
+  children: React.ReactNode;
 }) {
   const list = useServerFn(listEmployees);
   const q = useQuery({
@@ -47,64 +49,60 @@ function EmployeePickerSidebar({
   });
   const employees = (q.data ?? []).filter((e) => e.role === "employee");
 
-  if (!open) return null;
-
   return (
-    <div className="absolute inset-0 z-30" dir="rtl">
-      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <aside className="absolute inset-y-0 right-0 flex w-[280px] max-w-[85%] flex-col border-l border-blue-500/25 bg-[#0b0b0b]/95 shadow-[0_0_40px_-10px_rgba(0,0,0,0.95)] backdrop-blur-sm">
-        <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-          <span className="text-sm font-extrabold text-blue-300">قائمة الموظفين</span>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="إغلاق"
-            className="rounded-full p-1 text-white/70 transition hover:bg-white/10 hover:text-white"
-          >
-            <X className="h-4 w-4" />
-          </button>
+    <Popover open={open} onOpenChange={onOpenChange}>
+      <PopoverTrigger asChild>{children}</PopoverTrigger>
+      <PopoverContent
+        dir="rtl"
+        align="center"
+        className="w-auto max-w-[92vw] border-0 bg-transparent p-0 shadow-none"
+      >
+        <div className="w-[330px] overflow-hidden rounded-xl border border-border/50 bg-[oklch(0.135_0_0)] shadow-2xl">
+          <div className="data-table-head truncate px-3 py-1.5 text-center text-[11px] font-bold">
+            اختر الموظف
+          </div>
+          <div className="max-h-60 overflow-y-auto p-2">
+            {q.isLoading ? (
+              <Loader2 className="mx-auto my-4 size-4 animate-spin text-muted-foreground" />
+            ) : employees.length === 0 ? (
+              <p className="p-3 text-center text-xs text-white/60">لا يوجد موظفين</p>
+            ) : (
+              <ul className="space-y-1">
+                {employees.map((emp) => {
+                  const active = emp.user_id === selectedId;
+                  return (
+                    <li key={emp.user_id}>
+                      <button
+                        type="button"
+                        onClick={() => onSelect(emp)}
+                        className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-right text-xs font-bold transition ${
+                          active
+                            ? "bg-[#1a1a1a] text-blue-300 ring-1 ring-blue-500/40"
+                            : "bg-[#111] text-white/85 hover:bg-[#181818]"
+                        }`}
+                      >
+                        <span className="grid size-7 shrink-0 place-items-center overflow-hidden rounded-full bg-white/10 text-[10px] text-white/60">
+                          {emp.avatar_signed_url ? (
+                            <img
+                              src={emp.avatar_signed_url}
+                              alt={emp.full_name || emp.email}
+                              className="size-full object-cover"
+                            />
+                          ) : (
+                            (emp.full_name || emp.email || "?").slice(0, 1)
+                          )}
+                        </span>
+                        <span className="truncate">{emp.full_name || emp.email}</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
         </div>
-        <div className="flex-1 overflow-y-auto p-2">
-          {q.isLoading ? (
-            <p className="p-3 text-xs text-white/60">جارٍ التحميل…</p>
-          ) : employees.length === 0 ? (
-            <p className="p-3 text-xs text-white/60">لا يوجد موظفين</p>
-          ) : (
-            <ul className="space-y-1">
-              {employees.map((emp) => {
-                const active = emp.user_id === selectedId;
-                return (
-                  <li key={emp.user_id}>
-                    <button
-                      type="button"
-                      onClick={() => onSelect(emp)}
-                      className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-right text-xs font-bold transition ${
-                        active
-                          ? "bg-[#1a1a1a] text-blue-300 ring-1 ring-blue-500/40"
-                          : "bg-[#111] text-white/85 hover:bg-[#181818]"
-                      }`}
-                    >
-                      <span className="grid size-8 shrink-0 place-items-center overflow-hidden rounded-full bg-white/10 text-[10px] text-white/60">
-                        {emp.avatar_signed_url ? (
-                          <img
-                            src={emp.avatar_signed_url}
-                            alt={emp.full_name || emp.email}
-                            className="size-full object-cover"
-                          />
-                        ) : (
-                          (emp.full_name || emp.email || "?").slice(0, 1)
-                        )}
-                      </span>
-                      <span className="truncate">{emp.full_name || emp.email}</span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-      </aside>
-    </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 
