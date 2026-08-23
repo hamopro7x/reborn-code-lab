@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import { EmployeeWorkView } from "@/components/admin/EmployeeWorkView";
 import { AdminSheet } from "@/components/admin/AdminSheet";
 import { listEmployees } from "@/lib/admin.functions";
+import { getEmployeeShiftList } from "@/lib/work.functions";
 
 type TabKey = "sheet" | "employees";
 
@@ -92,6 +93,102 @@ function EmployeePickerSidebar({
   );
 }
 
+type Shift = {
+  id: string;
+  startedAt: number;
+  endedAt: number | null;
+  open: boolean;
+  txns: number;
+};
+
+const fmt = (ms: number) =>
+  new Date(ms).toLocaleString("ar-EG", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+/** الشريط الجانبي لاختيار الشفت — شفتات الموظف المختار فقط، بنفس تصميم اختيار الموظف. */
+function ShiftPickerSidebar({
+  open,
+  onClose,
+  userId,
+  selectedId,
+  onSelect,
+}: {
+  open: boolean;
+  onClose: () => void;
+  userId: string | null;
+  selectedId: string | null;
+  onSelect: (shift: Shift) => void;
+}) {
+  const listFn = useServerFn(getEmployeeShiftList);
+  const q = useQuery({
+    queryKey: ["admin-employee-shifts", userId],
+    queryFn: () => listFn({ data: { userId: userId! } }) as Promise<Shift[]>,
+    enabled: open && !!userId,
+  });
+  const shifts = q.data ?? [];
+
+  if (!open) return null;
+
+  return (
+    <div className="absolute inset-0 z-30" dir="rtl">
+      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
+      <aside className="absolute inset-y-0 right-0 flex w-[300px] max-w-[85%] flex-col border-l border-blue-500/25 bg-[#0b0b0b]/95 shadow-[0_0_40px_-10px_rgba(0,0,0,0.95)] backdrop-blur-sm">
+        <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+          <span className="text-sm font-extrabold text-blue-300">شفتات الموظف</span>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="إغلاق"
+            className="rounded-full p-1 text-white/70 transition hover:bg-white/10 hover:text-white"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-2">
+          {!userId ? (
+            <p className="p-3 text-xs text-white/60">اختر موظفًا أولاً</p>
+          ) : q.isLoading ? (
+            <p className="p-3 text-xs text-white/60">جارٍ التحميل…</p>
+          ) : shifts.length === 0 ? (
+            <p className="p-3 text-xs text-white/60">لا توجد شفتات</p>
+          ) : (
+            <ul className="space-y-1">
+              {shifts.map((sh) => {
+                const active = sh.id === selectedId;
+                return (
+                  <li key={sh.id}>
+                    <button
+                      type="button"
+                      onClick={() => onSelect(sh)}
+                      className={`w-full rounded-xl px-3 py-2 text-right text-xs font-bold transition ${
+                        active
+                          ? "bg-[#1a1a1a] text-blue-300 ring-1 ring-blue-500/40"
+                          : "bg-[#111] text-white/85 hover:bg-[#181818]"
+                      }`}
+                    >
+                      <div className="tabular-nums" dir="rtl">
+                        {fmt(sh.startedAt)} — {sh.endedAt ? fmt(sh.endedAt) : "شغّال الآن"}
+                      </div>
+                      <div className="mt-1 text-[11px] font-normal text-white/55">
+                        {sh.txns} معاملة
+                        {sh.open ? " • مفتوح" : ""}
+                      </div>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      </aside>
+    </div>
+  );
+}
+
 /**
  * قسم «جدول بيانات الشغل».
  * - واجهة الموظف: كما هي بالكامل (EmployeeWorkView).
@@ -101,6 +198,8 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
   const [tab, setTab] = useState<TabKey>("sheet");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [selected, setSelected] = useState<Employee | null>(null);
+  const [shiftPickerOpen, setShiftPickerOpen] = useState(false);
+  const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
   if (!isAdmin) return <EmployeeWorkView />;
 
 
@@ -141,6 +240,15 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
               اختيار الموظف
             </button>
           )}
+          {isEmployees && selected && (
+            <button
+              type="button"
+              onClick={() => setShiftPickerOpen(true)}
+              className={`${CHIP_BASE} ${shiftPickerOpen || selectedShift ? CHIP_ON : CHIP_OFF}`}
+            >
+              اختيار الشفت
+            </button>
+          )}
         </div>
 
         {isEmployees ? (
@@ -149,9 +257,10 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
               <div className="pb-6 pt-4">
                 {/* نفس جدول بيانات الشغل الموجود عند الموظف — بيانات الموظف المختار فقط */}
                 <EmployeeWorkView
-                  key={selected.user_id}
+                  key={`${selected.user_id}:${selectedShift?.id ?? "live"}`}
                   isAdmin
                   viewUserId={selected.user_id}
+                  {...(selectedShift ? { viewShiftId: selectedShift.id } : {})}
                   viewName={selected.full_name || selected.email}
                 />
               </div>
@@ -162,7 +271,18 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
               selectedId={selected?.user_id ?? null}
               onSelect={(emp) => {
                 setSelected(emp);
+                setSelectedShift(null);
                 setPickerOpen(false);
+              }}
+            />
+            <ShiftPickerSidebar
+              open={shiftPickerOpen}
+              onClose={() => setShiftPickerOpen(false)}
+              userId={selected?.user_id ?? null}
+              selectedId={selectedShift?.id ?? null}
+              onSelect={(sh) => {
+                setSelectedShift(sh);
+                setShiftPickerOpen(false);
               }}
             />
           </div>
