@@ -53,6 +53,10 @@ import {
   getEmployeeWorkState,
   getEmployeeShiftTxns,
   getEmployeeManualTxns,
+  getShiftTxns,
+  getShiftManualTxns,
+  getShiftTransfers,
+  getShiftP2P,
 
 } from "@/lib/work.functions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -259,11 +263,14 @@ function P2POrdersTable({
   loading,
   onDetails,
   onLinked,
+  readOnly,
 }: {
   rows: any[];
   loading?: boolean;
   onDetails: (row: any) => void;
   onLinked?: () => void;
+  /** أدمن يشاهد سجل شفت — بدون ربط. */
+  readOnly?: boolean;
 }) {
   const emptyRows = Math.max(8 - rows.length, 0);
 
@@ -316,7 +323,13 @@ function P2POrdersTable({
                       </span>
                     </td>
                     <td>
-                      <P2PLinkMenu ledgerId={String(r.ledgerId)} onLinked={onLinked} />
+                      {readOnly ? (
+                        <span className="text-xs text-muted-foreground">
+                          {String(r.employeeName ?? "—") || "—"}
+                        </span>
+                      ) : (
+                        <P2PLinkMenu ledgerId={String(r.ledgerId)} onLinked={onLinked} />
+                      )}
                     </td>
 
                   </tr>
@@ -982,27 +995,39 @@ function ManualSection({
   isAdmin,
   cards,
   viewUserId,
+  viewShiftId,
 }: {
   isAdmin: boolean;
   cards: [{ card: ManualKind; title: string }, { card: ManualKind; title: string }];
   /** أدمن يشاهد بيانات موظف محدد (قراءة فقط). */
   viewUserId?: string;
+  /** أدمن يشاهد شفتًا محددًا — سجل ذلك الشفت فقط (قراءة فقط). */
+  viewShiftId?: string;
 }) {
   const qc = useQueryClient();
   const listFn = useServerFn(getMyManualTxns);
   const empListFn = useServerFn(getEmployeeManualTxns);
+  const shiftListFn = useServerFn(getShiftManualTxns);
   const addFn = useServerFn(addMyManualTxn);
   const clearFn = useServerFn(clearMyManualTxns);
   const [adding, setAdding] = useState<ManualKind | null>(null);
   const [clearing, setClearing] = useState<ManualKind | null>(null);
   const [newestId, setNewestId] = useState<string | null>(null);
-  const readOnly = !!viewUserId;
-  const listKey = viewUserId ? ["emp-manual-txns", viewUserId] : ["my-manual-txns"];
+  const readOnly = !!viewUserId || !!viewShiftId;
+  const listKey = viewShiftId
+    ? ["shift-manual-txns", viewShiftId]
+    : viewUserId
+      ? ["emp-manual-txns", viewUserId]
+      : ["my-manual-txns"];
 
   const q = useQuery({
     queryKey: listKey,
     queryFn: () =>
-      viewUserId ? empListFn({ data: { userId: viewUserId } }) : listFn({ data: undefined as any }),
+      viewShiftId
+        ? shiftListFn({ data: { shiftId: viewShiftId } })
+        : viewUserId
+          ? empListFn({ data: { userId: viewUserId } })
+          : listFn({ data: undefined as any }),
     // Always re-read the stored rows when the section is opened again.
     staleTime: 0,
     refetchOnMount: "always",
@@ -1073,11 +1098,14 @@ function ManualSection({
 export function EmployeeWorkView({
   isAdmin = false,
   viewUserId,
+  viewShiftId,
   viewName,
   viewAvatar,
 }: {
   isAdmin?: boolean;
   viewUserId?: string;
+  /** أدمن اختار شفتًا محددًا → سجل ذلك الشفت فقط (قراءة). */
+  viewShiftId?: string;
   viewName?: string;
   viewAvatar?: string;
 }) {
@@ -1086,9 +1114,13 @@ export function EmployeeWorkView({
   const txnsFn = useServerFn(getMyShiftTxns);
   const empStateFn = useServerFn(getEmployeeWorkState);
   const empTxnsFn = useServerFn(getEmployeeShiftTxns);
+  const shiftTxnsFn = useServerFn(getShiftTxns);
+  const shiftTransfersFn = useServerFn(getShiftTransfers);
+  const shiftP2PFn = useServerFn(getShiftP2P);
   const brandsFn = useServerFn(getBybitCardBrands);
   const p2pFn = useServerFn(getWorkP2PCompleted);
-  const viewing = !!viewUserId;
+  const shiftMode = !!viewShiftId;
+  const viewing = !!viewUserId || shiftMode;
 
   const [tab, setTab] = useState<TabKey>("all");
   // إيداع / سحب داخل قسمي التحويلات (فلترة عرض فقط)
@@ -1097,39 +1129,55 @@ export function EmployeeWorkView({
   const st = useQuery({
     queryKey: viewing ? ["emp-work-state", viewUserId] : ["my-work-state"],
     queryFn: () =>
-      viewing ? empStateFn({ data: { userId: viewUserId! } }) : stateFn({ data: undefined as any }),
+      viewUserId ? empStateFn({ data: { userId: viewUserId } }) : stateFn({ data: undefined as any }),
+    enabled: !shiftMode,
     refetchInterval: 20_000,
   });
-  const holding = (st.data as any)?.holding === true;
+  // في وضع الشفت المحدد: السجل التاريخي متاح دائمًا.
+  const holding = shiftMode || (st.data as any)?.holding === true;
 
   const txns = useQuery({
-    queryKey: viewing ? ["emp-shift-txns", viewUserId] : ["my-shift-txns"],
+    queryKey: shiftMode
+      ? ["shift-txns", viewShiftId]
+      : viewUserId
+        ? ["emp-shift-txns", viewUserId]
+        : ["my-shift-txns"],
     queryFn: () =>
-      viewing
-        ? empTxnsFn({ data: { userId: viewUserId!, page: 1 } })
-        : txnsFn({ data: { page: 1 } }),
+      shiftMode
+        ? shiftTxnsFn({ data: { shiftId: viewShiftId!, page: 1 } })
+        : viewUserId
+          ? empTxnsFn({ data: { userId: viewUserId, page: 1 } })
+          : txnsFn({ data: { page: 1 } }),
     enabled: holding,
     refetchInterval: 20_000,
   });
 
-  // Completed P2P orders of all accounts — shared with every employee.
+  // طلبات P2P: للموظف = الطلبات المكتملة المتاحة للربط،
+  // للأدمن داخل شفت = الطلبات المرتبطة فعليًا بهذا الشفت (حتى لو تم الربط بعد إغلاقه).
   const p2pCompleted = useQuery({
-    queryKey: ["work-p2p-completed"],
-    queryFn: () => p2pFn({ data: undefined as any }),
+    queryKey: shiftMode ? ["shift-p2p", viewShiftId] : ["work-p2p-completed"],
+    queryFn: () =>
+      shiftMode ? shiftP2PFn({ data: { shiftId: viewShiftId! } }) : p2pFn({ data: undefined as any }),
     refetchInterval: 30_000,
   });
 
   // Read-only filters over the same central ledger: external / internal.
   const transfersFn = useServerFn(getWorkTransfers);
   const extQ = useQuery({
-    queryKey: ["work-transfers", "external"],
-    queryFn: () => transfersFn({ data: { scope: "external" as const } }),
+    queryKey: shiftMode ? ["shift-transfers", viewShiftId, "external"] : ["work-transfers", "external"],
+    queryFn: () =>
+      shiftMode
+        ? shiftTransfersFn({ data: { shiftId: viewShiftId!, scope: "external" as const } })
+        : transfersFn({ data: { scope: "external" as const } }),
     enabled: tab === "ext",
     refetchInterval: 30_000,
   });
   const intQ = useQuery({
-    queryKey: ["work-transfers", "internal"],
-    queryFn: () => transfersFn({ data: { scope: "internal" as const } }),
+    queryKey: shiftMode ? ["shift-transfers", viewShiftId, "internal"] : ["work-transfers", "internal"],
+    queryFn: () =>
+      shiftMode
+        ? shiftTransfersFn({ data: { shiftId: viewShiftId!, scope: "internal" as const } })
+        : transfersFn({ data: { scope: "internal" as const } }),
     enabled: tab === "int",
     refetchInterval: 30_000,
   });
@@ -1168,7 +1216,11 @@ export function EmployeeWorkView({
   const [detailRow, setDetailRow] = useState<any | null>(null);
   const refetchRows = () =>
     void qc.invalidateQueries({
-      queryKey: viewing ? ["emp-shift-txns", viewUserId] : ["my-shift-txns"],
+      queryKey: shiftMode
+        ? ["shift-txns", viewShiftId]
+        : viewUserId
+          ? ["emp-shift-txns", viewUserId]
+          : ["my-shift-txns"],
     });
 
   const emptyRows = Math.max(12 - rows.length, 0);
@@ -1219,6 +1271,7 @@ export function EmployeeWorkView({
         <ManualSection
           isAdmin={isAdmin}
           {...(viewUserId ? { viewUserId } : {})}
+          {...(viewShiftId ? { viewShiftId } : {})}
           cards={[
             { card: "employee", title: "خاص بالموظف" },
             { card: "wrong", title: "المعاملات الغلط" },
@@ -1228,6 +1281,7 @@ export function EmployeeWorkView({
         <ManualSection
           isAdmin={isAdmin}
           {...(viewUserId ? { viewUserId } : {})}
+          {...(viewShiftId ? { viewShiftId } : {})}
           cards={[
             { card: "receive", title: "الاستلام من" },
             { card: "transfer", title: "التحويل الي" },
@@ -1255,6 +1309,7 @@ export function EmployeeWorkView({
           loading={p2pCompleted.isLoading}
           onDetails={setDetailRow}
           onLinked={() => p2pCompleted.refetch()}
+          readOnly={viewing}
 
         />
       ) : (
