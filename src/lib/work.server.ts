@@ -1459,6 +1459,136 @@ export async function clearManualTxns(userId: string, card: ManualCard) {
   return { ok: true as const };
 }
 
+/* ============ «معاملة يدوية» داخل قسم المعاملات (الموظف فقط) ============
+ * سجل مستقل تمامًا عن معاملات الـAPI (bybit_ledger لا يُلمس أبدًا).
+ * القواعد كلها على السيرفر: يجب وجود شفت مفتوح للإنشاء، والتعديل مسموح
+ * 10 دقائق من وقت الإنشاء (created_at) فقط، ولا حذف نهائيًا للموظف. */
+
+export const MANUAL_CARD_EDIT_MS = 10 * 60 * 1000;
+
+type ManualCardRow = {
+  id: string;
+  merchant: string;
+  amount: string;
+  quantity: string;
+  pan4: string;
+  createdAt: string;
+};
+
+function mapManualCard(r: any): ManualCardRow {
+  return {
+    id: r.id as string,
+    merchant: r.merchant ?? "",
+    amount: r.amount === null || r.amount === undefined ? "" : String(r.amount),
+    quantity: r.quantity === null || r.quantity === undefined ? "" : String(r.quantity),
+    pan4: r.pan4 ?? "",
+    createdAt: r.created_at as string,
+  };
+}
+
+/** صفوف المعاملات اليدوية لشفت محدد (أو الشفت المفتوح للموظف). */
+export async function listManualCardTxns(userId: string, shiftId: string) {
+  const db = await admin();
+  const { data } = await db
+    .from("work_manual_card_txns")
+    .select("id,merchant,amount,quantity,pan4,created_at")
+    .eq("user_id", userId)
+    .eq("shift_id", shiftId)
+    .order("created_at", { ascending: false });
+  return {
+    serverNow: new Date().toISOString(),
+    editWindowMs: MANUAL_CARD_EDIT_MS,
+    rows: (data ?? []).map(mapManualCard),
+  };
+}
+
+export async function listMyManualCardTxns(userId: string) {
+  const shiftId = await openShiftId(userId);
+  if (!shiftId)
+    return { serverNow: new Date().toISOString(), editWindowMs: MANUAL_CARD_EDIT_MS, rows: [] as ManualCardRow[] };
+  return listManualCardTxns(userId, shiftId);
+}
+
+function parseNum(value: string) {
+  const norm = String(value ?? "")
+    .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[\u06f0-\u06f9]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
+    .replace(/[\u066b\u060c,]/g, ".")
+    .replace(/[^\d.\-]/g, "")
+    .trim();
+  if (norm === "") return null;
+  const n = Number(norm);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** الإنشاء: مرفوض تمامًا بدون شفت مفتوح — التحقق هنا وليس في الواجهة. */
+export async function addMyManualCardTxn(
+  userId: string,
+  input: { merchant: string; amount: string; quantity: string; pan4: string },
+) {
+  const shiftId = await openShiftId(userId);
+  if (!shiftId) {
+    return { ok: false as const, error: "يجب فتح شفت أولًا لإضافة معاملة يدوية." };
+  }
+  const db = await admin();
+  const { data, error } = await db
+    .from("work_manual_card_txns")
+    .insert({
+      user_id: userId,
+      shift_id: shiftId,
+      merchant: String(input.merchant ?? "").trim(),
+      amount: parseNum(input.amount),
+      quantity: parseNum(input.quantity),
+      pan4: String(input.pan4 ?? "").trim() || null,
+    })
+    .select("id,merchant,amount,quantity,pan4,created_at")
+    .maybeSingle();
+  if (error) return { ok: false as const, error: error.message };
+  return { ok: true as const, row: mapManualCard(data), serverNow: new Date().toISOString() };
+}
+
+/** التعديل: 10 دقائق من وقت الإنشاء المحفوظ في قاعدة البيانات (ساعة السيرفر). */
+export async function saveMyManualCardTxn(
+  userId: string,
+  id: string,
+  field: "merchant" | "amount" | "quantity" | "pan4",
+  value: string,
+) {
+  const db = await admin();
+  const { data: row } = await db
+    .from("work_manual_card_txns")
+    .select("id,created_at,shift_id")
+    .eq("id", id)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!row) return { ok: false as const, error: "الصف غير موجود" };
+
+  const now = new Date();
+  if (now.getTime() - new Date((row as any).created_at).getTime() >= MANUAL_CARD_EDIT_MS) {
+    return {
+      ok: false as const,
+      locked: true as const,
+      error: "انتهت مدة التعديل المسموحة (10 دقائق).",
+      serverNow: now.toISOString(),
+    };
+  }
+
+  const patch: Record<string, unknown> =
+    field === "merchant"
+      ? { merchant: String(value).trim() }
+      : field === "pan4"
+        ? { pan4: String(value).trim() || null }
+        : { [field]: parseNum(value) };
+
+  const { error } = await db
+    .from("work_manual_card_txns")
+    .update(patch)
+    .eq("id", id)
+    .eq("user_id", userId);
+  if (error) return { ok: false as const, error: error.message };
+  return { ok: true as const, serverNow: now.toISOString() };
+}
+
 /* ======================= shift-scoped history (admin) =======================
  * كل شفت سجل مستقل: نفس مصادر البيانات المستخدمة عند الموظف، لكن مفلترة
  * بمعرّف الشفت الحقيقي (work_txn_assignments.shift_id / work_manual_txns.shift_id)
