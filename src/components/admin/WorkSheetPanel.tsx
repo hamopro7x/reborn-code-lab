@@ -307,16 +307,8 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
                 />
               </div>
             )}
-            <ShiftPickerSidebar
-              open={shiftPickerOpen}
-              onClose={() => setShiftPickerOpen(false)}
-              userId={selected?.user_id ?? null}
-              selectedId={selectedShift?.id ?? null}
-              onSelect={(sh) => {
-                setSelectedShift(sh);
-                setShiftPickerOpen(false);
-              }}
-            />
+            <ShiftPickerSidebarRemoved />
+
           </div>
         ) : (
           <>
