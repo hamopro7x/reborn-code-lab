@@ -1329,13 +1329,14 @@ export function EmployeeWorkView({
           {name && (
             <div className="flex h-14 items-center gap-3 rounded-full border border-[oklch(0.55_0.14_255/0.55)] bg-[oklch(0.11_0.02_270)] px-4 py-2 shadow-[0_0_20px_-6px_oklch(0.55_0.14_255/0.45)]">
               <span className="text-sm font-black text-white/95">{name}</span>
-              <span className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-full bg-white/10 ring-1 ring-[oklch(0.55_0.14_255/0.45)]">
+              <span className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-full bg-white/10 ring-1 ring-[oklch(0.55_0.14_255/0.45)]">
                 {avatar ? (
                   <img src={avatar} alt={name} className="size-full object-cover" />
                 ) : (
-                  <User className="size-5 text-white/70" />
+                  <User className="size-6 text-white/70" />
                 )}
               </span>
+
             </div>
           )}
 
