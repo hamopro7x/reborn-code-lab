@@ -176,70 +176,75 @@ function ShiftPickerMenu({
               <ul className="space-y-1">
                 {shifts.map((sh) => {
                   const active = sh.id === selectedId;
+                  const start = fmtShift(sh.startedAt);
+                  const end = sh.endedAt ? fmtShift(sh.endedAt) : null;
                   return (
                     <li key={sh.id}>
                       <button
                         type="button"
                         onClick={() => onSelect(sh)}
-                        className={`w-full rounded-xl px-3 py-2 text-right text-xs font-bold transition ${
+                        className={`w-full rounded-2xl px-4 py-3 text-right transition ${
                           active
-                            ? "bg-[#1a1a1a] text-blue-300 ring-1 ring-blue-500/40"
-                            : "bg-[#111] text-white/85 hover:bg-[#181818]"
+                            ? "bg-[#0d0d0d] text-blue-300 ring-1 ring-blue-500/40 shadow-[0_0_20px_-6px_oklch(0.55_0.28_305/0.5)]"
+                            : "bg-[#0a0a0a] text-white/85 hover:bg-[#111]"
                         }`}
                       >
-                        {(() => {
-                          const start = fmtShift(sh.startedAt);
-                          const end = sh.endedAt ? fmtShift(sh.endedAt) : null;
-                          return (
-                            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-right" dir="rtl">
-                              {/* بداية الشفت */}
-                              <div className="flex flex-col items-end">
-                                <span className="text-[11px] font-bold text-white/90">
-                                  {start.day}
-                                </span>
-                                <span className="text-[11px] text-white/70">
-                                  {start.date}
-                                </span>
-                                <span className="mt-0.5 text-xs font-bold text-blue-300">
-                                  {start.time}
-                                </span>
-                              </div>
+                        <div className="grid grid-cols-[1fr_auto_1fr] items-stretch gap-3" dir="rtl">
+                          {/* بداية الشفت — الجزء الأيمن */}
+                          <div className="flex flex-col items-start justify-center gap-0.5">
+                            <span className="text-[10px] font-normal text-white/40">بداية</span>
+                            <span className="text-[12px] font-bold leading-tight text-white/95">
+                              {start.day}
+                            </span>
+                            <span className="text-[11px] text-white/65">
+                              {start.date}
+                            </span>
+                            <span className="text-[13px] font-bold text-blue-300">
+                              {start.time}
+                            </span>
+                          </div>
 
-                              {/* إلى */}
-                              <div className="flex flex-col items-center gap-1 self-stretch justify-center">
-                                <span className="text-[10px] font-bold text-white/50">إلى</span>
-                                <div className="h-8 w-px bg-white/10" />
-                              </div>
+                          {/* فاصل إلى */}
+                          <div className="flex flex-col items-center justify-center gap-1 self-stretch">
+                            <div className="h-6 w-px bg-white/10" />
+                            <span className="text-[10px] font-bold text-white/40">إلى</span>
+                            <div className="h-6 w-px bg-white/10" />
+                          </div>
 
-                              {/* نهاية الشفت */}
-                              <div className="flex flex-col items-start">
-                                {end ? (
-                                  <>
-                                    <span className="text-[11px] font-bold text-white/90">
-                                      {end.day}
-                                    </span>
-                                    <span className="text-[11px] text-white/70">
-                                      {end.date}
-                                    </span>
-                                    <span className="mt-0.5 text-xs font-bold text-blue-300">
-                                      {end.time}
-                                    </span>
-                                  </>
-                                ) : (
-                                  <span className="text-xs font-bold text-emerald-400">شغّال الآن</span>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })()}
-                        <div className="mt-2 flex items-center justify-between border-t border-white/5 pt-1.5 text-[11px] font-normal text-white/55">
+                          {/* نهاية الشفت — الجزء الأيسر */}
+                          <div className="flex flex-col items-end justify-center gap-0.5">
+                            <span className="text-[10px] font-normal text-white/40">انتهاء</span>
+                            {end ? (
+                              <>
+                                <span className="text-[12px] font-bold leading-tight text-white/95">
+                                  {end.day}
+                                </span>
+                                <span className="text-[11px] text-white/65">
+                                  {end.date}
+                                </span>
+                                <span className="text-[13px] font-bold text-blue-300">
+                                  {end.time}
+                                </span>
+                              </>
+                            ) : (
+                              <span className="text-[13px] font-bold text-emerald-400">شغّال الآن</span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="mt-2.5 flex items-center justify-between border-t border-white/5 pt-2 text-[11px] font-normal text-white/50">
                           <span>{sh.txns} معاملة</span>
-                          {sh.open && <span className="text-emerald-400">• مفتوح</span>}
+                          {sh.open && (
+                            <span className="inline-flex items-center gap-1 text-emerald-400">
+                              <span className="size-1.5 rounded-full bg-emerald-400" />
+                              مفتوح
+                            </span>
+                          )}
                         </div>
                       </button>
                     </li>
                   );
-                })}
+                })
               </ul>
             )}
           </div>
