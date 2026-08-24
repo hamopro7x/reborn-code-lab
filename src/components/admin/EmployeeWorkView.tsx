@@ -1725,6 +1725,22 @@ export function EmployeeWorkView({
           <table className="data-table text-center">
             <thead>
               <tr>
+                {[
+                  `إجمالي المعاملات: ${num(summary.count)}`,
+                  `إجمالي المبلغ: ${num(summary.amount)}`,
+                  `إجمالي المبلغ: ${num(summary.egp)}`,
+                  `إجمالي الفلوس التي تمت فيها طلبات P2P: ${num(summary.p2p)}`,
+                ].map((t, i) => (
+                  <th key={i} className="!bg-transparent !p-0 !border-0">
+                    <span className="mx-auto flex items-center justify-center whitespace-nowrap rounded-2xl border border-[oklch(0.55_0.14_255)] bg-[linear-gradient(180deg,oklch(0.34_0.12_258),oklch(0.26_0.09_258))] px-3 py-1 text-[11px] font-bold tabular-nums text-[oklch(0.96_0.01_255)]">
+                      {t}
+                    </span>
+                  </th>
+                ))}
+                <th className="!bg-transparent !border-0" colSpan={COLUMNS.length - 4} />
+              </tr>
+              <tr>
+
                 {COLUMNS.map((c) => {
                   const Icon = c.icon;
                   return (
