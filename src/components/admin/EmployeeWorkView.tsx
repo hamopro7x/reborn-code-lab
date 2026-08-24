@@ -1739,7 +1739,7 @@ export function EmployeeWorkView({
                   { label: "عدد المعاملات", value: summary.count.toLocaleString("en-US") },
                   { label: "اجمالي مبلغ الدولار", value: summary.amount.toLocaleString("en-US") },
                   { label: "مصري", value: summary.egp.toLocaleString("en-US") },
-                  { label: "P2P", value: `{ - ${summary.p2p.toLocaleString("en-US")} }` },
+                  { label: "P2P", value: `- ${summary.p2p.toLocaleString("en-US")}` },
                 ].map((s) => (
                   <th key={s.label}>
                     {isAdmin ? (
