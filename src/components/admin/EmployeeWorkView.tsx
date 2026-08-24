@@ -1314,46 +1314,24 @@ export function EmployeeWorkView({
   const shiftTransfersFn = useServerFn(getShiftTransfers);
   const shiftP2PFn = useServerFn(getShiftP2P);
   const brandsFn = useServerFn(getBybitCardBrands);
-  const p2pFn = useServerFn(getWorkP2PCompleted);
+  const myP2PFn = useServerFn(getMyShiftP2P);
+  const empP2PFn = useServerFn(getEmployeeShiftP2P);
   const shiftMode = !!viewShiftId;
   const viewing = !!viewUserId || shiftMode || blank;
 
-  const [tab, setTab] = useState<TabKey>("all");
-  // إيداع / سحب داخل قسمي التحويلات (فلترة عرض فقط)
-  const [flow, setFlow] = useState<"in" | "out">("in");
-
-  const st = useQuery({
-    queryKey: viewing ? ["emp-work-state", viewUserId] : ["my-work-state"],
-    queryFn: () =>
-      viewUserId ? empStateFn({ data: { userId: viewUserId } }) : stateFn({ data: undefined as any }),
-    enabled: !shiftMode && !blank,
-    refetchInterval: 20_000,
-  });
-  // في وضع الشفت المحدد: السجل التاريخي متاح دائمًا.
-  const holding = blank ? false : shiftMode || (st.data as any)?.holding === true;
-
-  const txns = useQuery({
+  // طلبات P2P: الموظف والأدمن يشاهدون فقط الطلبات المرتبطة بالشفت المختار/المفتوح.
+  const p2pCompleted = useQuery({
     queryKey: shiftMode
-      ? ["shift-txns", viewShiftId]
+      ? ["shift-p2p", viewShiftId]
       : viewUserId
-        ? ["emp-shift-txns", viewUserId]
-        : ["my-shift-txns"],
+        ? ["emp-shift-p2p", viewUserId]
+        : ["my-shift-p2p"],
     queryFn: () =>
       shiftMode
-        ? shiftTxnsFn({ data: { shiftId: viewShiftId!, page: 1 } })
+        ? shiftP2PFn({ data: { shiftId: viewShiftId! } })
         : viewUserId
-          ? empTxnsFn({ data: { userId: viewUserId, page: 1 } })
-          : txnsFn({ data: { page: 1 } }),
-    enabled: holding && !blank,
-    refetchInterval: 20_000,
-  });
-
-  // طلبات P2P: للموظف = الطلبات المكتملة المتاحة للربط،
-  // للأدمن داخل شفت = الطلبات المرتبطة فعليًا بهذا الشفت (حتى لو تم الربط بعد إغلاقه).
-  const p2pCompleted = useQuery({
-    queryKey: shiftMode ? ["shift-p2p", viewShiftId] : ["work-p2p-completed"],
-    queryFn: () =>
-      shiftMode ? shiftP2PFn({ data: { shiftId: viewShiftId! } }) : p2pFn({ data: undefined as any }),
+          ? empP2PFn({ data: { userId: viewUserId } })
+          : myP2PFn({ data: undefined as any }),
     refetchInterval: 30_000,
   });
 
