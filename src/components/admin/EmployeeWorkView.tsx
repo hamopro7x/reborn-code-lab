@@ -1189,17 +1189,12 @@ function ManualSection({
  * أرشيف كامل لكل شفتات الموظف المحدد: نفس الأقسام السبعة بنفس تصميمها
  * وأعمدتها، لكن البيانات مدمجة من جميع الشفتات ومرتّبة من الأقدم إلى الأحدث.
  * قراءة فقط، وبلا أي تعديل على سلوك الأقسام الأصلية. */
-type ArchiveTabKey = "txns" | "ext" | "int" | "employee" | "wrong" | "transfers" | "p2p";
+type ArchiveTabKey = "employee" | "wrong";
 
-/** نفس شريط الأقسام الموجود بالموقع، لكن داخل «ملخص الشفت». */
+/** شريط أقسام «ملخص الشفت» — قسمان فقط. */
 const ARCHIVE_TABS: { key: ArchiveTabKey; label: string; icon: typeof ListOrdered }[] = [
-  { key: "txns", label: "المعاملات", icon: ListOrdered },
-  { key: "ext", label: "الإيداع والسحب الخارجي", icon: ArrowDownUp },
-  { key: "int", label: "الإيداع والسحب الداخلي", icon: ArrowLeftRight },
-  { key: "employee", label: "الخاص بالموظف", icon: User },
+  { key: "employee", label: "خاص بالموظف", icon: User },
   { key: "wrong", label: "المعاملات الغلط", icon: AlertTriangle },
-  { key: "transfers", label: "الاستلام من والتحويل إلى", icon: ArrowLeftRight },
-  { key: "p2p", label: "طلبات P2P", icon: Users },
 ];
 
 
