@@ -1122,7 +1122,7 @@ export function EmployeeWorkView({
   /** أدمن اختار شفتًا محددًا → سجل ذلك الشفت فقط (قراءة). */
   viewShiftId?: string;
   /** بيانات الشفت المختار (للعرض فقط بجانب هوية الموظف). */
-  viewShift?: { id: string; startedAt: number; endedAt: number | null; open: boolean; txns: number };
+  viewShift?: { id: string; startedAt: number; endedAt: number | null; open: boolean; txns: number; label?: string };
   viewName?: string;
   viewAvatar?: string;
 }) {

@@ -112,6 +112,7 @@ type Shift = {
   endedAt: number | null;
   open: boolean;
   txns: number;
+  label?: string;
 };
 
 const fmtShift = (ms: number) => {
@@ -174,7 +175,7 @@ function ShiftPickerMenu({
               <p className="p-3 text-center text-xs text-white/60">لا توجد شفتات</p>
             ) : (
               <ul className="space-y-1">
-                {shifts.map((sh) => {
+                {shifts.map((sh, i) => {
                   const active = sh.id === selectedId;
                   const start = fmtShift(sh.startedAt);
                   const end = sh.endedAt ? fmtShift(sh.endedAt) : null;
@@ -182,7 +183,7 @@ function ShiftPickerMenu({
                     <li key={sh.id}>
                       <button
                         type="button"
-                        onClick={() => onSelect(sh)}
+                        onClick={() => onSelect({ ...sh, label: `شفت رقم ${shifts.length - i}` })}
                         className={`w-full rounded-2xl px-4 py-3 text-right transition ${
                           active
                             ? "bg-[#0d0d0d] text-blue-300 ring-1 ring-blue-500/40 shadow-[0_0_20px_-6px_oklch(0.55_0.28_305/0.5)]"
