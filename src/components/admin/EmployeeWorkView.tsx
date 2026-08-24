@@ -1674,11 +1674,25 @@ export function EmployeeWorkView({
               <tr>
                 {COLUMNS.map((c) => {
                   const Icon = c.icon;
+                  const withAdd = !viewing && c.label === "اسم التاجر";
                   return (
                     <th key={c.label}>
-                      <span className="flex items-center justify-center gap-1.5">
-                        <span>{c.label}</span>
-                        <Icon className="size-3.5 shrink-0 opacity-70" />
+                      <span className="flex flex-col items-center justify-center gap-1">
+                        {withAdd && (
+                          <button
+                            type="button"
+                            onClick={openManual}
+                            title="إضافة معاملة يدوية"
+                            className="flex items-center gap-1 rounded-2xl border border-[oklch(0.55_0.14_255)] bg-[oklch(0.11_0.02_270)] px-2 py-0.5 text-[10px] font-bold text-white/90 transition hover:bg-[oklch(0.2_0.06_258)] active:scale-95"
+                          >
+                            <Plus className="size-3" />
+                            <span>إضافة</span>
+                          </button>
+                        )}
+                        <span className="flex items-center justify-center gap-1.5">
+                          <span>{c.label}</span>
+                          <Icon className="size-3.5 shrink-0 opacity-70" />
+                        </span>
                       </span>
                     </th>
                   );
@@ -1687,6 +1701,29 @@ export function EmployeeWorkView({
             </thead>
 
             <tbody>
+              {manualRows.map((r) => {
+                const locked = manualLocked(r);
+                const refresh = () => void manualCardQ.refetch();
+                return (
+                  <tr key={`manual-${r.id}`}>
+                    <td>
+                      <ManualTxnCell row={r} field="merchant" locked={locked} onSaved={refresh} />
+                    </td>
+                    <td className="tabular-nums">
+                      <ManualTxnCell row={r} field="amount" locked={locked} onSaved={refresh} />
+                    </td>
+                    <td className="tabular-nums">{r.amount === "" ? "—" : num(Number(r.amount))}</td>
+                    <td className="tabular-nums">
+                      <ManualTxnCell row={r} field="quantity" locked={locked} onSaved={refresh} />
+                    </td>
+                    <td>{txnTime(new Date(r.createdAt).getTime())}</td>
+                    <td>
+                      <ManualTxnCell row={r} field="pan4" locked={locked} onSaved={refresh} />
+                    </td>
+                    <td>&nbsp;</td>
+                  </tr>
+                );
+              })}
               {viewing && !shiftMode && (st.data as any)?.holding === false ? (
                 <tr>
                   <td colSpan={COLUMNS.length} className="py-8 text-center text-xs text-muted-foreground">
