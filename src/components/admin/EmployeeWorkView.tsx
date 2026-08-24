@@ -33,6 +33,8 @@ import {
   Wallet,
   Trash2,
   Plus,
+  ClipboardList,
+
   
 
 } from "lucide-react";
@@ -75,7 +77,7 @@ import { BrandBadge, LedgerRowDetails, statusBadge } from "@/components/admin/By
 
 type ManualKind = "wrong" | "employee" | "receive" | "transfer";
 
-type TabKey = "p2p" | "transfers" | "wrong" | "week" | "all" | "employee" | "ext" | "int";
+type TabKey = "p2p" | "transfers" | "wrong" | "week" | "all" | "employee" | "ext" | "int" | "summary";
 
 /** DOM order = right-to-left order in the reference. */
 const TOP_TABS: { key: TabKey; label: string; icon: typeof ListOrdered }[] = [
@@ -85,7 +87,9 @@ const TOP_TABS: { key: TabKey; label: string; icon: typeof ListOrdered }[] = [
   { key: "wrong", label: "المعاملات الغلط والخاص بالموظف", icon: AlertTriangle },
   { key: "transfers", label: "الاستلم من والتحويل الي", icon: ArrowLeftRight },
   { key: "p2p", label: "طلبات p2p", icon: Users },
+  { key: "summary", label: "ملخص الشفت", icon: ClipboardList },
 ];
+
 
 
 
@@ -1594,7 +1598,7 @@ export function EmployeeWorkView({
 
       <section className="space-y-4">
         <div className="flex flex-wrap items-center gap-[0.1cm]">
-          {TOP_TABS.map((t) => {
+          {TOP_TABS.filter((t) => t.key !== "summary" || isAdmin).map((t) => {
             const Icon = t.icon;
             const active = tab === t.key;
             return (
@@ -1671,7 +1675,10 @@ export function EmployeeWorkView({
           onDetails={setDetailRow}
           readOnly={viewing}
         />
+      ) : tab === "summary" ? (
+        <div className="data-surface min-h-[420px]" />
       ) : tab === "p2p" ? (
+
         <P2POrdersTable
           rows={(p2pCompleted.data ?? []) as any[]}
           loading={p2pCompleted.isLoading}
