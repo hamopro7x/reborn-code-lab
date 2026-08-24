@@ -370,6 +370,7 @@ export const addMyManualCardTxn = createServerFn({ method: "POST" })
       .object({
         merchant: z.string().max(200).default(""),
         amount: z.string().max(40).default(""),
+        egp: z.string().max(40).default(""),
         quantity: z.string().max(40).default(""),
         // خانة حرة: أرقام/حروف/رموز/مسافات — بدون أي تقييد على 4 أرقام.
         pan4: z.string().max(60).default(""),
@@ -388,8 +389,9 @@ export const saveMyManualCardTxn = createServerFn({ method: "POST" })
     z
       .object({
         id: z.string().uuid(),
-        field: z.enum(["merchant", "amount", "quantity", "pan4"]),
+        field: z.enum(["merchant", "amount", "egp", "quantity", "pan4"]),
         value: z.string().max(200),
+
       })
       .parse(input),
   )
