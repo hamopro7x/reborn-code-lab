@@ -930,6 +930,157 @@ function ManualCell({
 }
 
 
+function ManualCard({
+  card,
+  title,
+  rows,
+  serverNow,
+  onAdd,
+  onClear,
+  onSaved,
+  adding,
+  clearing,
+  newestId,
+  isAdmin,
+  readOnly,
+}: {
+  card: ManualKind;
+  title: string;
+  rows: {
+    id: string;
+    amount: string;
+    details: string;
+    createdAt?: string;
+    amountSavedAt?: string | null;
+    detailsSavedAt?: string | null;
+  }[];
+  serverNow?: string | null;
+  onAdd: (card: ManualKind) => void;
+  onClear: (card: ManualKind) => void;
+  onSaved: () => void;
+  adding: boolean;
+  clearing: boolean;
+  newestId: string | null;
+  isAdmin: boolean;
+  readOnly?: boolean;
+}) {
+  const totalAmount = useMemo(() => {
+    return rows.reduce((sum, r) => {
+      const latin = String(r.amount ?? "")
+        .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+        .replace(/[\u06f0-\u06f9]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
+        .replace(/[\u066b\u060c,]/g, ".")
+        .replace(/[^\d.]/g, "");
+      const [head, ...rest] = latin.split(".");
+      const normalized = rest.length ? `${head}.${rest.join("")}` : head ?? "";
+      const n = parseFloat(normalized);
+      return Number.isFinite(n) ? sum + n : sum;
+    }, 0);
+  }, [rows]);
+
+  const totalCount = rows.length;
+
+  return (
+    <div className="data-surface">
+      <div className="data-table-head relative flex items-center justify-center px-3 py-3">
+        <span className="text-sm font-black">{title}</span>
+        <div className="absolute left-3 flex items-center gap-2">
+          {!readOnly && isAdmin && rows.length > 0 && (
+            <button
+              type="button"
+              onClick={() => onClear(card)}
+              disabled={clearing}
+              className="table-btn disabled:opacity-60"
+              title="تصفير الصفوف (أدمن فقط)"
+            >
+              {clearing ? (
+                <Loader2 className="size-3 animate-spin" />
+              ) : (
+                <Trash2 className="size-3 text-destructive" />
+              )}
+              <span className="whitespace-nowrap">تصفير</span>
+            </button>
+          )}
+          {!readOnly && (
+            <button
+              type="button"
+              onClick={() => onAdd(card)}
+              disabled={adding}
+              className="table-btn disabled:opacity-60"
+            >
+              <span className="grid size-4 place-items-center rounded-full bg-[oklch(0.5_0.14_255)] text-[11px] leading-none text-[oklch(0.98_0_0)]">
+                {adding ? <Loader2 className="size-2.5 animate-spin" /> : "+"}
+              </span>
+              <span className="whitespace-nowrap">إضافة معاملة جديدة</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="max-h-[520px] min-h-[520px] overflow-y-auto overflow-x-hidden scrollbar-hide">
+        <table className="data-table manual-table text-center">
+          <thead className="sticky top-0 z-10">
+            {isAdmin && (
+              <tr className="summary-row admin-summary">
+                <th className="w-[24%]">
+                  <span className="summary-text">
+                    <span className="text-white/90">إجمالي المبلغ</span>
+                    <span className="value">: {totalAmount.toLocaleString("en-US")}</span>
+                  </span>
+                </th>
+                <th>
+                  <span className="summary-text">
+                    <span className="text-white/90">إجمالي المعاملات</span>
+                    <span className="value">: {totalCount.toLocaleString("en-US")}</span>
+                  </span>
+                </th>
+                <th className="w-[34%]">&nbsp;</th>
+              </tr>
+            )}
+            <tr>
+              <th className="w-[24%]">المبلغ</th>
+              <th>التفاصيل</th>
+              <th className="w-[34%]">التاريخ والوقت</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.id}>
+                <td className="!p-0">
+                  <ManualCell
+                    id={r.id}
+                    field="amount"
+                    initial={r.amount}
+                    savedAt={r.amountSavedAt ?? null}
+                    serverNow={serverNow}
+                    numeric
+                    autoFocus={!readOnly && r.id === newestId}
+                    onSaved={onSaved}
+                    readOnly={readOnly}
+                  />
+                </td>
+                <td className="!p-0">
+                  <ManualCell
+                    id={r.id}
+                    field="details"
+                    initial={r.details}
+                    savedAt={r.detailsSavedAt ?? null}
+                    serverNow={serverNow}
+                    onSaved={onSaved}
+                    readOnly={readOnly}
+                  />
+                </td>
+                <td className="text-[11px] text-muted-foreground">{formatDateTime(r.createdAt)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+
 /** Two independent manual cards, side by side (same design + autosave/lock). */
 function ManualSection({
   isAdmin,
