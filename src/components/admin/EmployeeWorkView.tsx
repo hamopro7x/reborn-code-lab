@@ -1362,6 +1362,8 @@ export function EmployeeWorkView({
         : viewUserId
           ? empP2PFn({ data: { userId: viewUserId } })
           : myP2PFn({ data: undefined as any }),
+    // الأدمن: لا تُحمّل بيانات P2P إلا بعد اختيار شفت محدد.
+    enabled: !blank && (!viewUserId || shiftMode),
     refetchInterval: 30_000,
   });
 
@@ -1471,11 +1473,11 @@ export function EmployeeWorkView({
     const count = mergedRows.length;
     const amount = mergedRows.reduce((s, r: any) => s + Math.abs(n(r.amount)), 0);
     const egp = mergedRows.reduce((s, r: any) => s + Math.abs(n(r.egp)), 0);
-    const p2pRows = (p2pCompleted.data ?? []) as any[];
+    const p2pRows = (viewUserId && !shiftMode ? [] : ((p2pCompleted.data ?? []) as any[])) as any[];
     const p2pEgp = p2pRows.reduce((s, r: any) => s + Math.abs(n((r.detail ?? {}).fiatAmount)), 0);
     const p2pUsdt = p2pRows.reduce((s, r: any) => s + Math.abs(n(r.amount)), 0);
     return { count, amount, egp, p2pEgp, p2pUsdt };
-  }, [mergedRows, p2pCompleted.data]);
+  }, [mergedRows, p2pCompleted.data, viewUserId, shiftMode]);
 
 
   /* --------------------- identity / claim / clock --------------------- */
@@ -1733,23 +1735,21 @@ export function EmployeeWorkView({
 
           <table className="data-table text-center">
             <thead>
-              {isAdmin && (
+              {isAdmin && shiftMode && (
                 <tr className="summary-row admin-summary">
                   {[
-                    { label: "عدد المعاملات", value: summary.count.toLocaleString("en-US"), num: summary.count },
-                    { label: "اجمالي مبلغ الدولار", value: summary.amount.toLocaleString("en-US"), num: summary.amount },
-                    { label: "مصري", value: summary.egp.toLocaleString("en-US"), num: summary.egp },
-                    { label: "P2P", value: `EGP ${summary.p2pEgp.toLocaleString("en-US")} | USDT ${summary.p2pUsdt.toLocaleString("en-US")}`, num: summary.p2pEgp + summary.p2pUsdt },
-                  ]
-                    .filter((s) => s.num > 0)
-                    .map((s) => (
-                      <th key={s.label}>
-                        <span className="summary-text">
-                          <span className="text-white/70">{s.label}</span>
-                          <span className="value">: {s.value}</span>
-                        </span>
-                      </th>
-                    ))}
+                    { label: "عدد المعاملات", value: summary.count.toLocaleString("en-US") },
+                    { label: "اجمالي مبلغ الدولار", value: summary.amount.toLocaleString("en-US") },
+                    { label: "مصري", value: summary.egp.toLocaleString("en-US") },
+                    { label: "P2P", value: `EGP ${summary.p2pEgp.toLocaleString("en-US")} | USDT ${summary.p2pUsdt.toLocaleString("en-US")}` },
+                  ].map((s) => (
+                    <th key={s.label}>
+                      <span className="summary-text">
+                        <span className="text-white/70">{s.label}</span>
+                        <span className="value">: {s.value}</span>
+                      </span>
+                    </th>
+                  ))}
                   <th>&nbsp;</th>
                   <th>&nbsp;</th>
                   <th>&nbsp;</th>
