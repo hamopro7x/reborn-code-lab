@@ -114,17 +114,18 @@ const GLOW_IDLE =
 /** Split-pill content for the merged "wrong + employee" tab — side by side. */
 function SplitTabContent({ reversed }: { reversed?: boolean }) {
   const own = (
-    <span className="flex items-center gap-1.5 whitespace-nowrap text-[oklch(0.66_0.19_25)]">
+    <span className="flex items-center gap-1.5 whitespace-nowrap text-[oklch(0.74_0.19_25)]">
       <span>الخاص بالموظف</span>
-      <User className="size-3.5 shrink-0 text-current/80" />
+      <User className="size-4 shrink-0 text-current drop-shadow-[0_0_4px_oklch(0.6_0.18_25/0.55)]" />
     </span>
   );
   const wrong = (
     <span className="flex items-center gap-1.5 whitespace-nowrap">
       <span>المعاملات الغلط</span>
-      <AlertTriangle className="size-3.5 shrink-0" />
+      <AlertTriangle className="size-4 shrink-0 text-[oklch(0.85_0.15_85)] drop-shadow-[0_0_4px_oklch(0.7_0.15_85/0.5)]" />
     </span>
   );
+
   return (
     <span className="flex flex-row items-center gap-2.5">
       {reversed ? wrong : own}
