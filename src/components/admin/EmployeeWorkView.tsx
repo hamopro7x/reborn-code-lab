@@ -1362,6 +1362,8 @@ export function EmployeeWorkView({
         : viewUserId
           ? empP2PFn({ data: { userId: viewUserId } })
           : myP2PFn({ data: undefined as any }),
+    // الأدمن: لا تُحمّل بيانات P2P إلا بعد اختيار شفت محدد.
+    enabled: !blank && (!viewUserId || shiftMode),
     refetchInterval: 30_000,
   });
 
