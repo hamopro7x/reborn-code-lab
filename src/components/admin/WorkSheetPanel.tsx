@@ -244,7 +244,7 @@ function ShiftPickerMenu({
                       </button>
                     </li>
                   );
-                })
+                })}
               </ul>
             )}
           </div>
