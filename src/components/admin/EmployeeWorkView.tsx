@@ -131,6 +131,18 @@ const AR_MONTHS = [
 ];
 const AR_DAYS = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
 
+function fmtShiftDate(ts: number) {
+  const d = new Date(ts);
+  const p = (n: number) => String(n).padStart(2, "0");
+  const h24 = d.getHours();
+  const h = ((h24 + 11) % 12) || 12;
+  return {
+    day: AR_DAYS[d.getDay()],
+    date: `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`,
+    time: `${p(h)}:${p(d.getMinutes())} ${h24 < 12 ? "ص" : "م"}`,
+  };
+}
+
 
 const P2P_COLUMNS = [
   "النوع",
