@@ -1353,7 +1353,7 @@ export function EmployeeWorkView({
         </div>
       )}
 
-      <section className="space-y-4">
+      <section className="mb-[1cm] space-y-4">
         <div className="flex flex-wrap items-center gap-[0.1cm]">
           {TOP_TABS.map((t) => {
             const Icon = t.icon;
