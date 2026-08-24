@@ -1342,32 +1342,37 @@ export function EmployeeWorkView({
               </div>
             );
             return (
-              <div className="flex flex-col items-center gap-1">
-                <span className="rounded-md bg-[oklch(0.45_0.19_263)] px-3 py-0.5 text-[11px] font-black text-white">
-                  {viewShift.label ?? "الشفت"}
-                </span>
-                <div className="flex flex-row items-end gap-2">
-                  <div className="flex flex-col items-center gap-1">
-                    <span className={CHIP}>بدا</span>
-                    <div className="rounded-md bg-[oklch(0.22_0.02_20)] px-3 py-2 text-right">
-                      <Row k="اليوم" v={start.day} />
-                      <Row k="التاريخ" v={start.date} />
-                      <Row k="الساعه" v={start.time} />
-                    </div>
+              <div className="flex flex-row items-end gap-2" dir="rtl">
+                {/* بدا — على اليمين */}
+                <div className="flex flex-col items-center gap-1">
+                  <span className={CHIP}>بدا</span>
+                  <div className="rounded-md bg-[oklch(0.22_0.02_20)] px-3 py-2 text-right">
+                    <Row k="اليوم" v={start.day} />
+                    <Row k="التاريخ" v={start.date} />
+                    <Row k="الساعه" v={start.time} />
                   </div>
-                  <div className="flex flex-col items-center gap-1">
-                    <span className={CHIP}>انتهي</span>
-                    <div className="rounded-md bg-[oklch(0.22_0.02_20)] px-3 py-2 text-right">
-                      {end ? (
-                        <>
-                          <Row k="اليوم" v={end.day} />
-                          <Row k="التاريخ" v={end.date} />
-                          <Row k="الساعه" v={end.time} />
-                        </>
-                      ) : (
-                        <div className="py-2 text-[11px] font-black text-emerald-400">شغّال الآن</div>
-                      )}
-                    </div>
+                </div>
+
+                {/* رقم الشفت — في المنتصف */}
+                <div className="flex flex-col items-center justify-end gap-1 self-stretch">
+                  <span className="rounded-md bg-[oklch(0.45_0.19_263)] px-3 py-0.5 text-[11px] font-black text-white">
+                    {viewShift.label ?? "الشفت"}
+                  </span>
+                </div>
+
+                {/* انتهي — على اليسار */}
+                <div className="flex flex-col items-center gap-1">
+                  <span className={CHIP}>انتهي</span>
+                  <div className="rounded-md bg-[oklch(0.22_0.02_20)] px-3 py-2 text-right">
+                    {end ? (
+                      <>
+                        <Row k="اليوم" v={end.day} />
+                        <Row k="التاريخ" v={end.date} />
+                        <Row k="الساعه" v={end.time} />
+                      </>
+                    ) : (
+                      <div className="py-2 text-[11px] font-black text-emerald-400">شغّال الآن</div>
+                    )}
                   </div>
                 </div>
               </div>
