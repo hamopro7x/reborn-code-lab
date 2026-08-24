@@ -1206,8 +1206,6 @@ function ManualTxnDialog({
             {/* خانة حرة: أرقام/حروف/رموز/مسافات */}
             <input className={field} type="text" value={pan4} onChange={(e) => setPan4(e.target.value)} />
           </div>
-
-          </div>
           <div className="flex justify-end gap-2 pt-1">
             <button type="button" onClick={onClose} className="table-btn">
               إلغاء
