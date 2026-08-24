@@ -130,34 +130,40 @@ const fmtShift = (ms: number) => {
   return { day, date, time };
 };
 
-/** Sidebar يعرض شفتات الموظف المختار بنفس تصميم المرجع. */
-function ShiftSidebar({
+/** قائمة اختيار الشفت (Popover) بنفس تصميم كروت الشفتات الجديد. */
+function ShiftPickerMenu({
   userId,
   selectedId,
   onSelect,
+  open,
+  onOpenChange,
+  children,
 }: {
   userId: string | null;
   selectedId: string | null;
   onSelect: (shift: Shift) => void;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  children: React.ReactNode;
 }) {
   const listFn = useServerFn(getEmployeeShiftList);
   const q = useQuery({
     queryKey: ["admin-employee-shifts", userId],
     queryFn: () => listFn({ data: { userId: userId! } }) as Promise<Shift[]>,
-    enabled: !!userId,
+    enabled: !!userId && open,
   });
   const shifts = q.data ?? [];
 
-  if (!userId) {
-    return (
-      <aside className="w-[320px] shrink-0 rounded-xl border border-border/40 bg-[oklch(0.115_0_0)] p-4 text-center text-xs text-white/50">
-        اختر موظفًا لعرض شفتاته
-      </aside>
-    );
-  }
-
   return (
-    <aside className="sticky top-4 h-fit max-h-[calc(100vh-120px)] w-[320px] shrink-0 overflow-hidden rounded-xl border border-border/40 bg-[oklch(0.115_0_0)] p-3 shadow-2xl">
+    <Popover open={open} onOpenChange={onOpenChange}>
+      <PopoverTrigger asChild>{children}</PopoverTrigger>
+      <PopoverContent
+        dir="rtl"
+        align="center"
+        className="w-auto max-w-[92vw] border-0 bg-transparent p-0 shadow-none"
+      >
+        <div className="w-[420px] max-w-[92vw] overflow-hidden rounded-2xl border border-border/40 bg-[oklch(0.115_0_0)] p-3 shadow-2xl">
+
       {/* Header */}
       <div className="relative mb-3 overflow-hidden rounded-xl bg-[linear-gradient(180deg,#1636e6,#0a24c4)] px-3 py-2.5 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_2px_6px_rgba(0,0,0,0.55)]">
         <span className="text-sm font-black text-white">شفتات الموظف</span>
