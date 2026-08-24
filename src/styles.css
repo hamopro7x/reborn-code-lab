@@ -255,17 +255,6 @@
 .data-table tbody td {
   background-color: oklch(0.125 0 0);
   font-size: 12px;
-  text-align: start;
-}
-/* محتوى الصفوف يبدأ من أول الصف (اليمين في RTL) */
-.data-table tbody td > .flex,
-.data-table tbody td > span,
-.data-table tbody td > div {
-  justify-content: flex-start;
-  text-align: start;
-}
-.data-table tbody td input {
-  text-align: start;
 }
 .data-table tbody tr:hover > td {
   background-color: oklch(0.175 0 0);
