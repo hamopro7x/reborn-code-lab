@@ -1354,13 +1354,10 @@ export function EmployeeWorkView({
                 </div>
 
                 {/* رقم الشفت — في المنتصف */}
-                <div className="flex flex-col items-center gap-1">
+                <div className="flex flex-col items-center justify-end gap-1 self-stretch">
                   <span className="rounded-md bg-[oklch(0.45_0.19_263)] px-3 py-0.5 text-[11px] font-black text-white">
                     {viewShift.label ?? "الشفت"}
                   </span>
-                  <div className="rounded-md bg-[oklch(0.22_0.02_20)] px-3 py-2 text-center">
-                    <span className="text-[11px] font-black text-white/80">رقم الشفت</span>
-                  </div>
                 </div>
 
                 {/* انتهي — على اليسار */}
