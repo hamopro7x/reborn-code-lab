@@ -1189,18 +1189,19 @@ function ManualSection({
  * أرشيف كامل لكل شفتات الموظف المحدد: نفس الأقسام السبعة بنفس تصميمها
  * وأعمدتها، لكن البيانات مدمجة من جميع الشفتات ومرتّبة من الأقدم إلى الأحدث.
  * قراءة فقط، وبلا أي تعديل على سلوك الأقسام الأصلية. */
-function ArchiveBlock({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="space-y-2">
-      <div className="data-surface">
-        <div className="data-table-head flex items-center justify-center px-3 py-2.5">
-          <span className="text-sm font-black">{title}</span>
-        </div>
-      </div>
-      {children}
-    </section>
-  );
-}
+type ArchiveTabKey = "txns" | "ext" | "int" | "employee" | "wrong" | "transfers" | "p2p";
+
+/** نفس شريط الأقسام الموجود بالموقع، لكن داخل «ملخص الشفت». */
+const ARCHIVE_TABS: { key: ArchiveTabKey; label: string; icon: typeof ListOrdered }[] = [
+  { key: "txns", label: "المعاملات", icon: ListOrdered },
+  { key: "ext", label: "الإيداع والسحب الخارجي", icon: ArrowDownUp },
+  { key: "int", label: "الإيداع والسحب الداخلي", icon: ArrowLeftRight },
+  { key: "employee", label: "الخاص بالموظف", icon: User },
+  { key: "wrong", label: "المعاملات الغلط", icon: AlertTriangle },
+  { key: "transfers", label: "الاستلام من والتحويل إلى", icon: ArrowLeftRight },
+  { key: "p2p", label: "طلبات P2P", icon: Users },
+];
+
 
 function ArchiveTxnsTable({
   rows,
@@ -1290,7 +1291,9 @@ function ShiftArchive({
   brands: Record<string, string>;
   onDetails: (row: any) => void;
 }) {
+  const [sub, setSub] = useState<ArchiveTabKey>("txns");
   const archiveFn = useServerFn(getEmployeeArchive);
+
   const q = useQuery({
     queryKey: ["emp-archive", userId],
     queryFn: () => archiveFn({ data: { userId } }),
@@ -1331,41 +1334,55 @@ function ShiftArchive({
   );
 
   return (
-    <div className="space-y-6">
-      <ArchiveBlock title="المعاملات">
-        <ArchiveTxnsTable rows={txns} brands={brands} onDetails={onDetails} />
-      </ArchiveBlock>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-[0.1cm]">
+        {ARCHIVE_TABS.map((t) => {
+          const Icon = t.icon;
+          const active = sub === t.key;
+          return (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setSub(t.key)}
+              className={`flex items-center gap-2 rounded-2xl border px-3 py-2 text-[11px] font-bold transition ${
+                active ? GLOW_ACTIVE : GLOW_IDLE
+              }`}
+            >
+              <span className="whitespace-nowrap">{t.label}</span>
+              <Icon className="size-4 shrink-0 text-[oklch(0.88_0.06_255)] drop-shadow-[0_0_4px_oklch(0.6_0.15_258/0.6)]" />
+            </button>
+          );
+        })}
+      </div>
 
-      <ArchiveBlock title="الإيداع والسحب الخارجي">
+      {sub === "txns" ? (
+        <ArchiveTxnsTable rows={txns} brands={brands} onDetails={onDetails} />
+      ) : sub === "ext" ? (
         <div className="space-y-4">
           <TransfersTable rows={ext.filter((r) => r.direction === "in")} onDetails={onDetails} readOnly />
           <TransfersTable rows={ext.filter((r) => r.direction === "out")} onDetails={onDetails} noteColumn readOnly />
         </div>
-      </ArchiveBlock>
-
-      <ArchiveBlock title="الإيداع والسحب الداخلي">
+      ) : sub === "int" ? (
         <div className="space-y-4">
           <TransfersTable rows={int.filter((r) => r.direction === "in")} onDetails={onDetails} readOnly />
           <TransfersTable rows={int.filter((r) => r.direction === "out")} onDetails={onDetails} readOnly />
         </div>
-      </ArchiveBlock>
-
-      <ArchiveBlock title="الخاص بالموظف">{manualCard("employee", "خاص بالموظف")}</ArchiveBlock>
-      <ArchiveBlock title="المعاملات الغلط">{manualCard("wrong", "المعاملات الغلط")}</ArchiveBlock>
-
-      <ArchiveBlock title="الاستلام من والتحويل إلى">
+      ) : sub === "employee" ? (
+        manualCard("employee", "خاص بالموظف")
+      ) : sub === "wrong" ? (
+        manualCard("wrong", "المعاملات الغلط")
+      ) : sub === "transfers" ? (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {manualCard("receive", "الاستلام من")}
           {manualCard("transfer", "التحويل الي")}
         </div>
-      </ArchiveBlock>
-
-      <ArchiveBlock title="طلبات P2P">
+      ) : (
         <P2POrdersTable rows={p2p} onDetails={onDetails} readOnly />
-      </ArchiveBlock>
+      )}
     </div>
   );
 }
+
 
 
 /* ============ «معاملة يدوية» داخل قسم المعاملات — الموظف فقط ============
