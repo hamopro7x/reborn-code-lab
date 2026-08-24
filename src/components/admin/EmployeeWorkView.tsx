@@ -62,10 +62,12 @@ import {
   getEmployeeWorkState,
   getEmployeeShiftTxns,
   getEmployeeManualTxns,
+  getEmployeeShiftP2P,
   getShiftTxns,
   getShiftManualTxns,
   getShiftTransfers,
   getShiftP2P,
+  getMyShiftP2P,
 
   getMyAvatarUrl,
 } from "@/lib/work.functions";
@@ -1312,7 +1314,8 @@ export function EmployeeWorkView({
   const shiftTransfersFn = useServerFn(getShiftTransfers);
   const shiftP2PFn = useServerFn(getShiftP2P);
   const brandsFn = useServerFn(getBybitCardBrands);
-  const p2pFn = useServerFn(getWorkP2PCompleted);
+  const myP2PFn = useServerFn(getMyShiftP2P);
+  const empP2PFn = useServerFn(getEmployeeShiftP2P);
   const shiftMode = !!viewShiftId;
   const viewing = !!viewUserId || shiftMode || blank;
 
@@ -1346,12 +1349,19 @@ export function EmployeeWorkView({
     refetchInterval: 20_000,
   });
 
-  // طلبات P2P: للموظف = الطلبات المكتملة المتاحة للربط،
-  // للأدمن داخل شفت = الطلبات المرتبطة فعليًا بهذا الشفت (حتى لو تم الربط بعد إغلاقه).
+  // طلبات P2P: الموظف والأدمن يشاهدون فقط الطلبات المرتبطة بالشفت المختار/المفتوح.
   const p2pCompleted = useQuery({
-    queryKey: shiftMode ? ["shift-p2p", viewShiftId] : ["work-p2p-completed"],
+    queryKey: shiftMode
+      ? ["shift-p2p", viewShiftId]
+      : viewUserId
+        ? ["emp-shift-p2p", viewUserId]
+        : ["my-shift-p2p"],
     queryFn: () =>
-      shiftMode ? shiftP2PFn({ data: { shiftId: viewShiftId! } }) : p2pFn({ data: undefined as any }),
+      shiftMode
+        ? shiftP2PFn({ data: { shiftId: viewShiftId! } })
+        : viewUserId
+          ? empP2PFn({ data: { userId: viewUserId } })
+          : myP2PFn({ data: undefined as any }),
     refetchInterval: 30_000,
   });
 
@@ -1701,8 +1711,7 @@ export function EmployeeWorkView({
           loading={p2pCompleted.isLoading}
           onDetails={setDetailRow}
           onLinked={() => p2pCompleted.refetch()}
-          readOnly={viewing}
-
+          readOnly={true}
         />
       ) : (
 

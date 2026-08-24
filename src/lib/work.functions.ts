@@ -504,6 +504,25 @@ export const getShiftP2P = createServerFn({ method: "POST" })
     return mod.shiftP2P(data.shiftId);
   });
 
+/** طلبات P2P المرتبطة بالشفت المفتوح للموظف الحالي. */
+export const getMyShiftP2P = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAccess(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    return mod.myShiftP2P(context.userId);
+  });
+
+/** طلبات P2P المرتبطة بآخر شفت منتهي للموظف المختار (للأدمن). */
+export const getEmployeeShiftP2P = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => empSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    return mod.adminEmployeeShiftP2P(data.userId);
+  });
+
 /** رابط موقّع لصورة الموظف الحالي (bucket خاص). */
 export const getMyAvatarUrl = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])

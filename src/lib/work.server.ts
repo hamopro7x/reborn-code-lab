@@ -1754,3 +1754,23 @@ export async function shiftP2P(shiftId: string) {
     })
     .sort((a, b) => b.time - a.time);
 }
+
+/** طلبات P2P المرتبطة بالشفت المفتوح للموظف الحالي فقط. */
+export async function myShiftP2P(userId: string) {
+  const db = await admin();
+  const { data } = await db
+    .from("work_shifts")
+    .select("id")
+    .eq("user_id", userId)
+    .is("ended_at", null)
+    .maybeSingle();
+  if (!data) return [];
+  return shiftP2P(data.id as string);
+}
+
+/** طلبات P2P المرتبطة بآخر شفت منتهي للموظف المختار (للأدمن). */
+export async function adminEmployeeShiftP2P(userId: string) {
+  const state = await adminEmployeeWorkState(userId);
+  if (!state.holding) return [];
+  return shiftP2P(state.shiftId);
+}
