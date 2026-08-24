@@ -1739,8 +1739,8 @@ export function EmployeeWorkView({
                       const mName = String(r.merchant ?? "—");
                       return (
                         <tr key={`manual-${r.id}`}>
-                          <td>
-                            <span className="flex items-center justify-center gap-2">
+                          <td className="text-right">
+                            <span className="flex items-center justify-start gap-2">
                               <MerchantLogo name={mName} />
                               <ManualTxnCell row={r} field="merchant" locked={locked} onSaved={refresh} />
                             </span>
@@ -1764,8 +1764,8 @@ export function EmployeeWorkView({
                     })()
                   ) : (
                   <tr key={r.assignmentId ?? r.ledgerId}>
-                    <td>
-                      <span className="flex items-center justify-center gap-2">
+                    <td className="text-right">
+                      <span className="flex items-center justify-start gap-2">
                         <MerchantLogo name={String(r.detail?.merchantName ?? r.title ?? "—")} />
                         <span>{String(r.detail?.merchantName ?? r.title ?? "—")}</span>
                       </span>
