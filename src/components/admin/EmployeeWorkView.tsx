@@ -1721,7 +1721,23 @@ export function EmployeeWorkView({
             </button>
           </div>
         )}
+        <div className="flex flex-wrap items-center justify-start gap-2 px-2 pb-2 pt-1 text-[11px] font-bold text-white/90">
+          {[
+            { label: "عدد المعاملات", value: summary.count.toLocaleString("en-US") },
+            { label: "اجمالي مبلغ الدولار", value: summary.amount.toLocaleString("en-US") },
+            { label: "مصري", value: summary.egp.toLocaleString("en-US") },
+            { label: "P2P", value: `{  -  ${summary.p2p.toLocaleString("en-US")}  }` },
+          ].map((s) => (
+            <span
+              key={s.label}
+              className="rounded-md border border-[oklch(0.32_0.06_260_/_0.7)] bg-[oklch(0.09_0.01_270)] px-3 py-1"
+            >
+              {s.label} : <span className="text-[oklch(0.85_0.12_255)]">{s.value}</span>
+            </span>
+          ))}
+        </div>
         <div className="overflow-x-auto">
+
           <table className="data-table text-center">
             <thead>
               
