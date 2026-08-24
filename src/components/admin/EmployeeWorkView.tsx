@@ -1725,7 +1725,7 @@ export function EmployeeWorkView({
 
           <table className="data-table text-center">
             <thead>
-              <tr className="summary-row">
+              <tr className={`summary-row ${isAdmin ? "admin-summary" : ""}`}>
                 {[
                   { label: "عدد المعاملات", value: summary.count.toLocaleString("en-US") },
                   { label: "اجمالي مبلغ الدولار", value: summary.amount.toLocaleString("en-US") },
@@ -1733,10 +1733,17 @@ export function EmployeeWorkView({
                   { label: "P2P", value: `{ - ${summary.p2p.toLocaleString("en-US")} }` },
                 ].map((s) => (
                   <th key={s.label}>
-                    <span className="summary-pill">
-                      <span className="text-white/70">{s.label}</span>
-                      <span className="value">{s.value}</span>
-                    </span>
+                    {isAdmin ? (
+                      <span className="summary-text">
+                        <span className="text-white/70">{s.label}</span>
+                        <span className="value">: {s.value}</span>
+                      </span>
+                    ) : (
+                      <span className="summary-pill">
+                        <span className="text-white/70">{s.label}</span>
+                        <span className="value">{s.value}</span>
+                      </span>
+                    )}
                   </th>
                 ))}
                 <th>&nbsp;</th>

@@ -305,6 +305,21 @@
   color: oklch(0.82 0.15 85);
 }
 
+/* Admin-only summary text: no pill border, just plain text above columns */
+.summary-row.admin-summary .summary-text {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.35rem;
+  font-size: 11px;
+  font-weight: 700;
+  color: oklch(0.96 0 0);
+  white-space: nowrap;
+}
+.summary-row.admin-summary .summary-text .value {
+  color: oklch(0.82 0.15 85);
+}
+
 
 .table-btn {
   display: inline-flex;
