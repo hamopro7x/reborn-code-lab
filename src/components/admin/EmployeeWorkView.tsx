@@ -1544,10 +1544,10 @@ export function EmployeeWorkView({
   return (
     <div dir="rtl" className="space-y-4">
       {!viewing && (
-        <div className="flex flex-wrap items-center gap-4 mb-[1cm]">
+        <div className="flex flex-wrap items-center gap-2 mb-4">
 
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-full bg-secondary/80 text-muted-foreground">
+          <div className="flex min-w-0 items-center gap-2">
+            <div className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-full bg-secondary/80 text-foreground/80">
               {avatar ? (
                 <img src={avatar} alt={name} className="size-full object-cover" />
               ) : (
@@ -1555,8 +1555,8 @@ export function EmployeeWorkView({
               )}
             </div>
             <div className="min-w-0">
-              <div className="truncate text-lg font-black">{name}</div>
-              <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+              <div className="truncate text-xl font-black">{name}</div>
+              <div className="mt-1 flex items-center gap-1.5 text-sm text-foreground/70">
                 <span>موظف</span>
                 <span className="size-1.5 rounded-full bg-emerald-500" />
                 <span className="text-emerald-500">متصل</span>
@@ -1567,23 +1567,24 @@ export function EmployeeWorkView({
           <button
             type="button"
             onClick={faceClaim.start}
-            className="flex w-[96px] shrink-0 flex-col items-center gap-1 rounded-2xl border border-[oklch(0.55_0.14_250)] bg-card/70 px-2 py-2 text-[10px] font-bold transition hover:bg-card disabled:opacity-60"
+            className="flex w-[96px] shrink-0 flex-col items-center gap-1 rounded-2xl border border-[oklch(0.55_0.14_250)] bg-card/70 px-2 py-2 text-[11px] font-bold text-foreground/90 transition hover:bg-card disabled:opacity-60"
           >
-            <ScanFace className="size-5" />
+            <ScanFace className="size-5 text-foreground/85" />
             <span>استلم الشغل</span>
           </button>
           {faceClaim.node}
 
-          <div className="flex shrink-0 items-center gap-3">
+          <div className="flex shrink-0 items-center gap-2">
             <div className="text-left leading-tight">
-              <div className="text-sm font-black tabular-nums">
+              <div className="text-base font-black tabular-nums">
                 {clock.ampm} {clock.time}
               </div>
-              <div className="mt-1 text-[11px] text-muted-foreground">{clock.date}</div>
+              <div className="mt-1 text-xs font-bold tabular-nums text-foreground/70">{clock.date}</div>
             </div>
-            <Clock className="size-6 text-muted-foreground" />
+            <Clock className="size-6 text-foreground/80" />
           </div>
         </div>
+
       )}
 
       {/* ---------------------------- Top bar ---------------------------- */}
