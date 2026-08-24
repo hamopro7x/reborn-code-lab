@@ -1421,6 +1421,7 @@ export type Database = {
         Row: {
           amount: number | null
           created_at: string
+          egp: number | null
           id: string
           merchant: string
           pan4: string | null
@@ -1432,6 +1433,7 @@ export type Database = {
         Insert: {
           amount?: number | null
           created_at?: string
+          egp?: number | null
           id?: string
           merchant?: string
           pan4?: string | null
@@ -1443,6 +1445,7 @@ export type Database = {
         Update: {
           amount?: number | null
           created_at?: string
+          egp?: number | null
           id?: string
           merchant?: string
           pan4?: string | null
