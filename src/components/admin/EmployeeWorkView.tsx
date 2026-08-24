@@ -1319,6 +1319,36 @@ export function EmployeeWorkView({
   const shiftMode = !!viewShiftId;
   const viewing = !!viewUserId || shiftMode || blank;
 
+  const [tab, setTab] = useState<TabKey>("all");
+  // إيداع / سحب داخل قسمي التحويلات (فلترة عرض فقط)
+  const [flow, setFlow] = useState<"in" | "out">("in");
+
+  const st = useQuery({
+    queryKey: viewing ? ["emp-work-state", viewUserId] : ["my-work-state"],
+    queryFn: () =>
+      viewUserId ? empStateFn({ data: { userId: viewUserId } }) : stateFn({ data: undefined as any }),
+    enabled: !shiftMode && !blank,
+    refetchInterval: 20_000,
+  });
+  // في وضع الشفت المحدد: السجل التاريخي متاح دائمًا.
+  const holding = blank ? false : shiftMode || (st.data as any)?.holding === true;
+
+  const txns = useQuery({
+    queryKey: shiftMode
+      ? ["shift-txns", viewShiftId]
+      : viewUserId
+        ? ["emp-shift-txns", viewUserId]
+        : ["my-shift-txns"],
+    queryFn: () =>
+      shiftMode
+        ? shiftTxnsFn({ data: { shiftId: viewShiftId!, page: 1 } })
+        : viewUserId
+          ? empTxnsFn({ data: { userId: viewUserId, page: 1 } })
+          : txnsFn({ data: { page: 1 } }),
+    enabled: holding && !blank,
+    refetchInterval: 20_000,
+  });
+
   // طلبات P2P: الموظف والأدمن يشاهدون فقط الطلبات المرتبطة بالشفت المختار/المفتوح.
   const p2pCompleted = useQuery({
     queryKey: shiftMode
