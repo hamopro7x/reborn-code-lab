@@ -1452,6 +1452,23 @@ export function EmployeeWorkView({
 
   const emptyRows = Math.max(12 - mergedRows.length, 0);
 
+  /** صف الملخص فوق عناوين الأعمدة — خاص بالموظف/الشفت المعروض فقط. */
+  const summary = useMemo(() => {
+    const n = (v: unknown) => {
+      const x = Number(String(v ?? "").replace(/[^\d.-]/g, ""));
+      return Number.isFinite(x) ? x : 0;
+    };
+    const count = mergedRows.length;
+    const amount = mergedRows.reduce((s, r: any) => s + Math.abs(n(r.amount)), 0);
+    const egp = mergedRows.reduce((s, r: any) => s + Math.abs(n(r.egp)), 0);
+    const p2p = ((p2pCompleted.data ?? []) as any[]).reduce(
+      (s, r: any) => s + Math.abs(n(r.amount)),
+      0,
+    );
+    return { count, amount, egp, p2p };
+  }, [mergedRows, p2pCompleted.data]);
+
+
   /* --------------------- identity / claim / clock --------------------- */
   const faceClaim = useFaceClaim(() => {
     void qc.invalidateQueries({ queryKey: ["my-work-state"] });
