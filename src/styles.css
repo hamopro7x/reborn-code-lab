@@ -318,9 +318,10 @@
   text-shadow: 0 1px 2px oklch(0 0 0 / 0.5);
 }
 .summary-row.admin-summary .summary-text .value {
-  color: oklch(0.82 0.18 95);
+  color: #22d3ee;
   font-weight: 800;
   letter-spacing: 0.02em;
+  text-shadow: 0 0 6px oklch(0.75 0.2 220 / 0.55);
 }
 .summary-row.admin-summary .summary-text .value-muted {
   color: oklch(0.78 0 0);
