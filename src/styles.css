@@ -277,7 +277,7 @@
   padding: 0.35rem 0.6rem;
   font-size: 11px;
   font-weight: 700;
-  text-align: center;
+  text-align: right;
   color: oklch(0.93 0 0);
 }
 .data-table thead tr.summary-row th::before {
@@ -290,6 +290,7 @@
 .summary-row .summary-pill {
   display: inline-flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 0.35rem;
   border-radius: 999px;
   border: 1px solid oklch(0.35 0.12 264 / 0.7);
@@ -303,6 +304,7 @@
 .summary-row .summary-pill .value {
   color: oklch(0.82 0.15 85);
 }
+
 
 .table-btn {
   display: inline-flex;
