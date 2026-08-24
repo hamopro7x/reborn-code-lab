@@ -1764,8 +1764,8 @@ export function EmployeeWorkView({
                     })()
                   ) : (
                   <tr key={r.assignmentId ?? r.ledgerId}>
-                    <td>
-                      <span className="flex items-center justify-center gap-2">
+                    <td className="text-right">
+                      <span className="flex items-center justify-start gap-2">
                         <MerchantLogo name={String(r.detail?.merchantName ?? r.title ?? "—")} />
                         <span>{String(r.detail?.merchantName ?? r.title ?? "—")}</span>
                       </span>
