@@ -1122,7 +1122,7 @@ export function EmployeeWorkView({
   /** أدمن اختار شفتًا محددًا → سجل ذلك الشفت فقط (قراءة). */
   viewShiftId?: string;
   /** بيانات الشفت المختار (للعرض فقط بجانب هوية الموظف). */
-  viewShift?: { id: string; startedAt: number; endedAt: number | null; open: boolean; txns: number };
+  viewShift?: { id: string; startedAt: number; endedAt: number | null; open: boolean; txns: number; label?: string };
   viewName?: string;
   viewAvatar?: string;
 }) {
@@ -1330,28 +1330,50 @@ export function EmployeeWorkView({
             </span>
           </div>
 
-          {viewShift && (
-            <div className="flex items-center gap-3 rounded-full border border-[oklch(0.55_0.14_255/0.55)] bg-[oklch(0.11_0.02_270)] px-4 py-2 shadow-[0_0_20px_-6px_oklch(0.55_0.14_255/0.45)]">
-              <div className="flex flex-col gap-0.5 text-right">
-                <span className="text-[10px] font-bold text-white/60">الشفت</span>
-                <span className="text-xs font-black text-white/95">
-                  {(() => {
-                    const start = fmtShiftDate(viewShift.startedAt);
-                    if (viewShift.endedAt) {
-                      const end = fmtShiftDate(viewShift.endedAt);
-                      return `${start.day} ${start.date} ${start.time} → ${end.day} ${end.date} ${end.time}`;
-                    }
-                    return `${start.day} ${start.date} ${start.time} — شغّال الآن`;
-                  })()}
-                </span>
+          {viewShift && (() => {
+            const start = fmtShiftDate(viewShift.startedAt);
+            const end = viewShift.endedAt ? fmtShiftDate(viewShift.endedAt) : null;
+            const CHIP =
+              "rounded-md bg-[oklch(0.45_0.19_263)] px-6 py-1 text-center text-[13px] font-black text-white shadow-[0_0_14px_-4px_oklch(0.55_0.2_263/0.8)]";
+            const Row = ({ k, v }: { k: string; v: string }) => (
+              <div className="flex items-center gap-1 text-[11px] font-bold">
+                <span className="text-white/55">{k} :</span>
+                <span className="text-white/95">{v}</span>
               </div>
-              <span
-                className={`inline-flex size-2.5 rounded-full ${
-                  viewShift.open ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" : "bg-blue-400"
-                }`}
-              />
-            </div>
-          )}
+            );
+            return (
+              <div className="flex flex-col items-center gap-1">
+                <span className="rounded-md bg-[oklch(0.45_0.19_263)] px-3 py-0.5 text-[11px] font-black text-white">
+                  {viewShift.label ?? "الشفت"}
+                </span>
+                <div className="flex flex-row-reverse items-end gap-2">
+                  <div className="flex flex-col items-center gap-1">
+                    <span className={CHIP}>بدا</span>
+                    <div className="rounded-md bg-[oklch(0.22_0.02_20)] px-3 py-2 text-right">
+                      <Row k="اليوم" v={start.day} />
+                      <Row k="التاريخ" v={start.date} />
+                      <Row k="الساعه" v={start.time} />
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-center gap-1">
+                    <span className={CHIP}>انتهي</span>
+                    <div className="rounded-md bg-[oklch(0.22_0.02_20)] px-3 py-2 text-right">
+                      {end ? (
+                        <>
+                          <Row k="اليوم" v={end.day} />
+                          <Row k="التاريخ" v={end.date} />
+                          <Row k="الساعه" v={end.time} />
+                        </>
+                      ) : (
+                        <div className="py-2 text-[11px] font-black text-emerald-400">شغّال الآن</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
         </div>
       )}
 
