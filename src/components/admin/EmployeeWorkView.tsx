@@ -1711,8 +1711,7 @@ export function EmployeeWorkView({
           loading={p2pCompleted.isLoading}
           onDetails={setDetailRow}
           onLinked={() => p2pCompleted.refetch()}
-          readOnly={viewing}
-
+          readOnly={true}
         />
       ) : (
 
