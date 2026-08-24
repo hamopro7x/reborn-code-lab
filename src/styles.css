@@ -273,19 +273,19 @@
 .data-table thead tr.summary-row th {
   background: oklch(0.16 0.02 264);
   border: none;
-  border-bottom: 1px solid oklch(0.55 0.14 264 / 0.7);
-  padding: 0.35rem 0.6rem;
+  border-bottom: 2px solid oklch(0.6 0.16 264 / 0.85);
+  padding: 0.4rem 0.7rem;
   font-size: 11px;
   font-weight: 700;
   text-align: right;
-  color: oklch(0.95 0 0);
+  color: oklch(0.99 0 0);
 }
 .data-table thead tr.summary-row th::before {
   content: none;
 }
 /* Vertical separators between summary cells (RTL: first DOM child is the rightmost column) */
 .data-table thead tr.summary-row th:not(:first-child) {
-  border-right: 1px solid oklch(0.55 0.14 264 / 0.55);
+  border-right: 1px solid oklch(0.55 0.14 264 / 0.65);
 }
 .summary-row .summary-pill {
   display: inline-flex;
@@ -310,14 +310,21 @@
   display: inline-flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 0.35rem;
+  gap: 0.45rem;
   font-size: 11px;
   font-weight: 700;
-  color: oklch(0.95 0 0);
+  color: oklch(0.99 0 0);
   white-space: nowrap;
+  text-shadow: 0 1px 2px oklch(0 0 0 / 0.5);
 }
 .summary-row.admin-summary .summary-text .value {
-  color: oklch(0.82 0.15 85);
+  color: oklch(0.82 0.18 95);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.summary-row.admin-summary .summary-text .value-muted {
+  color: oklch(0.78 0 0);
+  font-weight: 700;
 }
 
 
