@@ -1736,25 +1736,27 @@ export function EmployeeWorkView({
             <thead>
               <tr className={`summary-row ${isAdmin ? "admin-summary" : ""}`}>
                 {[
-                  { label: "عدد المعاملات", value: summary.count.toLocaleString("en-US") },
-                  { label: "اجمالي مبلغ الدولار", value: summary.amount.toLocaleString("en-US") },
-                  { label: "مصري", value: summary.egp.toLocaleString("en-US") },
-                  { label: "P2P", value: `- ${summary.p2p.toLocaleString("en-US")}` },
-                ].map((s) => (
-                  <th key={s.label}>
-                    {isAdmin ? (
-                      <span className="summary-text">
-                        <span className="text-white/70">{s.label}</span>
-                        <span className="value">: {s.value}</span>
-                      </span>
-                    ) : (
-                      <span className="summary-pill">
-                        <span className="text-white/70">{s.label}</span>
-                        <span className="value">{s.value}</span>
-                      </span>
-                    )}
-                  </th>
-                ))}
+                  { label: "عدد المعاملات", value: summary.count.toLocaleString("en-US"), num: summary.count },
+                  { label: "اجمالي مبلغ الدولار", value: summary.amount.toLocaleString("en-US"), num: summary.amount },
+                  { label: "مصري", value: summary.egp.toLocaleString("en-US"), num: summary.egp },
+                  { label: "P2P", value: summary.p2p.toLocaleString("en-US"), num: summary.p2p },
+                ]
+                  .filter((s) => s.num > 0)
+                  .map((s) => (
+                    <th key={s.label}>
+                      {isAdmin ? (
+                        <span className="summary-text">
+                          <span className="text-white/70">{s.label}</span>
+                          <span className="value">: {s.value}</span>
+                        </span>
+                      ) : (
+                        <span className="summary-pill">
+                          <span className="text-white/70">{s.label}</span>
+                          <span className="value">{s.value}</span>
+                        </span>
+                      )}
+                    </th>
+                  ))}
                 <th>&nbsp;</th>
                 <th>&nbsp;</th>
                 <th>&nbsp;</th>
