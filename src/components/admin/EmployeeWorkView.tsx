@@ -1189,17 +1189,12 @@ function ManualSection({
  * أرشيف كامل لكل شفتات الموظف المحدد: نفس الأقسام السبعة بنفس تصميمها
  * وأعمدتها، لكن البيانات مدمجة من جميع الشفتات ومرتّبة من الأقدم إلى الأحدث.
  * قراءة فقط، وبلا أي تعديل على سلوك الأقسام الأصلية. */
-type ArchiveTabKey = "txns" | "ext" | "int" | "employee" | "wrong" | "transfers" | "p2p";
+type ArchiveTabKey = "employee" | "wrong";
 
-/** نفس شريط الأقسام الموجود بالموقع، لكن داخل «ملخص الشفت». */
+/** شريط أقسام «ملخص الشفت» — قسمان فقط. */
 const ARCHIVE_TABS: { key: ArchiveTabKey; label: string; icon: typeof ListOrdered }[] = [
-  { key: "txns", label: "المعاملات", icon: ListOrdered },
-  { key: "ext", label: "الإيداع والسحب الخارجي", icon: ArrowDownUp },
-  { key: "int", label: "الإيداع والسحب الداخلي", icon: ArrowLeftRight },
-  { key: "employee", label: "الخاص بالموظف", icon: User },
+  { key: "employee", label: "خاص بالموظف", icon: User },
   { key: "wrong", label: "المعاملات الغلط", icon: AlertTriangle },
-  { key: "transfers", label: "الاستلام من والتحويل إلى", icon: ArrowLeftRight },
-  { key: "p2p", label: "طلبات P2P", icon: Users },
 ];
 
 
@@ -1282,16 +1277,8 @@ function ArchiveTxnsTable({
   );
 }
 
-function ShiftArchive({
-  userId,
-  brands,
-  onDetails,
-}: {
-  userId: string;
-  brands: Record<string, string>;
-  onDetails: (row: any) => void;
-}) {
-  const [sub, setSub] = useState<ArchiveTabKey>("txns");
+function ShiftArchive({ userId }: { userId: string }) {
+  const [sub, setSub] = useState<ArchiveTabKey>("employee");
   const archiveFn = useServerFn(getEmployeeArchive);
 
   const q = useQuery({
@@ -1309,12 +1296,8 @@ function ShiftArchive({
   }
 
   const d = (q.data ?? {}) as any;
-  const txns: any[] = d.txns ?? [];
-  const ext: any[] = d.ext ?? [];
-  const int: any[] = d.int ?? [];
   const manualRows: any[] = d.manual?.rows ?? [];
   const manualNow: string | null = d.manual?.serverNow ?? null;
-  const p2p: any[] = d.p2p ?? [];
 
   const manualCard = (card: ManualKind, title: string) => (
     <ManualCard
@@ -1355,29 +1338,10 @@ function ShiftArchive({
         })}
       </div>
 
-      {sub === "txns" ? (
-        <ArchiveTxnsTable rows={txns} brands={brands} onDetails={onDetails} />
-      ) : sub === "ext" ? (
-        <div className="space-y-4">
-          <TransfersTable rows={ext.filter((r) => r.direction === "in")} onDetails={onDetails} readOnly />
-          <TransfersTable rows={ext.filter((r) => r.direction === "out")} onDetails={onDetails} noteColumn readOnly />
-        </div>
-      ) : sub === "int" ? (
-        <div className="space-y-4">
-          <TransfersTable rows={int.filter((r) => r.direction === "in")} onDetails={onDetails} readOnly />
-          <TransfersTable rows={int.filter((r) => r.direction === "out")} onDetails={onDetails} readOnly />
-        </div>
-      ) : sub === "employee" ? (
+      {sub === "employee" ? (
         manualCard("employee", "خاص بالموظف")
-      ) : sub === "wrong" ? (
-        manualCard("wrong", "المعاملات الغلط")
-      ) : sub === "transfers" ? (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {manualCard("receive", "الاستلام من")}
-          {manualCard("transfer", "التحويل الي")}
-        </div>
       ) : (
-        <P2POrdersTable rows={p2p} onDetails={onDetails} readOnly />
+        manualCard("wrong", "المعاملات الغلط")
       )}
     </div>
   );
@@ -1971,7 +1935,7 @@ export function EmployeeWorkView({
         />
       ) : tab === "summary" ? (
         viewUserId ? (
-          <ShiftArchive userId={viewUserId} brands={brands} onDetails={setDetailRow} />
+          <ShiftArchive userId={viewUserId} />
         ) : (
           <div className="data-surface grid min-h-[420px] place-items-center text-xs text-muted-foreground">
             اختر موظفًا لعرض ملخص جميع شفتاته.
