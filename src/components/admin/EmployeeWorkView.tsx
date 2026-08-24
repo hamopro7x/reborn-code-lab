@@ -68,6 +68,7 @@ import {
   getShiftTransfers,
   getShiftP2P,
   getMyShiftP2P,
+  getEmployeeArchive,
 
   getMyAvatarUrl,
 } from "@/lib/work.functions";
@@ -1154,6 +1155,189 @@ function ManualSection({
   );
 }
 
+/* ==================== «ملخص الشفت» — أدمن فقط ====================
+ * أرشيف كامل لكل شفتات الموظف المحدد: نفس الأقسام السبعة بنفس تصميمها
+ * وأعمدتها، لكن البيانات مدمجة من جميع الشفتات ومرتّبة من الأقدم إلى الأحدث.
+ * قراءة فقط، وبلا أي تعديل على سلوك الأقسام الأصلية. */
+function ArchiveBlock({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="space-y-2">
+      <div className="data-surface">
+        <div className="data-table-head flex items-center justify-center px-3 py-2.5">
+          <span className="text-sm font-black">{title}</span>
+        </div>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function ArchiveTxnsTable({
+  rows,
+  brands,
+  onDetails,
+}: {
+  rows: any[];
+  brands: Record<string, string>;
+  onDetails: (row: any) => void;
+}) {
+  return (
+    <div className="data-surface">
+      <div className="overflow-x-auto">
+        <table className="data-table text-center">
+          <thead>
+            <tr>
+              {COLUMNS.map((c) => (
+                <th key={c.label}>
+                  <span>{c.label}</span>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 ? (
+              <tr>
+                <td colSpan={COLUMNS.length} className="py-8 text-center text-xs text-muted-foreground">
+                  لا توجد معاملات
+                </td>
+              </tr>
+            ) : (
+              rows.map((r) =>
+                r.__manual ? (
+                  <tr key={`m-${r.id}`}>
+                    <td className="text-right">
+                      <span className="flex items-center justify-start gap-2">
+                        <MerchantLogo name={String(r.merchant ?? "—")} />
+                        <span>{String(r.merchant ?? "—")}</span>
+                      </span>
+                    </td>
+                    <td className="tabular-nums">{r.amount || "—"}</td>
+                    <td className="tabular-nums">{r.egp || "—"}</td>
+                    <td className="tabular-nums">{r.quantity || "—"}</td>
+                    <td>{txnTime(Number(r.time))}</td>
+                    <td className="tabular-nums">{r.pan4 || "—"}</td>
+                    <td>&nbsp;</td>
+                  </tr>
+                ) : (
+                  <tr key={r.assignmentId ?? r.ledgerId}>
+                    <td className="text-right">
+                      <span className="flex items-center justify-start gap-2">
+                        <MerchantLogo name={String(r.detail?.merchantName ?? r.title ?? "—")} />
+                        <span>{String(r.detail?.merchantName ?? r.title ?? "—")}</span>
+                      </span>
+                    </td>
+                    <td className="tabular-nums">
+                      {num(Math.abs(Number(r.amount)))} {r.currency}
+                    </td>
+                    <td className="tabular-nums">{r.egp ?? "—"}</td>
+                    <td className="tabular-nums">{r.quantity ?? "—"}</td>
+                    <td>{txnTime(Number(r.time))}</td>
+                    <td className="tabular-nums">
+                      <Last4Cell detail={(r.detail ?? {}) as Record<string, unknown>} brands={brands} />
+                    </td>
+                    <td>
+                      <button type="button" onClick={() => onDetails(r)} className="table-btn mx-auto">
+                        التفاصيل
+                      </button>
+                    </td>
+                  </tr>
+                ),
+              )
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function ShiftArchive({
+  userId,
+  brands,
+  onDetails,
+}: {
+  userId: string;
+  brands: Record<string, string>;
+  onDetails: (row: any) => void;
+}) {
+  const archiveFn = useServerFn(getEmployeeArchive);
+  const q = useQuery({
+    queryKey: ["emp-archive", userId],
+    queryFn: () => archiveFn({ data: { userId } }),
+    staleTime: 60_000,
+  });
+
+  if (q.isLoading) {
+    return (
+      <div className="data-surface grid min-h-[420px] place-items-center">
+        <Loader2 className="size-5 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  const d = (q.data ?? {}) as any;
+  const txns: any[] = d.txns ?? [];
+  const ext: any[] = d.ext ?? [];
+  const int: any[] = d.int ?? [];
+  const manualRows: any[] = d.manual?.rows ?? [];
+  const manualNow: string | null = d.manual?.serverNow ?? null;
+  const p2p: any[] = d.p2p ?? [];
+
+  const manualCard = (card: ManualKind, title: string) => (
+    <ManualCard
+      card={card}
+      title={title}
+      rows={manualRows.filter((r) => r.card === card)}
+      serverNow={manualNow}
+      onAdd={() => {}}
+      onClear={() => {}}
+      onSaved={() => {}}
+      adding={false}
+      clearing={false}
+      newestId={null}
+      isAdmin
+      readOnly
+    />
+  );
+
+  return (
+    <div className="space-y-6">
+      <ArchiveBlock title="المعاملات">
+        <ArchiveTxnsTable rows={txns} brands={brands} onDetails={onDetails} />
+      </ArchiveBlock>
+
+      <ArchiveBlock title="الإيداع والسحب الخارجي">
+        <div className="space-y-4">
+          <TransfersTable rows={ext.filter((r) => r.direction === "in")} onDetails={onDetails} readOnly />
+          <TransfersTable rows={ext.filter((r) => r.direction === "out")} onDetails={onDetails} noteColumn readOnly />
+        </div>
+      </ArchiveBlock>
+
+      <ArchiveBlock title="الإيداع والسحب الداخلي">
+        <div className="space-y-4">
+          <TransfersTable rows={int.filter((r) => r.direction === "in")} onDetails={onDetails} readOnly />
+          <TransfersTable rows={int.filter((r) => r.direction === "out")} onDetails={onDetails} readOnly />
+        </div>
+      </ArchiveBlock>
+
+      <ArchiveBlock title="الخاص بالموظف">{manualCard("employee", "خاص بالموظف")}</ArchiveBlock>
+      <ArchiveBlock title="المعاملات الغلط">{manualCard("wrong", "المعاملات الغلط")}</ArchiveBlock>
+
+      <ArchiveBlock title="الاستلام من والتحويل إلى">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {manualCard("receive", "الاستلام من")}
+          {manualCard("transfer", "التحويل الي")}
+        </div>
+      </ArchiveBlock>
+
+      <ArchiveBlock title="طلبات P2P">
+        <P2POrdersTable rows={p2p} onDetails={onDetails} readOnly />
+      </ArchiveBlock>
+    </div>
+  );
+}
+
+
 /* ============ «معاملة يدوية» داخل قسم المعاملات — الموظف فقط ============
  * سجل مستقل عن معاملات الـAPI. الشفت يُستنتج على السيرفر، والتاريخ/الوقت
  * من ساعة السيرفر، والتعديل 10 دقائق من وقت الإنشاء (يُفرض على السيرفر أيضًا)،
@@ -1739,7 +1923,13 @@ export function EmployeeWorkView({
           readOnly={viewing}
         />
       ) : tab === "summary" ? (
-        <div className="data-surface min-h-[420px]" />
+        viewUserId ? (
+          <ShiftArchive userId={viewUserId} brands={brands} onDetails={setDetailRow} />
+        ) : (
+          <div className="data-surface grid min-h-[420px] place-items-center text-xs text-muted-foreground">
+            اختر موظفًا لعرض ملخص جميع شفتاته.
+          </div>
+        )
       ) : tab === "p2p" ? (
 
         <P2POrdersTable

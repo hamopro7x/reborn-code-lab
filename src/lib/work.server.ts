@@ -1669,15 +1669,20 @@ export async function shiftManualTxns(shiftId: string) {
   return listManualTxns(userId, shiftId);
 }
 
-/** الإيداع والسحب الخارجي / الداخلي المرتبط بشفت معيّن (نفس شكل صفوف الموظف). */
-export async function shiftTransfers(shiftId: string, scope: "external" | "internal") {
+/** الإيداع والسحب الخارجي / الداخلي — بحسب شفت واحد أو كل شفتات موظف. */
+async function transfersByAssignment(
+  where: { shiftId?: string; userId?: string },
+  scope: "external" | "internal",
+) {
   const db = await admin();
-  const { data } = await db
+  let q: any = db
     .from("work_txn_assignments")
     .select("id, ledger_id, bybit_ledger!inner(*)")
-    .eq("shift_id", shiftId)
     .in("bybit_ledger.kind", TRANSFER_KINDS[scope] as unknown as string[])
     .in("bybit_ledger.status", SUCCESS_STATUSES as unknown as string[]);
+  if (where.shiftId) q = q.eq("shift_id", where.shiftId);
+  if (where.userId) q = q.eq("user_id", where.userId);
+  const { data } = await q;
 
   const accounts = await accountNames(db);
   const seen = new Set<string>();
@@ -1722,38 +1727,54 @@ export async function shiftTransfers(shiftId: string, scope: "external" | "inter
   return out;
 }
 
+/** الإيداع والسحب الخارجي / الداخلي المرتبط بشفت معيّن (نفس شكل صفوف الموظف). */
+export async function shiftTransfers(shiftId: string, scope: "external" | "internal") {
+  return transfersByAssignment({ shiftId }, scope);
+}
+
 /**
- * طلبات P2P المرتبطة بشفت معيّن — المرجع هو الربط الفعلي (shift_id) وليس وقت
- * وصول الطلب، فيظل الطلب داخل شفته حتى لو تم ربطه بعد إغلاق الشفت.
+ * طلبات P2P المرتبطة بشفت معيّن أو بكل شفتات موظف — المرجع هو الربط الفعلي
+ * (shift_id/user_id) وليس وقت وصول الطلب.
  */
-export async function shiftP2P(shiftId: string) {
+async function p2pByAssignment(where: { shiftId?: string; userId?: string }) {
   const db = await admin();
-  const { data } = await db
+  let q: any = db
     .from("work_txn_assignments")
     .select("id, ledger_id, bybit_ledger!inner(*)")
-    .eq("shift_id", shiftId)
     .in("bybit_ledger.kind", P2P_KINDS);
+  if (where.shiftId) q = q.eq("shift_id", where.shiftId);
+  if (where.userId) q = q.eq("user_id", where.userId);
+  const { data } = await q;
 
   const accounts = await accountNames(db);
-  return ((data ?? []) as any[])
-    .map((a) => {
-      const r = a.bybit_ledger ?? {};
-      return {
-        assignmentId: String(a.id),
-        ledgerId: String(r.id ?? a.ledger_id),
-        kind: String(r.kind ?? ""),
-        refId: String(r.ref_id ?? ""),
-        title: String(r.title ?? "—"),
-        amount: Number(r.amount ?? 0),
-        currency: r.currency ?? "USDT",
-        status: String(r.status ?? ""),
-        time: r.occurred_at ? new Date(r.occurred_at).getTime() : 0,
-        accountName: accounts.get(r.account_id) ?? "—",
-        detail: (r.detail ?? {}) as Record<string, string | number | boolean | null>,
-      };
-    })
-    .sort((a, b) => b.time - a.time);
+  const seen = new Set<string>();
+  const out: any[] = [];
+  for (const a of (data ?? []) as any[]) {
+    const r = a.bybit_ledger ?? {};
+    const id = String(r.id ?? a.ledger_id);
+    if (seen.has(id)) continue;
+    seen.add(id);
+    out.push({
+      assignmentId: String(a.id),
+      ledgerId: id,
+      kind: String(r.kind ?? ""),
+      refId: String(r.ref_id ?? ""),
+      title: String(r.title ?? "—"),
+      amount: Number(r.amount ?? 0),
+      currency: r.currency ?? "USDT",
+      status: String(r.status ?? ""),
+      time: r.occurred_at ? new Date(r.occurred_at).getTime() : 0,
+      accountName: accounts.get(r.account_id) ?? "—",
+      detail: (r.detail ?? {}) as Record<string, string | number | boolean | null>,
+    });
+  }
+  return out.sort((a, b) => b.time - a.time);
 }
+
+export async function shiftP2P(shiftId: string) {
+  return p2pByAssignment({ shiftId });
+}
+
 
 /** طلبات P2P المرتبطة بالشفت المفتوح للموظف الحالي فقط. */
 export async function myShiftP2P(userId: string) {
@@ -1773,4 +1794,82 @@ export async function adminEmployeeShiftP2P(userId: string) {
   const state = await adminEmployeeWorkState(userId);
   if (!state.holding) return [];
   return shiftP2P(state.shiftId);
+}
+
+/* ==================== أرشيف كامل: كل شفتات الموظف ====================
+ * قسم «ملخص الشفت» في لوحة الأدمن: نفس مصادر البيانات المستخدمة في الأقسام
+ * الأصلية (بلا مصدر موازٍ)، لكن بحسب الموظف كله بدل شفت واحد. القراءة فقط،
+ * والترتيب داخل كل قسم من الأقدم إلى الأحدث، وبلا تكرار (مفتاح فريد لكل صف).
+ */
+export async function employeeArchive(userId: string) {
+  const asc = (a: { time: number }, b: { time: number }) => a.time - b.time;
+
+  // 1) المعاملات (فيزا) — كل الشفتات، مع صفحات متتابعة حتى نهاية السجل.
+  const apiRows: any[] = [];
+  for (let page = 1; page <= 20; page++) {
+    const res = await workTable({ userId, page, pageSize: 200, successOnly: true });
+    apiRows.push(...res.rows);
+    if (apiRows.length >= res.total || res.rows.length === 0) break;
+  }
+  const entries = await myEntries(apiRows.map((r) => r.ledgerId));
+  const seenLedger = new Set<string>();
+  const cardTxns = apiRows
+    .filter((r) => {
+      const k = String(r.ledgerId);
+      if (seenLedger.has(k)) return false;
+      seenLedger.add(k);
+      return /^(card|refund)$/i.test(String(r.kind ?? ""));
+    })
+    .map((r) => {
+      const e = entries.get(r.ledgerId);
+      return {
+        ...r,
+        egp: e?.egp ?? null,
+        quantity: e?.quantity ?? null,
+        egpAt: e?.egpAt ?? null,
+        quantityAt: e?.quantityAt ?? null,
+      };
+    });
+
+  // 2) المعاملات اليدوية داخل قسم المعاملات — كل الشفتات.
+  const db = await admin();
+  const { data: manualCard } = await db
+    .from("work_manual_card_txns")
+    .select("id,merchant,amount,egp,quantity,pan4,created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: true });
+  const manualCardRows = (manualCard ?? []).map((r: any) => ({
+    ...mapManualCard(r),
+    __manual: true as const,
+    time: new Date(r.created_at).getTime(),
+  }));
+
+  const txns = [...cardTxns, ...manualCardRows].sort(asc);
+
+  // 3/4) التحويلات الخارجية والداخلية — كل الشفتات.
+  const [ext, int] = await Promise.all([
+    transfersByAssignment({ userId }, "external"),
+    transfersByAssignment({ userId }, "internal"),
+  ]);
+
+  // 5) السجلات اليدوية (الغلط / خاص بالموظف / الاستلام / التحويل) — كل الشفتات.
+  const manual = await listManualTxns(userId);
+
+  // 6) طلبات P2P — كل الشفتات.
+  const p2p = await p2pByAssignment({ userId });
+
+  return {
+    serverNow: new Date().toISOString(),
+    editWindowMs: MANUAL_CARD_EDIT_MS,
+    txns,
+    ext: [...ext].sort(asc),
+    int: [...int].sort(asc),
+    manual: {
+      serverNow: manual.serverNow,
+      rows: [...manual.rows].sort(
+        (a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+      ),
+    },
+    p2p: [...p2p].sort(asc),
+  };
 }

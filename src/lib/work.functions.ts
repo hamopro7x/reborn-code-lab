@@ -545,3 +545,16 @@ export const getMyAvatarUrl = createServerFn({ method: "GET" })
       avatar: url,
     };
   });
+
+/**
+ * «ملخص الشفت» (أدمن فقط): أرشيف كامل لكل شفتات الموظف المحدد، مقسّمًا على
+ * نفس الأقسام السبعة ومرتّبًا زمنيًا من الأقدم إلى الأحدث. قراءة فقط.
+ */
+export const getEmployeeArchive = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ userId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    return mod.employeeArchive(data.userId);
+  });
