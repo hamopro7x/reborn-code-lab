@@ -1471,11 +1471,10 @@ export function EmployeeWorkView({
     const count = mergedRows.length;
     const amount = mergedRows.reduce((s, r: any) => s + Math.abs(n(r.amount)), 0);
     const egp = mergedRows.reduce((s, r: any) => s + Math.abs(n(r.egp)), 0);
-    const p2p = ((p2pCompleted.data ?? []) as any[]).reduce(
-      (s, r: any) => s + Math.abs(n(r.amount)),
-      0,
-    );
-    return { count, amount, egp, p2p };
+    const p2pRows = (p2pCompleted.data ?? []) as any[];
+    const p2pEgp = p2pRows.reduce((s, r: any) => s + Math.abs(n((r.detail ?? {}).fiatAmount)), 0);
+    const p2pUsdt = p2pRows.reduce((s, r: any) => s + Math.abs(n(r.amount)), 0);
+    return { count, amount, egp, p2pEgp, p2pUsdt };
   }, [mergedRows, p2pCompleted.data]);
 
 
@@ -1739,7 +1738,7 @@ export function EmployeeWorkView({
                   { label: "عدد المعاملات", value: summary.count.toLocaleString("en-US"), num: summary.count },
                   { label: "اجمالي مبلغ الدولار", value: summary.amount.toLocaleString("en-US"), num: summary.amount },
                   { label: "مصري", value: summary.egp.toLocaleString("en-US"), num: summary.egp },
-                  { label: "P2P", value: summary.p2p.toLocaleString("en-US"), num: summary.p2p },
+                  { label: "P2P", value: `EGP ${summary.p2pEgp.toLocaleString("en-US")} | USDT ${summary.p2pUsdt.toLocaleString("en-US")}`, num: summary.p2pEgp + summary.p2pUsdt },
                 ]
                   .filter((s) => s.num > 0)
                   .map((s) => (
