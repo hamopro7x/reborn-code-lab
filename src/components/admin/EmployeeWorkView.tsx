@@ -1144,7 +1144,7 @@ export function EmployeeWorkView({
   const brandsFn = useServerFn(getBybitCardBrands);
   const p2pFn = useServerFn(getWorkP2PCompleted);
   const shiftMode = !!viewShiftId;
-  const viewing = !!viewUserId || shiftMode;
+  const viewing = !!viewUserId || shiftMode || blank;
 
   const [tab, setTab] = useState<TabKey>("all");
   // إيداع / سحب داخل قسمي التحويلات (فلترة عرض فقط)
