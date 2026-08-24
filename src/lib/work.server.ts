@@ -1569,7 +1569,8 @@ export async function saveMyManualCardTxn(
   if (!row) return { ok: false as const, error: "الصف غير موجود" };
 
   const now = new Date();
-  if (now.getTime() - new Date((row as any).created_at).getTime() >= MANUAL_CARD_EDIT_MS) {
+  // خانة «جنية» مفتوحة للتعديل دائمًا — باقي الخانات 10 دقائق فقط.
+  if (field !== "egp" && now.getTime() - new Date((row as any).created_at).getTime() >= MANUAL_CARD_EDIT_MS) {
     return {
       ok: false as const,
       locked: true as const,
