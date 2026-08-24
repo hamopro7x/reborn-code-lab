@@ -1724,7 +1724,7 @@ export function EmployeeWorkView({
         <div className="overflow-x-auto">
           <table className="data-table text-center">
             <thead>
-              <tr className="hidden" />
+              
 
               <tr>
 
