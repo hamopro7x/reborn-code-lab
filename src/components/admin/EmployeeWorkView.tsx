@@ -1024,7 +1024,7 @@ function ManualCard({
               <tr className="summary-row admin-summary">
                 <th className="w-[24%]">
                   <span className="summary-text">
-                    <span className="text-white/90">إجمالي المبلغ</span>
+                    <span className="text-white/90">الإجمالي</span>
                     <span className="value">: {totalAmount.toLocaleString("en-US")}</span>
                   </span>
                 </th>
