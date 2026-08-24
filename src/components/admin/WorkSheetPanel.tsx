@@ -328,11 +328,26 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
               قائمة الموظفين
             </button>
           </EmployeePickerMenu>
+          {isEmployees && selected && (
+            <ShiftPickerMenu
+              userId={selected.user_id}
+              selectedId={selectedShift?.id ?? null}
+              open={shiftOpen}
+              onOpenChange={setShiftOpen}
+              onSelect={(sh) => {
+                setSelectedShift(sh);
+                setShiftOpen(false);
+              }}
+            >
+              <button type="button" className={`${CHIP_BASE} ${selectedShift ? CHIP_ON : CHIP_OFF}`}>
+                اختيار الشفت
+              </button>
+            </ShiftPickerMenu>
+          )}
         </div>
 
         {isEmployees ? (
-          <div className="relative flex flex-1 gap-4 p-4 md:p-6">
-            {/* المحتوى الرئيسي */}
+          <div className="relative flex flex-1 p-4 md:p-6">
             <div className="min-w-0 flex-1">
               {selected ? (
                 <EmployeeWorkView
@@ -350,14 +365,8 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
                 </div>
               )}
             </div>
-
-            {/* الشريط الجانبي للشفتات */}
-            <ShiftSidebar
-              userId={selected?.user_id ?? null}
-              selectedId={selectedShift?.id ?? null}
-              onSelect={(sh) => setSelectedShift(sh)}
-            />
           </div>
+
         ) : (
           <>
             <div className="h-[57px]" />
