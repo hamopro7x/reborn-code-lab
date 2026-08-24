@@ -130,145 +130,139 @@ const fmtShift = (ms: number) => {
   return { day, date, time };
 };
 
-/** قائمة اختيار الشفت — بنفس أسلوب قائمة الموظفين (Popover). */
-function ShiftPickerMenu({
-  open,
-  onOpenChange,
+/** Sidebar يعرض شفتات الموظف المختار بنفس تصميم المرجع. */
+function ShiftSidebar({
   userId,
   selectedId,
   onSelect,
-  children,
 }: {
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
   userId: string | null;
   selectedId: string | null;
   onSelect: (shift: Shift) => void;
-  children: React.ReactNode;
 }) {
   const listFn = useServerFn(getEmployeeShiftList);
   const q = useQuery({
     queryKey: ["admin-employee-shifts", userId],
     queryFn: () => listFn({ data: { userId: userId! } }) as Promise<Shift[]>,
-    enabled: open && !!userId,
+    enabled: !!userId,
   });
   const shifts = q.data ?? [];
 
+  if (!userId) {
+    return (
+      <aside className="w-[320px] shrink-0 rounded-xl border border-border/40 bg-[oklch(0.115_0_0)] p-4 text-center text-xs text-white/50">
+        اختر موظفًا لعرض شفتاته
+      </aside>
+    );
+  }
+
   return (
-    <Popover open={open} onOpenChange={onOpenChange}>
-      <PopoverTrigger asChild>{children}</PopoverTrigger>
-      <PopoverContent
-        dir="rtl"
-        align="center"
-        className="w-auto max-w-[92vw] border-0 bg-transparent p-0 shadow-none"
-      >
-        <div className="w-[330px] overflow-hidden rounded-xl border border-border/50 bg-[oklch(0.135_0_0)] shadow-2xl">
-          <div className="data-table-head truncate px-3 py-1.5 text-center text-[11px] font-bold">
-            شفتات الموظف
-          </div>
-          <div className="max-h-60 overflow-y-auto p-2">
-            {!userId ? (
-              <p className="p-3 text-center text-xs text-white/60">اختر موظفًا أولاً</p>
-            ) : q.isLoading ? (
-              <Loader2 className="mx-auto my-4 size-4 animate-spin text-muted-foreground" />
-            ) : shifts.length === 0 ? (
-              <p className="p-3 text-center text-xs text-white/60">لا توجد شفتات</p>
-            ) : (
-              <ul className="space-y-1">
-                {shifts.map((sh, i) => {
-                  const active = sh.id === selectedId;
-                  const start = fmtShift(sh.startedAt);
-                  const end = sh.endedAt ? fmtShift(sh.endedAt) : null;
-                  return (
-                    <li key={sh.id}>
-                      <button
-                        type="button"
-                        onClick={() => onSelect({ ...sh, label: `شفت رقم ${shifts.length - i}` })}
-                        className={`w-full rounded-2xl px-4 py-3 text-right transition ${
-                          active
-                            ? "bg-[#0d0d0d] text-blue-300 ring-1 ring-blue-500/40 shadow-[0_0_20px_-6px_oklch(0.55_0.28_305/0.5)]"
-                            : "bg-[#0a0a0a] text-white/85 hover:bg-[#111]"
-                        }`}
-                      >
-                        <div className="grid grid-cols-[1fr_auto_1fr] items-stretch gap-3" dir="rtl">
-                          {/* بداية الشفت — الجزء الأيمن */}
-                          <div className="flex flex-col items-start justify-center gap-0.5">
-                            <span className="text-[10px] font-normal text-white/40">بداية</span>
-                            <span className="text-[12px] font-bold leading-tight text-white/95">
-                              {start.day}
-                            </span>
-                            <span className="text-[11px] text-white/65">
-                              {start.date}
-                            </span>
-                            <span className="text-[13px] font-bold text-blue-300">
-                              {start.time}
-                            </span>
-                          </div>
+    <aside className="sticky top-4 h-fit max-h-[calc(100vh-120px)] w-[320px] shrink-0 overflow-hidden rounded-xl border border-border/40 bg-[oklch(0.115_0_0)] p-3 shadow-2xl">
+      {/* Header */}
+      <div className="relative mb-3 overflow-hidden rounded-xl bg-[linear-gradient(180deg,#1636e6,#0a24c4)] px-3 py-2.5 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_2px_6px_rgba(0,0,0,0.55)]">
+        <span className="text-sm font-black text-white">شفتات الموظف</span>
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-white/90">
+          رقم الشفت
+        </span>
+      </div>
 
-                          {/* فاصل إلى */}
-                          <div className="flex flex-col items-center justify-center gap-1 self-stretch">
-                            <div className="h-6 w-px bg-white/10" />
-                            <span className="text-[10px] font-bold text-white/40">إلى</span>
-                            <div className="h-6 w-px bg-white/10" />
-                          </div>
+      {q.isLoading ? (
+        <Loader2 className="mx-auto my-6 size-5 animate-spin text-muted-foreground" />
+      ) : shifts.length === 0 ? (
+        <p className="py-6 text-center text-xs text-white/50">لا توجد شفتات</p>
+      ) : (
+        <ul className="scrollbar-hide max-h-[calc(100vh-200px)] space-y-2 overflow-y-auto">
 
-                          {/* نهاية الشفت — الجزء الأيسر */}
-                          <div className="flex flex-col items-end justify-center gap-0.5">
-                            <span className="text-[10px] font-normal text-white/40">انتهاء</span>
-                            {end ? (
-                              <>
-                                <span className="text-[12px] font-bold leading-tight text-white/95">
-                                  {end.day}
-                                </span>
-                                <span className="text-[11px] text-white/65">
-                                  {end.date}
-                                </span>
-                                <span className="text-[13px] font-bold text-blue-300">
-                                  {end.time}
-                                </span>
-                              </>
-                            ) : (
-                              <span className="text-[13px] font-bold text-emerald-400">شغّال الآن</span>
-                            )}
-                          </div>
+          {shifts.map((sh, i) => {
+            const active = sh.id === selectedId;
+            const start = fmtShift(sh.startedAt);
+            const end = sh.endedAt ? fmtShift(sh.endedAt) : null;
+            const number = shifts.length - i;
+            return (
+              <li key={sh.id}>
+                <button
+                  type="button"
+                  onClick={() => onSelect({ ...sh, label: `شفت رقم ${number}` })}
+                  className={`flex w-full items-stretch gap-2 rounded-xl border px-2 py-2 text-right transition ${
+                    active
+                      ? "border-blue-500/40 bg-[oklch(0.13_0_0)] shadow-[0_0_20px_-6px_oklch(0.55_0.28_305/0.5)]"
+                      : "border-white/5 bg-[oklch(0.095_0_0)] hover:bg-[oklch(0.11_0_0)]"
+                  }`}
+                >
+                  {/* رقم الشفت */}
+                  <div className="flex w-10 shrink-0 items-center justify-center">
+                    <span className="grid h-8 w-8 place-items-center rounded-lg bg-[linear-gradient(180deg,#1636e6,#0a24c4)] text-sm font-black text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
+                      {number}
+                    </span>
+                  </div>
+
+                  {/* بداية / انتهاء */}
+                  <div className="flex flex-1 items-stretch gap-2" dir="rtl">
+                    {/* بداية — على اليمين */}
+                    <div className="flex flex-1 flex-col items-start gap-1 rounded-lg bg-[oklch(0.055_0_0)] px-2 py-1.5">
+                      <span className="rounded bg-[linear-gradient(180deg,#1636e6,#0a24c4)] px-2 py-0.5 text-[10px] font-black text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
+                        بدا
+                      </span>
+                      <div className="flex flex-col gap-0.5 pr-1">
+                        <span className="text-[11px] font-bold text-white/90">
+                          اليوم: {start.day}
+                        </span>
+                        <span className="text-[11px] text-white/70">
+                          التاريخ: {start.date}
+                        </span>
+                        <span className="text-[11px] font-bold text-blue-300">
+                          الساعه: {start.time}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* انتهى — على اليسار */}
+                    <div className="flex flex-1 flex-col items-start gap-1 rounded-lg bg-[oklch(0.055_0_0)] px-2 py-1.5">
+                      <span className="rounded bg-[linear-gradient(180deg,#1636e6,#0a24c4)] px-2 py-0.5 text-[10px] font-black text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
+                        انتهي
+                      </span>
+                      {end ? (
+                        <div className="flex flex-col gap-0.5 pr-1">
+                          <span className="text-[11px] font-bold text-white/90">
+                            اليوم: {end.day}
+                          </span>
+                          <span className="text-[11px] text-white/70">
+                            التاريخ: {end.date}
+                          </span>
+                          <span className="text-[11px] font-bold text-blue-300">
+                            الساعه: {end.time}
+                          </span>
                         </div>
-
-                        <div className="mt-2.5 flex items-center justify-between border-t border-white/5 pt-2 text-[11px] font-normal text-white/50">
-                          <span>{sh.txns} معاملة</span>
-                          {sh.open && (
-                            <span className="inline-flex items-center gap-1 text-emerald-400">
-                              <span className="size-1.5 rounded-full bg-emerald-400" />
-                              مفتوح
-                            </span>
-                          )}
+                      ) : (
+                        <div className="flex flex-1 items-center justify-center pr-1">
+                          <span className="text-[11px] font-black text-emerald-400">شغّال الآن</span>
                         </div>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
-        </div>
-      </PopoverContent>
-    </Popover>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </aside>
   );
 }
+
 
 
 /**
  * قسم «جدول بيانات الشغل».
  * - واجهة الموظف: كما هي بالكامل (EmployeeWorkView).
- * - واجهة الأدمن: تبويبان (جدول بيانات حر + قسم الموظفين المحجوز لشغل لاحق).
+ * - واجهة الأدمن: تبويبان (جدول بيانات حر + قسم الموظفين مع sidebar شفتات).
  */
 export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
   const [tab, setTab] = useState<TabKey>("sheet");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [selected, setSelected] = useState<Employee | null>(null);
-  const [shiftPickerOpen, setShiftPickerOpen] = useState(false);
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
   if (!isAdmin) return <EmployeeWorkView />;
-
 
   const isEmployees = tab === "employees";
 
@@ -325,33 +319,13 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
               قائمة الموظفين
             </button>
           </EmployeePickerMenu>
-          {isEmployees && selected && (
-            <ShiftPickerMenu
-              open={shiftPickerOpen}
-              onOpenChange={setShiftPickerOpen}
-              userId={selected.user_id}
-              selectedId={selectedShift?.id ?? null}
-              onSelect={(sh) => {
-                setSelectedShift(sh);
-                setShiftPickerOpen(false);
-              }}
-            >
-              <button
-                type="button"
-                className={`${CHIP_BASE} ${shiftPickerOpen || selectedShift ? CHIP_ON : CHIP_OFF}`}
-              >
-                اختيار الشفت
-              </button>
-            </ShiftPickerMenu>
-          )}
-
         </div>
 
         {isEmployees ? (
-          <div className="relative flex-1">
-            {selected && (
-              <div className="pb-6 pt-4">
-                {/* نفس جدول بيانات الشغل الموجود عند الموظف — بيانات الموظف المختار فقط */}
+          <div className="relative flex flex-1 gap-4 p-4 md:p-6">
+            {/* المحتوى الرئيسي */}
+            <div className="min-w-0 flex-1">
+              {selected ? (
                 <EmployeeWorkView
                   key={`${selected.user_id}:${selectedShift?.id ?? "live"}`}
                   isAdmin
@@ -361,10 +335,19 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
                   viewName={selected.full_name || selected.email}
                   viewAvatar={selected.avatar_signed_url || undefined}
                 />
-              </div>
-            )}
-            
+              ) : (
+                <div className="flex h-64 items-center justify-center rounded-xl border border-border/40 bg-[oklch(0.115_0_0)] text-sm text-white/50">
+                  اختر موظفًا من قائمة الموظفين
+                </div>
+              )}
+            </div>
 
+            {/* الشريط الجانبي للشفتات */}
+            <ShiftSidebar
+              userId={selected?.user_id ?? null}
+              selectedId={selectedShift?.id ?? null}
+              onSelect={(sh) => setSelectedShift(sh)}
+            />
           </div>
         ) : (
           <>
@@ -376,4 +359,5 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
     </div>
   );
 }
+
 
