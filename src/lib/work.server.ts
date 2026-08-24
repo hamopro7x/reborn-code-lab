@@ -1470,6 +1470,7 @@ type ManualCardRow = {
   id: string;
   merchant: string;
   amount: string;
+  egp: string;
   quantity: string;
   pan4: string;
   createdAt: string;
@@ -1480,6 +1481,7 @@ function mapManualCard(r: any): ManualCardRow {
     id: r.id as string,
     merchant: r.merchant ?? "",
     amount: r.amount === null || r.amount === undefined ? "" : String(r.amount),
+    egp: r.egp === null || r.egp === undefined ? "" : String(r.egp),
     quantity: r.quantity === null || r.quantity === undefined ? "" : String(r.quantity),
     pan4: r.pan4 ?? "",
     createdAt: r.created_at as string,
@@ -1491,7 +1493,7 @@ export async function listManualCardTxns(userId: string, shiftId: string) {
   const db = await admin();
   const { data } = await db
     .from("work_manual_card_txns")
-    .select("id,merchant,amount,quantity,pan4,created_at")
+    .select("id,merchant,amount,egp,quantity,pan4,created_at")
     .eq("user_id", userId)
     .eq("shift_id", shiftId)
     .order("created_at", { ascending: false });
@@ -1501,6 +1503,7 @@ export async function listManualCardTxns(userId: string, shiftId: string) {
     rows: (data ?? []).map(mapManualCard),
   };
 }
+
 
 export async function listMyManualCardTxns(userId: string) {
   const shiftId = await openShiftId(userId);
