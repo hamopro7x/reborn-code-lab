@@ -1363,13 +1363,25 @@ export async function openShiftId(userId: string): Promise<string | null> {
   return data ? ((data as any).id as string) : null;
 }
 
-/** Manual rows of the employee's CURRENT shift only. */
+/** المعاملات بدون شفت تظهر للموظف 10 دقائق فقط من وقت الإنشاء. */
+export const MANUAL_NO_SHIFT_VISIBLE_MS = 10 * 60 * 1000;
+
+/**
+ * صفوف الموظف الظاهرة الآن: صفوف الشفت المفتوح (طوال الشفت) + الصفوف التي
+ * أُنشئت بدون شفت خلال آخر 10 دقائق. لا شيء يُحذف من قاعدة البيانات.
+ */
 export async function listMyManualTxns(userId: string) {
   const shiftId = await openShiftId(userId);
-  if (!shiftId) return { serverNow: new Date().toISOString(), rows: [] as any[] };
-  return listManualTxns(userId, shiftId);
+  const all = await listManualTxns(userId);
+  const now = Date.now();
+  const rows = all.rows.filter((r: any) => {
+    if (r.shiftId) return shiftId ? r.shiftId === shiftId : false;
+    return now - new Date(r.createdAt).getTime() < MANUAL_NO_SHIFT_VISIBLE_MS;
+  });
+  return { serverNow: all.serverNow, rows };
 }
 
+/** الإضافة مسموحة دائمًا: بشفت مفتوح أو بدونه (shift_id = null، بلا شفت وهمي). */
 export async function addManualTxn(userId: string, card: ManualCard) {
   const db = await admin();
   const shiftId = await openShiftId(userId);
@@ -1381,6 +1393,7 @@ export async function addManualTxn(userId: string, card: ManualCard) {
   if (error) return { ok: false as const, error: error.message };
   return { ok: true as const, id: data?.id as string };
 }
+
 
 export async function saveManualTxn(
   userId: string,
