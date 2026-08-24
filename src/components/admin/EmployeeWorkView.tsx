@@ -1673,8 +1673,9 @@ export function EmployeeWorkView({
                 ) : (
                   <>
                     <span className="whitespace-nowrap">{t.label}</span>
-                    <Icon className="size-3.5 shrink-0" />
+                    <Icon className="size-4 shrink-0 text-[oklch(0.88_0.06_255)] drop-shadow-[0_0_4px_oklch(0.6_0.15_258/0.6)]" />
                   </>
+
                 )}
               </button>
             );
