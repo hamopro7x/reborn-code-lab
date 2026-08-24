@@ -1751,11 +1751,11 @@ export function EmployeeWorkView({
                       value: summary.egp === 0 ? "لايوجد" : summary.egp.toLocaleString("en-US"),
                     },
                     {
-                      label: "P2P",
+                      label: "طلبات P2P",
                       value:
                         summary.p2pEgp === 0 && summary.p2pUsdt === 0
                           ? "لايوجد"
-                          : `EGP ${summary.p2pEgp.toLocaleString("en-US")} | $ ${summary.p2pUsdt.toLocaleString("en-US")}`,
+                          : `EGP ${summary.p2pEgp.toLocaleString("en-US")} | $ ${summary.p2pUsdt.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
                     },
                   ].map((s) => (
                     <th key={s.label}>
