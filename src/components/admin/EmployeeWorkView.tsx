@@ -872,12 +872,44 @@ function ManualCell({
     return (
       <div
         title="انتهت مدة التعديل المسموحة لهذه القيمة."
-        className={`flex h-full w-full items-center gap-1 px-3 py-2.5 text-xs text-foreground/90 ${
+        className={`flex h-full w-full min-w-0 items-start gap-1 px-3 py-2.5 text-xs text-foreground/90 ${
           numeric ? "justify-center tabular-nums" : "justify-end text-right"
         }`}
       >
-        <span>{value}</span>
+        <span className="w-full break-words [overflow-wrap:anywhere] whitespace-pre-wrap">{value}</span>
       </div>
+    );
+  }
+
+  if (!numeric) {
+    // «التفاصيل»: نص متعدد الأسطر — العرض ثابت والارتفاع هو الذي يزيد.
+    return (
+      <textarea
+        data-no-autosave
+        autoFocus={autoFocus}
+        rows={1}
+        value={value}
+        onChange={(e) => {
+          setValue(e.target.value);
+          const el = e.target as HTMLTextAreaElement;
+          el.style.height = "auto";
+          el.style.height = `${el.scrollHeight}px`;
+        }}
+        ref={(el) => {
+          if (el) {
+            el.style.height = "auto";
+            el.style.height = `${el.scrollHeight}px`;
+          }
+        }}
+        onBlur={(e) => flush(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            (e.target as HTMLTextAreaElement).blur();
+          }
+        }}
+        className="block min-h-[2.6rem] w-full min-w-0 max-w-full resize-none overflow-hidden whitespace-pre-wrap break-words [overflow-wrap:anywhere] border-0 bg-transparent px-3 py-2.5 text-right text-xs text-foreground/90 outline-none placeholder:text-transparent"
+      />
     );
   }
 
@@ -885,16 +917,14 @@ function ManualCell({
     <input
       data-no-autosave
       autoFocus={autoFocus}
-      inputMode={numeric ? "decimal" : "text"}
+      inputMode="decimal"
       value={value}
       onChange={(e) => setValue(clean(e.target.value))}
       onBlur={(e) => flush(clean(e.target.value))}
       onKeyDown={(e) => {
         if (e.key === "Enter") (e.target as HTMLInputElement).blur();
       }}
-      className={`h-full w-full border-0 bg-transparent px-3 py-2.5 text-xs text-foreground/90 outline-none placeholder:text-transparent ${
-        numeric ? "text-center tabular-nums" : "text-right"
-      }`}
+      className="h-full w-full min-w-0 border-0 bg-transparent px-3 py-2.5 text-center text-xs tabular-nums text-foreground/90 outline-none placeholder:text-transparent"
     />
   );
 }
@@ -988,7 +1018,7 @@ function ManualCard({
       </div>
 
       <div className="max-h-[520px] min-h-[520px] overflow-y-auto overflow-x-hidden scrollbar-hide">
-        <table className="data-table text-center">
+        <table className="data-table manual-table text-center">
           <thead className="sticky top-0 z-10">
             {isAdmin && (
               <tr className="summary-row admin-summary">
