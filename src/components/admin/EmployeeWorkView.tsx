@@ -1761,14 +1761,11 @@ export function EmployeeWorkView({
                   ].map((s) => (
                     <th key={s.label}>
                       <span className="summary-text">
-                        <span className={s.valueClass === "value-muted" ? "value-muted" : "value"}>{s.value}</span>
-                        <span className="text-white/90">: {s.label}</span>
+                        <span className="text-white/90">{s.label}</span>
+                        <span className="value">: {s.value}</span>
                       </span>
                     </th>
                   ))}
-                  <th>&nbsp;</th>
-                  <th>&nbsp;</th>
-                  <th>&nbsp;</th>
                 </tr>
               )}
               <tr>
