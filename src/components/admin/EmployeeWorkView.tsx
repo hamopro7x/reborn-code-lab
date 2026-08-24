@@ -108,22 +108,24 @@ const COLUMNS: { label: string; icon: typeof ListOrdered }[] = [
 const GLOW_ACTIVE =
   "border-[oklch(0.55_0.14_255)] bg-[linear-gradient(180deg,oklch(0.34_0.12_258),oklch(0.26_0.09_258))] text-[oklch(0.96_0.01_255)] shadow-[0_0_0_1px_oklch(0.55_0.14_255/0.35)]";
 const GLOW_IDLE =
-  "border-border/40 bg-[oklch(0.11_0.02_270)] text-foreground/75 hover:border-[oklch(0.45_0.1_258)] hover:text-foreground/90";
+  "border-border/60 bg-[oklch(0.14_0.02_270)] text-foreground/90 hover:border-[oklch(0.45_0.1_258)] hover:text-foreground";
+
 
 /** Split-pill content for the merged "wrong + employee" tab — side by side. */
 function SplitTabContent({ reversed }: { reversed?: boolean }) {
   const own = (
-    <span className="flex items-center gap-1.5 whitespace-nowrap text-[oklch(0.66_0.19_25)]">
+    <span className="flex items-center gap-1.5 whitespace-nowrap text-[oklch(0.74_0.19_25)]">
       <span>الخاص بالموظف</span>
-      <User className="size-3.5 shrink-0 text-current/80" />
+      <User className="size-4 shrink-0 text-current drop-shadow-[0_0_4px_oklch(0.6_0.18_25/0.55)]" />
     </span>
   );
   const wrong = (
     <span className="flex items-center gap-1.5 whitespace-nowrap">
       <span>المعاملات الغلط</span>
-      <AlertTriangle className="size-3.5 shrink-0" />
+      <AlertTriangle className="size-4 shrink-0 text-[oklch(0.85_0.15_85)] drop-shadow-[0_0_4px_oklch(0.7_0.15_85/0.5)]" />
     </span>
   );
+
   return (
     <span className="flex flex-row items-center gap-2.5">
       {reversed ? wrong : own}
@@ -1606,18 +1608,20 @@ export function EmployeeWorkView({
             const end = viewShift.endedAt ? fmtShiftDate(viewShift.endedAt) : null;
             const CHIP =
               "rounded-md bg-[oklch(0.45_0.19_263)] px-4 py-0.5 text-center text-[11px] font-black text-white shadow-[0_0_12px_-4px_oklch(0.55_0.2_263/0.8)]";
+            const BOX =
+              "rounded-md border border-[oklch(0.6_0.14_258/0.75)] bg-[oklch(0.16_0.02_270)] px-2 py-1 text-right shadow-[0_0_0_1px_oklch(0_0_0/0.6)]";
             const Row = ({ k, v }: { k: string; v: string }) => (
-              <div className="flex items-center gap-1 text-[10px] font-bold leading-tight">
-                <span className="text-white/55">{k} :</span>
-                <span className="text-white/95">{v}</span>
+              <div className="flex items-center gap-1 text-[11px] font-bold leading-tight tabular-nums">
+                <span className="text-white/65">{k} :</span>
+                <span className="text-white">{v}</span>
               </div>
             );
             return (
-              <div className="flex flex-row items-start gap-1.5" dir="rtl">
+              <div className="flex flex-row items-start gap-1" dir="rtl">
                 {/* بدا — على اليمين */}
                 <div className="flex flex-col items-center gap-1">
                   <span className={CHIP}>بدا</span>
-                  <div className="rounded-md bg-[oklch(0.22_0.02_20)] px-2 py-1 text-right">
+                  <div className={BOX}>
                     <Row k="اليوم" v={start.day} />
                     <Row k="التاريخ" v={start.date} />
                     <Row k="الساعه" v={start.time} />
@@ -1626,7 +1630,7 @@ export function EmployeeWorkView({
 
                 {/* رقم الشفت — في الأعلى بجانب الاتنين */}
                 <div className="flex flex-col items-center gap-1">
-                  <span className="rounded-md bg-[oklch(0.45_0.19_263)] px-3 py-0.5 text-[10px] font-black text-white">
+                  <span className="rounded-md border border-[oklch(0.6_0.14_258/0.7)] bg-[oklch(0.45_0.19_263)] px-3 py-0.5 text-[11px] font-black text-white">
                     {viewShift.label ?? "الشفت"}
                   </span>
                 </div>
@@ -1634,7 +1638,7 @@ export function EmployeeWorkView({
                 {/* انتهي — على اليسار */}
                 <div className="flex flex-col items-center gap-1">
                   <span className={CHIP}>انتهي</span>
-                  <div className="rounded-md bg-[oklch(0.22_0.02_20)] px-2 py-1 text-right">
+                  <div className={BOX}>
                     {end ? (
                       <>
                         <Row k="اليوم" v={end.day} />
@@ -1642,12 +1646,13 @@ export function EmployeeWorkView({
                         <Row k="الساعه" v={end.time} />
                       </>
                     ) : (
-                      <div className="py-1 text-[10px] font-black text-emerald-400">شغّال الآن</div>
+                      <div className="py-1 text-[11px] font-black text-emerald-400">شغّال الآن</div>
                     )}
                   </div>
                 </div>
               </div>
             );
+
           })()}
 
         </div>
@@ -1672,8 +1677,9 @@ export function EmployeeWorkView({
                 ) : (
                   <>
                     <span className="whitespace-nowrap">{t.label}</span>
-                    <Icon className="size-3.5 shrink-0" />
+                    <Icon className="size-4 shrink-0 text-[oklch(0.88_0.06_255)] drop-shadow-[0_0_4px_oklch(0.6_0.15_258/0.6)]" />
                   </>
+
                 )}
               </button>
             );
