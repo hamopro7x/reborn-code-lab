@@ -273,13 +273,14 @@
 .data-table thead tr.summary-row th {
   background: oklch(0.16 0.02 264);
   border: none;
-  border-bottom: 2px solid oklch(0.6 0.16 264 / 0.85);
-  padding: 0.4rem 0.7rem;
-  font-size: 11px;
-  font-weight: 700;
+  border-bottom: none;
+  padding: 0.5rem 0.7rem;
+  font-size: 13px;
+  font-weight: 800;
   text-align: right;
   color: oklch(0.99 0 0);
 }
+
 .data-table thead tr.summary-row th::before {
   content: none;
 }
