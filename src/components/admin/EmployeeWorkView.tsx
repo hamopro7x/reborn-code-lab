@@ -1403,7 +1403,34 @@ export function EmployeeWorkView({
           : ["my-shift-txns"],
     });
 
-  const emptyRows = Math.max(12 - rows.length, 0);
+  /* ---- معاملات يدوية: قسم «المعاملات» عند الموظف فقط ---- */
+  const manualCardFn = useServerFn(getMyManualCardTxns);
+  const manualCardQ = useQuery({
+    queryKey: ["my-manual-card-txns"],
+    queryFn: () => manualCardFn({ data: undefined as any }),
+    enabled: !viewing && tab === "all",
+    refetchInterval: 30_000,
+  });
+  const manualRows: any[] = viewing || tab !== "all" ? [] : ((manualCardQ.data as any)?.rows ?? []);
+  const [manualOpen, setManualOpen] = useState(false);
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    if (viewing || !manualRows.length) return;
+    const t = setInterval(() => setTick((n) => n + 1), 15_000);
+    return () => clearInterval(t);
+  }, [viewing, manualRows.length]);
+  void tick;
+  const manualLocked = (r: any) =>
+    Date.now() - new Date(r.createdAt).getTime() >= MANUAL_TXN_WINDOW_MS;
+  const openManual = () => {
+    if (!holding) {
+      toast.error("يجب فتح شفت أولًا لإضافة معاملة يدوية.");
+      return;
+    }
+    setManualOpen(true);
+  };
+
+  const emptyRows = Math.max(12 - rows.length - manualRows.length, 0);
 
   /* --------------------- identity / claim / clock --------------------- */
   const faceClaim = useFaceClaim(() => {
