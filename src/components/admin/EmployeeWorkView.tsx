@@ -1755,13 +1755,14 @@ export function EmployeeWorkView({
                       value:
                         summary.p2pEgp === 0 && summary.p2pUsdt === 0
                           ? "لايوجد"
-                          : `EGP ${summary.p2pEgp.toLocaleString("en-US")} | USDT ${summary.p2pUsdt.toLocaleString("en-US")}`,
+                          : `EGP ${summary.p2pEgp.toLocaleString("en-US")} | $ ${summary.p2pUsdt.toLocaleString("en-US")}`,
+                      valueClass: "value",
                     },
                   ].map((s) => (
                     <th key={s.label}>
                       <span className="summary-text">
-                        <span className="text-white/70">{s.label}</span>
-                        <span className="value">: {s.value}</span>
+                        <span className={s.valueClass === "value-muted" ? "value-muted" : "value"}>{s.value}</span>
+                        <span className="text-white/90">: {s.label}</span>
                       </span>
                     </th>
                   ))}
