@@ -94,15 +94,15 @@ const COLUMNS: { label: string; icon: typeof ListOrdered }[] = [
   { label: "الإجراء", icon: Settings },
 ];
 
-const GLOW_ACTIVE =
-  "border-[oklch(0.55_0.14_255)] bg-[linear-gradient(180deg,oklch(0.34_0.12_258),oklch(0.26_0.09_258))] text-[oklch(0.96_0.01_255)] shadow-[0_0_0_1px_oklch(0.55_0.14_255/0.35)]";
-const GLOW_IDLE =
-  "border-border/40 bg-[oklch(0.11_0.02_270)] text-foreground/75 hover:border-[oklch(0.45_0.1_258)] hover:text-foreground/90";
+const TAB_ACTIVE =
+  "rounded-full border border-[oklch(0.25_0_0)] bg-[#0d0d0d] px-5 py-2.5 text-[13px] font-bold text-[oklch(0.62_0.25_25)] shadow-[0_0_0_1px_oklch(0.55_0.14_255/0.25)]";
+const TAB_IDLE =
+  "rounded-full border border-[oklch(0.55_0.12_255/0.55)] bg-[linear-gradient(180deg,#1636e6,#0a24c4)] px-5 py-2.5 text-[13px] font-bold text-white shadow-[0_2px_8px_-2px_oklch(0.45_0.2_255/0.55)] hover:brightness-110";
 
 /** Split-pill content for the merged "wrong + employee" tab — side by side. */
-function SplitTabContent({ reversed }: { reversed?: boolean }) {
+function SplitTabContent({ active }: { active?: boolean }) {
   const own = (
-    <span className="flex items-center gap-1.5 whitespace-nowrap text-[oklch(0.66_0.19_25)]">
+    <span className={`flex items-center gap-1.5 whitespace-nowrap ${active ? "text-[oklch(0.62_0.25_25)]" : ""}`}>
       <span>الخاص بالموظف</span>
       <User className="size-3.5 shrink-0 text-current/80" />
     </span>
@@ -115,9 +115,9 @@ function SplitTabContent({ reversed }: { reversed?: boolean }) {
   );
   return (
     <span className="flex flex-row items-center gap-2.5">
-      {reversed ? wrong : own}
+      {own}
       <span className="inline-block h-4 w-px bg-current/25" />
-      {reversed ? own : wrong}
+      {wrong}
     </span>
   );
 }
