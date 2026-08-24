@@ -1051,7 +1051,7 @@ function ManualCard({
                     id={r.id}
                     field="amount"
                     initial={r.amount}
-                    savedAt={r.amountSavedAt ?? null}
+                    savedAt={r.createdAt ?? null}
                     serverNow={serverNow}
                     numeric
                     autoFocus={!readOnly && r.id === newestId}
@@ -1064,12 +1064,13 @@ function ManualCard({
                     id={r.id}
                     field="details"
                     initial={r.details}
-                    savedAt={r.detailsSavedAt ?? null}
+                    savedAt={r.createdAt ?? null}
                     serverNow={serverNow}
                     onSaved={onSaved}
                     readOnly={readOnly}
                   />
                 </td>
+
                 <td className="text-[11px] text-muted-foreground">{formatDateTime(r.createdAt)}</td>
               </tr>
             ))}
