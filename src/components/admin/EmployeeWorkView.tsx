@@ -1272,7 +1272,7 @@ export function EmployeeWorkView({
   return (
     <div dir="rtl" className="space-y-4">
       {!viewing && (
-        <div className="flex flex-wrap items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4 mb-[2cm]">
           <div className="flex min-w-0 items-center gap-3">
             <div className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-full bg-secondary/80 text-muted-foreground">
               {avatar ? (
@@ -1316,7 +1316,7 @@ export function EmployeeWorkView({
       {/* ---------------------------- Top bar ---------------------------- */}
 
       {viewing && name && (
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 mb-[2cm]">
           <div className="flex items-center gap-3 rounded-full border border-[oklch(0.55_0.14_255/0.55)] bg-[oklch(0.11_0.02_270)] px-4 py-2 shadow-[0_0_20px_-6px_oklch(0.55_0.14_255/0.45)]">
             <span className="text-sm font-black text-white/95">{name}</span>
             <span className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-full bg-white/10 ring-1 ring-[oklch(0.55_0.14_255/0.45)]">
@@ -1353,43 +1353,45 @@ export function EmployeeWorkView({
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-2">
-        {TOP_TABS.map((t) => {
-          const Icon = t.icon;
-          const active = tab === t.key;
-          return (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => setTab(t.key)}
-              className={`flex items-center gap-2 rounded-2xl border px-3 py-2 text-[11px] font-bold transition ${
-                active ? GLOW_ACTIVE : GLOW_IDLE
-              }`}
-            >
-              {t.key === "wrong" ? (
-                <SplitTabContent />
-              ) : (
-                <>
-                  <span className="whitespace-nowrap">{t.label}</span>
-                  <Icon className="size-3.5 shrink-0" />
-                </>
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* ----------- إيداع / سحب (نفس شكل القسم المركزي) ----------- */}
-      {(tab === "ext" || tab === "int") && (
+      <section className="mb-[2cm] space-y-4">
         <div className="flex flex-wrap items-center gap-2">
-          <FlowChip active={flow === "in"} onClick={() => setFlow("in")}>
-            إيداع
-          </FlowChip>
-          <FlowChip active={flow === "out"} onClick={() => setFlow("out")}>
-            سحب
-          </FlowChip>
+          {TOP_TABS.map((t) => {
+            const Icon = t.icon;
+            const active = tab === t.key;
+            return (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setTab(t.key)}
+                className={`flex items-center gap-2 rounded-2xl border px-3 py-2 text-[11px] font-bold transition ${
+                  active ? GLOW_ACTIVE : GLOW_IDLE
+                }`}
+              >
+                {t.key === "wrong" ? (
+                  <SplitTabContent />
+                ) : (
+                  <>
+                    <span className="whitespace-nowrap">{t.label}</span>
+                    <Icon className="size-3.5 shrink-0" />
+                  </>
+                )}
+              </button>
+            );
+          })}
         </div>
-      )}
+
+        {/* ----------- إيداع / سحب (نفس شكل القسم المركزي) ----------- */}
+        {(tab === "ext" || tab === "int") && (
+          <div className="flex flex-wrap items-center gap-2">
+            <FlowChip active={flow === "in"} onClick={() => setFlow("in")}>
+              إيداع
+            </FlowChip>
+            <FlowChip active={flow === "out"} onClick={() => setFlow("out")}>
+              سحب
+            </FlowChip>
+          </div>
+        )}
+      </section>
 
       {/* ------------------------- Transactions ------------------------- */}
       {tab === "wrong" ? (
