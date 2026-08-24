@@ -1189,18 +1189,19 @@ function ManualSection({
  * أرشيف كامل لكل شفتات الموظف المحدد: نفس الأقسام السبعة بنفس تصميمها
  * وأعمدتها، لكن البيانات مدمجة من جميع الشفتات ومرتّبة من الأقدم إلى الأحدث.
  * قراءة فقط، وبلا أي تعديل على سلوك الأقسام الأصلية. */
-function ArchiveBlock({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="space-y-2">
-      <div className="data-surface">
-        <div className="data-table-head flex items-center justify-center px-3 py-2.5">
-          <span className="text-sm font-black">{title}</span>
-        </div>
-      </div>
-      {children}
-    </section>
-  );
-}
+type ArchiveTabKey = "txns" | "ext" | "int" | "employee" | "wrong" | "transfers" | "p2p";
+
+/** نفس شريط الأقسام الموجود بالموقع، لكن داخل «ملخص الشفت». */
+const ARCHIVE_TABS: { key: ArchiveTabKey; label: string; icon: typeof ListOrdered }[] = [
+  { key: "txns", label: "المعاملات", icon: ListOrdered },
+  { key: "ext", label: "الإيداع والسحب الخارجي", icon: ArrowDownUp },
+  { key: "int", label: "الإيداع والسحب الداخلي", icon: ArrowLeftRight },
+  { key: "employee", label: "الخاص بالموظف", icon: User },
+  { key: "wrong", label: "المعاملات الغلط", icon: AlertTriangle },
+  { key: "transfers", label: "الاستلام من والتحويل إلى", icon: ArrowLeftRight },
+  { key: "p2p", label: "طلبات P2P", icon: Users },
+];
+
 
 function ArchiveTxnsTable({
   rows,
