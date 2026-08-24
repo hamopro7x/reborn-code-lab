@@ -32,6 +32,7 @@ import {
   DollarSign,
   Wallet,
   Trash2,
+  Plus,
   
 
 } from "lucide-react";
