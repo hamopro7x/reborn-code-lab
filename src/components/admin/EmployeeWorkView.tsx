@@ -1452,6 +1452,23 @@ export function EmployeeWorkView({
 
   const emptyRows = Math.max(12 - mergedRows.length, 0);
 
+  /** صف الملخص فوق عناوين الأعمدة — خاص بالموظف/الشفت المعروض فقط. */
+  const summary = useMemo(() => {
+    const n = (v: unknown) => {
+      const x = Number(String(v ?? "").replace(/[^\d.-]/g, ""));
+      return Number.isFinite(x) ? x : 0;
+    };
+    const count = mergedRows.length;
+    const amount = mergedRows.reduce((s, r: any) => s + Math.abs(n(r.amount)), 0);
+    const egp = mergedRows.reduce((s, r: any) => s + Math.abs(n(r.egp)), 0);
+    const p2p = ((p2pCompleted.data ?? []) as any[]).reduce(
+      (s, r: any) => s + Math.abs(n(r.amount)),
+      0,
+    );
+    return { count, amount, egp, p2p };
+  }, [mergedRows, p2pCompleted.data]);
+
+
   /* --------------------- identity / claim / clock --------------------- */
   const faceClaim = useFaceClaim(() => {
     void qc.invalidateQueries({ queryKey: ["my-work-state"] });
@@ -1708,6 +1725,22 @@ export function EmployeeWorkView({
           <table className="data-table text-center">
             <thead>
               <tr>
+                {[
+                  `إجمالي المعاملات: ${num(summary.count)}`,
+                  `إجمالي المبلغ: ${num(summary.amount)}`,
+                  `إجمالي المبلغ: ${num(summary.egp)}`,
+                  `إجمالي الفلوس التي تمت فيها طلبات P2P: ${num(summary.p2p)}`,
+                ].map((t, i) => (
+                  <th key={i} className="!bg-transparent !p-0 !border-0">
+                    <span className="mx-auto flex items-center justify-center whitespace-nowrap rounded-2xl border border-[oklch(0.55_0.14_255)] bg-[linear-gradient(180deg,oklch(0.34_0.12_258),oklch(0.26_0.09_258))] px-3 py-1 text-[11px] font-bold tabular-nums text-[oklch(0.96_0.01_255)]">
+                      {t}
+                    </span>
+                  </th>
+                ))}
+                <th className="!bg-transparent !border-0" colSpan={COLUMNS.length - 4} />
+              </tr>
+              <tr>
+
                 {COLUMNS.map((c) => {
                   const Icon = c.icon;
                   return (
