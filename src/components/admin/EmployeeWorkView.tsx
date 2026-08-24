@@ -1738,10 +1738,25 @@ export function EmployeeWorkView({
               {isAdmin && shiftMode && (
                 <tr className="summary-row admin-summary">
                   {[
-                    { label: "عدد المعاملات", value: summary.count.toLocaleString("en-US") },
-                    { label: "اجمالي مبلغ الدولار", value: summary.amount.toLocaleString("en-US") },
-                    { label: "مصري", value: summary.egp.toLocaleString("en-US") },
-                    { label: "P2P", value: `EGP ${summary.p2pEgp.toLocaleString("en-US")} | USDT ${summary.p2pUsdt.toLocaleString("en-US")}` },
+                    {
+                      label: "عدد المعاملات",
+                      value: summary.count === 0 ? "لايوجد" : summary.count.toLocaleString("en-US"),
+                    },
+                    {
+                      label: "اجمالي مبلغ الدولار",
+                      value: summary.amount === 0 ? "لايوجد" : summary.amount.toLocaleString("en-US"),
+                    },
+                    {
+                      label: "مصري",
+                      value: summary.egp === 0 ? "لايوجد" : summary.egp.toLocaleString("en-US"),
+                    },
+                    {
+                      label: "P2P",
+                      value:
+                        summary.p2pEgp === 0 && summary.p2pUsdt === 0
+                          ? "لايوجد"
+                          : `EGP ${summary.p2pEgp.toLocaleString("en-US")} | USDT ${summary.p2pUsdt.toLocaleString("en-US")}`,
+                    },
                   ].map((s) => (
                     <th key={s.label}>
                       <span className="summary-text">
