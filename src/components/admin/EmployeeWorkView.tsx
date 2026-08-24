@@ -1363,12 +1363,10 @@ export function EmployeeWorkView({
                 key={t.key}
                 type="button"
                 onClick={() => setTab(t.key)}
-                className={`flex items-center gap-2 rounded-2xl border px-3 py-2 text-[11px] font-bold transition ${
-                  active ? GLOW_ACTIVE : GLOW_IDLE
-                }`}
+                className={`flex items-center gap-2 transition ${active ? TAB_ACTIVE : TAB_IDLE}`}
               >
                 {t.key === "wrong" ? (
-                  <SplitTabContent />
+                  <SplitTabContent active={active} />
                 ) : (
                   <>
                     <span className="whitespace-nowrap">{t.label}</span>
