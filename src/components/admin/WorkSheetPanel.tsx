@@ -269,6 +269,8 @@ function ShiftPickerMenu({
 export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
   const [tab, setTab] = useState<TabKey>("sheet");
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [shiftOpen, setShiftOpen] = useState(false);
+
   const [selected, setSelected] = useState<Employee | null>(null);
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
   if (!isAdmin) return <EmployeeWorkView />;
