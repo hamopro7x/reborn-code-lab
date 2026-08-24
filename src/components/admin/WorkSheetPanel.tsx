@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, X } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { EmployeeWorkView } from "@/components/admin/EmployeeWorkView";
 import { AdminSheet } from "@/components/admin/AdminSheet";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
