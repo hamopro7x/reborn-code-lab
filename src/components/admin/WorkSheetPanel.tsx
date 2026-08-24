@@ -254,16 +254,14 @@ function ShiftSidebar({
 /**
  * قسم «جدول بيانات الشغل».
  * - واجهة الموظف: كما هي بالكامل (EmployeeWorkView).
- * - واجهة الأدمن: تبويبان (جدول بيانات حر + قسم الموظفين المحجوز لشغل لاحق).
+ * - واجهة الأدمن: تبويبان (جدول بيانات حر + قسم الموظفين مع sidebar شفتات).
  */
 export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
   const [tab, setTab] = useState<TabKey>("sheet");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [selected, setSelected] = useState<Employee | null>(null);
-  const [shiftPickerOpen, setShiftPickerOpen] = useState(false);
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
   if (!isAdmin) return <EmployeeWorkView />;
-
 
   const isEmployees = tab === "employees";
 
@@ -320,33 +318,13 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
               قائمة الموظفين
             </button>
           </EmployeePickerMenu>
-          {isEmployees && selected && (
-            <ShiftPickerMenu
-              open={shiftPickerOpen}
-              onOpenChange={setShiftPickerOpen}
-              userId={selected.user_id}
-              selectedId={selectedShift?.id ?? null}
-              onSelect={(sh) => {
-                setSelectedShift(sh);
-                setShiftPickerOpen(false);
-              }}
-            >
-              <button
-                type="button"
-                className={`${CHIP_BASE} ${shiftPickerOpen || selectedShift ? CHIP_ON : CHIP_OFF}`}
-              >
-                اختيار الشفت
-              </button>
-            </ShiftPickerMenu>
-          )}
-
         </div>
 
         {isEmployees ? (
-          <div className="relative flex-1">
-            {selected && (
-              <div className="pb-6 pt-4">
-                {/* نفس جدول بيانات الشغل الموجود عند الموظف — بيانات الموظف المختار فقط */}
+          <div className="relative flex flex-1 gap-4 p-4 md:p-6">
+            {/* المحتوى الرئيسي */}
+            <div className="min-w-0 flex-1">
+              {selected ? (
                 <EmployeeWorkView
                   key={`${selected.user_id}:${selectedShift?.id ?? "live"}`}
                   isAdmin
@@ -356,10 +334,19 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
                   viewName={selected.full_name || selected.email}
                   viewAvatar={selected.avatar_signed_url || undefined}
                 />
-              </div>
-            )}
-            
+              ) : (
+                <div className="flex h-64 items-center justify-center rounded-xl border border-border/40 bg-[oklch(0.115_0_0)] text-sm text-white/50">
+                  اختر موظفًا من قائمة الموظفين
+                </div>
+              )}
+            </div>
 
+            {/* الشريط الجانبي للشفتات */}
+            <ShiftSidebar
+              userId={selected?.user_id ?? null}
+              selectedId={selectedShift?.id ?? null}
+              onSelect={(sh) => setSelectedShift(sh)}
+            />
           </div>
         ) : (
           <>
@@ -371,4 +358,5 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
     </div>
   );
 }
+
 
