@@ -33,6 +33,8 @@ import {
   Wallet,
   Trash2,
   Plus,
+  ClipboardList,
+
   
 
 } from "lucide-react";
@@ -75,7 +77,7 @@ import { BrandBadge, LedgerRowDetails, statusBadge } from "@/components/admin/By
 
 type ManualKind = "wrong" | "employee" | "receive" | "transfer";
 
-type TabKey = "p2p" | "transfers" | "wrong" | "week" | "all" | "employee" | "ext" | "int";
+type TabKey = "p2p" | "transfers" | "wrong" | "week" | "all" | "employee" | "ext" | "int" | "summary";
 
 /** DOM order = right-to-left order in the reference. */
 const TOP_TABS: { key: TabKey; label: string; icon: typeof ListOrdered }[] = [
@@ -85,7 +87,9 @@ const TOP_TABS: { key: TabKey; label: string; icon: typeof ListOrdered }[] = [
   { key: "wrong", label: "المعاملات الغلط والخاص بالموظف", icon: AlertTriangle },
   { key: "transfers", label: "الاستلم من والتحويل الي", icon: ArrowLeftRight },
   { key: "p2p", label: "طلبات p2p", icon: Users },
+  { key: "summary", label: "ملخص الشفت", icon: ClipboardList },
 ];
+
 
 
 
