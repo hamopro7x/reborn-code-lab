@@ -1608,18 +1608,20 @@ export function EmployeeWorkView({
             const end = viewShift.endedAt ? fmtShiftDate(viewShift.endedAt) : null;
             const CHIP =
               "rounded-md bg-[oklch(0.45_0.19_263)] px-4 py-0.5 text-center text-[11px] font-black text-white shadow-[0_0_12px_-4px_oklch(0.55_0.2_263/0.8)]";
+            const BOX =
+              "rounded-md border border-[oklch(0.6_0.14_258/0.75)] bg-[oklch(0.16_0.02_270)] px-2 py-1 text-right shadow-[0_0_0_1px_oklch(0_0_0/0.6)]";
             const Row = ({ k, v }: { k: string; v: string }) => (
-              <div className="flex items-center gap-1 text-[10px] font-bold leading-tight">
-                <span className="text-white/55">{k} :</span>
-                <span className="text-white/95">{v}</span>
+              <div className="flex items-center gap-1 text-[11px] font-bold leading-tight tabular-nums">
+                <span className="text-white/65">{k} :</span>
+                <span className="text-white">{v}</span>
               </div>
             );
             return (
-              <div className="flex flex-row items-start gap-1.5" dir="rtl">
+              <div className="flex flex-row items-start gap-1" dir="rtl">
                 {/* بدا — على اليمين */}
                 <div className="flex flex-col items-center gap-1">
                   <span className={CHIP}>بدا</span>
-                  <div className="rounded-md bg-[oklch(0.22_0.02_20)] px-2 py-1 text-right">
+                  <div className={BOX}>
                     <Row k="اليوم" v={start.day} />
                     <Row k="التاريخ" v={start.date} />
                     <Row k="الساعه" v={start.time} />
@@ -1628,7 +1630,7 @@ export function EmployeeWorkView({
 
                 {/* رقم الشفت — في الأعلى بجانب الاتنين */}
                 <div className="flex flex-col items-center gap-1">
-                  <span className="rounded-md bg-[oklch(0.45_0.19_263)] px-3 py-0.5 text-[10px] font-black text-white">
+                  <span className="rounded-md border border-[oklch(0.6_0.14_258/0.7)] bg-[oklch(0.45_0.19_263)] px-3 py-0.5 text-[11px] font-black text-white">
                     {viewShift.label ?? "الشفت"}
                   </span>
                 </div>
@@ -1636,7 +1638,7 @@ export function EmployeeWorkView({
                 {/* انتهي — على اليسار */}
                 <div className="flex flex-col items-center gap-1">
                   <span className={CHIP}>انتهي</span>
-                  <div className="rounded-md bg-[oklch(0.22_0.02_20)] px-2 py-1 text-right">
+                  <div className={BOX}>
                     {end ? (
                       <>
                         <Row k="اليوم" v={end.day} />
@@ -1644,12 +1646,13 @@ export function EmployeeWorkView({
                         <Row k="الساعه" v={end.time} />
                       </>
                     ) : (
-                      <div className="py-1 text-[10px] font-black text-emerald-400">شغّال الآن</div>
+                      <div className="py-1 text-[11px] font-black text-emerald-400">شغّال الآن</div>
                     )}
                   </div>
                 </div>
               </div>
             );
+
           })()}
 
         </div>
