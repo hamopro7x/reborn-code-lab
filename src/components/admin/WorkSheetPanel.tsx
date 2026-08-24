@@ -252,9 +252,12 @@ function ShiftPickerMenu({
           })}
         </ul>
       )}
-    </aside>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
+
 
 
 
