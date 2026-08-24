@@ -351,6 +351,54 @@ export const saveMyManualTxn = createServerFn({ method: "POST" })
     return mod.saveManualTxn(context.userId, data.id, data.field, data.value);
   });
 
+/* ---------------- «معاملة يدوية» في قسم المعاملات (الموظف فقط) ----------------
+ * الشفت يُستنتج من السيرفر: بدون شفت مفتوح لا يمكن الإنشاء إطلاقًا،
+ * والتعديل مسموح 10 دقائق من created_at فقط. لا يوجد endpoint للحذف. */
+
+export const getMyManualCardTxns = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAccess(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    return mod.listMyManualCardTxns(context.userId);
+  });
+
+export const addMyManualCardTxn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        merchant: z.string().max(200).default(""),
+        amount: z.string().max(40).default(""),
+        quantity: z.string().max(40).default(""),
+        // خانة حرة: أرقام/حروف/رموز/مسافات — بدون أي تقييد على 4 أرقام.
+        pan4: z.string().max(60).default(""),
+      })
+      .parse(input ?? {}),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAccess(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    return mod.addMyManualCardTxn(context.userId, data);
+  });
+
+export const saveMyManualCardTxn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        field: z.enum(["merchant", "amount", "quantity", "pan4"]),
+        value: z.string().max(200),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAccess(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    return mod.saveMyManualCardTxn(context.userId, data.id, data.field, data.value);
+  });
+
 /** Admin-only: clear every manual row in one card for the current user. */
 export const clearMyManualTxns = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
