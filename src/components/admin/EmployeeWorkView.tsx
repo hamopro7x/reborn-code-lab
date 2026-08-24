@@ -1120,8 +1120,11 @@ export function EmployeeWorkView({
   viewShift,
   viewName,
   viewAvatar,
+  blank = false,
 }: {
   isAdmin?: boolean;
+  /** جدول فارغ تمامًا — الأدمن اختار موظفًا لكن لم يختر شفتًا. */
+  blank?: boolean;
   viewUserId?: string;
   /** أدمن اختار شفتًا محددًا → سجل ذلك الشفت فقط (قراءة). */
   viewShiftId?: string;
@@ -1151,11 +1154,11 @@ export function EmployeeWorkView({
     queryKey: viewing ? ["emp-work-state", viewUserId] : ["my-work-state"],
     queryFn: () =>
       viewUserId ? empStateFn({ data: { userId: viewUserId } }) : stateFn({ data: undefined as any }),
-    enabled: !shiftMode,
+    enabled: !shiftMode && !blank,
     refetchInterval: 20_000,
   });
   // في وضع الشفت المحدد: السجل التاريخي متاح دائمًا.
-  const holding = shiftMode || (st.data as any)?.holding === true;
+  const holding = blank ? false : shiftMode || (st.data as any)?.holding === true;
 
   const txns = useQuery({
     queryKey: shiftMode
@@ -1169,7 +1172,7 @@ export function EmployeeWorkView({
         : viewUserId
           ? empTxnsFn({ data: { userId: viewUserId, page: 1 } })
           : txnsFn({ data: { page: 1 } }),
-    enabled: holding,
+    enabled: holding && !blank,
     refetchInterval: 20_000,
   });
 
@@ -1190,7 +1193,7 @@ export function EmployeeWorkView({
       shiftMode
         ? shiftTransfersFn({ data: { shiftId: viewShiftId!, scope: "external" as const } })
         : transfersFn({ data: { scope: "external" as const } }),
-    enabled: tab === "ext",
+    enabled: tab === "ext" && !blank,
     refetchInterval: 30_000,
   });
   const intQ = useQuery({
@@ -1199,7 +1202,7 @@ export function EmployeeWorkView({
       shiftMode
         ? shiftTransfersFn({ data: { shiftId: viewShiftId!, scope: "internal" as const } })
         : transfersFn({ data: { scope: "internal" as const } }),
-    enabled: tab === "int",
+    enabled: tab === "int" && !blank,
     refetchInterval: 30_000,
   });
 
@@ -1213,7 +1216,7 @@ export function EmployeeWorkView({
   });
   const brands = (brandsQ.data?.brands ?? {}) as Record<string, string>;
 
-  const allRows: any[] = (txns.data as any)?.rows ?? [];
+  const allRows: any[] = blank ? [] : ((txns.data as any)?.rows ?? []);
   const txnServerNow: string | null = (txns.data as any)?.serverNow ?? null;
   const rows = useMemo(() => {
     const weekAgo = Date.now() - 7 * 86400_000;
@@ -1432,6 +1435,7 @@ export function EmployeeWorkView({
           isAdmin={isAdmin}
           {...(viewUserId ? { viewUserId } : {})}
           {...(viewShiftId ? { viewShiftId } : {})}
+          blank={blank}
           cards={[
             { card: "employee", title: "خاص بالموظف" },
             { card: "wrong", title: "المعاملات الغلط" },
@@ -1442,6 +1446,7 @@ export function EmployeeWorkView({
           isAdmin={isAdmin}
           {...(viewUserId ? { viewUserId } : {})}
           {...(viewShiftId ? { viewShiftId } : {})}
+          blank={blank}
           cards={[
             { card: "receive", title: "الاستلام من" },
             { card: "transfer", title: "التحويل الي" },
