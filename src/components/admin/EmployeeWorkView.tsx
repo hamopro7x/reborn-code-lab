@@ -1324,7 +1324,7 @@ export function EmployeeWorkView({
       {/* ---------------------------- Top bar ---------------------------- */}
 
       {viewing && name && (
-        <div className="flex flex-wrap items-center gap-3 mb-[1cm]">
+        <div className="flex flex-wrap items-center gap-3 mb-[1.4cm]">
 
           <div className="flex items-center gap-3 rounded-full border border-[oklch(0.55_0.14_255/0.55)] bg-[oklch(0.11_0.02_270)] px-4 py-2 shadow-[0_0_20px_-6px_oklch(0.55_0.14_255/0.45)]">
             <span className="text-sm font-black text-white/95">{name}</span>
