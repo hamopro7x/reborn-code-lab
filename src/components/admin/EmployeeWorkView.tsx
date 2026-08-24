@@ -1354,7 +1354,7 @@ export function EmployeeWorkView({
       )}
 
       <section className="mb-[2cm] space-y-4">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-[0.1cm]">
           {TOP_TABS.map((t) => {
             const Icon = t.icon;
             const active = tab === t.key;
@@ -1382,7 +1382,7 @@ export function EmployeeWorkView({
 
         {/* ----------- إيداع / سحب (نفس شكل القسم المركزي) ----------- */}
         {(tab === "ext" || tab === "int") && (
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-[0.1cm]">
             <FlowChip active={flow === "in"} onClick={() => setFlow("in")}>
               إيداع
             </FlowChip>
