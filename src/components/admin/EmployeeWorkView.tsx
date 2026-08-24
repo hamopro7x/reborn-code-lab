@@ -1675,7 +1675,10 @@ export function EmployeeWorkView({
           onDetails={setDetailRow}
           readOnly={viewing}
         />
+      ) : tab === "summary" ? (
+        <div className="data-surface min-h-[420px]" />
       ) : tab === "p2p" ? (
+
         <P2POrdersTable
           rows={(p2pCompleted.data ?? []) as any[]}
           loading={p2pCompleted.isLoading}
