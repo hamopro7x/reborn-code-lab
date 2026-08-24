@@ -1749,7 +1749,7 @@ export function EmployeeWorkView({
                             <ManualTxnCell row={r} field="amount" locked={locked} onSaved={refresh} />
                           </td>
                           <td className="tabular-nums">
-                            <ManualTxnCell row={r} field="egp" locked={false} onSaved={refresh} />
+                            <ManualTxnCell row={r} field="egp" locked={locked} onSaved={refresh} />
                           </td>
                           <td className="tabular-nums">
                             <ManualTxnCell row={r} field="quantity" locked={locked} onSaved={refresh} />
