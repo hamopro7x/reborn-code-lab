@@ -1744,19 +1744,13 @@ export function EmployeeWorkView({
                 <th>&nbsp;</th>
               </tr>
               <tr>
-
-                {COLUMNS.map((c) => {
-                  const Icon = c.icon;
-                  return (
-                    <th key={c.label}>
-                      <span className="flex items-center justify-center gap-1.5">
-                        <span>{c.label}</span>
-                        <Icon className="size-3.5 shrink-0 opacity-70" />
-                      </span>
-                    </th>
-                  );
-                })}
+                {COLUMNS.map((c) => (
+                  <th key={c.label}>
+                    <span>{c.label}</span>
+                  </th>
+                ))}
               </tr>
+
             </thead>
 
             <tbody>
