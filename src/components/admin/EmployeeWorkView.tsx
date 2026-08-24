@@ -1738,7 +1738,7 @@ export function EmployeeWorkView({
                   { label: "عدد المعاملات", value: summary.count.toLocaleString("en-US"), num: summary.count },
                   { label: "اجمالي مبلغ الدولار", value: summary.amount.toLocaleString("en-US"), num: summary.amount },
                   { label: "مصري", value: summary.egp.toLocaleString("en-US"), num: summary.egp },
-                  { label: "P2P", value: summary.p2p.toLocaleString("en-US"), num: summary.p2p },
+                  { label: "P2P", value: `EGP ${summary.p2pEgp.toLocaleString("en-US")} | USDT ${summary.p2pUsdt.toLocaleString("en-US")}`, num: summary.p2pEgp + summary.p2pUsdt },
                 ]
                   .filter((s) => s.num > 0)
                   .map((s) => (
