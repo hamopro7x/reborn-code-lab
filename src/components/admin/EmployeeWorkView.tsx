@@ -1778,6 +1778,13 @@ export function EmployeeWorkView({
       )}
 
       <TxnDetailsDialog row={detailRow} onClose={() => setDetailRow(null)} />
+      {!viewing && (
+        <ManualTxnDialog
+          open={manualOpen}
+          onClose={() => setManualOpen(false)}
+          onAdded={() => void manualCardQ.refetch()}
+        />
+      )}
     </div>
   );
 }
