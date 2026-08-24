@@ -1535,10 +1535,11 @@ export function EmployeeWorkView({
     return () => clearInterval(t);
   }, []);
   const clock = {
-    time: now.toLocaleTimeString("ar-EG", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+    time: now.toLocaleTimeString("en-GB", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" }),
     ampm: now.getHours() < 12 ? "صباحاً" : "مساء",
-    date: now.toLocaleDateString("ar-EG", { weekday: "long", day: "numeric", month: "long", year: "numeric" }),
+    date: `${AR_DAYS[now.getDay()]} ${now.toLocaleDateString("en-GB")}`,
   };
+
 
   return (
     <div dir="rtl" className="space-y-4">
