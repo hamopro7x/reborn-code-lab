@@ -1598,7 +1598,7 @@ export function EmployeeWorkView({
 
       <section className="space-y-4">
         <div className="flex flex-wrap items-center gap-[0.1cm]">
-          {TOP_TABS.map((t) => {
+          {TOP_TABS.filter((t) => t.key !== "summary" || isAdmin).map((t) => {
             const Icon = t.icon;
             const active = tab === t.key;
             return (
