@@ -1471,11 +1471,10 @@ export function EmployeeWorkView({
     const count = mergedRows.length;
     const amount = mergedRows.reduce((s, r: any) => s + Math.abs(n(r.amount)), 0);
     const egp = mergedRows.reduce((s, r: any) => s + Math.abs(n(r.egp)), 0);
-    const p2p = ((p2pCompleted.data ?? []) as any[]).reduce(
-      (s, r: any) => s + Math.abs(n(r.amount)),
-      0,
-    );
-    return { count, amount, egp, p2p };
+    const p2pRows = (p2pCompleted.data ?? []) as any[];
+    const p2pEgp = p2pRows.reduce((s, r: any) => s + Math.abs(n((r.detail ?? {}).fiatAmount)), 0);
+    const p2pUsdt = p2pRows.reduce((s, r: any) => s + Math.abs(n(r.amount)), 0);
+    return { count, amount, egp, p2pEgp, p2pUsdt };
   }, [mergedRows, p2pCompleted.data]);
 
 
