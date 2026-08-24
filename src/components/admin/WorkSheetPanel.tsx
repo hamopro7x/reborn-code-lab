@@ -330,9 +330,9 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
               قائمة الموظفين
             </button>
           </EmployeePickerMenu>
-          {isEmployees && selected && (
+          {isEmployees && (
             <ShiftPickerMenu
-              userId={selected.user_id}
+              userId={selected?.user_id ?? null}
               selectedId={selectedShift?.id ?? null}
               open={shiftOpen}
               onOpenChange={setShiftOpen}
@@ -351,23 +351,19 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
         {isEmployees ? (
           <div className="relative flex flex-1 p-4 md:p-6">
             <div className="min-w-0 flex-1">
-              {selected ? (
-                <EmployeeWorkView
-                  key={`${selected.user_id}:${selectedShift?.id ?? "live"}`}
-                  isAdmin
-                  viewUserId={selected.user_id}
-                  {...(selectedShift ? { viewShiftId: selectedShift.id } : {})}
-                  viewShift={selectedShift ?? undefined}
-                  viewName={selected.full_name || selected.email}
-                  viewAvatar={selected.avatar_signed_url || undefined}
-                />
-              ) : (
-                <div className="flex h-64 items-center justify-center rounded-xl border border-border/40 bg-[oklch(0.115_0_0)] text-sm text-white/50">
-                  اختر موظفًا من قائمة الموظفين
-                </div>
-              )}
+              <EmployeeWorkView
+                key={`${selected?.user_id ?? "none"}:${selectedShift?.id ?? "blank"}`}
+                isAdmin
+                blank={!selectedShift}
+                {...(selected ? { viewUserId: selected.user_id } : {})}
+                {...(selectedShift ? { viewShiftId: selectedShift.id } : {})}
+                viewShift={selectedShift ?? undefined}
+                viewName={selected ? selected.full_name || selected.email : undefined}
+                viewAvatar={selected?.avatar_signed_url || undefined}
+              />
             </div>
           </div>
+
 
         ) : (
           <>
