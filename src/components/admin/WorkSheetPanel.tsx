@@ -187,9 +187,20 @@ function ShiftPickerMenu({
                             : "bg-[#111] text-white/85 hover:bg-[#181818]"
                         }`}
                       >
-                        <div className="tabular-nums" dir="rtl">
-                          {fmt(sh.startedAt)} — {sh.endedAt ? fmt(sh.endedAt) : "شغّال الآن"}
-                        </div>
+                        {(() => {
+                          const start = fmtShift(sh.startedAt);
+                          const end = sh.endedAt ? fmtShift(sh.endedAt) : null;
+                          return (
+                            <div className="text-right text-xs font-bold" dir="rtl">
+                              <div>
+                                {start.day} — {start.date}
+                              </div>
+                              <div className="mt-0.5 text-[11px] font-normal text-white/80">
+                                {start.time} {end ? `إلى ${end.time}` : "إلى الآن"}
+                              </div>
+                            </div>
+                          );
+                        })()}
                         <div className="mt-1 text-[11px] font-normal text-white/55">
                           {sh.txns} معاملة
                           {sh.open ? " • مفتوح" : ""}
