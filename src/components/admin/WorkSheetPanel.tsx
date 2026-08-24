@@ -130,34 +130,40 @@ const fmtShift = (ms: number) => {
   return { day, date, time };
 };
 
-/** Sidebar يعرض شفتات الموظف المختار بنفس تصميم المرجع. */
-function ShiftSidebar({
+/** قائمة اختيار الشفت (Popover) بنفس تصميم كروت الشفتات الجديد. */
+function ShiftPickerMenu({
   userId,
   selectedId,
   onSelect,
+  open,
+  onOpenChange,
+  children,
 }: {
   userId: string | null;
   selectedId: string | null;
   onSelect: (shift: Shift) => void;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  children: React.ReactNode;
 }) {
   const listFn = useServerFn(getEmployeeShiftList);
   const q = useQuery({
     queryKey: ["admin-employee-shifts", userId],
     queryFn: () => listFn({ data: { userId: userId! } }) as Promise<Shift[]>,
-    enabled: !!userId,
+    enabled: !!userId && open,
   });
   const shifts = q.data ?? [];
 
-  if (!userId) {
-    return (
-      <aside className="w-[320px] shrink-0 rounded-xl border border-border/40 bg-[oklch(0.115_0_0)] p-4 text-center text-xs text-white/50">
-        اختر موظفًا لعرض شفتاته
-      </aside>
-    );
-  }
-
   return (
-    <aside className="sticky top-4 h-fit max-h-[calc(100vh-120px)] w-[320px] shrink-0 overflow-hidden rounded-xl border border-border/40 bg-[oklch(0.115_0_0)] p-3 shadow-2xl">
+    <Popover open={open} onOpenChange={onOpenChange}>
+      <PopoverTrigger asChild>{children}</PopoverTrigger>
+      <PopoverContent
+        dir="rtl"
+        align="center"
+        className="w-auto max-w-[92vw] border-0 bg-transparent p-0 shadow-none"
+      >
+        <div className="w-[420px] max-w-[92vw] overflow-hidden rounded-2xl border border-border/40 bg-[oklch(0.115_0_0)] p-3 shadow-2xl">
+
       {/* Header */}
       <div className="relative mb-3 overflow-hidden rounded-xl bg-[linear-gradient(180deg,#1636e6,#0a24c4)] px-3 py-2.5 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_2px_6px_rgba(0,0,0,0.55)]">
         <span className="text-sm font-black text-white">شفتات الموظف</span>
@@ -171,7 +177,7 @@ function ShiftSidebar({
       ) : shifts.length === 0 ? (
         <p className="py-6 text-center text-xs text-white/50">لا توجد شفتات</p>
       ) : (
-        <ul className="scrollbar-hide max-h-[calc(100vh-200px)] space-y-2 overflow-y-auto">
+        <ul className="scrollbar-hide max-h-[60vh] space-y-2 overflow-y-auto">
 
           {shifts.map((sh, i) => {
             const active = sh.id === selectedId;
@@ -246,9 +252,12 @@ function ShiftSidebar({
           })}
         </ul>
       )}
-    </aside>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
+
 
 
 
@@ -260,6 +269,8 @@ function ShiftSidebar({
 export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
   const [tab, setTab] = useState<TabKey>("sheet");
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [shiftOpen, setShiftOpen] = useState(false);
+
   const [selected, setSelected] = useState<Employee | null>(null);
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
   if (!isAdmin) return <EmployeeWorkView />;
@@ -319,11 +330,26 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
               قائمة الموظفين
             </button>
           </EmployeePickerMenu>
+          {isEmployees && selected && (
+            <ShiftPickerMenu
+              userId={selected.user_id}
+              selectedId={selectedShift?.id ?? null}
+              open={shiftOpen}
+              onOpenChange={setShiftOpen}
+              onSelect={(sh) => {
+                setSelectedShift(sh);
+                setShiftOpen(false);
+              }}
+            >
+              <button type="button" className={`${CHIP_BASE} ${selectedShift ? CHIP_ON : CHIP_OFF}`}>
+                اختيار الشفت
+              </button>
+            </ShiftPickerMenu>
+          )}
         </div>
 
         {isEmployees ? (
-          <div className="relative flex flex-1 gap-4 p-4 md:p-6">
-            {/* المحتوى الرئيسي */}
+          <div className="relative flex flex-1 p-4 md:p-6">
             <div className="min-w-0 flex-1">
               {selected ? (
                 <EmployeeWorkView
@@ -341,14 +367,8 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
                 </div>
               )}
             </div>
-
-            {/* الشريط الجانبي للشفتات */}
-            <ShiftSidebar
-              userId={selected?.user_id ?? null}
-              selectedId={selectedShift?.id ?? null}
-              onSelect={(sh) => setSelectedShift(sh)}
-            />
           </div>
+
         ) : (
           <>
             <div className="h-[57px]" />
