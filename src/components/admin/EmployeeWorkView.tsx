@@ -1132,6 +1132,7 @@ function ManualTxnDialog({
   const addFn = useServerFn(addMyManualCardTxn);
   const [merchant, setMerchant] = useState("");
   const [amount, setAmount] = useState("");
+  const [egp, setEgp] = useState("");
   const [quantity, setQuantity] = useState("");
   const [pan4, setPan4] = useState("");
   const [busy, setBusy] = useState(false);
@@ -1140,6 +1141,7 @@ function ManualTxnDialog({
     if (open) {
       setMerchant("");
       setAmount("");
+      setEgp("");
       setQuantity("");
       setPan4("");
     }
@@ -1148,7 +1150,8 @@ function ManualTxnDialog({
   const submit = async () => {
     setBusy(true);
     try {
-      const res: any = await addFn({ data: { merchant, amount, quantity, pan4 } });
+      const res: any = await addFn({ data: { merchant, amount, egp, quantity, pan4 } });
+
       if (!res?.ok) {
         toast.error(res?.error ?? "تعذّر إضافة المعاملة");
         return;
