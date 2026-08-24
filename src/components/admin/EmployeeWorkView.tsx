@@ -1010,6 +1010,7 @@ function ManualSection({
   cards,
   viewUserId,
   viewShiftId,
+  blank = false,
 }: {
   isAdmin: boolean;
   cards: [{ card: ManualKind; title: string }, { card: ManualKind; title: string }];
@@ -1017,6 +1018,8 @@ function ManualSection({
   viewUserId?: string;
   /** أدمن يشاهد شفتًا محددًا — سجل ذلك الشفت فقط (قراءة فقط). */
   viewShiftId?: string;
+  /** جدول فارغ تمامًا (الأدمن لم يختر شفتًا بعد). */
+  blank?: boolean;
 }) {
   const qc = useQueryClient();
   const listFn = useServerFn(getMyManualTxns);
