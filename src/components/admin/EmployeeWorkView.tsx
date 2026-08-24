@@ -1733,33 +1733,28 @@ export function EmployeeWorkView({
 
           <table className="data-table text-center">
             <thead>
-              <tr className={`summary-row ${isAdmin ? "admin-summary" : ""}`}>
-                {[
-                  { label: "عدد المعاملات", value: summary.count.toLocaleString("en-US"), num: summary.count },
-                  { label: "اجمالي مبلغ الدولار", value: summary.amount.toLocaleString("en-US"), num: summary.amount },
-                  { label: "مصري", value: summary.egp.toLocaleString("en-US"), num: summary.egp },
-                  { label: "P2P", value: `EGP ${summary.p2pEgp.toLocaleString("en-US")} | USDT ${summary.p2pUsdt.toLocaleString("en-US")}`, num: summary.p2pEgp + summary.p2pUsdt },
-                ]
-                  .filter((s) => s.num > 0)
-                  .map((s) => (
-                    <th key={s.label}>
-                      {isAdmin ? (
+              {isAdmin && (
+                <tr className="summary-row admin-summary">
+                  {[
+                    { label: "عدد المعاملات", value: summary.count.toLocaleString("en-US"), num: summary.count },
+                    { label: "اجمالي مبلغ الدولار", value: summary.amount.toLocaleString("en-US"), num: summary.amount },
+                    { label: "مصري", value: summary.egp.toLocaleString("en-US"), num: summary.egp },
+                    { label: "P2P", value: `EGP ${summary.p2pEgp.toLocaleString("en-US")} | USDT ${summary.p2pUsdt.toLocaleString("en-US")}`, num: summary.p2pEgp + summary.p2pUsdt },
+                  ]
+                    .filter((s) => s.num > 0)
+                    .map((s) => (
+                      <th key={s.label}>
                         <span className="summary-text">
                           <span className="text-white/70">{s.label}</span>
                           <span className="value">: {s.value}</span>
                         </span>
-                      ) : (
-                        <span className="summary-pill">
-                          <span className="text-white/70">{s.label}</span>
-                          <span className="value">{s.value}</span>
-                        </span>
-                      )}
-                    </th>
-                  ))}
-                <th>&nbsp;</th>
-                <th>&nbsp;</th>
-                <th>&nbsp;</th>
-              </tr>
+                      </th>
+                    ))}
+                  <th>&nbsp;</th>
+                  <th>&nbsp;</th>
+                  <th>&nbsp;</th>
+                </tr>
+              )}
               <tr>
                 {COLUMNS.map((c) => (
                   <th key={c.label}>
