@@ -114,13 +114,20 @@ type Shift = {
   txns: number;
 };
 
-const fmt = (ms: number) =>
-  new Date(ms).toLocaleString("ar-EG", {
-    day: "2-digit",
-    month: "2-digit",
+const fmtShift = (ms: number) => {
+  const d = new Date(ms);
+  const day = d.toLocaleDateString("ar-EG", { weekday: "long" });
+  const date = d.toLocaleDateString("ar-EG", {
+    day: "numeric",
+    month: "numeric",
+    year: "numeric",
+  });
+  const time = d.toLocaleTimeString("ar-EG", {
     hour: "2-digit",
     minute: "2-digit",
   });
+  return { day, date, time };
+};
 
 /** قائمة اختيار الشفت — بنفس أسلوب قائمة الموظفين (Popover). */
 function ShiftPickerMenu({
@@ -180,9 +187,20 @@ function ShiftPickerMenu({
                             : "bg-[#111] text-white/85 hover:bg-[#181818]"
                         }`}
                       >
-                        <div className="tabular-nums" dir="rtl">
-                          {fmt(sh.startedAt)} — {sh.endedAt ? fmt(sh.endedAt) : "شغّال الآن"}
-                        </div>
+                        {(() => {
+                          const start = fmtShift(sh.startedAt);
+                          const end = sh.endedAt ? fmtShift(sh.endedAt) : null;
+                          return (
+                            <div className="text-right text-xs font-bold" dir="rtl">
+                              <div>
+                                {start.day} — {start.date}
+                              </div>
+                              <div className="mt-0.5 text-[11px] font-normal text-white/80">
+                                {start.time} {end ? `إلى ${end.time}` : "إلى الآن"}
+                              </div>
+                            </div>
+                          );
+                        })()}
                         <div className="mt-1 text-[11px] font-normal text-white/55">
                           {sh.txns} معاملة
                           {sh.open ? " • مفتوح" : ""}
