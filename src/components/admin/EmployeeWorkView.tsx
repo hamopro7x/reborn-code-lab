@@ -131,6 +131,18 @@ const AR_MONTHS = [
 ];
 const AR_DAYS = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
 
+function fmtShiftDate(ts: number) {
+  const d = new Date(ts);
+  const p = (n: number) => String(n).padStart(2, "0");
+  const h24 = d.getHours();
+  const h = ((h24 + 11) % 12) || 12;
+  return {
+    day: AR_DAYS[d.getDay()],
+    date: `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`,
+    time: `${p(h)}:${p(d.getMinutes())} ${h24 < 12 ? "ص" : "م"}`,
+  };
+}
+
 
 const P2P_COLUMNS = [
   "النوع",
@@ -1101,6 +1113,7 @@ export function EmployeeWorkView({
   isAdmin = false,
   viewUserId,
   viewShiftId,
+  viewShift,
   viewName,
   viewAvatar,
 }: {
@@ -1108,6 +1121,8 @@ export function EmployeeWorkView({
   viewUserId?: string;
   /** أدمن اختار شفتًا محددًا → سجل ذلك الشفت فقط (قراءة). */
   viewShiftId?: string;
+  /** بيانات الشفت المختار (للعرض فقط بجانب هوية الموظف). */
+  viewShift?: { id: string; startedAt: number; endedAt: number | null; open: boolean; txns: number };
   viewName?: string;
   viewAvatar?: string;
 }) {
@@ -1312,6 +1327,29 @@ export function EmployeeWorkView({
               )}
             </span>
           </div>
+
+          {viewShift && (
+            <div className="flex items-center gap-3 rounded-full border border-[oklch(0.55_0.14_255/0.55)] bg-[oklch(0.11_0.02_270)] px-4 py-2 shadow-[0_0_20px_-6px_oklch(0.55_0.14_255/0.45)]">
+              <div className="flex flex-col gap-0.5 text-right">
+                <span className="text-[10px] font-bold text-white/60">الشفت</span>
+                <span className="text-xs font-black text-white/95">
+                  {(() => {
+                    const start = fmtShiftDate(viewShift.startedAt);
+                    if (viewShift.endedAt) {
+                      const end = fmtShiftDate(viewShift.endedAt);
+                      return `${start.day} ${start.date} ${start.time} → ${end.day} ${end.date} ${end.time}`;
+                    }
+                    return `${start.day} ${start.date} ${start.time} — شغّال الآن`;
+                  })()}
+                </span>
+              </div>
+              <span
+                className={`inline-flex size-2.5 rounded-full ${
+                  viewShift.open ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" : "bg-blue-400"
+                }`}
+              />
+            </div>
+          )}
         </div>
       )}
 
