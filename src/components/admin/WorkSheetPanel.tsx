@@ -271,14 +271,25 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
             </button>
           </EmployeePickerMenu>
           {isEmployees && selected && (
-            <button
-              type="button"
-              onClick={() => setShiftPickerOpen(true)}
-              className={`${CHIP_BASE} ${shiftPickerOpen || selectedShift ? CHIP_ON : CHIP_OFF}`}
+            <ShiftPickerMenu
+              open={shiftPickerOpen}
+              onOpenChange={setShiftPickerOpen}
+              userId={selected.user_id}
+              selectedId={selectedShift?.id ?? null}
+              onSelect={(sh) => {
+                setSelectedShift(sh);
+                setShiftPickerOpen(false);
+              }}
             >
-              اختيار الشفت
-            </button>
+              <button
+                type="button"
+                className={`${CHIP_BASE} ${shiftPickerOpen || selectedShift ? CHIP_ON : CHIP_OFF}`}
+              >
+                اختيار الشفت
+              </button>
+            </ShiftPickerMenu>
           )}
+
         </div>
 
         {isEmployees ? (
