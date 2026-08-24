@@ -1101,6 +1101,7 @@ export function EmployeeWorkView({
   isAdmin = false,
   viewUserId,
   viewShiftId,
+  viewShift,
   viewName,
   viewAvatar,
 }: {
@@ -1108,6 +1109,8 @@ export function EmployeeWorkView({
   viewUserId?: string;
   /** أدمن اختار شفتًا محددًا → سجل ذلك الشفت فقط (قراءة). */
   viewShiftId?: string;
+  /** بيانات الشفت المختار (للعرض فقط بجانب هوية الموظف). */
+  viewShift?: { id: string; startedAt: number; endedAt: number | null; open: boolean; txns: number };
   viewName?: string;
   viewAvatar?: string;
 }) {
