@@ -177,7 +177,7 @@ function ShiftPickerMenu({
       ) : shifts.length === 0 ? (
         <p className="py-6 text-center text-xs text-white/50">لا توجد شفتات</p>
       ) : (
-        <ul className="scrollbar-hide max-h-[calc(100vh-200px)] space-y-2 overflow-y-auto">
+        <ul className="scrollbar-hide max-h-[60vh] space-y-2 overflow-y-auto">
 
           {shifts.map((sh, i) => {
             const active = sh.id === selectedId;
