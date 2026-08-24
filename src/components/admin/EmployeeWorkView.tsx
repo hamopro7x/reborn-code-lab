@@ -931,6 +931,22 @@ function ManualCard({
   isAdmin: boolean;
   readOnly?: boolean;
 }) {
+  const totalAmount = useMemo(() => {
+    return rows.reduce((sum, r) => {
+      const latin = String(r.amount ?? "")
+        .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+        .replace(/[\u06f0-\u06f9]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
+        .replace(/[\u066b\u060c,]/g, ".")
+        .replace(/[^\d.]/g, "");
+      const [head, ...rest] = latin.split(".");
+      const normalized = rest.length ? `${head}.${rest.join("")}` : head ?? "";
+      const n = parseFloat(normalized);
+      return Number.isFinite(n) ? sum + n : sum;
+    }, 0);
+  }, [rows]);
+
+  const totalCount = rows.length;
+
   return (
     <div className="data-surface">
       <div className="data-table-head relative flex items-center justify-center px-3 py-3">
@@ -971,6 +987,23 @@ function ManualCard({
       <div className="max-h-[520px] min-h-[520px] overflow-y-auto overflow-x-hidden scrollbar-hide">
         <table className="data-table text-center">
           <thead className="sticky top-0 z-10">
+            {isAdmin && (
+              <tr className="summary-row admin-summary">
+                <th className="w-[24%]">
+                  <span className="summary-text">
+                    <span className="text-white/90">إجمالي المبلغ</span>
+                    <span className="value">: {totalAmount.toLocaleString("en-US")}</span>
+                  </span>
+                </th>
+                <th>
+                  <span className="summary-text">
+                    <span className="text-white/90">إجمالي المعاملات</span>
+                    <span className="value">: {totalCount.toLocaleString("en-US")}</span>
+                  </span>
+                </th>
+                <th className="w-[34%]">&nbsp;</th>
+              </tr>
+            )}
             <tr>
               <th className="w-[24%]">المبلغ</th>
               <th>التفاصيل</th>
