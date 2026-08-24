@@ -1030,7 +1030,7 @@ function ManualSection({
   const [adding, setAdding] = useState<ManualKind | null>(null);
   const [clearing, setClearing] = useState<ManualKind | null>(null);
   const [newestId, setNewestId] = useState<string | null>(null);
-  const readOnly = !!viewUserId || !!viewShiftId;
+  const readOnly = !!viewUserId || !!viewShiftId || blank;
   const listKey = viewShiftId
     ? ["shift-manual-txns", viewShiftId]
     : viewUserId
@@ -1045,11 +1045,12 @@ function ManualSection({
         : viewUserId
           ? empListFn({ data: { userId: viewUserId } })
           : listFn({ data: undefined as any }),
+    enabled: !blank,
     // Always re-read the stored rows when the section is opened again.
     staleTime: 0,
     refetchOnMount: "always",
   });
-  const all = (q.data as any)?.rows ?? [];
+  const all = blank ? [] : ((q.data as any)?.rows ?? []);
   const serverNow = (q.data as any)?.serverNow ?? null;
   const refresh = () => void qc.invalidateQueries({ queryKey: listKey });
 
