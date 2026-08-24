@@ -1588,13 +1588,13 @@ export function EmployeeWorkView({
       {/* ---------------------------- Top bar ---------------------------- */}
 
       {viewing && (
-        <div className="flex h-[92px] max-h-[92px] min-h-[92px] flex-nowrap items-center gap-3 overflow-hidden mb-[17px]">
+          <div className="flex h-[92px] max-h-[92px] min-h-[92px] flex-nowrap items-center gap-3 overflow-hidden mb-[17px]">
 
-          <div className="grid size-14 shrink-0 place-items-center overflow-hidden rounded-full border border-[oklch(0.55_0.14_255/0.55)] bg-[oklch(0.11_0.02_270)] shadow-[0_0_20px_-6px_oklch(0.55_0.14_255/0.45)]">
+          <div className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-full border border-[oklch(0.55_0.14_255/0.55)] bg-[oklch(0.11_0.02_270)] shadow-[0_0_20px_-6px_oklch(0.55_0.14_255/0.45)]">
             {avatar ? (
               <img src={avatar} alt={name} className="size-full object-cover" />
             ) : (
-              <User className="size-6 text-white/70" />
+              <User className="size-7 text-white/70" />
             )}
           </div>
 
