@@ -68,6 +68,7 @@ import {
   getShiftTransfers,
   getShiftP2P,
   getMyShiftP2P,
+  getEmployeeArchive,
 
   getMyAvatarUrl,
 } from "@/lib/work.functions";
@@ -1922,7 +1923,13 @@ export function EmployeeWorkView({
           readOnly={viewing}
         />
       ) : tab === "summary" ? (
-        <div className="data-surface min-h-[420px]" />
+        viewUserId ? (
+          <ShiftArchive userId={viewUserId} brands={brands} onDetails={setDetailRow} />
+        ) : (
+          <div className="data-surface grid min-h-[420px] place-items-center text-xs text-muted-foreground">
+            اختر موظفًا لعرض ملخص جميع شفتاته.
+          </div>
+        )
       ) : tab === "p2p" ? (
 
         <P2POrdersTable
