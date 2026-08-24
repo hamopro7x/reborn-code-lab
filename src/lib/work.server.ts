@@ -1441,9 +1441,10 @@ export async function saveManualTxn(
   } else {
     patch = { details: value };
   }
-  // Only a real value starts the edit window; clearing a cell resets it.
+  // الطابع الزمني للحفظ يُحدَّث مع كل تعديل؛ الغلق يعتمد على created_at فقط.
   const hasValue = field === "amount" ? patch["amount"] !== null : String(value).trim() !== "";
-  patch[stampCol] = hasValue ? (prevStamp ?? savedAt) : null;
+  patch[stampCol] = hasValue ? savedAt : null;
+
 
   const { error } = await db.from("work_manual_txns").update(patch).eq("id", id).eq("user_id", userId);
   if (error) return { ok: false as const, error: error.message };
