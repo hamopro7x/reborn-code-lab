@@ -1324,7 +1324,7 @@ export function EmployeeWorkView({
       {/* ---------------------------- Top bar ---------------------------- */}
 
       {viewing && (
-        <div className="flex min-h-14 flex-wrap items-center gap-3 mb-[1.4cm]">
+        <div className="flex h-[92px] max-h-[92px] min-h-[92px] flex-nowrap items-center gap-3 overflow-hidden mb-[17px]">
 
           {name && (
             <div className="flex h-14 items-center gap-3 rounded-full border border-[oklch(0.55_0.14_255/0.55)] bg-[oklch(0.11_0.02_270)] px-4 py-2 shadow-[0_0_20px_-6px_oklch(0.55_0.14_255/0.45)]">
