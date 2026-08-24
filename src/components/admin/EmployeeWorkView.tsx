@@ -1286,7 +1286,7 @@ function ShiftArchive({
   brands: Record<string, string>;
   onDetails: (row: any) => void;
 }) {
-  const [sub, setSub] = useState<ArchiveTabKey>("txns");
+  const [sub, setSub] = useState<ArchiveTabKey>("employee");
   const archiveFn = useServerFn(getEmployeeArchive);
 
   const q = useQuery({
@@ -1304,12 +1304,8 @@ function ShiftArchive({
   }
 
   const d = (q.data ?? {}) as any;
-  const txns: any[] = d.txns ?? [];
-  const ext: any[] = d.ext ?? [];
-  const int: any[] = d.int ?? [];
   const manualRows: any[] = d.manual?.rows ?? [];
   const manualNow: string | null = d.manual?.serverNow ?? null;
-  const p2p: any[] = d.p2p ?? [];
 
   const manualCard = (card: ManualKind, title: string) => (
     <ManualCard
@@ -1350,29 +1346,10 @@ function ShiftArchive({
         })}
       </div>
 
-      {sub === "txns" ? (
-        <ArchiveTxnsTable rows={txns} brands={brands} onDetails={onDetails} />
-      ) : sub === "ext" ? (
-        <div className="space-y-4">
-          <TransfersTable rows={ext.filter((r) => r.direction === "in")} onDetails={onDetails} readOnly />
-          <TransfersTable rows={ext.filter((r) => r.direction === "out")} onDetails={onDetails} noteColumn readOnly />
-        </div>
-      ) : sub === "int" ? (
-        <div className="space-y-4">
-          <TransfersTable rows={int.filter((r) => r.direction === "in")} onDetails={onDetails} readOnly />
-          <TransfersTable rows={int.filter((r) => r.direction === "out")} onDetails={onDetails} readOnly />
-        </div>
-      ) : sub === "employee" ? (
+      {sub === "employee" ? (
         manualCard("employee", "خاص بالموظف")
-      ) : sub === "wrong" ? (
-        manualCard("wrong", "المعاملات الغلط")
-      ) : sub === "transfers" ? (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {manualCard("receive", "الاستلام من")}
-          {manualCard("transfer", "التحويل الي")}
-        </div>
       ) : (
-        <P2POrdersTable rows={p2p} onDetails={onDetails} readOnly />
+        manualCard("wrong", "المعاملات الغلط")
       )}
     </div>
   );
