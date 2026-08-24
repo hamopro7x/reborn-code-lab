@@ -206,10 +206,12 @@
 /* ===== Unified data tables (Admin + Employee dashboards only) ===== */
 .data-surface {
   background-color: oklch(0.115 0 0);
-  border: 1px solid oklch(0.3 0 0 / 0.7);
+  border: 1.5px solid oklch(0.45 0.03 264 / 0.85);
   border-radius: 1rem;
   overflow: hidden;
+  box-shadow: 0 0 0 1px oklch(0 0 0 / 0.6), 0 10px 28px -18px oklch(0 0 0 / 0.9);
 }
+
 .data-table {
   width: 100%;
   border-collapse: collapse;
