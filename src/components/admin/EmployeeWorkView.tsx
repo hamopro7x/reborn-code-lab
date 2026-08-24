@@ -1291,7 +1291,9 @@ function ShiftArchive({
   brands: Record<string, string>;
   onDetails: (row: any) => void;
 }) {
+  const [sub, setSub] = useState<ArchiveTabKey>("txns");
   const archiveFn = useServerFn(getEmployeeArchive);
+
   const q = useQuery({
     queryKey: ["emp-archive", userId],
     queryFn: () => archiveFn({ data: { userId } }),
