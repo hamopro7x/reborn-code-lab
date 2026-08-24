@@ -114,13 +114,20 @@ type Shift = {
   txns: number;
 };
 
-const fmt = (ms: number) =>
-  new Date(ms).toLocaleString("ar-EG", {
-    day: "2-digit",
-    month: "2-digit",
+const fmtShift = (ms: number) => {
+  const d = new Date(ms);
+  const day = d.toLocaleDateString("ar-EG", { weekday: "long" });
+  const date = d.toLocaleDateString("ar-EG", {
+    day: "numeric",
+    month: "numeric",
+    year: "numeric",
+  });
+  const time = d.toLocaleTimeString("ar-EG", {
     hour: "2-digit",
     minute: "2-digit",
   });
+  return { day, date, time };
+};
 
 /** قائمة اختيار الشفت — بنفس أسلوب قائمة الموظفين (Popover). */
 function ShiftPickerMenu({
