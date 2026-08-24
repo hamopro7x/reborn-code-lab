@@ -157,7 +157,7 @@ function ShiftSidebar({
   }
 
   return (
-    <aside className="w-[320px] shrink-0 rounded-xl border border-border/40 bg-[oklch(0.115_0_0)] p-3 shadow-2xl">
+    <aside className="sticky top-4 h-fit max-h-[calc(100vh-120px)] w-[320px] shrink-0 overflow-hidden rounded-xl border border-border/40 bg-[oklch(0.115_0_0)] p-3 shadow-2xl">
       {/* Header */}
       <div className="relative mb-3 overflow-hidden rounded-xl bg-[linear-gradient(180deg,#1636e6,#0a24c4)] px-3 py-2.5 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_2px_6px_rgba(0,0,0,0.55)]">
         <span className="text-sm font-black text-white">شفتات الموظف</span>
@@ -171,7 +171,8 @@ function ShiftSidebar({
       ) : shifts.length === 0 ? (
         <p className="py-6 text-center text-xs text-white/50">لا توجد شفتات</p>
       ) : (
-        <ul className="space-y-2">
+        <ul className="scrollbar-hide max-h-[calc(100vh-200px)] space-y-2 overflow-y-auto">
+
           {shifts.map((sh, i) => {
             const active = sh.id === selectedId;
             const start = fmtShift(sh.startedAt);
