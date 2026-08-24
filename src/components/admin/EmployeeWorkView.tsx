@@ -1132,6 +1132,7 @@ function ManualTxnDialog({
   const addFn = useServerFn(addMyManualCardTxn);
   const [merchant, setMerchant] = useState("");
   const [amount, setAmount] = useState("");
+  const [egp, setEgp] = useState("");
   const [quantity, setQuantity] = useState("");
   const [pan4, setPan4] = useState("");
   const [busy, setBusy] = useState(false);
@@ -1140,6 +1141,7 @@ function ManualTxnDialog({
     if (open) {
       setMerchant("");
       setAmount("");
+      setEgp("");
       setQuantity("");
       setPan4("");
     }
@@ -1148,7 +1150,8 @@ function ManualTxnDialog({
   const submit = async () => {
     setBusy(true);
     try {
-      const res: any = await addFn({ data: { merchant, amount, quantity, pan4 } });
+      const res: any = await addFn({ data: { merchant, amount, egp, quantity, pan4 } });
+
       if (!res?.ok) {
         toast.error(res?.error ?? "تعذّر إضافة المعاملة");
         return;
@@ -1179,21 +1182,27 @@ function ManualTxnDialog({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <div className="mb-1 text-[11px] font-bold text-muted-foreground">إجمالي المبلغ (جنية)</div>
+              <div className="mb-1 text-[11px] font-bold text-muted-foreground">إجمالي الذي قمت بدفعه</div>
               <input className={field} value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" />
             </div>
             <div>
-              <div className="mb-1 text-[11px] font-bold text-muted-foreground">الكمية</div>
-              <input
-                className={field}
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
-                inputMode="decimal"
-              />
+              <div className="mb-1 text-[11px] font-bold text-muted-foreground">المبلغ الذي استلمته من العميل</div>
+              <input className={field} value={egp} onChange={(e) => setEgp(e.target.value)} inputMode="decimal" />
             </div>
           </div>
           <div>
-            <div className="mb-1 text-[11px] font-bold text-muted-foreground">آخر 4 أرقام للبطاقة</div>
+            <div className="mb-1 text-[11px] font-bold text-muted-foreground">الكمية</div>
+            <input
+              className={field}
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+              inputMode="decimal"
+            />
+          </div>
+          <div>
+            <div className="mb-1 text-[11px] font-bold text-muted-foreground">
+              آخر 4 أرقام للبطاقة - أو طريقة الدفع التي دفعت من خلالها
+            </div>
             {/* خانة حرة: أرقام/حروف/رموز/مسافات */}
             <input className={field} type="text" value={pan4} onChange={(e) => setPan4(e.target.value)} />
           </div>

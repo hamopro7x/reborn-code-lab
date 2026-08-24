@@ -1,0 +1,1 @@
+ALTER TABLE public.work_manual_card_txns ADD COLUMN IF NOT EXISTS egp numeric;
