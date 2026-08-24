@@ -312,12 +312,13 @@
   align-items: center;
   justify-content: flex-start;
   gap: 0.45rem;
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 800;
   color: oklch(0.99 0 0);
   white-space: nowrap;
   text-shadow: 0 1px 2px oklch(0 0 0 / 0.5);
 }
+
 .summary-row.admin-summary .summary-text .value {
   color: #ffffff;
   font-weight: 800;
