@@ -191,19 +191,50 @@ function ShiftPickerMenu({
                           const start = fmtShift(sh.startedAt);
                           const end = sh.endedAt ? fmtShift(sh.endedAt) : null;
                           return (
-                            <div className="text-right text-xs font-bold" dir="rtl">
-                              <div>
-                                {start.day} — {start.date}
+                            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-right" dir="rtl">
+                              {/* بداية الشفت */}
+                              <div className="flex flex-col items-end">
+                                <span className="text-[11px] font-bold text-white/90">
+                                  {start.day}
+                                </span>
+                                <span className="text-[11px] text-white/70">
+                                  {start.date}
+                                </span>
+                                <span className="mt-0.5 text-xs font-bold text-blue-300">
+                                  {start.time}
+                                </span>
                               </div>
-                              <div className="mt-0.5 text-[11px] font-normal text-white/80">
-                                {start.time} {end ? `إلى ${end.time}` : "إلى الآن"}
+
+                              {/* إلى */}
+                              <div className="flex flex-col items-center gap-1 self-stretch justify-center">
+                                <span className="text-[10px] font-bold text-white/50">إلى</span>
+                                <div className="h-8 w-px bg-white/10" />
+                              </div>
+
+                              {/* نهاية الشفت */}
+                              <div className="flex flex-col items-start">
+                                {end ? (
+                                  <>
+                                    <span className="text-[11px] font-bold text-white/90">
+                                      {end.day}
+                                    </span>
+                                    <span className="text-[11px] text-white/70">
+                                      {end.date}
+                                    </span>
+                                    <span className="mt-0.5 text-xs font-bold text-blue-300">
+                                      {end.time}
+                                    </span>
+                                  </>
+                                ) : (
+                                  <span className="text-xs font-bold text-emerald-400">شغّال الآن</span>
+                                )}
                               </div>
                             </div>
                           );
                         })()}
-                        <div className="mt-1 text-[11px] font-normal text-white/55">
-                          {sh.txns} معاملة
-                          {sh.open ? " • مفتوح" : ""}
+                        <div className="mt-2 flex items-center justify-between border-t border-white/5 pt-1.5 text-[11px] font-normal text-white/55">
+                          <span>{sh.txns} معاملة</span>
+                          {sh.open && <span className="text-emerald-400">• مفتوح</span>}
                         </div>
                       </button>
                     </li>
