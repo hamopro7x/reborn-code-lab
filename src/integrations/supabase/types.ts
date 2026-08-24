@@ -1417,6 +1417,50 @@ export type Database = {
         }
         Relationships: []
       }
+      work_manual_card_txns: {
+        Row: {
+          amount: number | null
+          created_at: string
+          id: string
+          merchant: string
+          pan4: string | null
+          quantity: number | null
+          shift_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string
+          id?: string
+          merchant?: string
+          pan4?: string | null
+          quantity?: number | null
+          shift_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string
+          id?: string
+          merchant?: string
+          pan4?: string | null
+          quantity?: number | null
+          shift_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_manual_card_txns_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "work_shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       work_manual_txns: {
         Row: {
           amount: number | null
