@@ -1669,15 +1669,20 @@ export async function shiftManualTxns(shiftId: string) {
   return listManualTxns(userId, shiftId);
 }
 
-/** الإيداع والسحب الخارجي / الداخلي المرتبط بشفت معيّن (نفس شكل صفوف الموظف). */
-export async function shiftTransfers(shiftId: string, scope: "external" | "internal") {
+/** الإيداع والسحب الخارجي / الداخلي — بحسب شفت واحد أو كل شفتات موظف. */
+async function transfersByAssignment(
+  where: { shiftId?: string; userId?: string },
+  scope: "external" | "internal",
+) {
   const db = await admin();
-  const { data } = await db
+  let q: any = db
     .from("work_txn_assignments")
     .select("id, ledger_id, bybit_ledger!inner(*)")
-    .eq("shift_id", shiftId)
     .in("bybit_ledger.kind", TRANSFER_KINDS[scope] as unknown as string[])
     .in("bybit_ledger.status", SUCCESS_STATUSES as unknown as string[]);
+  if (where.shiftId) q = q.eq("shift_id", where.shiftId);
+  if (where.userId) q = q.eq("user_id", where.userId);
+  const { data } = await q;
 
   const accounts = await accountNames(db);
   const seen = new Set<string>();
@@ -1722,38 +1727,54 @@ export async function shiftTransfers(shiftId: string, scope: "external" | "inter
   return out;
 }
 
+/** الإيداع والسحب الخارجي / الداخلي المرتبط بشفت معيّن (نفس شكل صفوف الموظف). */
+export async function shiftTransfers(shiftId: string, scope: "external" | "internal") {
+  return transfersByAssignment({ shiftId }, scope);
+}
+
 /**
- * طلبات P2P المرتبطة بشفت معيّن — المرجع هو الربط الفعلي (shift_id) وليس وقت
- * وصول الطلب، فيظل الطلب داخل شفته حتى لو تم ربطه بعد إغلاق الشفت.
+ * طلبات P2P المرتبطة بشفت معيّن أو بكل شفتات موظف — المرجع هو الربط الفعلي
+ * (shift_id/user_id) وليس وقت وصول الطلب.
  */
-export async function shiftP2P(shiftId: string) {
+async function p2pByAssignment(where: { shiftId?: string; userId?: string }) {
   const db = await admin();
-  const { data } = await db
+  let q: any = db
     .from("work_txn_assignments")
     .select("id, ledger_id, bybit_ledger!inner(*)")
-    .eq("shift_id", shiftId)
     .in("bybit_ledger.kind", P2P_KINDS);
+  if (where.shiftId) q = q.eq("shift_id", where.shiftId);
+  if (where.userId) q = q.eq("user_id", where.userId);
+  const { data } = await q;
 
   const accounts = await accountNames(db);
-  return ((data ?? []) as any[])
-    .map((a) => {
-      const r = a.bybit_ledger ?? {};
-      return {
-        assignmentId: String(a.id),
-        ledgerId: String(r.id ?? a.ledger_id),
-        kind: String(r.kind ?? ""),
-        refId: String(r.ref_id ?? ""),
-        title: String(r.title ?? "—"),
-        amount: Number(r.amount ?? 0),
-        currency: r.currency ?? "USDT",
-        status: String(r.status ?? ""),
-        time: r.occurred_at ? new Date(r.occurred_at).getTime() : 0,
-        accountName: accounts.get(r.account_id) ?? "—",
-        detail: (r.detail ?? {}) as Record<string, string | number | boolean | null>,
-      };
-    })
-    .sort((a, b) => b.time - a.time);
+  const seen = new Set<string>();
+  const out: any[] = [];
+  for (const a of (data ?? []) as any[]) {
+    const r = a.bybit_ledger ?? {};
+    const id = String(r.id ?? a.ledger_id);
+    if (seen.has(id)) continue;
+    seen.add(id);
+    out.push({
+      assignmentId: String(a.id),
+      ledgerId: id,
+      kind: String(r.kind ?? ""),
+      refId: String(r.ref_id ?? ""),
+      title: String(r.title ?? "—"),
+      amount: Number(r.amount ?? 0),
+      currency: r.currency ?? "USDT",
+      status: String(r.status ?? ""),
+      time: r.occurred_at ? new Date(r.occurred_at).getTime() : 0,
+      accountName: accounts.get(r.account_id) ?? "—",
+      detail: (r.detail ?? {}) as Record<string, string | number | boolean | null>,
+    });
+  }
+  return out.sort((a, b) => b.time - a.time);
 }
+
+export async function shiftP2P(shiftId: string) {
+  return p2pByAssignment({ shiftId });
+}
+
 
 /** طلبات P2P المرتبطة بالشفت المفتوح للموظف الحالي فقط. */
 export async function myShiftP2P(userId: string) {
