@@ -1406,24 +1406,25 @@ export async function saveManualTxn(
 
   const { data: row } = await db
     .from("work_manual_txns")
-    .select("id,amount,details,amount_saved_at,details_saved_at")
+    .select("id,amount,details,created_at,amount_saved_at,details_saved_at")
     .eq("id", id)
     .eq("user_id", userId)
     .maybeSingle();
   if (!row) return { ok: false as const, error: "الصف غير موجود" };
 
-  // 10-minute edit window enforced on the SERVER clock, never the client's.
-  const prevStamp = (row as any)[stampCol] as string | null;
+  // نافذة التعديل = 5 دقائق من created_at المحفوظ في قاعدة البيانات (ساعة السيرفر).
+  const createdAt = (row as any).created_at as string;
   const now = new Date();
-  if (prevStamp && now.getTime() - new Date(prevStamp).getTime() >= EDIT_WINDOW_MS) {
+  if (now.getTime() - new Date(createdAt).getTime() >= EDIT_WINDOW_MS) {
     return {
       ok: false as const,
-      error: "انتهت مدة التعديل المسموحة لهذه القيمة.",
+      error: "انتهت مدة التعديل المسموحة لهذه المعاملة.",
       locked: true as const,
-      savedAt: prevStamp,
+      savedAt: createdAt,
       serverNow: now.toISOString(),
     };
   }
+
 
   const savedAt = now.toISOString();
   let patch: Record<string, unknown>;
