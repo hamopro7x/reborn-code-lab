@@ -1935,7 +1935,7 @@ export function EmployeeWorkView({
         />
       ) : tab === "summary" ? (
         viewUserId ? (
-          <ShiftArchive userId={viewUserId} brands={brands} onDetails={setDetailRow} />
+          <ShiftArchive userId={viewUserId} />
         ) : (
           <div className="data-surface grid min-h-[420px] place-items-center text-xs text-muted-foreground">
             اختر موظفًا لعرض ملخص جميع شفتاته.
