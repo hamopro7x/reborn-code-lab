@@ -1818,7 +1818,7 @@ export async function employeeArchive(userId: string) {
       const k = String(r.ledgerId);
       if (seenLedger.has(k)) return false;
       seenLedger.add(k);
-      return CARD_KINDS.includes(String(r.kind) as never);
+      return /^(card|refund)$/i.test(String(r.kind ?? ""));
     })
     .map((r) => {
       const e = entries.get(r.ledgerId);
