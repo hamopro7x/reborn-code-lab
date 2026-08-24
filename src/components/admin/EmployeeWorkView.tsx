@@ -1277,15 +1277,7 @@ function ArchiveTxnsTable({
   );
 }
 
-function ShiftArchive({
-  userId,
-  brands,
-  onDetails,
-}: {
-  userId: string;
-  brands: Record<string, string>;
-  onDetails: (row: any) => void;
-}) {
+function ShiftArchive({ userId }: { userId: string }) {
   const [sub, setSub] = useState<ArchiveTabKey>("employee");
   const archiveFn = useServerFn(getEmployeeArchive);
 
