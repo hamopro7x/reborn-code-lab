@@ -37,6 +37,7 @@ import {
 
 } from "lucide-react";
 import { toast } from "sonner";
+import { MerchantLogo } from "./MerchantLogo";
 import { formatDateTime } from "@/lib/format";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -83,7 +84,7 @@ const TOP_TABS: { key: TabKey; label: string; icon: typeof ListOrdered }[] = [
   { key: "int", label: "الإيداع والسحب الداخلي", icon: ArrowLeftRight },
   { key: "wrong", label: "المعاملات الغلط والخاص بالموظف", icon: AlertTriangle },
   { key: "transfers", label: "الاستلم من والتحويل الي", icon: ArrowLeftRight },
-  { key: "p2p", label: "طليات P2P", icon: Users },
+  { key: "p2p", label: "طلبات p2p", icon: Users },
 ];
 
 
@@ -740,7 +741,7 @@ function EntryCell({
         onKeyDown={(e) => {
           if (e.key === "Enter") (e.target as HTMLInputElement).blur();
         }}
-        className="h-8 w-20 rounded-lg border border-border/60 bg-background/60 px-2 text-center text-xs tabular-nums outline-none focus:border-[oklch(0.62_0.18_250)]"
+        className="h-8 w-20 border-0 bg-transparent px-2 text-center text-xs tabular-nums outline-none focus:bg-white/5"
       />
       {busy ? <Loader2 className="size-3 animate-spin text-muted-foreground" /> : null}
     </div>
@@ -1233,7 +1234,7 @@ function ManualTxnCell({
   onSaved,
 }: {
   row: any;
-  field: "merchant" | "amount" | "quantity" | "pan4";
+  field: "merchant" | "amount" | "egp" | "quantity" | "pan4";
   locked: boolean;
   onSaved: () => void;
 }) {
@@ -1268,7 +1269,7 @@ function ManualTxnCell({
       disabled={busy}
       onChange={(e) => setValue(e.target.value)}
       onBlur={() => void commit()}
-      className="w-full min-w-[70px] rounded-md border border-[oklch(0.45_0.1_258/0.5)] bg-transparent px-2 py-1 text-center text-[11px] font-bold outline-none focus:border-[oklch(0.55_0.14_255)]"
+      className="w-full min-w-[70px] border-0 bg-transparent px-2 py-1 text-center text-[11px] font-bold outline-none focus:bg-white/5"
     />
   );
 }
@@ -1439,7 +1440,13 @@ export function EmployeeWorkView({
     setManualOpen(true);
   };
 
-  const emptyRows = Math.max(12 - rows.length - manualRows.length, 0);
+  /** المعاملات مرتّبة زمنيًا (اليدوي + الـ API معًا). */
+  const mergedRows = useMemo(() => {
+    const manual = manualRows.map((r) => ({ ...r, __manual: true, time: new Date(r.createdAt).getTime() }));
+    return [...manual, ...rows].sort((a: any, b: any) => Number(b.time) - Number(a.time));
+  }, [manualRows, rows]);
+
+  const emptyRows = Math.max(12 - mergedRows.length, 0);
 
   /* --------------------- identity / claim / clock --------------------- */
   const faceClaim = useFaceClaim(() => {
@@ -1677,31 +1684,30 @@ export function EmployeeWorkView({
 
 
       <div className="data-surface">
+        {!viewing && (
+          <div className="flex items-center justify-start px-3 pb-1.5 pt-2">
+            <button
+              type="button"
+              onClick={openManual}
+              title="إضافة معاملة يدوية"
+              className="flex items-center gap-1 rounded-2xl border border-[oklch(0.55_0.14_255)] bg-[oklch(0.11_0.02_270)] px-3 py-1 text-[11px] font-bold text-white/90 transition hover:bg-[oklch(0.2_0.06_258)] active:scale-95"
+            >
+              <Plus className="size-3" />
+              <span>إضافة</span>
+            </button>
+          </div>
+        )}
         <div className="overflow-x-auto">
           <table className="data-table text-center">
             <thead>
               <tr>
                 {COLUMNS.map((c) => {
                   const Icon = c.icon;
-                  const withAdd = !viewing && c.label === "اسم التاجر";
                   return (
                     <th key={c.label}>
-                      <span className="flex flex-col items-center justify-center gap-1">
-                        {withAdd && (
-                          <button
-                            type="button"
-                            onClick={openManual}
-                            title="إضافة معاملة يدوية"
-                            className="flex items-center gap-1 rounded-2xl border border-[oklch(0.55_0.14_255)] bg-[oklch(0.11_0.02_270)] px-2 py-0.5 text-[10px] font-bold text-white/90 transition hover:bg-[oklch(0.2_0.06_258)] active:scale-95"
-                          >
-                            <Plus className="size-3" />
-                            <span>إضافة</span>
-                          </button>
-                        )}
-                        <span className="flex items-center justify-center gap-1.5">
-                          <span>{c.label}</span>
-                          <Icon className="size-3.5 shrink-0 opacity-70" />
-                        </span>
+                      <span className="flex items-center justify-center gap-1.5">
+                        <span>{c.label}</span>
+                        <Icon className="size-3.5 shrink-0 opacity-70" />
                       </span>
                     </th>
                   );
@@ -1710,29 +1716,6 @@ export function EmployeeWorkView({
             </thead>
 
             <tbody>
-              {manualRows.map((r) => {
-                const locked = manualLocked(r);
-                const refresh = () => void manualCardQ.refetch();
-                return (
-                  <tr key={`manual-${r.id}`}>
-                    <td>
-                      <ManualTxnCell row={r} field="merchant" locked={locked} onSaved={refresh} />
-                    </td>
-                    <td className="tabular-nums">
-                      <ManualTxnCell row={r} field="amount" locked={locked} onSaved={refresh} />
-                    </td>
-                    <td className="tabular-nums">{r.amount === "" ? "—" : num(Number(r.amount))}</td>
-                    <td className="tabular-nums">
-                      <ManualTxnCell row={r} field="quantity" locked={locked} onSaved={refresh} />
-                    </td>
-                    <td>{txnTime(new Date(r.createdAt).getTime())}</td>
-                    <td>
-                      <ManualTxnCell row={r} field="pan4" locked={locked} onSaved={refresh} />
-                    </td>
-                    <td>&nbsp;</td>
-                  </tr>
-                );
-              })}
               {viewing && !shiftMode && (st.data as any)?.holding === false ? (
                 <tr>
                   <td colSpan={COLUMNS.length} className="py-8 text-center text-xs text-muted-foreground">
@@ -1748,9 +1731,45 @@ export function EmployeeWorkView({
                   </td>
                 </tr>
               ) : (
-                rows.map((r) => (
+                mergedRows.map((r) =>
+                  r.__manual ? (
+                    (() => {
+                      const locked = manualLocked(r);
+                      const refresh = () => void manualCardQ.refetch();
+                      const mName = String(r.merchant ?? "—");
+                      return (
+                        <tr key={`manual-${r.id}`}>
+                          <td>
+                            <span className="flex items-center justify-center gap-2">
+                              <MerchantLogo name={mName} />
+                              <ManualTxnCell row={r} field="merchant" locked={locked} onSaved={refresh} />
+                            </span>
+                          </td>
+                          <td className="tabular-nums">
+                            <ManualTxnCell row={r} field="amount" locked={locked} onSaved={refresh} />
+                          </td>
+                          <td className="tabular-nums">
+                            <ManualTxnCell row={r} field="egp" locked={false} onSaved={refresh} />
+                          </td>
+                          <td className="tabular-nums">
+                            <ManualTxnCell row={r} field="quantity" locked={locked} onSaved={refresh} />
+                          </td>
+                          <td>{txnTime(Number(r.time))}</td>
+                          <td>
+                            <ManualTxnCell row={r} field="pan4" locked={locked} onSaved={refresh} />
+                          </td>
+                          <td>&nbsp;</td>
+                        </tr>
+                      );
+                    })()
+                  ) : (
                   <tr key={r.assignmentId ?? r.ledgerId}>
-                    <td>{String(r.detail?.merchantName ?? r.title ?? "—")}</td>
+                    <td>
+                      <span className="flex items-center justify-center gap-2">
+                        <MerchantLogo name={String(r.detail?.merchantName ?? r.title ?? "—")} />
+                        <span>{String(r.detail?.merchantName ?? r.title ?? "—")}</span>
+                      </span>
+                    </td>
                     <td className="tabular-nums">
                       {num(Math.abs(Number(r.amount)))} {r.currency}
                     </td>
@@ -1770,7 +1789,8 @@ export function EmployeeWorkView({
                       </button>
                     </td>
                   </tr>
-                ))
+                  ),
+                )
               )}
               {Array.from({ length: emptyRows }).map((_, i) => (
                 <tr key={`empty-${i}`}>
