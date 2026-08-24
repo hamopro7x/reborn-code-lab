@@ -307,7 +307,7 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
                 />
               </div>
             )}
-            <ShiftPickerSidebarRemoved />
+            
 
           </div>
         ) : (
