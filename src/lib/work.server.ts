@@ -1891,7 +1891,11 @@ export async function employeeArchive(
   ]);
 
   // 5) السجلات اليدوية (الغلط / خاص بالموظف / الاستلام / التحويل) — كل الشفتات.
-  const manual = await listManualTxns(userId);
+  const manual = await listManualTxns(
+    userId,
+    null,
+    manualPaging ? { ...manualPaging, ascending: true } : undefined,
+  );
 
   // 6) طلبات P2P — كل الشفتات.
   const p2p = await p2pByAssignment({ userId });
