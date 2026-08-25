@@ -1894,6 +1894,13 @@ export async function employeeArchive(userId: string) {
  * حتى لا تفشل قيود المفاتيح الأجنبية. سجل Bybit الأصلي لا يُلمس إطلاقًا:
  * المعاملات المربوطة تعود «غير مربوطة» فقط.
  */
+export async function deleteManualTxnRow(id: string) {
+  const db = await admin();
+  const { error } = await db.from("work_manual_txns").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  return { ok: true };
+}
+
 export async function deleteShift(shiftId: string) {
   const db = await admin();
   await db.from("work_txn_assignments").delete().eq("shift_id", shiftId);
