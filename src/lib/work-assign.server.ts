@@ -46,5 +46,9 @@ export async function autoAssignLedger(db: any): Promise<number> {
     if (error) console.error("work auto-assign failed:", error.message);
     else saved += Math.min(500, payload.length - i);
   }
+  if (saved > 0) {
+    const { enforceRetentionSafe } = await import("./retention.server");
+    await enforceRetentionSafe("work_txn_assignments");
+  }
   return saved;
 }
