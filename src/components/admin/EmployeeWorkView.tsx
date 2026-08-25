@@ -966,8 +966,9 @@ function ManualCard({
   newestId: string | null;
   isAdmin: boolean;
   readOnly?: boolean;
-  /** حذف صف بدون شفت (أدمن فقط). */
   onDelete?: (id: string) => void;
+  /** Custom header replaces the default blue title bar. */
+  header?: React.ReactNode;
 }) {
   const totalAmount = useMemo(() => {
     return rows.reduce((sum, r) => {
