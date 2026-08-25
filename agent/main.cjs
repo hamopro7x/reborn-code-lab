@@ -347,7 +347,15 @@ let activeViewerCount = 0;
 ipcMain.on("viewer-count", (_event, count) => {
   const value = Number(count);
   activeViewerCount = Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
+  stage.viewers = activeViewerCount;
+  stage.screen = activeViewerCount > 0 ? "streaming" : "idle";
+  try {
+    tray?.setToolTip(describeStage());
+  } catch {
+    /* tray optional */
+  }
 });
+
 
 ipcMain.handle("open-external", (_e, url) => {
   if (typeof url === "string" && /^https:\/\//.test(url)) void shell.openExternal(url);
