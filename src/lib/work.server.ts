@@ -1343,7 +1343,8 @@ export async function listManualTxns(
     .eq("user_id", userId);
   if (shiftId) q = q.eq("shift_id", shiftId);
   if (paging?.card) q = q.eq("card", paging.card);
-  q = q.order("created_at", { ascending: false }).order("id", { ascending: false });
+  const asc = paging?.ascending === true;
+  q = q.order("created_at", { ascending: asc }).order("id", { ascending: asc });
   const usePaging = !!paging && (paging.page !== undefined || paging.pageSize !== undefined);
   if (usePaging) {
     const { from, to } = pageRange(paging!.page, paging!.pageSize);
