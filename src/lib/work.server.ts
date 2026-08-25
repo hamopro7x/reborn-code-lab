@@ -1908,6 +1908,9 @@ export async function employeeArchive(
     int: [...int].sort(asc),
     manual: {
       serverNow: manual.serverNow,
+      total: manual.total,
+      page: manual.page,
+      pageSize: manual.pageSize,
       rows: [...manual.rows].sort(
         (a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
       ),
