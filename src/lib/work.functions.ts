@@ -568,3 +568,13 @@ export const deleteEmployeeShift = createServerFn({ method: "POST" })
     const mod = await import("./work.server");
     return mod.deleteShift(data.shiftId);
   });
+
+/** حذف صف يدوي (خاص بالموظف / المعاملات الغلط) — أدمن فقط. */
+export const deleteEmployeeManualTxn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    return mod.deleteManualTxnRow(data.id);
+  });
