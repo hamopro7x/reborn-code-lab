@@ -80,6 +80,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { getBybitCardBrands } from "@/lib/bybit.functions";
 import { useFaceClaim } from "@/components/admin/FaceGate";
 import { BrandBadge, LedgerRowDetails, statusBadge } from "@/components/admin/BybitLedgerPanel";
+import { useWorkRealtime } from "@/lib/use-work-realtime";
 
 type ManualKind = "wrong" | "employee" | "receive" | "transfer";
 
@@ -1571,6 +1572,9 @@ export function EmployeeWorkView({
   const [tab, setTab] = useState<TabKey>("all");
   // إيداع / سحب داخل قسمي التحويلات (فلترة عرض فقط)
   const [flow, setFlow] = useState<"in" | "out">("in");
+
+  // تحديث لحظي: أي تغيير حقيقي في المركز الرئيسي يحدّث الـqueries المتأثرة فقط.
+  useWorkRealtime({ enabled: !blank, shiftId: viewShiftId ?? null, viewUserId: viewUserId ?? null });
 
   const st = useQuery({
     queryKey: viewing ? ["emp-work-state", viewUserId] : ["my-work-state"],
