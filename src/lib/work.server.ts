@@ -6,6 +6,8 @@
  * webauthn credentials). It never modifies a transaction's original fields.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { pageRange } from "./pagination";
+import { enforceRetentionSafe } from "./retention.server";
 
 type DB = SupabaseClient<any, any, any>;
 
@@ -1328,16 +1330,33 @@ export type ManualCard = "wrong" | "employee" | "receive" | "transfer";
  * written during (`shift_id`). Passing a shift id returns that shift's history
  * only; ended shifts keep their rows for good (nothing is ever deleted).
  */
-export async function listManualTxns(userId: string, shiftId?: string | null) {
+export async function listManualTxns(
+  userId: string,
+  shiftId?: string | null,
+  /** طبقة الصفحات الإضافية: بدونها يبقى السلوك القديم كما هو تمامًا. */
+  paging?: { card?: ManualCard | null; page?: number; pageSize?: number; ascending?: boolean },
+) {
   const db = await admin();
   let q = db
     .from("work_manual_txns")
-    .select("id,card,amount,details,created_at,amount_saved_at,details_saved_at,shift_id")
+    .select("id,card,amount,details,created_at,amount_saved_at,details_saved_at,shift_id", { count: "exact" })
     .eq("user_id", userId);
   if (shiftId) q = q.eq("shift_id", shiftId);
-  const { data } = await q.order("created_at", { ascending: false });
+  if (paging?.card) q = q.eq("card", paging.card);
+  const asc = paging?.ascending === true;
+  q = q.order("created_at", { ascending: asc }).order("id", { ascending: asc });
+  const usePaging = !!paging && (paging.page !== undefined || paging.pageSize !== undefined);
+  if (usePaging) {
+    const { from, to } = pageRange(paging!.page, paging!.pageSize);
+    q = q.range(from, to);
+  }
+  const { data, count } = await q;
+  const r0 = pageRange(paging?.page, paging?.pageSize);
   return {
     serverNow: new Date().toISOString(),
+    total: Number(count ?? (data ?? []).length),
+    page: r0.page,
+    pageSize: r0.pageSize,
     rows: (data ?? []).map((r: any) => ({
       id: r.id as string,
       card: r.card as ManualCard,
@@ -1391,6 +1410,7 @@ export async function addManualTxn(userId: string, card: ManualCard) {
     .select("id")
     .maybeSingle();
   if (error) return { ok: false as const, error: error.message };
+  await enforceRetentionSafe("work_manual_txns");
   return { ok: true as const, id: data?.id as string };
 }
 
@@ -1563,6 +1583,7 @@ export async function addMyManualCardTxn(
     .select("id,merchant,amount,egp,quantity,pan4,created_at")
     .maybeSingle();
   if (error) return { ok: false as const, error: error.message };
+  await enforceRetentionSafe("work_manual_card_txns");
   return { ok: true as const, row: mapManualCard(data), serverNow: new Date().toISOString() };
 }
 
@@ -1816,7 +1837,11 @@ export async function adminEmployeeShiftP2P(userId: string) {
  * الأصلية (بلا مصدر موازٍ)، لكن بحسب الموظف كله بدل شفت واحد. القراءة فقط،
  * والترتيب داخل كل قسم من الأقدم إلى الأحدث، وبلا تكرار (مفتاح فريد لكل صف).
  */
-export async function employeeArchive(userId: string) {
+export async function employeeArchive(
+  userId: string,
+  /** صفحات السجلات اليدوية فقط — باقي الأقسام كما هي بدون تغيير. */
+  manualPaging?: { card?: ManualCard | null; page?: number; pageSize?: number },
+) {
   const asc = (a: { time: number }, b: { time: number }) => a.time - b.time;
 
   // 1) المعاملات (فيزا) — كل الشفتات، مع صفحات متتابعة حتى نهاية السجل.
@@ -1868,7 +1893,11 @@ export async function employeeArchive(userId: string) {
   ]);
 
   // 5) السجلات اليدوية (الغلط / خاص بالموظف / الاستلام / التحويل) — كل الشفتات.
-  const manual = await listManualTxns(userId);
+  const manual = await listManualTxns(
+    userId,
+    null,
+    manualPaging ? { ...manualPaging, ascending: true } : undefined,
+  );
 
   // 6) طلبات P2P — كل الشفتات.
   const p2p = await p2pByAssignment({ userId });
@@ -1881,6 +1910,9 @@ export async function employeeArchive(userId: string) {
     int: [...int].sort(asc),
     manual: {
       serverNow: manual.serverNow,
+      total: manual.total,
+      page: manual.page,
+      pageSize: manual.pageSize,
       rows: [...manual.rows].sort(
         (a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
       ),

@@ -41,6 +41,8 @@ import {
 import { toast } from "sonner";
 import { MerchantLogo } from "./MerchantLogo";
 import { formatDateTime } from "@/lib/format";
+import { PAGE_SIZE } from "@/lib/pagination";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import { supabase } from "@/integrations/supabase/client";
 import {
   getMyWorkState,
@@ -1283,12 +1285,17 @@ function ArchiveTxnsTable({
 
 function ShiftArchive({ userId }: { userId: string }) {
   const [sub, setSub] = useState<ArchiveTabKey>("employee");
+  const [page, setPage] = useState(1);
   const archiveFn = useServerFn(getEmployeeArchive);
   const deleteFn = useServerFn(deleteEmployeeManualTxn);
 
+  useEffect(() => {
+    setPage(1);
+  }, [sub, userId]);
+
   const q = useQuery({
-    queryKey: ["emp-archive", userId],
-    queryFn: () => archiveFn({ data: { userId } }),
+    queryKey: ["emp-archive", userId, sub, page],
+    queryFn: () => archiveFn({ data: { userId, card: sub, page, pageSize: PAGE_SIZE } }),
     staleTime: 60_000,
   });
 
@@ -1340,23 +1347,32 @@ function ShiftArchive({ userId }: { userId: string }) {
   );
 
   return (
-    <ManualCard
-      key={sub}
-      card={sub}
-      title={sub === "employee" ? "خاص بالموظف" : "المعاملات الغلط"}
-      header={header}
-      rows={manualRows.filter((r) => r.card === sub)}
-      serverNow={manualNow}
-      onAdd={() => {}}
-      onClear={() => {}}
-      onSaved={() => {}}
-      adding={false}
-      clearing={false}
-      newestId={null}
-      isAdmin
-      readOnly
-      onDelete={del}
-    />
+    <div className="space-y-2">
+      <ManualCard
+        key={sub}
+        card={sub}
+        title={sub === "employee" ? "خاص بالموظف" : "المعاملات الغلط"}
+        header={header}
+        rows={manualRows.filter((r) => r.card === sub)}
+        serverNow={manualNow}
+        onAdd={() => {}}
+        onClear={() => {}}
+        onSaved={() => {}}
+        adding={false}
+        clearing={false}
+        newestId={null}
+        isAdmin
+        readOnly
+        onDelete={del}
+      />
+      <PaginationBar
+        page={Number(d.manual?.page ?? page)}
+        total={Number(d.manual?.total ?? manualRows.length)}
+        pageSize={Number(d.manual?.pageSize ?? PAGE_SIZE)}
+        onPage={setPage}
+        className="data-surface rounded-2xl"
+      />
+    </div>
   );
 }
 
