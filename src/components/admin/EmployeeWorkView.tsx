@@ -86,11 +86,12 @@ type TabKey = "p2p" | "transfers" | "wrong" | "week" | "all" | "employee" | "ext
 /** DOM order = right-to-left order in the reference. */
 const TOP_TABS: { key: TabKey; label: string; icon: typeof ListOrdered }[] = [
   { key: "all", label: "المعاملات", icon: ListOrdered },
+  { key: "employee", label: "الخاص بالموظف", icon: User },
+  { key: "wrong", label: "المعاملات الغلط", icon: AlertTriangle },
+  { key: "transfers", label: "الاستلام من والتحويل الي", icon: ArrowLeftRight },
+  { key: "p2p", label: "طلبات p2p", icon: Users },
   { key: "ext", label: "الإيداع والسحب الخارجي", icon: ArrowDownUp },
   { key: "int", label: "الإيداع والسحب الداخلي", icon: ArrowLeftRight },
-  { key: "wrong", label: "المعاملات الغلط والخاص بالموظف", icon: AlertTriangle },
-  { key: "transfers", label: "الاستلم من والتحويل الي", icon: ArrowLeftRight },
-  { key: "p2p", label: "طلبات p2p", icon: Users },
   { key: "summary", label: "ملخص الشفت", icon: ClipboardList },
 ];
 
@@ -113,29 +114,6 @@ const GLOW_IDLE =
   "border-border/60 bg-[oklch(0.14_0.02_270)] text-foreground/90 hover:border-[oklch(0.45_0.1_258)] hover:text-foreground";
 
 
-/** Split-pill content for the merged "wrong + employee" tab — side by side. */
-function SplitTabContent({ reversed }: { reversed?: boolean }) {
-  const own = (
-    <span className="flex items-center gap-1.5 whitespace-nowrap text-[oklch(0.74_0.19_25)]">
-      <span>الخاص بالموظف</span>
-      <User className="size-4 shrink-0 text-current drop-shadow-[0_0_4px_oklch(0.6_0.18_25/0.55)]" />
-    </span>
-  );
-  const wrong = (
-    <span className="flex items-center gap-1.5 whitespace-nowrap">
-      <span>المعاملات الغلط</span>
-      <AlertTriangle className="size-4 shrink-0 text-[oklch(0.85_0.15_85)] drop-shadow-[0_0_4px_oklch(0.7_0.15_85/0.5)]" />
-    </span>
-  );
-
-  return (
-    <span className="flex flex-row items-center gap-2.5">
-      {reversed ? wrong : own}
-      <span className="inline-block h-4 w-px bg-current/25" />
-      {reversed ? own : wrong}
-    </span>
-  );
-}
 
 /* ------------------------- P2P orders table (طلبات P2P) -------------------------
  * Same look as the approved reference: blue pill header row, buy/sell toggle,
@@ -1116,7 +1094,7 @@ function ManualSection({
   blank = false,
 }: {
   isAdmin: boolean;
-  cards: [{ card: ManualKind; title: string }, { card: ManualKind; title: string }];
+  cards: { card: ManualKind; title: string }[];
   /** أدمن يشاهد بيانات موظف محدد (قراءة فقط). */
   viewUserId?: string;
   /** أدمن يشاهد شفتًا محددًا — سجل ذلك الشفت فقط (قراءة فقط). */
@@ -1915,15 +1893,8 @@ export function EmployeeWorkView({
                   active ? GLOW_ACTIVE : GLOW_IDLE
                 }`}
               >
-                {t.key === "wrong" ? (
-                  <SplitTabContent />
-                ) : (
-                  <>
-                    <span className="whitespace-nowrap">{t.label}</span>
-                    <Icon className="size-4 shrink-0 text-[oklch(0.88_0.06_255)] drop-shadow-[0_0_4px_oklch(0.6_0.15_258/0.6)]" />
-                  </>
-
-                )}
+                <span className="whitespace-nowrap">{t.label}</span>
+                <Icon className="size-4 shrink-0 text-[oklch(0.88_0.06_255)] drop-shadow-[0_0_4px_oklch(0.6_0.15_258/0.6)]" />
               </button>
             );
           })}
@@ -1943,16 +1914,21 @@ export function EmployeeWorkView({
       </section>
 
       {/* ------------------------- Transactions ------------------------- */}
-      {tab === "wrong" ? (
+      {tab === "employee" ? (
         <ManualSection
           isAdmin={isAdmin}
           {...(viewUserId ? { viewUserId } : {})}
           {...(viewShiftId ? { viewShiftId } : {})}
           blank={blank}
-          cards={[
-            { card: "employee", title: "خاص بالموظف" },
-            { card: "wrong", title: "المعاملات الغلط" },
-          ]}
+          cards={[{ card: "employee", title: "خاص بالموظف" }]}
+        />
+      ) : tab === "wrong" ? (
+        <ManualSection
+          isAdmin={isAdmin}
+          {...(viewUserId ? { viewUserId } : {})}
+          {...(viewShiftId ? { viewShiftId } : {})}
+          blank={blank}
+          cards={[{ card: "wrong", title: "المعاملات الغلط" }]}
         />
       ) : tab === "transfers" ? (
         <ManualSection
