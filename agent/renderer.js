@@ -1096,13 +1096,20 @@ document.getElementById("refresh")?.addEventListener("click", async (e) => {
 
 // إعادة الاتصال تلقائياً لما الشبكة ترجع (بعد قفل اللابتوب/فقد النت)
 window.addEventListener("online", () => {
-  requestReconnect(1500);
+  reportStage({ connection: "reconnecting" });
+  // بدون تأخير ملحوظ: الشبكة عادت فعلاً، فنستعيد الإشارة فوراً.
+  requestReconnect(300);
+});
+window.addEventListener("offline", () => {
+  reportStage({ connection: "disconnected" });
 });
 
 window.agent.onPowerResume?.(() => {
   setStatus("جارٍ استعادة الاتصال…", false);
-  requestReconnect(2500);
+  reportStage({ connection: "reconnecting" });
+  requestReconnect(1200);
 });
+
 
 window.addEventListener("unhandledrejection", (event) => {
   console.error("[renderer] unhandled rejection:", event.reason);
