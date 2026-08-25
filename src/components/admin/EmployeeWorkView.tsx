@@ -41,6 +41,8 @@ import {
 import { toast } from "sonner";
 import { MerchantLogo } from "./MerchantLogo";
 import { formatDateTime } from "@/lib/format";
+import { PAGE_SIZE } from "@/lib/pagination";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import { supabase } from "@/integrations/supabase/client";
 import {
   getMyWorkState,
