@@ -730,8 +730,9 @@ async function startPeer(viewerId) {
       videoSender = sender;
       try {
         const params = sender.getParameters();
-        // نبدأ بجودة عالية ثم نكيف الحمل سريعاً قبل أن يتكون طابور frames قديم.
-        params.degradationPreference = "maintain-framerate";
+        // الوضوح أولاً: عند نقص السعة نخفض الإطارات ونحافظ على دقة النصوص.
+        params.degradationPreference = "maintain-resolution";
+
         params.encodings = [
           {
             ...(params.encodings?.[0] ?? {}),
