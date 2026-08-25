@@ -1,4 +1,5 @@
 /**
+import { useUiState } from "@/lib/ui-state";
  * Employee execution view — visual design is fixed by the approved reference:
  * black surface with blue neon accents, a top section bar, a horizontal shift
  * strip, the shift's inner section bar, then the transactions grid.
@@ -1293,7 +1294,7 @@ function ArchiveCard({
   card: ArchiveTabKey;
   title: string;
 }) {
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useUiState<number>(`emp-archive-${card}`, "page", 1);
   const archiveFn = useServerFn(getEmployeeArchive);
   const deleteFn = useServerFn(deleteEmployeeManualTxn);
 
@@ -1569,9 +1570,9 @@ export function EmployeeWorkView({
   const shiftMode = !!viewShiftId;
   const viewing = !!viewUserId || shiftMode || blank;
 
-  const [tab, setTab] = useState<TabKey>("all");
+  const [tab, setTab] = useUiState<TabKey>("work-sheet", "tab", "all");
   // إيداع / سحب داخل قسمي التحويلات (فلترة عرض فقط)
-  const [flow, setFlow] = useState<"in" | "out">("in");
+  const [flow, setFlow] = useUiState<"in" | "out">("work-sheet", "flow", "in");
 
   // تحديث لحظي: أي تغيير حقيقي في المركز الرئيسي يحدّث الـqueries المتأثرة فقط.
   useWorkRealtime({ enabled: !blank, shiftId: viewShiftId ?? null, viewUserId: viewUserId ?? null });
