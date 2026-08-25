@@ -267,6 +267,71 @@ setInterval(() => {
   win.webContents.reloadIgnoringCache();
 }, 15_000);
 
+// ===== فصل حالات الجهاز: العملية شغالة ≠ متصل ≠ البث يعمل =====
+// الواجهة الخلفية تُبلّغ المراحل، فنعرف بالضبط أين تتوقف السلسلة عند بدء
+// ويندوز بدل تفسير كل شيء كـ«الجهاز مفصول».
+const stage = {
+  app: "running",
+  connection: "connecting", // connecting | connected | reconnecting | disconnected
+  screen: "idle", // idle | starting | streaming
+  input: "idle", // idle | connected
+  viewers: 0,
+  at: Date.now(),
+};
+
+function describeStage() {
+  return `Mag Pro Connect\nالاتصال: ${stage.connection}\nالبث: ${stage.screen}\nالتحكم: ${stage.input}`;
+}
+
+ipcMain.on("stage", (_e, patch) => {
+  if (!patch || typeof patch !== "object") return;
+  for (const key of ["connection", "screen", "input"]) {
+    if (typeof patch[key] === "string") stage[key] = patch[key];
+  }
+  stage.at = Date.now();
+  try {
+    tray?.setToolTip(describeStage());
+  } catch {
+    /* tray optional */
+  }
+});
+ipcMain.handle("get-stage", () => ({ ...stage }));
+
+// جاهزية الشبكة بدون تأخير ثابت: نحاول فوراً، ولو الشبكة/DNS لم تجهز بعد
+// نعيد المحاولة بتباعد متزايد قصير حتى تتوفر، ثم نكمل مباشرة.
+function probeNetwork() {
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (ok) => {
+      if (!done) {
+        done = true;
+        resolve(ok);
+      }
+    };
+    setTimeout(() => finish(false), 4000);
+    try {
+      httpGet(VERSION_ENDPOINT, (res) => {
+        res.resume();
+        finish(true);
+      }, () => finish(false));
+    } catch {
+      finish(false);
+    }
+  });
+}
+
+async function whenNetworkReady(maxWaitMs = 10 * 60 * 1000) {
+  const deadline = Date.now() + maxWaitMs;
+  let wait = 500;
+  while (Date.now() < deadline) {
+    if (await probeNetwork()) return true;
+    await new Promise((r) => setTimeout(r, wait));
+    wait = Math.min(15_000, Math.round(wait * 1.6));
+  }
+  return false;
+}
+
+
 // ===== التحكم عن بعد: أوامر الماوس/الكيبورد الواردة من لوحة الإدارة =====
 const { handleRemoteInput } = require("./input.cjs");
 ipcMain.on("remote-input", (_e, cmd) => {
