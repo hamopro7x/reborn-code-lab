@@ -1334,7 +1334,7 @@ export async function listManualTxns(
   userId: string,
   shiftId?: string | null,
   /** طبقة الصفحات الإضافية: بدونها يبقى السلوك القديم كما هو تمامًا. */
-  paging?: { card?: ManualCard | null; page?: number; pageSize?: number },
+  paging?: { card?: ManualCard | null; page?: number; pageSize?: number; ascending?: boolean },
 ) {
   const db = await admin();
   let q = db
