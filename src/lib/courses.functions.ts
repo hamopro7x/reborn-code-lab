@@ -33,24 +33,27 @@ export const checkDevice = createServerFn({ method: "POST" })
 
     const now = new Date().toISOString();
 
-    // Authorization is per PHYSICAL DEVICE, not per account.
-    // 1) exact fingerprint  2) legacy fingerprint  3) hardware signature
+    // Authorization = USER + DEVICE. Never global, never inherited.
+    // نبحث فقط داخل أجهزة هذا المستخدم؛ hw_signature مجرد معرّف مساعد.
     const fps = [data.fingerprint, data.legacy_fingerprint].filter(Boolean) as string[];
-    let approved: any = null;
 
-    const { data: byFp } = await supabaseAdmin
+    const { data: mine } = await supabaseAdmin
       .from("user_devices")
       .select("id,user_id,device_label,device_fingerprint,hw_signature")
+      .eq("user_id", context.userId)
       .in("device_fingerprint", fps)
       .order("last_seen_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    approved = byFp ?? null;
+
+    let approved: any = mine ?? null;
 
     if (!approved && data.hw_signature) {
+      // نفس المستخدم + نفس الجهاز الفعلي (بروفايل متصفح مختلف مثلاً)
       const { data: bySig } = await supabaseAdmin
         .from("user_devices")
         .select("id,user_id,device_label,device_fingerprint,hw_signature")
+        .eq("user_id", context.userId)
         .eq("hw_signature", data.hw_signature)
         .order("last_seen_at", { ascending: false })
         .limit(1)
@@ -59,14 +62,13 @@ export const checkDevice = createServerFn({ method: "POST" })
     }
 
     if (approved) {
-      if (approved.user_id === context.userId && approved.device_fingerprint === data.fingerprint) {
+      if (approved.device_fingerprint === data.fingerprint) {
         await supabaseAdmin
           .from("user_devices")
           .update({ last_seen_at: now, user_agent: data.user_agent ?? null, hw_signature: data.hw_signature ?? approved.hw_signature })
           .eq("id", approved.id);
       } else {
-        // Same physical device (other account / other browser profile / legacy
-        // fingerprint) → inherit the approval under the stable fingerprint.
+        // نفس المستخدم ونفس الجهاز، لكن بصمة أحدث → نثبّتها تحت نفس المستخدم فقط.
         await supabaseAdmin.from("user_devices").upsert({
           user_id: context.userId,
           device_fingerprint: data.fingerprint,
@@ -81,6 +83,7 @@ export const checkDevice = createServerFn({ method: "POST" })
     return { ok: false as const, blocked: true, fingerprint: data.fingerprint };
 
   });
+
 
 
 /** Admin: manually authorize a device fingerprint for a specific user. */
@@ -173,14 +176,20 @@ export const getLessonVideoUrl = createServerFn({ method: "POST" })
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // Trust is bound to the device fingerprint, regardless of which account signed in.
-    const { data: dev } = await supabaseAdmin
-      .from("user_devices")
-      .select("id")
-      .eq("device_fingerprint", data.fingerprint)
-      .limit(1)
-      .maybeSingle();
-    if (!dev) throw new Error("DEVICE_NOT_TRUSTED");
+    // الجهاز يجب أن يكون مصرّحًا لهذا المستخدم تحديدًا (الأدمن مستثنى من قيد الأجهزة).
+    let devId: string | null = null;
+    if (role !== "admin") {
+      const { data: dev } = await supabaseAdmin
+        .from("user_devices")
+        .select("id")
+        .eq("user_id", context.userId)
+        .eq("device_fingerprint", data.fingerprint)
+        .limit(1)
+        .maybeSingle();
+      if (!dev) throw new Error("DEVICE_NOT_TRUSTED");
+      devId = dev.id;
+    }
+
 
 
     const { data: lesson } = await supabaseAdmin
@@ -193,7 +202,10 @@ export const getLessonVideoUrl = createServerFn({ method: "POST" })
     if (error || !signed?.signedUrl) throw new Error(error?.message || "Failed to sign URL");
 
     // touch last seen
-    await supabaseAdmin.from("user_devices").update({ last_seen_at: new Date().toISOString() }).eq("id", dev.id);
+    if (devId) {
+      await supabaseAdmin.from("user_devices").update({ last_seen_at: new Date().toISOString() }).eq("id", devId);
+    }
+
     return { url: signed.signedUrl };
   });
 
