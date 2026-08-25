@@ -68,9 +68,12 @@ class ScreenSession {
   }
 
   sendInput = (cmd: Record<string, unknown>) => {
-    const ch = this.ctl;
+    // الحركة على القناة غير الموثوقة (الأحدث يفوز، لا طابور يتراكم)،
+    // والنقر/المفاتيح/العجلة/النص على القناة الموثوقة فلا تُفقد أبداً.
+    const isMove = cmd.t === "move";
+    const ch = isMove ? (this.ctl ?? this.ctlRel) : (this.ctlRel ?? this.ctl);
     if (!ch || ch.readyState !== "open") return;
-    const limit = cmd.t === "move" ? 4_096 : 65_536;
+    const limit = isMove ? 4_096 : 65_536;
     if (ch.bufferedAmount > limit) return;
     try {
       ch.send(JSON.stringify(cmd));
@@ -80,6 +83,8 @@ class ScreenSession {
   };
 
   sendMove = (p: { x: number; y: number }) => {
+    // نضغط الحركات إلى آخر موضع فقط لكل إطار عرض: التحكم يصل فوراً ولا
+    // يتأخر خلف مواضع قديمة، ومساره منفصل تماماً عن إطارات الفيديو.
     this.moveQueued = p;
     if (this.raf != null) return;
     this.raf = requestAnimationFrame(() => {
@@ -89,6 +94,7 @@ class ScreenSession {
       if (m) this.sendInput({ t: "move", x: m.x, y: m.y });
     });
   };
+
 
   /** يهدم مسار WebRTC الحالي فقط (بدون هدم الجلسة) */
   private dropTransport() {
