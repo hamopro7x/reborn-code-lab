@@ -15,6 +15,8 @@ class ScreenSession {
   private pc: RTCPeerConnection | null = null;
   private sig: Signaling | null = null;
   private ctl: RTCDataChannel | null = null;
+  private ctlRel: RTCDataChannel | null = null;
+
   private timers: Array<ReturnType<typeof setInterval>> = [];
   private recoverTimer: ReturnType<typeof setTimeout> | undefined;
   private recoverAt = 0;
