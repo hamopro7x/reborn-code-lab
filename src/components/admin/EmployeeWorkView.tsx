@@ -1117,7 +1117,7 @@ function ManualSection({
   blank = false,
 }: {
   isAdmin: boolean;
-  cards: [{ card: ManualKind; title: string }, { card: ManualKind; title: string }];
+  cards: { card: ManualKind; title: string }[];
   /** أدمن يشاهد بيانات موظف محدد (قراءة فقط). */
   viewUserId?: string;
   /** أدمن يشاهد شفتًا محددًا — سجل ذلك الشفت فقط (قراءة فقط). */
