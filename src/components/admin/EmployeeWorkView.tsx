@@ -338,9 +338,14 @@ function P2POrdersTable({
                     </td>
                     {!readOnly && (
                       <td>
-                        <P2PLinkMenu ledgerId={String(r.ledgerId)} onLinked={onLinked} />
+                        {r.assignmentId ? (
+                          <span className="text-[11px] font-bold text-emerald-400">مرتبط</span>
+                        ) : (
+                          <P2PLinkMenu ledgerId={String(r.ledgerId)} onLinked={onLinked} />
+                        )}
                       </td>
                     )}
+
                   </tr>
                 );
               })
@@ -1611,6 +1616,23 @@ export function EmployeeWorkView({
     refetchInterval: 30_000,
   });
 
+  // طلبات P2P الجديدة (غير مرتبطة بأي شفت) — تظهر لكل الموظفين حتى يربطوها.
+  const openP2PFn = useServerFn(getWorkP2PCompleted);
+  const p2pOpen = useQuery({
+    queryKey: ["work-p2p-open"],
+    queryFn: () => openP2PFn({ data: undefined as any }),
+    enabled: !blank && !viewUserId && !shiftMode,
+    refetchInterval: 30_000,
+  });
+
+  const p2pRowsView = useMemo(() => {
+    const linked = (p2pCompleted.data ?? []) as any[];
+    const open = (p2pOpen.data ?? []) as any[];
+    const ids = new Set(linked.map((r) => String(r.ledgerId)));
+    return [...open.filter((r) => !ids.has(String(r.ledgerId))), ...linked];
+  }, [p2pCompleted.data, p2pOpen.data]);
+
+
   // Read-only filters over the same central ledger: external / internal.
   const transfersFn = useServerFn(getWorkTransfers);
   const extQ = useQuery({
@@ -1964,12 +1986,16 @@ export function EmployeeWorkView({
       ) : tab === "p2p" ? (
 
         <P2POrdersTable
-          rows={(p2pCompleted.data ?? []) as any[]}
-          loading={p2pCompleted.isLoading}
+          rows={p2pRowsView}
+          loading={p2pCompleted.isLoading || p2pOpen.isLoading}
           onDetails={setDetailRow}
-          onLinked={() => p2pCompleted.refetch()}
-          readOnly={true}
+          onLinked={() => {
+            void p2pCompleted.refetch();
+            void p2pOpen.refetch();
+          }}
+          readOnly={!!viewUserId || shiftMode}
         />
+
       ) : (
 
 
