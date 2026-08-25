@@ -1916,15 +1916,8 @@ export function EmployeeWorkView({
                   active ? GLOW_ACTIVE : GLOW_IDLE
                 }`}
               >
-                {t.key === "wrong" ? (
-                  <SplitTabContent />
-                ) : (
-                  <>
-                    <span className="whitespace-nowrap">{t.label}</span>
-                    <Icon className="size-4 shrink-0 text-[oklch(0.88_0.06_255)] drop-shadow-[0_0_4px_oklch(0.6_0.15_258/0.6)]" />
-                  </>
-
-                )}
+                <span className="whitespace-nowrap">{t.label}</span>
+                <Icon className="size-4 shrink-0 text-[oklch(0.88_0.06_255)] drop-shadow-[0_0_4px_oklch(0.6_0.15_258/0.6)]" />
               </button>
             );
           })}
