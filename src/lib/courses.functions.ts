@@ -202,7 +202,10 @@ export const getLessonVideoUrl = createServerFn({ method: "POST" })
     if (error || !signed?.signedUrl) throw new Error(error?.message || "Failed to sign URL");
 
     // touch last seen
-    await supabaseAdmin.from("user_devices").update({ last_seen_at: new Date().toISOString() }).eq("id", dev.id);
+    if (devId) {
+      await supabaseAdmin.from("user_devices").update({ last_seen_at: new Date().toISOString() }).eq("id", devId);
+    }
+
     return { url: signed.signedUrl };
   });
 
