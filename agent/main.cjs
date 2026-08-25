@@ -1048,9 +1048,12 @@ app.whenReady().then(() => {
       // لا نعيد تحميل صفحة البرنامج عند الاستيقاظ؛ الشبكة تكون غالباً لم
       // تستعد بعد، وإعادة التحميل كانت تهدم البث وتترك الواجهة معلقة.
       if (win && !win.isDestroyed()) win.webContents.send("power-resume");
-      // بعد الاستئناف نفحص التحديث فوراً بدل انتظار الدورة القادمة
-      // أعطِ البث والشبكة وقتاً للاستقرار بعد الاستيقاظ قبل فحص تحديث كبير.
-      setTimeout(() => void runBootUpdate(), 30000);
+      // بعد الاستئناف: ننتظر جاهزية الشبكة الحقيقية لا مهلة ثابتة.
+      stage.connection = "reconnecting";
+      void whenNetworkReady(5 * 60 * 1000).then((ok) => {
+        if (ok) void runBootUpdate();
+      });
+
     };
 
     powerMonitor.on("resume", reconnect);
