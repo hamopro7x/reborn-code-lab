@@ -1316,7 +1316,7 @@ function ShiftArchive({ userId }: { userId: string }) {
   };
 
   const header = (
-    <div className="data-table-head relative flex items-center justify-center px-3 py-3">
+    <div className="data-table-head relative flex items-center justify-start px-3 py-3">
       <div className="flex flex-wrap items-center gap-[0.1cm]" dir="rtl">
         {ARCHIVE_TABS.map((t) => {
           const Icon = t.icon;
