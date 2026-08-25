@@ -867,6 +867,7 @@ async function refreshHeartbeat(device) {
   if (ok === true) {
     heartbeatFailures = 0;
     setStatus("متصل", true);
+    reportStage({ connection: "connected" });
     return;
   }
   if (ok === false) {
@@ -875,9 +876,19 @@ async function refreshHeartbeat(device) {
   }
   heartbeatFailures += 1;
   setStatus("انقطع الاتصال — جاري الاستعادة…", false);
+  reportStage({ connection: heartbeatFailures > 3 ? "disconnected" : "reconnecting" });
   // فشل نبض قاعدة البيانات لا يعني أن مسار WebRTC متوقف؛ لا نهدم بثاً حياً
   // بسبب طلب HTTP بطيء. دورة النبض والإشارات ستتعافى تلقائياً.
+  // استعادة سريعة: نعيد المحاولة فوراً بتباعد قصير بدل انتظار دورة النبض
+  // الكاملة، فيعود الاتصال في ثوانٍ بعد رجوع الإنترنت بلا إعادة تشغيل.
+  if (running && heartbeatFailures <= 8) {
+    const wait = Math.min(8000, 700 * heartbeatFailures);
+    setTimeout(() => {
+      if (running) void refreshHeartbeat(device);
+    }, wait);
+  }
 }
+
 
 function stopSession() {
   running = false;
