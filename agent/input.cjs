@@ -318,7 +318,7 @@ function handleRemoteInput(cmd) {
     if (x === lastX && y === lastY) return;
     lastX = x;
     lastY = y;
-    write(`M ${x.toFixed(5)} ${y.toFixed(5)}`);
+    writeMove(`M ${x.toFixed(5)} ${y.toFixed(5)}`);
     return;
   }
   if (cmd.t === "down" || cmd.t === "up") {
