@@ -1835,7 +1835,11 @@ export async function adminEmployeeShiftP2P(userId: string) {
  * الأصلية (بلا مصدر موازٍ)، لكن بحسب الموظف كله بدل شفت واحد. القراءة فقط،
  * والترتيب داخل كل قسم من الأقدم إلى الأحدث، وبلا تكرار (مفتاح فريد لكل صف).
  */
-export async function employeeArchive(userId: string) {
+export async function employeeArchive(
+  userId: string,
+  /** صفحات السجلات اليدوية فقط — باقي الأقسام كما هي بدون تغيير. */
+  manualPaging?: { card?: ManualCard | null; page?: number; pageSize?: number },
+) {
   const asc = (a: { time: number }, b: { time: number }) => a.time - b.time;
 
   // 1) المعاملات (فيزا) — كل الشفتات، مع صفحات متتابعة حتى نهاية السجل.
