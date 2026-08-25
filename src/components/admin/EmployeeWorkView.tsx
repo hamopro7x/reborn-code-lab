@@ -1337,27 +1337,9 @@ function ShiftArchive({ userId }: { userId: string }) {
     }
   };
 
-  const manualCard = (card: ManualKind, title: string) => (
-    <ManualCard
-      card={card}
-      title={title}
-      rows={manualRows.filter((r) => r.card === card)}
-      serverNow={manualNow}
-      onAdd={() => {}}
-      onClear={() => {}}
-      onSaved={() => {}}
-      adding={false}
-      clearing={false}
-      newestId={null}
-      isAdmin
-      readOnly
-      onDelete={del}
-    />
-  );
-
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-[0.1cm]">
+  const header = (
+    <div className="data-table-head relative flex items-center justify-center px-3 py-3">
+      <div className="flex flex-wrap items-center gap-[0.1cm]" dir="rtl">
         {ARCHIVE_TABS.map((t) => {
           const Icon = t.icon;
           const active = sub === t.key;
@@ -1376,13 +1358,27 @@ function ShiftArchive({ userId }: { userId: string }) {
           );
         })}
       </div>
-
-      {sub === "employee" ? (
-        manualCard("employee", "خاص بالموظف")
-      ) : (
-        manualCard("wrong", "المعاملات الغلط")
-      )}
     </div>
+  );
+
+  return (
+    <ManualCard
+      key={sub}
+      card={sub}
+      title={sub === "employee" ? "خاص بالموظف" : "المعاملات الغلط"}
+      header={header}
+      rows={manualRows.filter((r) => r.card === sub)}
+      serverNow={manualNow}
+      onAdd={() => {}}
+      onClear={() => {}}
+      onSaved={() => {}}
+      adding={false}
+      clearing={false}
+      newestId={null}
+      isAdmin
+      readOnly
+      onDelete={del}
+    />
   );
 }
 
