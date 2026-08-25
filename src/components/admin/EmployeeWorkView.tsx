@@ -1283,19 +1283,26 @@ function ArchiveTxnsTable({
   );
 }
 
-function ShiftArchive({ userId }: { userId: string }) {
-  const [sub, setSub] = useState<ArchiveTabKey>("employee");
+function ArchiveCard({
+  userId,
+  card,
+  title,
+}: {
+  userId: string;
+  card: ArchiveTabKey;
+  title: string;
+}) {
   const [page, setPage] = useState(1);
   const archiveFn = useServerFn(getEmployeeArchive);
   const deleteFn = useServerFn(deleteEmployeeManualTxn);
 
   useEffect(() => {
     setPage(1);
-  }, [sub, userId]);
+  }, [userId, card]);
 
   const q = useQuery({
-    queryKey: ["emp-archive", userId, sub, page],
-    queryFn: () => archiveFn({ data: { userId, card: sub, page, pageSize: PAGE_SIZE } }),
+    queryKey: ["emp-archive", userId, card, page],
+    queryFn: () => archiveFn({ data: { userId, card, page, pageSize: PAGE_SIZE } }),
     staleTime: 60_000,
   });
 
@@ -1322,38 +1329,12 @@ function ShiftArchive({ userId }: { userId: string }) {
     }
   };
 
-  const header = (
-    <div className="data-table-head relative flex items-center justify-start px-3 py-3">
-      <div className="flex flex-wrap items-center gap-[0.1cm]" dir="rtl">
-        {ARCHIVE_TABS.map((t) => {
-          const Icon = t.icon;
-          const active = sub === t.key;
-          return (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => setSub(t.key)}
-              className={`flex items-center gap-2 rounded-2xl border px-3 py-2 text-[11px] font-bold transition ${
-                active ? GLOW_ACTIVE : GLOW_IDLE
-              }`}
-            >
-              <span className="whitespace-nowrap">{t.label}</span>
-              <Icon className="size-4 shrink-0 text-[oklch(0.88_0.06_255)] drop-shadow-[0_0_4px_oklch(0.6_0.15_258/0.6)]" />
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-
   return (
     <div className="space-y-2">
       <ManualCard
-        key={sub}
-        card={sub}
-        title={sub === "employee" ? "خاص بالموظف" : "المعاملات الغلط"}
-        header={header}
-        rows={manualRows.filter((r) => r.card === sub)}
+        card={card}
+        title={title}
+        rows={manualRows.filter((r) => r.card === card)}
         serverNow={manualNow}
         onAdd={() => {}}
         onClear={() => {}}
@@ -1372,6 +1353,15 @@ function ShiftArchive({ userId }: { userId: string }) {
         onPage={setPage}
         className="data-surface rounded-2xl"
       />
+    </div>
+  );
+}
+
+function ShiftArchive({ userId }: { userId: string }) {
+  return (
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <ArchiveCard userId={userId} card="employee" title="خاص بالموظف" />
+      <ArchiveCard userId={userId} card="wrong" title="المعاملات الغلط" />
     </div>
   );
 }
