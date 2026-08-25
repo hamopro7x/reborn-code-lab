@@ -945,6 +945,7 @@ function ManualCard({
   isAdmin,
   readOnly,
   onDelete,
+  header,
 }: {
   card: ManualKind;
   title: string;
@@ -966,8 +967,9 @@ function ManualCard({
   newestId: string | null;
   isAdmin: boolean;
   readOnly?: boolean;
-  /** حذف صف بدون شفت (أدمن فقط). */
   onDelete?: (id: string) => void;
+  /** Custom header replaces the default blue title bar. */
+  header?: React.ReactNode;
 }) {
   const totalAmount = useMemo(() => {
     return rows.reduce((sum, r) => {
@@ -987,40 +989,44 @@ function ManualCard({
 
   return (
     <div className="data-surface">
-      <div className="data-table-head relative flex items-center justify-center px-3 py-3">
-        <span className="text-sm font-black">{title}</span>
-        <div className="absolute left-3 flex items-center gap-2">
-          {!readOnly && isAdmin && rows.length > 0 && (
-            <button
-              type="button"
-              onClick={() => onClear(card)}
-              disabled={clearing}
-              className="table-btn disabled:opacity-60"
-              title="تصفير الصفوف (أدمن فقط)"
-            >
-              {clearing ? (
-                <Loader2 className="size-3 animate-spin" />
-              ) : (
-                <Trash2 className="size-3 text-destructive" />
-              )}
-              <span className="whitespace-nowrap">تصفير</span>
-            </button>
-          )}
-          {!readOnly && (
-            <button
-              type="button"
-              onClick={() => onAdd(card)}
-              disabled={adding}
-              className="table-btn disabled:opacity-60"
-            >
-              <span className="grid size-4 place-items-center rounded-full bg-[oklch(0.5_0.14_255)] text-[11px] leading-none text-[oklch(0.98_0_0)]">
-                {adding ? <Loader2 className="size-2.5 animate-spin" /> : "+"}
-              </span>
-              <span className="whitespace-nowrap">إضافة معاملة جديدة</span>
-            </button>
-          )}
+      {header ? (
+        header
+      ) : (
+        <div className="data-table-head relative flex items-center justify-center px-3 py-3">
+          <span className="text-sm font-black">{title}</span>
+          <div className="absolute left-3 flex items-center gap-2">
+            {!readOnly && isAdmin && rows.length > 0 && (
+              <button
+                type="button"
+                onClick={() => onClear(card)}
+                disabled={clearing}
+                className="table-btn disabled:opacity-60"
+                title="تصفير الصفوف (أدمن فقط)"
+              >
+                {clearing ? (
+                  <Loader2 className="size-3 animate-spin" />
+                ) : (
+                  <Trash2 className="size-3 text-destructive" />
+                )}
+                <span className="whitespace-nowrap">تصفير</span>
+              </button>
+            )}
+            {!readOnly && (
+              <button
+                type="button"
+                onClick={() => onAdd(card)}
+                disabled={adding}
+                className="table-btn disabled:opacity-60"
+              >
+                <span className="grid size-4 place-items-center rounded-full bg-[oklch(0.5_0.14_255)] text-[11px] leading-none text-[oklch(0.98_0_0)]">
+                  {adding ? <Loader2 className="size-2.5 animate-spin" /> : "+"}
+                </span>
+                <span className="whitespace-nowrap">إضافة معاملة جديدة</span>
+              </button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="max-h-[520px] min-h-[520px] overflow-y-auto overflow-x-hidden scrollbar-hide">
         <table className="data-table manual-table text-center">
@@ -1331,27 +1337,9 @@ function ShiftArchive({ userId }: { userId: string }) {
     }
   };
 
-  const manualCard = (card: ManualKind, title: string) => (
-    <ManualCard
-      card={card}
-      title={title}
-      rows={manualRows.filter((r) => r.card === card)}
-      serverNow={manualNow}
-      onAdd={() => {}}
-      onClear={() => {}}
-      onSaved={() => {}}
-      adding={false}
-      clearing={false}
-      newestId={null}
-      isAdmin
-      readOnly
-      onDelete={del}
-    />
-  );
-
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-[0.1cm]">
+  const header = (
+    <div className="data-table-head relative flex items-center justify-center px-3 py-3">
+      <div className="flex flex-wrap items-center gap-[0.1cm]" dir="rtl">
         {ARCHIVE_TABS.map((t) => {
           const Icon = t.icon;
           const active = sub === t.key;
@@ -1370,13 +1358,27 @@ function ShiftArchive({ userId }: { userId: string }) {
           );
         })}
       </div>
-
-      {sub === "employee" ? (
-        manualCard("employee", "خاص بالموظف")
-      ) : (
-        manualCard("wrong", "المعاملات الغلط")
-      )}
     </div>
+  );
+
+  return (
+    <ManualCard
+      key={sub}
+      card={sub}
+      title={sub === "employee" ? "خاص بالموظف" : "المعاملات الغلط"}
+      header={header}
+      rows={manualRows.filter((r) => r.card === sub)}
+      serverNow={manualNow}
+      onAdd={() => {}}
+      onClear={() => {}}
+      onSaved={() => {}}
+      adding={false}
+      clearing={false}
+      newestId={null}
+      isAdmin
+      readOnly
+      onDelete={del}
+    />
   );
 }
 
