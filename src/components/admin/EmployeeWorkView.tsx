@@ -1283,12 +1283,17 @@ function ArchiveTxnsTable({
 
 function ShiftArchive({ userId }: { userId: string }) {
   const [sub, setSub] = useState<ArchiveTabKey>("employee");
+  const [page, setPage] = useState(1);
   const archiveFn = useServerFn(getEmployeeArchive);
   const deleteFn = useServerFn(deleteEmployeeManualTxn);
 
+  useEffect(() => {
+    setPage(1);
+  }, [sub, userId]);
+
   const q = useQuery({
-    queryKey: ["emp-archive", userId],
-    queryFn: () => archiveFn({ data: { userId } }),
+    queryKey: ["emp-archive", userId, sub, page],
+    queryFn: () => archiveFn({ data: { userId, card: sub, page, pageSize: PAGE_SIZE } }),
     staleTime: 60_000,
   });
 
