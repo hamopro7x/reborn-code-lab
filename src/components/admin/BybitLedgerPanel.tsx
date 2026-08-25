@@ -1,4 +1,5 @@
 import { Fragment, useState } from "react";
+import { useUiState } from "@/lib/ui-state";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ChevronDown } from "lucide-react";
@@ -284,10 +285,10 @@ function amt(n: number) {
 /** السجل المركزي: كل معاملة على أي حساب من حسابات الفيزا تُسجَّل هنا تلقائياً. */
 export function BybitLedgerPanel() {
   const listFn = useServerFn(getBybitLedger);
-  const [group, setGroup] = useState("txns");
-  const [status, setStatus] = useState("all");
+  const [group, setGroup] = useUiState<string>("bybit-ledger", "group", "txns");
+  const [status, setStatus] = useUiState<string>("bybit-ledger", "status", "all");
   const [openId, setOpenId] = useState<string | null>(null);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useUiState<number>("bybit-ledger", "page", 1);
   const pageSize = 50;
 
   const q = useQuery({

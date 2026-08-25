@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useState, useRef } from "react";
+import { useUiState } from "@/lib/ui-state";
 import { usePersistentState } from "@/lib/persistent-state";
 import tonAsset from "@/assets/ton.png.asset.json";
 import usdtOfficial from "@/assets/usdt-official.png.asset.json";
@@ -1606,8 +1607,7 @@ function CardTableInner({
   const [filter, setFilter] = usePersistentState<"all" | "success" | "failed" | "refund">("bybit.card.filter", "all");
   const [openId, setOpenId] = usePersistentState<string | null>("bybit.card.open", null);
   const PAGE_SIZE = 150;
-  const [page, setPage] = useState(1);
-  useEffect(() => { setPage(1); }, [filter]);
+  const [page, setPage] = useUiState<number>("bybit-card", "page", 1);
 
   // The archive is read one page at a time: the full stored history is far too
   // large to travel in a single response, which is what left the table empty.

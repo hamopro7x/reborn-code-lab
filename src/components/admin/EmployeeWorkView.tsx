@@ -81,6 +81,7 @@ import { getBybitCardBrands } from "@/lib/bybit.functions";
 import { useFaceClaim } from "@/components/admin/FaceGate";
 import { BrandBadge, LedgerRowDetails, statusBadge } from "@/components/admin/BybitLedgerPanel";
 import { useWorkRealtime } from "@/lib/use-work-realtime";
+import { useUiState } from "@/lib/ui-state";
 
 type ManualKind = "wrong" | "employee" | "receive" | "transfer";
 
@@ -1293,7 +1294,7 @@ function ArchiveCard({
   card: ArchiveTabKey;
   title: string;
 }) {
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useUiState<number>(`emp-archive-${card}`, "page", 1);
   const archiveFn = useServerFn(getEmployeeArchive);
   const deleteFn = useServerFn(deleteEmployeeManualTxn);
 
@@ -1569,9 +1570,9 @@ export function EmployeeWorkView({
   const shiftMode = !!viewShiftId;
   const viewing = !!viewUserId || shiftMode || blank;
 
-  const [tab, setTab] = useState<TabKey>("all");
+  const [tab, setTab] = useUiState<TabKey>("work-sheet", "tab", "all");
   // إيداع / سحب داخل قسمي التحويلات (فلترة عرض فقط)
-  const [flow, setFlow] = useState<"in" | "out">("in");
+  const [flow, setFlow] = useUiState<"in" | "out">("work-sheet", "flow", "in");
 
   // تحديث لحظي: أي تغيير حقيقي في المركز الرئيسي يحدّث الـqueries المتأثرة فقط.
   useWorkRealtime({ enabled: !blank, shiftId: viewShiftId ?? null, viewUserId: viewUserId ?? null });
