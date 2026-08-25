@@ -86,11 +86,12 @@ type TabKey = "p2p" | "transfers" | "wrong" | "week" | "all" | "employee" | "ext
 /** DOM order = right-to-left order in the reference. */
 const TOP_TABS: { key: TabKey; label: string; icon: typeof ListOrdered }[] = [
   { key: "all", label: "المعاملات", icon: ListOrdered },
+  { key: "employee", label: "الخاص بالموظف", icon: User },
+  { key: "wrong", label: "المعاملات الغلط", icon: AlertTriangle },
+  { key: "transfers", label: "الاستلام من والتحويل الي", icon: ArrowLeftRight },
+  { key: "p2p", label: "طلبات p2p", icon: Users },
   { key: "ext", label: "الإيداع والسحب الخارجي", icon: ArrowDownUp },
   { key: "int", label: "الإيداع والسحب الداخلي", icon: ArrowLeftRight },
-  { key: "wrong", label: "المعاملات الغلط والخاص بالموظف", icon: AlertTriangle },
-  { key: "transfers", label: "الاستلم من والتحويل الي", icon: ArrowLeftRight },
-  { key: "p2p", label: "طلبات p2p", icon: Users },
   { key: "summary", label: "ملخص الشفت", icon: ClipboardList },
 ];
 
