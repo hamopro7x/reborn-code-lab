@@ -1572,6 +1572,9 @@ export function EmployeeWorkView({
   // إيداع / سحب داخل قسمي التحويلات (فلترة عرض فقط)
   const [flow, setFlow] = useState<"in" | "out">("in");
 
+  // تحديث لحظي: أي تغيير حقيقي في المركز الرئيسي يحدّث الـqueries المتأثرة فقط.
+  useWorkRealtime({ enabled: !blank, shiftId: viewShiftId ?? null, viewUserId: viewUserId ?? null });
+
   const st = useQuery({
     queryKey: viewing ? ["emp-work-state", viewUserId] : ["my-work-state"],
     queryFn: () =>
