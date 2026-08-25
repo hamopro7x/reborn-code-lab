@@ -1,5 +1,4 @@
 /**
-import { useUiState } from "@/lib/ui-state";
  * Employee execution view — visual design is fixed by the approved reference:
  * black surface with blue neon accents, a top section bar, a horizontal shift
  * strip, the shift's inner section bar, then the transactions grid.
@@ -82,6 +81,7 @@ import { getBybitCardBrands } from "@/lib/bybit.functions";
 import { useFaceClaim } from "@/components/admin/FaceGate";
 import { BrandBadge, LedgerRowDetails, statusBadge } from "@/components/admin/BybitLedgerPanel";
 import { useWorkRealtime } from "@/lib/use-work-realtime";
+import { useUiState } from "@/lib/ui-state";
 
 type ManualKind = "wrong" | "employee" | "receive" | "transfer";
 
