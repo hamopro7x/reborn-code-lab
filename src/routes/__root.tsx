@@ -10,6 +10,8 @@ import { CurrencyProvider } from "@/lib/currency-context";
 import { supabase } from "@/integrations/supabase/client";
 import { useAutoRefreshOnDeploy } from "@/lib/use-auto-refresh";
 import { useGlobalAutoSave } from "@/lib/use-global-autosave";
+import { GlobalRealtime } from "@/lib/realtime/global-realtime";
+import { setUiScope } from "@/lib/ui-state";
 
 
 
