@@ -1930,21 +1930,16 @@ export function EmployeeWorkView({
       </section>
 
       {/* ------------------------- Transactions ------------------------- */}
-      {tab === "employee" ? (
+      {tab === "employee" || tab === "wrong" ? (
         <ManualSection
           isAdmin={isAdmin}
           {...(viewUserId ? { viewUserId } : {})}
           {...(viewShiftId ? { viewShiftId } : {})}
           blank={blank}
-          cards={[{ card: "employee", title: "خاص بالموظف" }]}
-        />
-      ) : tab === "wrong" ? (
-        <ManualSection
-          isAdmin={isAdmin}
-          {...(viewUserId ? { viewUserId } : {})}
-          {...(viewShiftId ? { viewShiftId } : {})}
-          blank={blank}
-          cards={[{ card: "wrong", title: "المعاملات الغلط" }]}
+          cards={[
+            { card: "employee", title: "خاص بالموظف" },
+            { card: "wrong", title: "المعاملات الغلط" },
+          ]}
         />
       ) : tab === "transfers" ? (
         <ManualSection
