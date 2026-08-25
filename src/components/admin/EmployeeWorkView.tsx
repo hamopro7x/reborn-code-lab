@@ -69,6 +69,7 @@ import {
   getShiftP2P,
   getMyShiftP2P,
   getEmployeeArchive,
+  deleteEmployeeManualTxn,
 
   getMyAvatarUrl,
 } from "@/lib/work.functions";
@@ -943,6 +944,7 @@ function ManualCard({
   newestId,
   isAdmin,
   readOnly,
+  onDelete,
 }: {
   card: ManualKind;
   title: string;
@@ -950,6 +952,7 @@ function ManualCard({
     id: string;
     amount: string;
     details: string;
+    shiftId?: string | null;
     createdAt?: string;
     amountSavedAt?: string | null;
     detailsSavedAt?: string | null;
@@ -963,6 +966,8 @@ function ManualCard({
   newestId: string | null;
   isAdmin: boolean;
   readOnly?: boolean;
+  /** حذف صف بدون شفت (أدمن فقط). */
+  onDelete?: (id: string) => void;
 }) {
   const totalAmount = useMemo(() => {
     return rows.reduce((sum, r) => {
@@ -1071,7 +1076,21 @@ function ManualCard({
                   />
                 </td>
 
-                <td className="text-[11px] text-muted-foreground">{formatDateTime(r.createdAt)}</td>
+                <td className="text-[11px] text-muted-foreground">
+                  <div className="flex items-center justify-center gap-2">
+                    <span>{formatDateTime(r.createdAt)}</span>
+                    {onDelete && !r.shiftId && (
+                      <button
+                        type="button"
+                        onClick={() => onDelete(r.id)}
+                        title="حذف الصف (بدون شفت)"
+                        className="grid size-6 shrink-0 place-items-center rounded-lg border border-destructive/50 text-destructive transition hover:bg-destructive/15 active:scale-95"
+                      >
+                        <Trash2 className="size-3" />
+                      </button>
+                    )}
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -1281,6 +1300,7 @@ function ArchiveTxnsTable({
 function ShiftArchive({ userId }: { userId: string }) {
   const [sub, setSub] = useState<ArchiveTabKey>("employee");
   const archiveFn = useServerFn(getEmployeeArchive);
+  const deleteFn = useServerFn(deleteEmployeeManualTxn);
 
   const q = useQuery({
     queryKey: ["emp-archive", userId],
@@ -1300,6 +1320,17 @@ function ShiftArchive({ userId }: { userId: string }) {
   const manualRows: any[] = d.manual?.rows ?? [];
   const manualNow: string | null = d.manual?.serverNow ?? null;
 
+  const del = async (id: string) => {
+    if (!window.confirm("حذف هذا الصف نهائيًا؟")) return;
+    try {
+      await deleteFn({ data: { id } });
+      toast.success("تم حذف الصف");
+      q.refetch();
+    } catch {
+      toast.error("تعذّر حذف الصف");
+    }
+  };
+
   const manualCard = (card: ManualKind, title: string) => (
     <ManualCard
       card={card}
@@ -1314,6 +1345,7 @@ function ShiftArchive({ userId }: { userId: string }) {
       newestId={null}
       isAdmin
       readOnly
+      onDelete={del}
     />
   );
 
