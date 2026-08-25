@@ -779,7 +779,13 @@ async function startPeer(viewerId) {
         if (entry.connectTimer) { clearTimeout(entry.connectTimer); entry.connectTimer = null; }
         if (entry.recoverTimer) { clearTimeout(entry.recoverTimer); entry.recoverTimer = null; }
         setStatus("متصل", true);
+        reportStage({
+          connection: "connected",
+          screen: "streaming",
+          input: entry.ctlRel?.readyState === "open" || entry.ctl?.readyState === "open" ? "connected" : "idle",
+        });
         reportConnectedViewers();
+
         // رشقة إطارات مفتاحية في أول ثوانٍ: تظهر الصورة فوراً ولا تبقى
         // متجمّدة لو ضاع أول keyframe في الشبكة.
         let kf = 0;
