@@ -3,11 +3,11 @@
 // دائماً آخر إصدار فقط — البرنامج ينزل هذا الإصدار مباشرة ولا يمر بأي
 // إصدارات وسيطة بالترتيب.
 export const AGENT_RELEASE = {
-  version: "3.1.22",
-  notes: "تحسين جودة البث: صورة أوضح وحركة أنعم مع معدل بت أعلى وسقف دقة 1440p.",
+  version: "3.1.23",
+  notes: "بدء أسرع مع ويندوز، استعادة تلقائية للاتصال، بث أوضح للنصوص، وتحكم فوري بقناة بيانات منفصلة.",
   url: "https://mag-pro1.com/api/public/agent-download.exe",
   storageBucket: "site-assets",
-  storagePath: "releases/MagProConnect-Setup-3.1.22.exe",
-  size: 110525071,
-  sha256: "c0876cea33aa5fd04e791b0e2016da40069ec579ffd1d6bc7cf0bcedf7e3e961",
+  storagePath: "releases/MagProConnect-Setup-3.1.23.exe",
+  size: 110526725,
+  sha256: "3cf538b8b59f3264d907025dc134d492f078e73031e672859a55be7aa6311c06",
 } as const;
