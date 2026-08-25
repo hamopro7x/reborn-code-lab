@@ -1981,12 +1981,16 @@ export function EmployeeWorkView({
       ) : tab === "p2p" ? (
 
         <P2POrdersTable
-          rows={(p2pCompleted.data ?? []) as any[]}
-          loading={p2pCompleted.isLoading}
+          rows={p2pRowsView}
+          loading={p2pCompleted.isLoading || p2pOpen.isLoading}
           onDetails={setDetailRow}
-          onLinked={() => p2pCompleted.refetch()}
-          readOnly={true}
+          onLinked={() => {
+            void p2pCompleted.refetch();
+            void p2pOpen.refetch();
+          }}
+          readOnly={!!viewUserId || shiftMode}
         />
+
       ) : (
 
 
