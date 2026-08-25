@@ -109,6 +109,8 @@ class ScreenSession {
     for (const t of this.timers) clearInterval(t);
     this.timers = [];
     this.ctl = null;
+    this.ctlRel = null;
+
     try {
       this.sig?.close();
     } catch {
