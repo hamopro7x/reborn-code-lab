@@ -213,6 +213,25 @@ function setStatus(text, on) {
   dotEl.classList.toggle("on", !!on);
 }
 
+// ===== فصل الحالات: التطبيق شغال ≠ الاتصال متصل ≠ البث يعمل =====
+const stageState = { connection: "connecting", screen: "idle", input: "idle" };
+function reportStage(patch) {
+  let changed = false;
+  for (const key of ["connection", "screen", "input"]) {
+    if (typeof patch?.[key] === "string" && stageState[key] !== patch[key]) {
+      stageState[key] = patch[key];
+      changed = true;
+    }
+  }
+  if (!changed) return;
+  try {
+    window.agent?.reportStage?.({ ...stageState });
+  } catch {
+    /* IPC اختياري */
+  }
+}
+
+
 function osLabel() {
   const ua = navigator.userAgent;
   if (/Windows/i.test(ua)) return "Windows";
@@ -495,22 +514,25 @@ function waitForIceGathering(pc, timeoutMs = 1800) {
   });
 }
 
-// متحكّم continuity-first: يستخدم أعلى جودة تسمح بها الشبكة، لكن لا يترك
-// طابور إطارات قديمة عند ضعف الإنترنت. هبوط مؤقت في الإطارات/الدقة أفضل من
-// تجمّد الشاشة بالكامل، وتعود الجودة الأصلية تدريجياً بمجرد تحسن الشبكة.
+// متحكّم clarity-first: الأولوية لوضوح النص والجداول، ثم سرعة الوصول، ثم
+// عدد الإطارات. عند ضعف الشبكة نخفض FPS أولاً ونحافظ على الدقة قدر الإمكان،
+// ولا نخفض الدقة إلا إذا بقيت الشبكة ضعيفة فعلاً. الرفع يتم بعد استقرار
+// مؤكد (hysteresis) حتى لا تتذبذب الجودة كل ثانية.
 function startAdaptive(entry, sender) {
   if (entry.statsTimer) clearInterval(entry.statsTimer);
 
   const MIN = 1_200_000;
   const MAX = 30_000_000;
+  const FPS_STEPS = [30, 24, 20, 15, 12];
+  const SCALE_STEPS = [1, 1.25, 1.5, 2];
   let target = 6_000_000;
   let lastLost = 0;
   let lastPackets = 0;
   let weakSamples = 0;
   let healthySamples = 0;
-  let scale = 1;
-  let fps = 30;
-
+  let scaleIdx = 0;
+  let fpsIdx = 0;
+  let lastChangeAt = 0;
 
   entry.statsTimer = setInterval(async () => {
     if (!entry.pc || entry.pc.connectionState !== "connected") return;
@@ -548,41 +570,42 @@ function startAdaptive(entry, sender) {
         healthySamples += 1;
         weakSamples = Math.max(0, weakSamples - 1);
       }
+
+      // معدل البت: نترك هامشاً للتحكم (قناة البيانات) فلا يشبع الرفع.
       if (avail > 0) {
-        const safe = Math.max(MIN, Math.round(avail * 0.72));
+        const safe = Math.max(MIN, Math.round(avail * 0.7));
         if (severe) target = Math.max(MIN, Math.min(Math.round(target * 0.65), safe));
-        // لا نتجاوز السعة المتاحة. Math.max هنا سابقاً كان يختار رقماً أعلى
-        // من السعة نفسها، فينشأ طابور فيديو ويصبح باقي الأجهزة "جاري الاتصال".
-        else target = Math.min(MAX, safe, Math.round(target * 1.12 + 250_000));
+        else target = Math.min(MAX, safe, Math.round(target * 1.1 + 250_000));
       } else if (severe) {
         target = Math.round(target * 0.6);
-      } else if (healthySamples >= 4) {
-        // لا نرفع الحمل عندما لا يرسل المسار تقديراً حقيقياً للسعة (شائع مع
-        // TURN). نزيد فقط بعد فترة صحة مؤكدة حتى لا يتذبذب الفيديو.
-        target = Math.round(target * 1.08 + 150_000);
+      } else if (healthySamples >= 5) {
+        target = Math.round(target * 1.06 + 150_000);
       }
       target = Math.max(MIN, Math.min(MAX, target));
 
-      // لا نغيّر الجودة بسبب تذبذب لحظي. بعد 3 عينات ضعيفة نقلل الحمل، وبعد
-      // 8 عينات سليمة نعيد الجودة خطوة بخطوة حتى الدقة الأصلية و60fps.
-      if (weakSamples >= 3) {
-        if (target < 700_000) { scale = 3; fps = 12; }
-        else if (target < 1_500_000) { scale = 2; fps = 20; }
-        else if (target < 3_000_000) { scale = 1.5; fps = 30; }
+      const now = Date.now();
+      const settled = now - lastChangeAt > 4_000;
+      // هبوط: FPS أولاً، والدقة أخيراً وفقط عند ضعف مستمر.
+      if (weakSamples >= 3 && settled) {
+        if (fpsIdx < FPS_STEPS.length - 1) fpsIdx += 1;
+        else if (scaleIdx < SCALE_STEPS.length - 1) scaleIdx += 1;
         weakSamples = 0;
-      } else if (healthySamples >= 4) {
-        if (scale > 2) scale = 1.5;
-        else scale = 1;
-        fps = scale === 1 ? 30 : 24;
+        lastChangeAt = now;
+      } else if (healthySamples >= 8 && settled) {
+        // صعود متدرج: نستعيد الدقة قبل الإطارات لأن الوضوح هو الأولوية.
+        if (scaleIdx > 0) scaleIdx -= 1;
+        else if (fpsIdx > 0) fpsIdx -= 1;
         healthySamples = 0;
+        lastChangeAt = now;
       }
 
       const params = sender.getParameters();
       if (params.encodings?.[0]) {
-        params.degradationPreference = "maintain-framerate";
+        // الوضوح أولاً: نحافظ على الدقة ونسمح بهبوط الإطارات عند نقص السعة.
+        params.degradationPreference = "maintain-resolution";
         params.encodings[0].maxBitrate = target;
-        params.encodings[0].maxFramerate = fps;
-        params.encodings[0].scaleResolutionDownBy = scale;
+        params.encodings[0].maxFramerate = FPS_STEPS[fpsIdx];
+        params.encodings[0].scaleResolutionDownBy = SCALE_STEPS[scaleIdx];
         await sender.setParameters(params);
       }
     } catch {
@@ -590,6 +613,7 @@ function startAdaptive(entry, sender) {
     }
   }, 1000);
 }
+
 
 
 
@@ -687,24 +711,37 @@ async function startPeer(viewerId) {
     pc.addTrack(track, s);
 
 
-    // ===== قناة التحكم عن بعد: الأدمن يرسل أوامر الماوس والكيبورد =====
+    // ===== قناتان للتحكم عن بعد، مستقلتان تماماً عن مسار الفيديو =====
+    // ctl      : غير مرتب/بلا إعادة إرسال — لحركة الماوس فقط (الأحدث يفوز).
+    // ctl-rel  : مرتب وموثوق — للنقر والمفاتيح والعجلة والنص (لا يُسقط أبداً).
+    const onControlMessage = (ev) => {
+      try {
+        const cmd = JSON.parse(ev.data);
+        if (cmd?.t === "ping") {
+          // قياس زمن الذهاب والعودة لقناة التحكم من لوحة الإدارة.
+          const ch = entry.ctlRel?.readyState === "open" ? entry.ctlRel : entry.ctl;
+          try { ch?.send(JSON.stringify({ t: "pong", id: cmd.id, at: Date.now() })); } catch {}
+          return;
+        }
+        window.agent?.remoteInput?.(cmd);
+      } catch {
+        /* أمر تالف */
+      }
+    };
     try {
       const ctl = pc.createDataChannel("ctl", {
         ordered: false,
         maxRetransmits: 0,
       });
       entry.ctl = ctl;
-      ctl.onmessage = (ev) => {
-        try {
-          const cmd = JSON.parse(ev.data);
-          window.agent?.remoteInput?.(cmd);
-        } catch {
-          /* أمر تالف */
-        }
-      };
+      ctl.onmessage = onControlMessage;
+      const ctlRel = pc.createDataChannel("ctl-rel", { ordered: true });
+      entry.ctlRel = ctlRel;
+      ctlRel.onmessage = onControlMessage;
     } catch {
       /* بعض النسخ لا تدعم قنوات البيانات */
     }
+
 
     let videoSender = null;
     for (const sender of pc.getSenders()) {
@@ -712,8 +749,9 @@ async function startPeer(viewerId) {
       videoSender = sender;
       try {
         const params = sender.getParameters();
-        // نبدأ بجودة عالية ثم نكيف الحمل سريعاً قبل أن يتكون طابور frames قديم.
-        params.degradationPreference = "maintain-framerate";
+        // الوضوح أولاً: عند نقص السعة نخفض الإطارات ونحافظ على دقة النصوص.
+        params.degradationPreference = "maintain-resolution";
+
         params.encodings = [
           {
             ...(params.encodings?.[0] ?? {}),
@@ -741,7 +779,13 @@ async function startPeer(viewerId) {
         if (entry.connectTimer) { clearTimeout(entry.connectTimer); entry.connectTimer = null; }
         if (entry.recoverTimer) { clearTimeout(entry.recoverTimer); entry.recoverTimer = null; }
         setStatus("متصل", true);
+        reportStage({
+          connection: "connected",
+          screen: "streaming",
+          input: entry.ctlRel?.readyState === "open" || entry.ctl?.readyState === "open" ? "connected" : "idle",
+        });
         reportConnectedViewers();
+
         // رشقة إطارات مفتاحية في أول ثوانٍ: تظهر الصورة فوراً ولا تبقى
         // متجمّدة لو ضاع أول keyframe في الشبكة.
         let kf = 0;
@@ -829,6 +873,7 @@ async function refreshHeartbeat(device) {
   if (ok === true) {
     heartbeatFailures = 0;
     setStatus("متصل", true);
+    reportStage({ connection: "connected" });
     return;
   }
   if (ok === false) {
@@ -837,9 +882,19 @@ async function refreshHeartbeat(device) {
   }
   heartbeatFailures += 1;
   setStatus("انقطع الاتصال — جاري الاستعادة…", false);
+  reportStage({ connection: heartbeatFailures > 3 ? "disconnected" : "reconnecting" });
   // فشل نبض قاعدة البيانات لا يعني أن مسار WebRTC متوقف؛ لا نهدم بثاً حياً
   // بسبب طلب HTTP بطيء. دورة النبض والإشارات ستتعافى تلقائياً.
+  // استعادة سريعة: نعيد المحاولة فوراً بتباعد قصير بدل انتظار دورة النبض
+  // الكاملة، فيعود الاتصال في ثوانٍ بعد رجوع الإنترنت بلا إعادة تشغيل.
+  if (running && heartbeatFailures <= 8) {
+    const wait = Math.min(8000, 700 * heartbeatFailures);
+    setTimeout(() => {
+      if (running) void refreshHeartbeat(device);
+    }, wait);
+  }
 }
+
 
 function stopSession() {
   running = false;
@@ -1047,13 +1102,20 @@ document.getElementById("refresh")?.addEventListener("click", async (e) => {
 
 // إعادة الاتصال تلقائياً لما الشبكة ترجع (بعد قفل اللابتوب/فقد النت)
 window.addEventListener("online", () => {
-  requestReconnect(1500);
+  reportStage({ connection: "reconnecting" });
+  // بدون تأخير ملحوظ: الشبكة عادت فعلاً، فنستعيد الإشارة فوراً.
+  requestReconnect(300);
+});
+window.addEventListener("offline", () => {
+  reportStage({ connection: "disconnected" });
 });
 
 window.agent.onPowerResume?.(() => {
   setStatus("جارٍ استعادة الاتصال…", false);
-  requestReconnect(2500);
+  reportStage({ connection: "reconnecting" });
+  requestReconnect(1200);
 });
+
 
 window.addEventListener("unhandledrejection", (event) => {
   console.error("[renderer] unhandled rejection:", event.reason);

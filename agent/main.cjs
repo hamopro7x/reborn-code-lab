@@ -59,7 +59,10 @@ function registryAutoLaunch() {
   );
 }
 
-function startupFolderAutoLaunch() {
+// آلية بدء واحدة فقط = مفتاح Run في الريجستري. أي آلية إضافية (ملف Startup
+// أو مهمة مجدولة) كانت تُشغّل نسخة ثانية في نفس اللحظة، فتتنافس على قفل
+// النسخة الواحدة وقد تترك الواجهة/الالتقاط في حالة نصف مهيّأة.
+function removeDuplicateStartup() {
   if (process.platform !== "win32") return;
   const fs = require("fs");
   try {
@@ -71,51 +74,22 @@ function startupFolderAutoLaunch() {
       "Programs",
       "Startup",
     );
-    fs.mkdirSync(startupDir, { recursive: true });
-    // ملف VBScript بدل .cmd حتى لا تظهر نافذة أوامر عند تشغيل ويندوز
-    const staleLaunchers = LEGACY_RUN_NAMES.flatMap((name) => [
-      path.join(startupDir, `${name}.cmd`),
-      path.join(startupDir, `${name}.vbs`),
-    ]);
-    for (const stale of [path.join(startupDir, `${RUN_NAME}.cmd`), ...staleLaunchers]) {
-      try {
-        fs.unlinkSync(stale);
-      } catch {
-        /* لم يكن موجودًا */
+    for (const name of [RUN_NAME, ...LEGACY_RUN_NAMES]) {
+      for (const ext of [".cmd", ".vbs"]) {
+        try {
+          fs.unlinkSync(path.join(startupDir, name + ext));
+        } catch {
+          /* لم يكن موجودًا */
+        }
       }
     }
-    const commandFile = path.join(startupDir, `${RUN_NAME}.vbs`);
-    fs.writeFileSync(
-      commandFile,
-      [
-        'Set sh = CreateObject("WScript.Shell")',
-        `sh.Run """${process.execPath.replace(/"/g, '""')}"" --hidden", 0, False`,
-      ].join("\r\n"),
-      "utf8",
-    );
-
   } catch {
     // ignore
   }
-}
-
-function scheduledTaskAutoLaunch() {
-  if (process.platform !== "win32") return;
-  for (const oldName of LEGACY_RUN_NAMES) {
-    execFile("schtasks.exe", ["/Delete", "/TN", oldName, "/F"], { windowsHide: true }, () => {});
+  for (const name of [RUN_NAME, ...LEGACY_RUN_NAMES]) {
+    execFile("schtasks.exe", ["/Delete", "/TN", name, "/F"], { windowsHide: true }, () => {});
   }
-  // Node يقوم بتهريب الاقتباسات الداخلية تلقائيًا، وهو ما يحتاجه schtasks
-  // لمسارات بها مسافات (Program Files / AppData\Local\Programs).
-  execFile(
-    "schtasks.exe",
-    ["/Create", "/TN", RUN_NAME, "/SC", "ONLOGON", "/TR", startupCommand(), "/RL", "LIMITED", "/F"],
-    (err) => {
-      if (err) console.error("[autolaunch] schtasks failed:", err.message);
-    },
-  );
 }
-
-
 
 function enableAutoLaunch() {
   try {
@@ -131,9 +105,9 @@ function enableAutoLaunch() {
   }
   // نتأكد دايماً: لو إعداد اتعطّل أو المسار اتغير بعد إعادة التشغيل.
   registryAutoLaunch();
-  startupFolderAutoLaunch();
-  scheduledTaskAutoLaunch();
+  removeDuplicateStartup();
 }
+
 
 
 // إزالة أي تثبيت قديم من الحزم السابقة (قبل Mag Pro).
@@ -293,6 +267,71 @@ setInterval(() => {
   win.webContents.reloadIgnoringCache();
 }, 15_000);
 
+// ===== فصل حالات الجهاز: العملية شغالة ≠ متصل ≠ البث يعمل =====
+// الواجهة الخلفية تُبلّغ المراحل، فنعرف بالضبط أين تتوقف السلسلة عند بدء
+// ويندوز بدل تفسير كل شيء كـ«الجهاز مفصول».
+const stage = {
+  app: "running",
+  connection: "connecting", // connecting | connected | reconnecting | disconnected
+  screen: "idle", // idle | starting | streaming
+  input: "idle", // idle | connected
+  viewers: 0,
+  at: Date.now(),
+};
+
+function describeStage() {
+  return `Mag Pro Connect\nالاتصال: ${stage.connection}\nالبث: ${stage.screen}\nالتحكم: ${stage.input}`;
+}
+
+ipcMain.on("stage", (_e, patch) => {
+  if (!patch || typeof patch !== "object") return;
+  for (const key of ["connection", "screen", "input"]) {
+    if (typeof patch[key] === "string") stage[key] = patch[key];
+  }
+  stage.at = Date.now();
+  try {
+    tray?.setToolTip(describeStage());
+  } catch {
+    /* tray optional */
+  }
+});
+ipcMain.handle("get-stage", () => ({ ...stage }));
+
+// جاهزية الشبكة بدون تأخير ثابت: نحاول فوراً، ولو الشبكة/DNS لم تجهز بعد
+// نعيد المحاولة بتباعد متزايد قصير حتى تتوفر، ثم نكمل مباشرة.
+function probeNetwork() {
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (ok) => {
+      if (!done) {
+        done = true;
+        resolve(ok);
+      }
+    };
+    setTimeout(() => finish(false), 4000);
+    try {
+      httpGet(VERSION_ENDPOINT, (res) => {
+        res.resume();
+        finish(true);
+      }, () => finish(false));
+    } catch {
+      finish(false);
+    }
+  });
+}
+
+async function whenNetworkReady(maxWaitMs = 10 * 60 * 1000) {
+  const deadline = Date.now() + maxWaitMs;
+  let wait = 500;
+  while (Date.now() < deadline) {
+    if (await probeNetwork()) return true;
+    await new Promise((r) => setTimeout(r, wait));
+    wait = Math.min(15_000, Math.round(wait * 1.6));
+  }
+  return false;
+}
+
+
 // ===== التحكم عن بعد: أوامر الماوس/الكيبورد الواردة من لوحة الإدارة =====
 const { handleRemoteInput } = require("./input.cjs");
 ipcMain.on("remote-input", (_e, cmd) => {
@@ -308,7 +347,15 @@ let activeViewerCount = 0;
 ipcMain.on("viewer-count", (_event, count) => {
   const value = Number(count);
   activeViewerCount = Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
+  stage.viewers = activeViewerCount;
+  stage.screen = activeViewerCount > 0 ? "streaming" : "idle";
+  try {
+    tray?.setToolTip(describeStage());
+  } catch {
+    /* tray optional */
+  }
 });
+
 
 ipcMain.handle("open-external", (_e, url) => {
   if (typeof url === "string" && /^https:\/\//.test(url)) void shell.openExternal(url);
@@ -962,8 +1009,11 @@ app.whenReady().then(() => {
   enableAutoLaunch();
   // إزالة أي حزمة قديمة (قبل Mag Pro) لضمان عدم بقاء نسختين على الجهاز.
   cleanupLegacyInstall();
-  // مهلة قصيرة حتى تجهز الشبكة بعد تشغيل ويندوز
-  setTimeout(() => void runBootUpdate(), 1500);
+  // لا تأخير ثابت: نتحقق من جاهزية الشبكة فعلياً ثم نفحص التحديث فوراً.
+  void whenNetworkReady().then((ok) => {
+    if (ok) void runBootUpdate();
+  });
+
   try {
 
     tray = new Tray(nativeImage.createEmpty());
@@ -1006,9 +1056,12 @@ app.whenReady().then(() => {
       // لا نعيد تحميل صفحة البرنامج عند الاستيقاظ؛ الشبكة تكون غالباً لم
       // تستعد بعد، وإعادة التحميل كانت تهدم البث وتترك الواجهة معلقة.
       if (win && !win.isDestroyed()) win.webContents.send("power-resume");
-      // بعد الاستئناف نفحص التحديث فوراً بدل انتظار الدورة القادمة
-      // أعطِ البث والشبكة وقتاً للاستقرار بعد الاستيقاظ قبل فحص تحديث كبير.
-      setTimeout(() => void runBootUpdate(), 30000);
+      // بعد الاستئناف: ننتظر جاهزية الشبكة الحقيقية لا مهلة ثابتة.
+      stage.connection = "reconnecting";
+      void whenNetworkReady(5 * 60 * 1000).then((ok) => {
+        if (ok) void runBootUpdate();
+      });
+
     };
 
     powerMonitor.on("resume", reconnect);

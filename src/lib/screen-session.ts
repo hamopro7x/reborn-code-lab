@@ -15,6 +15,8 @@ class ScreenSession {
   private pc: RTCPeerConnection | null = null;
   private sig: Signaling | null = null;
   private ctl: RTCDataChannel | null = null;
+  private ctlRel: RTCDataChannel | null = null;
+
   private timers: Array<ReturnType<typeof setInterval>> = [];
   private recoverTimer: ReturnType<typeof setTimeout> | undefined;
   private recoverAt = 0;
@@ -68,9 +70,12 @@ class ScreenSession {
   }
 
   sendInput = (cmd: Record<string, unknown>) => {
-    const ch = this.ctl;
+    // الحركة على القناة غير الموثوقة (الأحدث يفوز، لا طابور يتراكم)،
+    // والنقر/المفاتيح/العجلة/النص على القناة الموثوقة فلا تُفقد أبداً.
+    const isMove = cmd.t === "move";
+    const ch = isMove ? (this.ctl ?? this.ctlRel) : (this.ctlRel ?? this.ctl);
     if (!ch || ch.readyState !== "open") return;
-    const limit = cmd.t === "move" ? 4_096 : 65_536;
+    const limit = isMove ? 4_096 : 65_536;
     if (ch.bufferedAmount > limit) return;
     try {
       ch.send(JSON.stringify(cmd));
@@ -80,6 +85,8 @@ class ScreenSession {
   };
 
   sendMove = (p: { x: number; y: number }) => {
+    // نضغط الحركات إلى آخر موضع فقط لكل إطار عرض: التحكم يصل فوراً ولا
+    // يتأخر خلف مواضع قديمة، ومساره منفصل تماماً عن إطارات الفيديو.
     this.moveQueued = p;
     if (this.raf != null) return;
     this.raf = requestAnimationFrame(() => {
@@ -89,6 +96,7 @@ class ScreenSession {
       if (m) this.sendInput({ t: "move", x: m.x, y: m.y });
     });
   };
+
 
   /** يهدم مسار WebRTC الحالي فقط (بدون هدم الجلسة) */
   private dropTransport() {
@@ -101,6 +109,8 @@ class ScreenSession {
     for (const t of this.timers) clearInterval(t);
     this.timers = [];
     this.ctl = null;
+    this.ctlRel = null;
+
     try {
       this.sig?.close();
     } catch {
@@ -256,8 +266,10 @@ class ScreenSession {
     };
 
     pc.ondatachannel = (e) => {
-      if (e.channel.label !== "ctl") return;
-      this.ctl = e.channel;
+      if (e.channel.label === "ctl-rel") this.ctlRel = e.channel;
+      else if (e.channel.label === "ctl") this.ctl = e.channel;
+      else return;
+
       e.channel.onopen = () => {
         if (alive()) this.set({ canControl: true });
       };

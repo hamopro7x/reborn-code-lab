@@ -12,6 +12,9 @@ contextBridge.exposeInMainWorld("agent", {
   reloadRenderer: () => ipcRenderer.send("reload-renderer"),
   setViewerCount: (count) => ipcRenderer.send("viewer-count", count),
   remoteInput: (cmd) => ipcRenderer.send("remote-input", cmd),
+  reportStage: (patch) => ipcRenderer.send("stage", patch),
+  getStage: () => ipcRenderer.invoke("get-stage"),
+
   onUpdateProgress: (cb) => {
     ipcRenderer.on("update-progress", (_e, data) => cb(data));
   },
