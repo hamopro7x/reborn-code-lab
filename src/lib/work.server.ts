@@ -1935,10 +1935,24 @@ export async function deleteManualTxnRow(id: string) {
 
 export async function deleteShift(shiftId: string) {
   const db = await admin();
-  await db.from("work_txn_assignments").delete().eq("shift_id", shiftId);
+
+  // طلبات P2P: لا نفقد تاريخ الربط. نحوّل روابطها إلى «previously_assigned»
+  // (shift_id = NULL) حتى لا تعود للظهور كطلبات متاحة بعد حذف الشفت.
+  await db
+    .from("work_txn_assignments")
+    .update({ shift_id: null, assign_mode: "previously_assigned" })
+    .eq("shift_id", shiftId)
+    .in("kind", P2P_KINDS as unknown as string[]);
+
+  await db
+    .from("work_txn_assignments")
+    .delete()
+    .eq("shift_id", shiftId)
+    .not("kind", "in", `(${P2P_KINDS.join(",")})`);
   await db.from("work_manual_card_txns").delete().eq("shift_id", shiftId);
   await db.from("work_manual_txns").delete().eq("shift_id", shiftId);
   const { error } = await db.from("work_shifts").delete().eq("id", shiftId);
   if (error) throw new Error(error.message);
   return { ok: true };
 }
+
