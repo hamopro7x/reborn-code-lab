@@ -242,7 +242,7 @@ const EXTENDED = new Set([
   "PageUp", "PageDown", "Insert", "Delete",
 ]);
 
-function write(line) {
+function writeRaw(line) {
   const p = ensure();
   if (!p || !p.stdin.writable) return;
   try {
@@ -250,6 +250,34 @@ function write(line) {
   } catch {
     proc = null;
   }
+}
+
+// الحركة: آخر موضع فقط هو المهم. نجمع الحركات في نفس دورة الحدث ونرسل
+// الأخيرة فقط، فلا يتكوّن طابور مواضع قديمة عند ضعف الشبكة أو الرشقات
+// السريعة. أما النقر والكيبورد فيُرسلان دائماً بلا إسقاط، وقبلهما نُفرغ
+// الحركة المعلّقة للحفاظ على الترتيب الصحيح (اذهب ثم اضغط).
+let pendingMove = null;
+let flushScheduled = false;
+
+function flushMove() {
+  flushScheduled = false;
+  if (pendingMove === null) return;
+  const line = pendingMove;
+  pendingMove = null;
+  writeRaw(line);
+}
+
+function writeMove(line) {
+  pendingMove = line;
+  if (flushScheduled) return;
+  flushScheduled = true;
+  setImmediate(flushMove);
+}
+
+/** أحداث موثوقة (نقر/مفاتيح/عجلة/نص) — تُرسل فوراً بعد إفراغ الحركة */
+function write(line) {
+  if (pendingMove !== null) flushMove();
+  writeRaw(line);
 }
 
 // الحركة تُرسل فوراً — العملية الأصلية سريعة ولا تحتاج تجميع زمني،
@@ -262,6 +290,7 @@ function clamp01(v) {
   if (!Number.isFinite(n)) return null;
   return Math.max(0, Math.min(1, n));
 }
+
 
 function sendText(s) {
   const codes = [];
