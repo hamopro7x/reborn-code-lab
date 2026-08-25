@@ -362,8 +362,10 @@ function stopRemoteInput() {
     proc?.kill();
   } catch {}
   proc = null;
+  pendingMove = null;
   lastX = -1;
   lastY = -1;
+
 }
 
 module.exports = { handleRemoteInput, stopRemoteInput };
