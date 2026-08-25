@@ -692,24 +692,37 @@ async function startPeer(viewerId) {
     pc.addTrack(track, s);
 
 
-    // ===== قناة التحكم عن بعد: الأدمن يرسل أوامر الماوس والكيبورد =====
+    // ===== قناتان للتحكم عن بعد، مستقلتان تماماً عن مسار الفيديو =====
+    // ctl      : غير مرتب/بلا إعادة إرسال — لحركة الماوس فقط (الأحدث يفوز).
+    // ctl-rel  : مرتب وموثوق — للنقر والمفاتيح والعجلة والنص (لا يُسقط أبداً).
+    const onControlMessage = (ev) => {
+      try {
+        const cmd = JSON.parse(ev.data);
+        if (cmd?.t === "ping") {
+          // قياس زمن الذهاب والعودة لقناة التحكم من لوحة الإدارة.
+          const ch = entry.ctlRel?.readyState === "open" ? entry.ctlRel : entry.ctl;
+          try { ch?.send(JSON.stringify({ t: "pong", id: cmd.id, at: Date.now() })); } catch {}
+          return;
+        }
+        window.agent?.remoteInput?.(cmd);
+      } catch {
+        /* أمر تالف */
+      }
+    };
     try {
       const ctl = pc.createDataChannel("ctl", {
         ordered: false,
         maxRetransmits: 0,
       });
       entry.ctl = ctl;
-      ctl.onmessage = (ev) => {
-        try {
-          const cmd = JSON.parse(ev.data);
-          window.agent?.remoteInput?.(cmd);
-        } catch {
-          /* أمر تالف */
-        }
-      };
+      ctl.onmessage = onControlMessage;
+      const ctlRel = pc.createDataChannel("ctl-rel", { ordered: true });
+      entry.ctlRel = ctlRel;
+      ctlRel.onmessage = onControlMessage;
     } catch {
       /* بعض النسخ لا تدعم قنوات البيانات */
     }
+
 
     let videoSender = null;
     for (const sender of pc.getSenders()) {
