@@ -1197,11 +1197,6 @@ function ManualSection({
  * قراءة فقط، وبلا أي تعديل على سلوك الأقسام الأصلية. */
 type ArchiveTabKey = "employee" | "wrong";
 
-/** شريط أقسام «ملخص الشفت» — قسمان فقط. */
-const ARCHIVE_TABS: { key: ArchiveTabKey; label: string; icon: typeof ListOrdered }[] = [
-  { key: "employee", label: "خاص بالموظف", icon: User },
-  { key: "wrong", label: "المعاملات الغلط", icon: AlertTriangle },
-];
 
 
 function ArchiveTxnsTable({
