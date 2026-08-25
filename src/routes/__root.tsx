@@ -132,9 +132,13 @@ function RootComponent() {
   useGlobalAutoSave();
 
   useEffect(() => {
+    // نطاق حفظ حالة الواجهة = المستخدم الحالي (حتى لا تتداخل حالة
+    // الأدمن/الموظف/المستخدم على نفس الجهاز).
+    void supabase.auth.getUser().then(({ data }) => setUiScope(data.user?.id ?? "anon"));
 
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") {
+        setUiScope(session?.user?.id ?? "anon");
         router.invalidate();
         if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
       }
@@ -145,6 +149,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <CurrencyProvider>
         <CartProvider>
+          <GlobalRealtime />
           <Outlet />
           <Toaster position="top-center" richColors theme="dark" />
         </CartProvider>
