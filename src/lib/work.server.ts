@@ -1328,16 +1328,32 @@ export type ManualCard = "wrong" | "employee" | "receive" | "transfer";
  * written during (`shift_id`). Passing a shift id returns that shift's history
  * only; ended shifts keep their rows for good (nothing is ever deleted).
  */
-export async function listManualTxns(userId: string, shiftId?: string | null) {
+export async function listManualTxns(
+  userId: string,
+  shiftId?: string | null,
+  /** طبقة الصفحات الإضافية: بدونها يبقى السلوك القديم كما هو تمامًا. */
+  paging?: { card?: ManualCard | null; page?: number; pageSize?: number },
+) {
   const db = await admin();
   let q = db
     .from("work_manual_txns")
-    .select("id,card,amount,details,created_at,amount_saved_at,details_saved_at,shift_id")
+    .select("id,card,amount,details,created_at,amount_saved_at,details_saved_at,shift_id", { count: "exact" })
     .eq("user_id", userId);
   if (shiftId) q = q.eq("shift_id", shiftId);
-  const { data } = await q.order("created_at", { ascending: false });
+  if (paging?.card) q = q.eq("card", paging.card);
+  q = q.order("created_at", { ascending: false }).order("id", { ascending: false });
+  const usePaging = !!paging && (paging.page !== undefined || paging.pageSize !== undefined);
+  if (usePaging) {
+    const { from, to } = pageRange(paging!.page, paging!.pageSize);
+    q = q.range(from, to);
+  }
+  const { data, count } = await q;
+  const r0 = pageRange(paging?.page, paging?.pageSize);
   return {
     serverNow: new Date().toISOString(),
+    total: Number(count ?? (data ?? []).length),
+    page: r0.page,
+    pageSize: r0.pageSize,
     rows: (data ?? []).map((r: any) => ({
       id: r.id as string,
       card: r.card as ManualCard,
