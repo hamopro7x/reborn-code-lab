@@ -1583,6 +1583,7 @@ export async function addMyManualCardTxn(
     .select("id,merchant,amount,egp,quantity,pan4,created_at")
     .maybeSingle();
   if (error) return { ok: false as const, error: error.message };
+  await enforceRetentionSafe("work_manual_card_txns");
   return { ok: true as const, row: mapManualCard(data), serverNow: new Date().toISOString() };
 }
 
