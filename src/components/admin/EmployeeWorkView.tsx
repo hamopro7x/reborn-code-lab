@@ -338,9 +338,14 @@ function P2POrdersTable({
                     </td>
                     {!readOnly && (
                       <td>
-                        <P2PLinkMenu ledgerId={String(r.ledgerId)} onLinked={onLinked} />
+                        {r.assignmentId ? (
+                          <span className="text-[11px] font-bold text-emerald-400">مرتبط</span>
+                        ) : (
+                          <P2PLinkMenu ledgerId={String(r.ledgerId)} onLinked={onLinked} />
+                        )}
                       </td>
                     )}
+
                   </tr>
                 );
               })
