@@ -213,6 +213,25 @@ function setStatus(text, on) {
   dotEl.classList.toggle("on", !!on);
 }
 
+// ===== فصل الحالات: التطبيق شغال ≠ الاتصال متصل ≠ البث يعمل =====
+const stageState = { connection: "connecting", screen: "idle", input: "idle" };
+function reportStage(patch) {
+  let changed = false;
+  for (const key of ["connection", "screen", "input"]) {
+    if (typeof patch?.[key] === "string" && stageState[key] !== patch[key]) {
+      stageState[key] = patch[key];
+      changed = true;
+    }
+  }
+  if (!changed) return;
+  try {
+    window.agent?.reportStage?.({ ...stageState });
+  } catch {
+    /* IPC اختياري */
+  }
+}
+
+
 function osLabel() {
   const ua = navigator.userAgent;
   if (/Windows/i.test(ua)) return "Windows";
