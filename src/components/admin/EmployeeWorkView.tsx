@@ -1611,6 +1611,23 @@ export function EmployeeWorkView({
     refetchInterval: 30_000,
   });
 
+  // طلبات P2P الجديدة (غير مرتبطة بأي شفت) — تظهر لكل الموظفين حتى يربطوها.
+  const openP2PFn = useServerFn(getWorkP2PCompleted);
+  const p2pOpen = useQuery({
+    queryKey: ["work-p2p-open"],
+    queryFn: () => openP2PFn({ data: undefined as any }),
+    enabled: !blank && !viewUserId && !shiftMode,
+    refetchInterval: 30_000,
+  });
+
+  const p2pRowsView = useMemo(() => {
+    const linked = (p2pCompleted.data ?? []) as any[];
+    const open = (p2pOpen.data ?? []) as any[];
+    const ids = new Set(linked.map((r) => String(r.ledgerId)));
+    return [...open.filter((r) => !ids.has(String(r.ledgerId))), ...linked];
+  }, [p2pCompleted.data, p2pOpen.data]);
+
+
   // Read-only filters over the same central ledger: external / internal.
   const transfersFn = useServerFn(getWorkTransfers);
   const extQ = useQuery({
