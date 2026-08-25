@@ -1410,6 +1410,7 @@ export async function addManualTxn(userId: string, card: ManualCard) {
     .select("id")
     .maybeSingle();
   if (error) return { ok: false as const, error: error.message };
+  await enforceRetentionSafe("work_manual_txns");
   return { ok: true as const, id: data?.id as string };
 }
 
