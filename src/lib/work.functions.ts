@@ -558,3 +558,13 @@ export const getEmployeeArchive = createServerFn({ method: "POST" })
     const mod = await import("./work.server");
     return mod.employeeArchive(data.userId);
   });
+
+/** حذف شفت لأي موظف (أدمن فقط). */
+export const deleteEmployeeShift = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ shiftId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    return mod.deleteShift(data.shiftId);
+  });
