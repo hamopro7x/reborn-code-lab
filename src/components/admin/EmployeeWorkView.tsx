@@ -1752,14 +1752,27 @@ export function EmployeeWorkView({
                 <User className="size-8" />
               )}
             </div>
-            <div className="min-w-0">
-              <div className="truncate text-xl font-black">{name}</div>
-              <div className="mt-1 flex items-center gap-1.5 text-sm text-foreground/70">
-                <span>موظف</span>
-                <span className="size-1.5 rounded-full bg-emerald-500" />
-                <span className="text-emerald-500">متصل</span>
+              <div className="min-w-0">
+                <div className="truncate text-xl font-black">{name}</div>
+                <div className="mt-1 flex items-center gap-1.5 text-sm text-foreground/70">
+                  {st.data?.holding === true ? (
+                    <>
+                      <span className="size-2 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.8)]" />
+                      <span className="font-bold text-emerald-500">متصل</span>
+                    </>
+                  ) : st.data?.holding === false ? (
+                    <>
+                      <span className="size-2 rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.8)]" />
+                      <span className="font-bold text-red-500">مش متصل ب الشفت</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="size-2 rounded-full bg-muted-foreground" />
+                      <span className="text-muted-foreground">جارٍ التحميل...</span>
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
           </div>
 
           <button
