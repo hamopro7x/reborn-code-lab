@@ -1795,7 +1795,7 @@ export function EmployeeWorkView({
                   ) : st.data?.holding === false ? (
                     <>
                       <span className="size-2 rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.8)]" />
-                      <span className="font-bold text-red-500">مش متصل ب الشفت</span>
+                      <span className="font-bold text-red-500">غير متصل</span>
                     </>
                   ) : (
                     <>
