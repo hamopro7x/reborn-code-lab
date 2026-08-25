@@ -1888,3 +1888,18 @@ export async function employeeArchive(userId: string) {
     p2p: [...p2p].sort(asc),
   };
 }
+
+/**
+ * حذف شفت كامل (أدمن فقط). يحذف الروابط والسجلات اليدوية التابعة للشفت أولًا
+ * حتى لا تفشل قيود المفاتيح الأجنبية. سجل Bybit الأصلي لا يُلمس إطلاقًا:
+ * المعاملات المربوطة تعود «غير مربوطة» فقط.
+ */
+export async function deleteShift(shiftId: string) {
+  const db = await admin();
+  await db.from("work_txn_assignments").delete().eq("shift_id", shiftId);
+  await db.from("work_manual_card_txns").delete().eq("shift_id", shiftId);
+  await db.from("work_manual_txns").delete().eq("shift_id", shiftId);
+  const { error } = await db.from("work_shifts").delete().eq("id", shiftId);
+  if (error) throw new Error(error.message);
+  return { ok: true };
+}

@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2 } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 import { EmployeeWorkView } from "@/components/admin/EmployeeWorkView";
 import { AdminSheet } from "@/components/admin/AdminSheet";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { listEmployees } from "@/lib/admin.functions";
-import { getEmployeeShiftList } from "@/lib/work.functions";
+import { getEmployeeShiftList, deleteEmployeeShift } from "@/lib/work.functions";
 import employeesBg from "@/assets/employees-bg.png.asset.json";
 
 
@@ -135,6 +135,7 @@ function ShiftPickerMenu({
   userId,
   selectedId,
   onSelect,
+  onDeleted,
   open,
   onOpenChange,
   children,
@@ -142,11 +143,13 @@ function ShiftPickerMenu({
   userId: string | null;
   selectedId: string | null;
   onSelect: (shift: Shift) => void;
+  onDeleted: (shiftId: string) => void;
   open: boolean;
   onOpenChange: (v: boolean) => void;
   children: React.ReactNode;
 }) {
   const listFn = useServerFn(getEmployeeShiftList);
+  const del = useServerFn(deleteEmployeeShift);
   const q = useQuery({
     queryKey: ["admin-employee-shifts", userId],
     queryFn: () => listFn({ data: { userId: userId! } }) as Promise<Shift[]>,
@@ -185,16 +188,34 @@ function ShiftPickerMenu({
             const end = sh.endedAt ? fmtShift(sh.endedAt) : null;
             const number = shifts.length - i;
             return (
-              <li key={sh.id}>
+              <li key={sh.id} className="flex items-stretch gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!window.confirm(`حذف «شفت رقم ${number}» وكل سجلاته اليدوية؟`)) return;
+                    del({ data: { shiftId: sh.id } })
+                      .then(() => {
+                        if (sh.id === selectedId) onDeleted(sh.id);
+                        void q.refetch();
+                      })
+                      .catch((e: any) => window.alert(e?.message || "تعذر حذف الشفت"));
+                  }}
+                  title="حذف الشفت"
+                  aria-label="حذف الشفت"
+                  className="grid w-9 shrink-0 place-items-center rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-300 transition hover:bg-rose-500/20"
+                >
+                  <Trash2 className="size-4" />
+                </button>
                 <button
                   type="button"
                   onClick={() => onSelect({ ...sh, label: `شفت رقم ${number}` })}
-                  className={`flex w-full items-stretch gap-2 rounded-xl border px-2 py-2 text-right transition ${
+                  className={`flex flex-1 items-stretch gap-2 rounded-xl border px-2 py-2 text-right transition ${
                     active
                       ? "border-blue-500/40 bg-[oklch(0.13_0_0)] shadow-[0_0_20px_-6px_oklch(0.55_0.28_305/0.5)]"
                       : "border-white/5 bg-[oklch(0.095_0_0)] hover:bg-[oklch(0.11_0_0)]"
                   }`}
                 >
+
                   {/* رقم الشفت */}
                   <div className="flex w-10 shrink-0 items-center justify-center">
                     <span className="grid h-8 w-8 place-items-center rounded-lg bg-[linear-gradient(180deg,#1636e6,#0a24c4)] text-sm font-black text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
@@ -340,6 +361,7 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
                 setSelectedShift(sh);
                 setShiftOpen(false);
               }}
+              onDeleted={() => setSelectedShift(null)}
             >
               <button type="button" className={`${CHIP_BASE} ${selectedShift ? CHIP_ON : CHIP_OFF}`}>
                 اختيار الشفت
