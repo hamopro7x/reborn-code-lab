@@ -1347,23 +1347,32 @@ function ShiftArchive({ userId }: { userId: string }) {
   );
 
   return (
-    <ManualCard
-      key={sub}
-      card={sub}
-      title={sub === "employee" ? "خاص بالموظف" : "المعاملات الغلط"}
-      header={header}
-      rows={manualRows.filter((r) => r.card === sub)}
-      serverNow={manualNow}
-      onAdd={() => {}}
-      onClear={() => {}}
-      onSaved={() => {}}
-      adding={false}
-      clearing={false}
-      newestId={null}
-      isAdmin
-      readOnly
-      onDelete={del}
-    />
+    <div className="space-y-2">
+      <ManualCard
+        key={sub}
+        card={sub}
+        title={sub === "employee" ? "خاص بالموظف" : "المعاملات الغلط"}
+        header={header}
+        rows={manualRows.filter((r) => r.card === sub)}
+        serverNow={manualNow}
+        onAdd={() => {}}
+        onClear={() => {}}
+        onSaved={() => {}}
+        adding={false}
+        clearing={false}
+        newestId={null}
+        isAdmin
+        readOnly
+        onDelete={del}
+      />
+      <PaginationBar
+        page={Number(d.manual?.page ?? page)}
+        total={Number(d.manual?.total ?? manualRows.length)}
+        pageSize={Number(d.manual?.pageSize ?? PAGE_SIZE)}
+        onPage={setPage}
+        className="data-surface rounded-2xl"
+      />
+    </div>
   );
 }
 
