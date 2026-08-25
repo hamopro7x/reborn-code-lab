@@ -1330,13 +1330,40 @@ export type ManualCard = "wrong" | "employee" | "receive" | "transfer";
  * written during (`shift_id`). Passing a shift id returns that shift's history
  * only; ended shifts keep their rows for good (nothing is ever deleted).
  */
+/** الصف الفاضي (بلا مبلغ وبلا تفاصيل) يُحذف بعد 5 دقائق من إنشائه — بشفت أو بدون. */
+export const MANUAL_EMPTY_ROW_TTL_MS = 5 * 60 * 1000;
+
+/**
+ * تنظيف الصفوف الفاضية: أي صف لم يُكتب فيه أي قيمة (amount = null و details فاضي)
+ * ومر على إنشائه أكثر من 5 دقائق يُحذف نهائيًا، حتى لو الموظف ماسك الشفت.
+ * الصفوف التي فيها أي بيانات لا تُلمس إطلاقًا.
+ */
+export async function purgeEmptyManualTxns(userId?: string | null) {
+  const db = await admin();
+  const cutoff = new Date(Date.now() - MANUAL_EMPTY_ROW_TTL_MS).toISOString();
+  let q = db
+    .from("work_manual_txns")
+    .delete()
+    .is("amount", null)
+    .or("details.is.null,details.eq.")
+    .lt("created_at", cutoff);
+  if (userId) q = q.eq("user_id", userId);
+  try {
+    await q;
+  } catch {
+    /* التنظيف صيانة: فشله لا يوقف العرض. */
+  }
+}
+
 export async function listManualTxns(
   userId: string,
   shiftId?: string | null,
   /** طبقة الصفحات الإضافية: بدونها يبقى السلوك القديم كما هو تمامًا. */
   paging?: { card?: ManualCard | null; page?: number; pageSize?: number; ascending?: boolean },
 ) {
+  await purgeEmptyManualTxns(userId);
   const db = await admin();
+
   let q = db
     .from("work_manual_txns")
     .select("id,card,amount,details,created_at,amount_saved_at,details_saved_at,shift_id", { count: "exact" })
