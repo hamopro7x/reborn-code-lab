@@ -80,6 +80,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { getBybitCardBrands } from "@/lib/bybit.functions";
 import { useFaceClaim } from "@/components/admin/FaceGate";
 import { BrandBadge, LedgerRowDetails, statusBadge } from "@/components/admin/BybitLedgerPanel";
+import { useWorkRealtime } from "@/lib/use-work-realtime";
 
 type ManualKind = "wrong" | "employee" | "receive" | "transfer";
 
