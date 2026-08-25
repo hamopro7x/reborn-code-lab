@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2 } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 import { EmployeeWorkView } from "@/components/admin/EmployeeWorkView";
 import { AdminSheet } from "@/components/admin/AdminSheet";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { listEmployees } from "@/lib/admin.functions";
-import { getEmployeeShiftList } from "@/lib/work.functions";
+import { getEmployeeShiftList, deleteEmployeeShift } from "@/lib/work.functions";
 import employeesBg from "@/assets/employees-bg.png.asset.json";
 
 
@@ -135,6 +135,7 @@ function ShiftPickerMenu({
   userId,
   selectedId,
   onSelect,
+  onDeleted,
   open,
   onOpenChange,
   children,
@@ -142,11 +143,13 @@ function ShiftPickerMenu({
   userId: string | null;
   selectedId: string | null;
   onSelect: (shift: Shift) => void;
+  onDeleted: (shiftId: string) => void;
   open: boolean;
   onOpenChange: (v: boolean) => void;
   children: React.ReactNode;
 }) {
   const listFn = useServerFn(getEmployeeShiftList);
+  const del = useServerFn(deleteEmployeeShift);
   const q = useQuery({
     queryKey: ["admin-employee-shifts", userId],
     queryFn: () => listFn({ data: { userId: userId! } }) as Promise<Shift[]>,
@@ -358,6 +361,7 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
                 setSelectedShift(sh);
                 setShiftOpen(false);
               }}
+              onDeleted={() => setSelectedShift(null)}
             >
               <button type="button" className={`${CHIP_BASE} ${selectedShift ? CHIP_ON : CHIP_OFF}`}>
                 اختيار الشفت
