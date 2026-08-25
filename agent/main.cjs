@@ -59,7 +59,10 @@ function registryAutoLaunch() {
   );
 }
 
-function startupFolderAutoLaunch() {
+// آلية بدء واحدة فقط = مفتاح Run في الريجستري. أي آلية إضافية (ملف Startup
+// أو مهمة مجدولة) كانت تُشغّل نسخة ثانية في نفس اللحظة، فتتنافس على قفل
+// النسخة الواحدة وقد تترك الواجهة/الالتقاط في حالة نصف مهيّأة.
+function removeDuplicateStartup() {
   if (process.platform !== "win32") return;
   const fs = require("fs");
   try {
@@ -71,51 +74,22 @@ function startupFolderAutoLaunch() {
       "Programs",
       "Startup",
     );
-    fs.mkdirSync(startupDir, { recursive: true });
-    // ملف VBScript بدل .cmd حتى لا تظهر نافذة أوامر عند تشغيل ويندوز
-    const staleLaunchers = LEGACY_RUN_NAMES.flatMap((name) => [
-      path.join(startupDir, `${name}.cmd`),
-      path.join(startupDir, `${name}.vbs`),
-    ]);
-    for (const stale of [path.join(startupDir, `${RUN_NAME}.cmd`), ...staleLaunchers]) {
-      try {
-        fs.unlinkSync(stale);
-      } catch {
-        /* لم يكن موجودًا */
+    for (const name of [RUN_NAME, ...LEGACY_RUN_NAMES]) {
+      for (const ext of [".cmd", ".vbs"]) {
+        try {
+          fs.unlinkSync(path.join(startupDir, name + ext));
+        } catch {
+          /* لم يكن موجودًا */
+        }
       }
     }
-    const commandFile = path.join(startupDir, `${RUN_NAME}.vbs`);
-    fs.writeFileSync(
-      commandFile,
-      [
-        'Set sh = CreateObject("WScript.Shell")',
-        `sh.Run """${process.execPath.replace(/"/g, '""')}"" --hidden", 0, False`,
-      ].join("\r\n"),
-      "utf8",
-    );
-
   } catch {
     // ignore
   }
-}
-
-function scheduledTaskAutoLaunch() {
-  if (process.platform !== "win32") return;
-  for (const oldName of LEGACY_RUN_NAMES) {
-    execFile("schtasks.exe", ["/Delete", "/TN", oldName, "/F"], { windowsHide: true }, () => {});
+  for (const name of [RUN_NAME, ...LEGACY_RUN_NAMES]) {
+    execFile("schtasks.exe", ["/Delete", "/TN", name, "/F"], { windowsHide: true }, () => {});
   }
-  // Node يقوم بتهريب الاقتباسات الداخلية تلقائيًا، وهو ما يحتاجه schtasks
-  // لمسارات بها مسافات (Program Files / AppData\Local\Programs).
-  execFile(
-    "schtasks.exe",
-    ["/Create", "/TN", RUN_NAME, "/SC", "ONLOGON", "/TR", startupCommand(), "/RL", "LIMITED", "/F"],
-    (err) => {
-      if (err) console.error("[autolaunch] schtasks failed:", err.message);
-    },
-  );
 }
-
-
 
 function enableAutoLaunch() {
   try {
@@ -131,9 +105,9 @@ function enableAutoLaunch() {
   }
   // نتأكد دايماً: لو إعداد اتعطّل أو المسار اتغير بعد إعادة التشغيل.
   registryAutoLaunch();
-  startupFolderAutoLaunch();
-  scheduledTaskAutoLaunch();
+  removeDuplicateStartup();
 }
+
 
 
 // إزالة أي تثبيت قديم من الحزم السابقة (قبل Mag Pro).
