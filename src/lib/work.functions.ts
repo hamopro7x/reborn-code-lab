@@ -552,11 +552,24 @@ export const getMyAvatarUrl = createServerFn({ method: "GET" })
  */
 export const getEmployeeArchive = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ userId: z.string().uuid() }).parse(input))
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        userId: z.string().uuid(),
+        card: z.enum(["wrong", "employee", "receive", "transfer"]).optional(),
+        page: z.number().int().min(1).optional(),
+        pageSize: z.number().int().min(10).max(500).optional(),
+      })
+      .parse(input),
+  )
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
     const mod = await import("./work.server");
-    return mod.employeeArchive(data.userId);
+    const paging =
+      data.page !== undefined || data.pageSize !== undefined || data.card
+        ? { card: data.card ?? null, page: data.page, pageSize: data.pageSize }
+        : undefined;
+    return mod.employeeArchive(data.userId, paging);
   });
 
 /** حذف شفت لأي موظف (أدمن فقط). */
