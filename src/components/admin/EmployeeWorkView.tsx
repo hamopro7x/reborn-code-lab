@@ -945,6 +945,7 @@ function ManualCard({
   isAdmin,
   readOnly,
   onDelete,
+  header,
 }: {
   card: ManualKind;
   title: string;
