@@ -1001,8 +1001,11 @@ app.whenReady().then(() => {
   enableAutoLaunch();
   // إزالة أي حزمة قديمة (قبل Mag Pro) لضمان عدم بقاء نسختين على الجهاز.
   cleanupLegacyInstall();
-  // مهلة قصيرة حتى تجهز الشبكة بعد تشغيل ويندوز
-  setTimeout(() => void runBootUpdate(), 1500);
+  // لا تأخير ثابت: نتحقق من جاهزية الشبكة فعلياً ثم نفحص التحديث فوراً.
+  void whenNetworkReady().then((ok) => {
+    if (ok) void runBootUpdate();
+  });
+
   try {
 
     tray = new Tray(nativeImage.createEmpty());
