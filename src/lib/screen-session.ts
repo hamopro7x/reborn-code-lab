@@ -264,8 +264,10 @@ class ScreenSession {
     };
 
     pc.ondatachannel = (e) => {
-      if (e.channel.label !== "ctl") return;
-      this.ctl = e.channel;
+      if (e.channel.label === "ctl-rel") this.ctlRel = e.channel;
+      else if (e.channel.label === "ctl") this.ctl = e.channel;
+      else return;
+
       e.channel.onopen = () => {
         if (alive()) this.set({ canControl: true });
       };
