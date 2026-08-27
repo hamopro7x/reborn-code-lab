@@ -81,11 +81,11 @@ function OrderPage() {
               <div className="size-16 rounded-full gradient-primary mx-auto flex items-center justify-center mb-4 glow-purple">
                 <CheckCircle2 className="size-8 text-white" />
               </div>
-              <h1 className="text-3xl font-black text-gradient">تم إرسال طلبك</h1>
+              <h1 className="text-3xl font-semibold text-gradient">تم إرسال طلبك</h1>
               <p className="text-muted-foreground mt-2">سيتم مراجعة الدفع وتأكيد الطلب قريباً</p>
             </div>
 
-            <div className="card-surface rounded-2xl p-6 mb-4">
+            <div className="card-surface rounded-lg p-6 mb-4">
               <div className="space-y-3 text-sm">
                 <div className="flex items-center gap-2 flex-wrap">
                   <div className="text-muted-foreground">حالة الطلب :</div>
@@ -94,7 +94,7 @@ function OrderPage() {
                 <div className="flex items-center gap-2 flex-wrap">
                   <div className="text-muted-foreground">كود الطلب انسخو لتتبع طلبك :</div>
                   <div className="flex items-center gap-2">
-                    <div className="font-mono font-black text-lg text-gradient">{o.order_code}</div>
+                    <div className="num font-semibold text-lg text-gradient">{o.order_code}</div>
                     <button
                       onClick={() => { navigator.clipboard.writeText(o.order_code); toast.success("تم النسخ"); }}
                       className="inline-flex items-center gap-1 rounded-lg bg-primary/10 hover:bg-primary/20 px-2 py-1 text-xs font-medium text-primary transition-colors"
@@ -110,7 +110,7 @@ function OrderPage() {
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <div className="text-muted-foreground">اجمالي المبلغ :</div>
-                  <div className="font-black">{o.total} {o.currency_code}</div>
+                  <div className="font-semibold">{o.total} {o.currency_code}</div>
                 </div>
               </div>
 

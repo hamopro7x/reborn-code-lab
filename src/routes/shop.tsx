@@ -63,7 +63,7 @@ function Shop() {
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8">
         <div className="mb-8 animate-slide-up">
-          <h1 className="text-4xl font-black text-gradient">المتجر</h1>
+          <h1 className="text-4xl font-semibold text-gradient">المتجر</h1>
           <p className="text-muted-foreground mt-2">تصفح كل المنتجات الرقمية</p>
         </div>
 
@@ -87,7 +87,7 @@ function Shop() {
         </div>
 
         {filtered.length === 0 ? (
-          <div className="card-surface rounded-2xl p-16 text-center text-muted-foreground">
+          <div className="card-surface rounded-lg p-16 text-center text-muted-foreground">
             لا توجد منتجات مطابقة.
           </div>
         ) : (
