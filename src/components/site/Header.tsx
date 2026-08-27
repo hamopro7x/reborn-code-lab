@@ -37,7 +37,7 @@ export function Header() {
     <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
         <Link to="/" className="flex items-center gap-2 shrink-0">
-          <img src={logoAsset.url} alt="شعار متجر الاشتراكات الرقمية" width={36} height={36} className="size-9 rounded-lg border border-border hue-rotate-[120deg] saturate-110" />
+          <img src={logoAsset.url} alt="شعار متجر الاشتراكات الرقمية" width={36} height={36} className="size-9 rounded-lg border border-border hue-rotate-[-150deg] saturate-110" />
           <div className="hidden sm:block">
             <div className="font-bold text-sm leading-none">متجر الاشتراكات</div>
             <div className="text-[10px] text-muted-foreground mt-1">الرقمية الاحترافية</div>
