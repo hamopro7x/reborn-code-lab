@@ -3,14 +3,12 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Loader2, Trash2 } from "lucide-react";
 import { EmployeeWorkView } from "@/components/admin/EmployeeWorkView";
-import { AdminSheet } from "@/components/admin/AdminSheet";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { listEmployees } from "@/lib/admin.functions";
 import { getEmployeeShiftList, deleteEmployeeShift } from "@/lib/work.functions";
 import employeesBg from "@/assets/employees-bg.png.asset.json";
 
 
-type TabKey = "sheet" | "employees";
 
 const CHIP_BASE =
   "inline-flex flex-row-reverse items-center gap-2 rounded-full px-4 py-2 text-sm font-extrabold text-white transition";
