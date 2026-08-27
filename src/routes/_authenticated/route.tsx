@@ -51,6 +51,37 @@ export const Route = createFileRoute("/_authenticated")({
 // شاشة خطأ داخل لوحة الأدمن/الموظف بنفس الألوان الرمادية + رسالة الخطأ الحقيقية.
 function StaffError({ error, reset }: { error: Error; reset: () => void }) {
   useAdminTheme();
+  const [recovering, setRecovering] = useState(false);
+
+  // أخطاء التوكن المؤقتة (Unauthorized) نحاول تجديد الجلسة تلقائيًا مرة واحدة
+  // بدل إظهار خطأ وإجبار المستخدم على تسجيل الدخول من جديد.
+  useEffect(() => {
+    const msg = error?.message ?? "";
+    if (!/unauthorized|invalid token|jwt|failed to fetch|network/i.test(msg)) return;
+    let cancelled = false;
+    setRecovering(true);
+    (async () => {
+      try {
+        await supabase.auth.refreshSession();
+      } catch {
+        /* تجاهل */
+      }
+      if (cancelled) return;
+      const { data } = await supabase.auth.getSession();
+      setRecovering(false);
+      if (data.session) reset();
+    })();
+    return () => { cancelled = true; };
+  }, [error, reset]);
+
+  if (recovering) {
+    return (
+      <div className="admin-theme min-h-dvh flex items-center justify-center">
+        <Loader2 className="size-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="admin-theme min-h-dvh flex items-center justify-center p-6" dir="rtl">
       <div className="card-surface rounded-2xl p-8 max-w-md w-full text-center space-y-3">
@@ -67,6 +98,7 @@ function StaffError({ error, reset }: { error: Error; reset: () => void }) {
     </div>
   );
 }
+
 
 
 function DeviceGate() {
