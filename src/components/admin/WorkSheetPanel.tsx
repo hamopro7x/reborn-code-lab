@@ -3,14 +3,12 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Loader2, Trash2 } from "lucide-react";
 import { EmployeeWorkView } from "@/components/admin/EmployeeWorkView";
-import { AdminSheet } from "@/components/admin/AdminSheet";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { listEmployees } from "@/lib/admin.functions";
 import { getEmployeeShiftList, deleteEmployeeShift } from "@/lib/work.functions";
 import employeesBg from "@/assets/employees-bg.png.asset.json";
 
 
-type TabKey = "sheet" | "employees";
 
 const CHIP_BASE =
   "inline-flex flex-row-reverse items-center gap-2 rounded-full px-4 py-2 text-sm font-extrabold text-white transition";
@@ -288,7 +286,6 @@ function ShiftPickerMenu({
  * - واجهة الأدمن: تبويبان (جدول بيانات حر + قسم الموظفين مع sidebar شفتات).
  */
 export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
-  const [tab, setTab] = useState<TabKey>("sheet");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [shiftOpen, setShiftOpen] = useState(false);
 
@@ -296,43 +293,25 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
   if (!isAdmin) return <EmployeeWorkView />;
 
-  const isEmployees = tab === "employees";
-
   return (
     <div className="min-h-[40vh] -mx-4 md:-mx-6 -mt-4 md:-mt-6" dir="rtl">
       <div className="relative flex min-h-[calc(100vh-80px)] flex-col">
-        {isEmployees && (
-          <div
-            className="pointer-events-none absolute inset-0 opacity-20"
-            style={{
-              backgroundImage: `url(${employeesBg.url})`,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-              backgroundRepeat: "no-repeat",
-              backgroundAttachment: "fixed",
-            }}
-            aria-hidden="true"
-          />
-        )}
+        <div
+          className="pointer-events-none absolute inset-0 opacity-20"
+          style={{
+            backgroundImage: `url(${employeesBg.url})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
+            backgroundAttachment: "fixed",
+          }}
+          aria-hidden="true"
+        />
 
         <div className="relative flex items-center justify-start gap-3 px-4 pb-0 pt-4 md:px-6">
-          <button
-            type="button"
-            onClick={() => setTab("sheet")}
-            className={`inline-flex flex-row-reverse items-center gap-2 rounded-full px-4 py-2 text-sm font-extrabold text-white transition ${
-              tab === "sheet"
-                ? "bg-[#1a1a1a] text-blue-300 shadow-[0_0_20px_-4px_oklch(0.55_0.28_305/0.7),0_0_0_1px_oklch(0.55_0.28_305/0.5)] ring-1 ring-blue-500/40"
-                : "bg-[#0d0d0d] opacity-80 shadow-[0_6px_20px_-6px_rgba(0,0,0,0.9)] hover:opacity-95 hover:ring-1 hover:ring-blue-500/20"
-            }`}
-          >
-            جدول بيانات
-          </button>
           <EmployeePickerMenu
             open={pickerOpen}
-            onOpenChange={(v) => {
-              if (v) setTab("employees");
-              setPickerOpen(v);
-            }}
+            onOpenChange={setPickerOpen}
             selectedId={selected?.user_id ?? null}
             onSelect={(emp) => {
               setSelected(emp);
@@ -340,62 +319,45 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
               setPickerOpen(false);
             }}
           >
-            <button
-              type="button"
-              className={`inline-flex flex-row-reverse items-center gap-2 rounded-full px-4 py-2 text-sm font-extrabold text-white transition ${
-                tab === "employees"
-                  ? "bg-[#1a1a1a] text-blue-300 shadow-[0_0_20px_-4px_oklch(0.55_0.28_305/0.7),0_0_0_1px_oklch(0.55_0.28_305/0.5)] ring-1 ring-blue-500/40"
-                  : "bg-[#0d0d0d] opacity-80 shadow-[0_6px_20px_-6px_rgba(0,0,0,0.9)] hover:opacity-95 hover:ring-1 hover:ring-blue-500/20"
-              }`}
-            >
+            <button type="button" className={`${CHIP_BASE} ${selected ? CHIP_ON : CHIP_OFF}`}>
               قائمة الموظفين
             </button>
           </EmployeePickerMenu>
-          {isEmployees && (
-            <ShiftPickerMenu
-              userId={selected?.user_id ?? null}
-              selectedId={selectedShift?.id ?? null}
-              open={shiftOpen}
-              onOpenChange={setShiftOpen}
-              onSelect={(sh) => {
-                setSelectedShift(sh);
-                setShiftOpen(false);
-              }}
-              onDeleted={() => setSelectedShift(null)}
-            >
-              <button type="button" className={`${CHIP_BASE} ${selectedShift ? CHIP_ON : CHIP_OFF}`}>
-                اختيار الشفت
-              </button>
-            </ShiftPickerMenu>
-          )}
+          <ShiftPickerMenu
+            userId={selected?.user_id ?? null}
+            selectedId={selectedShift?.id ?? null}
+            open={shiftOpen}
+            onOpenChange={setShiftOpen}
+            onSelect={(sh) => {
+              setSelectedShift(sh);
+              setShiftOpen(false);
+            }}
+            onDeleted={() => setSelectedShift(null)}
+          >
+            <button type="button" className={`${CHIP_BASE} ${selectedShift ? CHIP_ON : CHIP_OFF}`}>
+              اختيار الشفت
+            </button>
+          </ShiftPickerMenu>
         </div>
 
-        {isEmployees ? (
-          <div className="relative flex flex-1 p-4 md:p-6">
-            <div className="min-w-0 flex-1">
-              <EmployeeWorkView
-                key={`${selected?.user_id ?? "none"}:${selectedShift?.id ?? "blank"}`}
-                isAdmin
-                blank={!selectedShift}
-                {...(selected ? { viewUserId: selected.user_id } : {})}
-                {...(selectedShift ? { viewShiftId: selectedShift.id } : {})}
-                viewShift={selectedShift ?? undefined}
-                viewName={selected ? selected.full_name || selected.email : undefined}
-                viewAvatar={selected?.avatar_signed_url || undefined}
-              />
-            </div>
+        <div className="relative flex flex-1 p-4 md:p-6">
+          <div className="min-w-0 flex-1">
+            <EmployeeWorkView
+              key={`${selected?.user_id ?? "none"}:${selectedShift?.id ?? "blank"}`}
+              isAdmin
+              blank={!selectedShift}
+              {...(selected ? { viewUserId: selected.user_id } : {})}
+              {...(selectedShift ? { viewShiftId: selectedShift.id } : {})}
+              viewShift={selectedShift ?? undefined}
+              viewName={selected ? selected.full_name || selected.email : undefined}
+              viewAvatar={selected?.avatar_signed_url || undefined}
+            />
           </div>
-
-
-        ) : (
-          <>
-            <div className="h-[57px]" />
-            <AdminSheet />
-          </>
-        )}
+        </div>
       </div>
     </div>
   );
 }
+
 
 
