@@ -6,10 +6,10 @@ export function Footer() {
       <div className="container mx-auto px-4 py-12 grid md:grid-cols-4 gap-8">
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <div className="size-9 rounded-xl gradient-primary flex items-center justify-center">
+            <div className="flex size-9 items-center justify-center rounded border border-border bg-secondary">
               <span className="text-lg font-black text-white">م</span>
             </div>
-            <span className="font-bold text-gradient">متجر الاشتراكات الرقمية</span>
+            <span className="font-semibold">متجر الاشتراكات الرقمية</span>
           </div>
           <p className="text-sm text-muted-foreground leading-relaxed">
             وجهتك الأولى للاشتراكات الرقمية، أدوات الذكاء الاصطناعي، القوالب وأدوات التصميم بأسعار تنافسية وضمان حقيقي.
