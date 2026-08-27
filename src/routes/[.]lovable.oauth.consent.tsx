@@ -71,7 +71,7 @@ function Consent() {
         <div className="size-14 rounded-2xl gradient-primary mx-auto flex items-center justify-center mb-4">
           <ShieldCheck className="size-7 text-white" />
         </div>
-        <h1 className="text-xl font-black text-center text-gradient">ربط {clientName} بحسابك</h1>
+        <h1 className="text-xl font-semibold text-center text-gradient">ربط {clientName} بحسابك</h1>
         <p className="text-sm text-muted-foreground text-center mt-3">
           سيتمكن {clientName} من استخدام أدوات المتجر نيابةً عنك بنفس صلاحيات حسابك (المنتجات، الطلبات، وملخص المبيعات).
         </p>
