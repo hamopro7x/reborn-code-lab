@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -40,6 +40,9 @@ export function HomeSidebar({
   categories: any[];
   loading?: boolean;
 }) {
+  const activeCategory = useRouterState({
+    select: (s) => (s.location.search as any)?.category as string | undefined,
+  });
   const fetchPayments = useServerFn(listPublicPaymentMethods);
   const paymentsQ = useQuery({
     queryKey: ["public-payment-methods"],
@@ -62,15 +65,22 @@ export function HomeSidebar({
             ))}
           {categories.map((c: any) => {
             const Icon = iconForSlug(c.slug ?? "", c.name ?? "");
+            const isActive = activeCategory === c.slug;
             return (
               <li key={c.id}>
                 <Link
                   to="/shop"
                   search={{ category: c.slug } as any}
-                  className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-sm text-foreground/85 hover:bg-secondary hover:text-foreground transition-colors duration-150"
+                  aria-current={isActive ? "page" : undefined}
+                  className={
+                    "flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors duration-150 border-r-2 " +
+                    (isActive
+                      ? "bg-secondary text-foreground border-primary font-bold"
+                      : "text-foreground/85 border-transparent hover:bg-secondary hover:text-foreground")
+                  }
                 >
                   <span className="truncate">{c.name}</span>
-                  <Icon className="size-4 shrink-0 text-muted-foreground" />
+                  <Icon className={"size-4 shrink-0 " + (isActive ? "text-primary" : "text-muted-foreground")} />
                 </Link>
               </li>
             );

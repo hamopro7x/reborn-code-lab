@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Users, Zap, BadgeCheck, Tags, ArrowLeft } from "lucide-react";
+import { Headphones, Zap, ShieldCheck, Tags, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
@@ -30,10 +30,10 @@ export const Route = createFileRoute("/")({
 });
 
 const features = [
-  { icon: Users, title: "آلاف العملاء", body: "يثقون بنا" },
   { icon: Zap, title: "تسليم فوري", body: "يصل لحسابك مباشرة" },
-  { icon: BadgeCheck, title: "منتجات أصلية", body: "جودة مضمونة" },
+  { icon: ShieldCheck, title: "ضمان حقيقي", body: "استبدال أو استرجاع" },
   { icon: Tags, title: "أسعار تنافسية", body: "أفضل الأسعار دائمًا" },
+  { icon: Headphones, title: "دعم العملاء", body: "متاح في أي وقت" },
 ];
 
 function SectionHeading({ title, to }: { title: string; to?: string }) {
