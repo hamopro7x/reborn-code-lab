@@ -190,7 +190,7 @@ function Home() {
                 ))}
               </div>
               {!featuredQ.isLoading && !latestQ.isLoading && featured.length === 0 && (
-                <p className="text-sm text-muted-foreground">لا توجد منتجات مميزة حاليًا.</p>
+                <p className="text-sm text-muted-foreground">لا توجد منتجات متاحة حاليًا.</p>
               )}
             </section>
 
