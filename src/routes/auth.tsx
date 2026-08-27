@@ -45,8 +45,12 @@ function AuthPage() {
 
   function goAfterAuth() {
     if (next) { window.location.href = next; return; }
+    // بدون هدف محدد: نرجّع المستخدم لآخر مكان كان فيه قبل الخروج/الدخول.
+    const last = readLastLocation();
+    if (last) { window.location.href = last; return; }
     navigate({ to: "/admin" });
   }
+
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
