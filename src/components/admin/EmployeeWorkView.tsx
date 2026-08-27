@@ -1781,7 +1781,7 @@ export function EmployeeWorkView({
 
   return (
     <div dir="rtl" className="space-y-4">
-      {!viewing && (
+      {(!isAdmin || viewing) && (
         <div className="flex flex-wrap items-center gap-2 mb-4">
 
           <div className="flex min-w-0 items-center gap-2">
