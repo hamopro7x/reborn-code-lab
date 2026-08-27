@@ -67,6 +67,10 @@ function Home() {
     queryKey: ["featured"],
     queryFn: async () => (await supabase.from("products").select("*, category:categories(icon,name)").eq("active", true).eq("featured", true).order("sort_order").limit(12)).data ?? [],
   });
+  const latestQ = useQuery({
+    queryKey: ["latest-products"],
+    queryFn: async () => (await supabase.from("products").select("*, category:categories(icon,name)").eq("active", true).order("created_at", { ascending: false }).limit(10)).data ?? [],
+  });
   const timerQ = useQuery({
     queryKey: ["timer"],
     queryFn: async () => (await supabase.from("countdown_timers").select("*").eq("active", true).gt("ends_at", new Date().toISOString()).order("ends_at").limit(1).maybeSingle()).data,
@@ -92,7 +96,9 @@ function Home() {
   }, [currenciesQ.data]);
 
   const categories = categoriesQ.data ?? [];
-  const featured = featuredQ.data ?? [];
+  const featuredRaw = featuredQ.data ?? [];
+  // لو مفيش منتجات مميزة نعرض الأحدث من نفس البيانات الموجودة.
+  const featured = featuredRaw.length ? featuredRaw : (latestQ.data ?? []);
 
   // شرائح الهيرو مبنية على البيانات الموجودة (منتجات مميزة ثم أقسام) بدون أي بيانات ثابتة.
   const slides: HeroSlide[] = useMemo(() => {
@@ -175,7 +181,7 @@ function Home() {
             <section>
               <SectionHeading title="أحدث المنتجات" to="/shop" />
               <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
-                {featuredQ.isLoading &&
+                {(featuredQ.isLoading || latestQ.isLoading) &&
                   Array.from({ length: 5 }).map((_, i) => (
                     <div key={`p-sk-${i}`} className="rounded-xl border border-border bg-card h-[16rem] animate-pulse" />
                   ))}
@@ -183,7 +189,7 @@ function Home() {
                   <ProductCard key={p.id} p={p} />
                 ))}
               </div>
-              {!featuredQ.isLoading && featured.length === 0 && (
+              {!featuredQ.isLoading && !latestQ.isLoading && featured.length === 0 && (
                 <p className="text-sm text-muted-foreground">لا توجد منتجات مميزة حاليًا.</p>
               )}
             </section>
