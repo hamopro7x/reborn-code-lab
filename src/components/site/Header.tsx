@@ -20,7 +20,7 @@ function NavLink({ to, label, active }: { to: string; label: string; active: boo
     <Link
       to={to}
       className={`px-4 py-2 rounded-lg text-sm transition-colors ${
-        active ? "bg-primary/20 text-primary" : "hover:bg-secondary text-foreground/80 hover:text-foreground"
+        active ? "bg-secondary text-primary" : "hover:bg-secondary text-foreground/80 hover:text-foreground"
       }`}
     >
       {label}
@@ -34,12 +34,12 @@ export function Header() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border/40 backdrop-blur-xl bg-background/80">
+    <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
         <Link to="/" className="flex items-center gap-2 shrink-0">
-          <img src={logoAsset.url} alt="شعار متجر الاشتراكات الرقمية" width={36} height={36} className="size-9 rounded-xl glow-purple" />
+          <img src={logoAsset.url} alt="شعار متجر الاشتراكات الرقمية" width={36} height={36} className="size-9 rounded-lg border border-border" />
           <div className="hidden sm:block">
-            <div className="font-bold text-sm leading-none text-gradient">متجر الاشتراكات</div>
+            <div className="font-bold text-sm leading-none">متجر الاشتراكات</div>
             <div className="text-[10px] text-muted-foreground mt-1">الرقمية الاحترافية</div>
           </div>
         </Link>
@@ -75,7 +75,7 @@ export function Header() {
             <Button variant="ghost" size="sm" className="relative" aria-label="سلة التسوق">
               <ShoppingCart className="size-5" />
               {count > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 size-5 rounded-full gradient-primary text-white text-[10px] font-bold flex items-center justify-center animate-glow-pulse">{count}</span>
+                <span className="absolute -top-0.5 -right-0.5 size-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">{count}</span>
               )}
             </Button>
           </Link>

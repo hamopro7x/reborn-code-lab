@@ -2,14 +2,14 @@ import { Link } from "@tanstack/react-router";
 
 export function Footer() {
   return (
-    <footer className="mt-24 border-t border-border/40 bg-card/40 backdrop-blur-xl">
+    <footer className="mt-16 border-t border-border bg-card">
       <div className="container mx-auto px-4 py-12 grid md:grid-cols-4 gap-8">
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <div className="size-9 rounded-xl gradient-primary flex items-center justify-center">
-              <span className="text-lg font-black text-white">م</span>
+            <div className="size-9 rounded-lg border border-border bg-secondary flex items-center justify-center">
+              <span className="text-lg font-black">م</span>
             </div>
-            <span className="font-bold text-gradient">متجر الاشتراكات الرقمية</span>
+            <span className="font-bold">متجر الاشتراكات الرقمية</span>
           </div>
           <p className="text-sm text-muted-foreground leading-relaxed">
             وجهتك الأولى للاشتراكات الرقمية، أدوات الذكاء الاصطناعي، القوالب وأدوات التصميم بأسعار تنافسية وضمان حقيقي.
@@ -52,7 +52,7 @@ export function Footer() {
           </ul>
         </div>
       </div>
-      <div className="border-t border-border/40 py-4 text-center text-xs text-muted-foreground">
+      <div className="border-t border-border py-4 text-center text-xs text-muted-foreground">
         © {new Date().getFullYear()} متجر الاشتراكات الرقمية — جميع الحقوق محفوظة
       </div>
     </footer>
