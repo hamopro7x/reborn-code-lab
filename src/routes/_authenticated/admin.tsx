@@ -278,6 +278,8 @@ function Admin() {
             {panel === "reports" && canView("reports") && <ReportsTab />}
             {panel === "cardtx" && canView("cardtx") && <BybitTab isAdmin={adminOnly} />}
             {panel === "worksheet" && canView("worksheet") && <WorkSheetPanel isAdmin={adminOnly} />}
+            {panel === "sheet" && adminOnly && <AdminSheet />}
+
 
             {panel === "products" && canView("products") && <ProductsTab />}
             {panel === "categories" && canView("categories") && <CategoriesTab />}
