@@ -75,12 +75,12 @@ export function HomeSidebar({
                   className={
                     "flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors duration-150 border-r-2 " +
                     (isActive
-                      ? "bg-secondary text-foreground border-primary font-bold"
+                      ? "bg-secondary text-lime border-lime font-bold"
                       : "text-foreground/85 border-transparent hover:bg-secondary hover:text-foreground")
                   }
                 >
                   <span className="truncate">{c.name}</span>
-                  <Icon className={"size-4 shrink-0 " + (isActive ? "text-primary" : "text-muted-foreground")} />
+                  <Icon className={"size-4 shrink-0 " + (isActive ? "text-lime" : "text-muted-foreground")} />
                 </Link>
               </li>
             );
@@ -92,7 +92,7 @@ export function HomeSidebar({
       <ul className="rounded-2xl border border-border bg-card divide-y divide-border">
         {perks.map((p) => (
           <li key={p.title} className="flex items-start gap-3 p-4">
-            <p.icon className="size-5 shrink-0 text-primary mt-0.5" />
+            <p.icon className="size-5 shrink-0 text-lime mt-0.5" />
             <div className="min-w-0">
               <div className="text-sm font-bold">{p.title}</div>
               <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{p.body}</p>

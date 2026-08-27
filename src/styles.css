@@ -45,6 +45,8 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-gold: var(--gold);
+  --color-lime: var(--lime);
+  --color-lime-foreground: var(--lime-foreground);
 }
 
 :root {
@@ -69,6 +71,8 @@
   --input: oklch(0.2 0.04 290);
   --ring: oklch(0.62 0.24 300);
   --gold: oklch(0.82 0.15 85);
+  --lime: oklch(0.78 0.24 120);
+  --lime-foreground: oklch(0.15 0 0);
   --chart-1: oklch(0.62 0.24 300);
   --chart-2: oklch(0.7 0.2 200);
   --chart-3: oklch(0.75 0.15 85);

@@ -40,13 +40,13 @@ function SectionHeading({ title, to }: { title: string; to?: string }) {
   return (
     <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 mb-4">
       <div className="flex min-w-0 items-center gap-3">
-        <span className="h-6 w-1 shrink-0 rounded-full bg-primary" />
+        <span className="h-6 w-1 shrink-0 rounded-full bg-lime" />
         <h2 className="truncate text-lg md:text-xl font-bold">{title}</h2>
       </div>
       {to && (
         <Link
           to={to as any}
-          className="shrink-0 rounded-lg border border-border px-3 py-1.5 text-xs hover:bg-secondary transition-colors duration-150 inline-flex items-center gap-1.5"
+          className="shrink-0 rounded-lg border border-border px-3 py-1.5 text-xs hover:bg-secondary hover:border-lime hover:text-lime transition-colors duration-150 inline-flex items-center gap-1.5"
         >
           عرض الكل
           <ArrowLeft className="size-3.5" />
@@ -168,7 +168,7 @@ function Home() {
             <ul className="grid grid-cols-2 lg:grid-cols-4 rounded-2xl border border-border bg-card divide-y divide-border lg:divide-y-0 lg:divide-x lg:divide-x-reverse">
               {features.map((f) => (
                 <li key={f.title} className="flex items-center gap-3 p-4 min-w-0">
-                  <f.icon className="size-5 shrink-0 text-primary" />
+                  <f.icon className="size-5 shrink-0 text-lime" />
                   <div className="min-w-0">
                     <div className="text-sm font-bold truncate">{f.title}</div>
                     <div className="text-xs text-muted-foreground truncate">{f.body}</div>
@@ -207,7 +207,7 @@ function Home() {
                     key={c.id}
                     to="/shop"
                     search={{ category: c.slug } as any}
-                    className="rounded-xl border border-border bg-card overflow-hidden flex flex-col transition-colors duration-150 hover:border-primary/60"
+                    className="group rounded-xl border border-border bg-card overflow-hidden flex flex-col transition-colors duration-150 hover:border-lime/60"
                   >
                     <div className="aspect-[4/3] bg-secondary overflow-hidden">
                       {c.banner_image ? (
@@ -225,7 +225,7 @@ function Home() {
                         </div>
                       )}
                     </div>
-                    <div className="px-3 py-2.5 text-sm font-bold text-center truncate border-t border-border">
+                    <div className="px-3 py-2.5 text-sm font-bold text-center truncate border-t border-border group-hover:text-lime">
                       {c.name}
                     </div>
                   </Link>
