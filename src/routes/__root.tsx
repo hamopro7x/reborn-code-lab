@@ -131,6 +131,20 @@ function RootComponent() {
   useAutoRefreshOnDeploy();
   useGlobalAutoSave();
 
+  // حفظ آخر مكان (مسار + query) على مستوى الموقع كله حتى يرجع المستخدم
+  // لنفس الصفحة/القسم بعد أي تحديث أو إعادة دخول.
+  useEffect(() => {
+    const record = () => {
+      if (typeof window === "undefined") return;
+      saveLastLocation(`${window.location.pathname}${window.location.search}`);
+    };
+    record();
+    const unsub = router.subscribe("onResolved", record);
+    return () => unsub();
+  }, [router]);
+
+
+
   useEffect(() => {
     // نطاق حفظ حالة الواجهة = المستخدم الحالي (حتى لا تتداخل حالة
     // الأدمن/الموظف/المستخدم على نفس الجهاز).
