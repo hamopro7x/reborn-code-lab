@@ -1,53 +1,92 @@
 import { Link } from "@tanstack/react-router";
 import { useCurrency } from "@/lib/currency-context";
 import { convertFromEgp, formatPrice, computeDiscountedPrice } from "@/lib/format";
-import { Sparkles, ShieldCheck } from "lucide-react";
+import { ShieldCheck, ShoppingCart } from "lucide-react";
+import { useCart } from "@/lib/cart";
+import { toast } from "sonner";
 
 export function ProductCard({ p }: { p: any }) {
   const { currency, rates } = useCurrency();
+  const { add } = useCart();
   const rate = rates[currency.code] ?? 1;
   const price = computeDiscountedPrice(p.base_price_egp, p.discount_percent ?? 0);
   const localized = convertFromEgp(price, rate, currency.code);
   const original = convertFromEgp(p.base_price_egp, rate, currency.code);
   const hasDiscount = (p.discount_percent ?? 0) > 0;
 
+  const onAdd = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    add({
+      productId: p.id,
+      slug: p.slug,
+      name: p.name,
+      image: p.main_image,
+      basePriceEgp: Number(p.base_price_egp),
+      discountPercent: Number(p.discount_percent ?? 0),
+      warrantyDays: Number(p.warranty_days ?? 0),
+    });
+    toast.success("تمت الإضافة إلى السلة");
+  };
+
   return (
     <Link
       to="/product/$slug"
       params={{ slug: p.slug }}
-      className="group card-surface rounded-2xl overflow-hidden hover:glow-purple transition-all duration-500 hover:-translate-y-1 animate-slide-up flex flex-col"
+      className="group rounded-xl border border-border bg-card overflow-hidden flex flex-col transition-colors duration-150 hover:border-primary/60"
     >
-      <div className="relative aspect-[4/3] bg-gradient-to-br from-primary/20 via-accent/10 to-background overflow-hidden">
+      <div className="relative aspect-[4/5] bg-secondary overflow-hidden">
         {p.main_image ? (
-          <img src={p.main_image} alt={p.name} width={640} height={480} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-700" loading="lazy" />
+          <img
+            src={p.main_image}
+            alt={p.name}
+            width={480}
+            height={600}
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-6xl opacity-40">
-            {p.category?.icon ?? "🎁"}
+          <div className="w-full h-full flex items-center justify-center text-sm text-muted-foreground">
+            {p.name}
           </div>
         )}
         {hasDiscount && (
-          <div className="absolute top-3 right-3 gradient-gold text-black text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
-            <Sparkles className="size-3" />
+          <span className="absolute top-2 right-2 rounded-md bg-primary px-2 py-0.5 text-[11px] font-bold text-primary-foreground">
             خصم {p.discount_percent}%
-          </div>
+          </span>
         )}
         {p.featured && (
-          <div className="absolute top-3 left-3 bg-black/60 backdrop-blur text-white text-[10px] px-2 py-1 rounded-full">مميز</div>
+          <span className="absolute top-2 left-2 rounded-md border border-border bg-background/85 px-2 py-0.5 text-[10px]">
+            مميز
+          </span>
         )}
       </div>
-      <div className="p-4 flex-1 flex flex-col gap-2">
-        <h3 className="font-bold text-sm line-clamp-2 group-hover:text-primary transition-colors">{p.name}</h3>
-        {p.short_description && <p className="text-xs text-muted-foreground line-clamp-2">{p.short_description}</p>}
-        <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-          {p.warranty_days > 0 && (
-            <><ShieldCheck className="size-3 text-primary" /> ضمان {p.warranty_days} يوم</>
-          )}
-        </div>
-        <div className="mt-auto pt-2 flex items-baseline gap-2">
-          <span className="text-lg font-black text-gradient">{formatPrice(localized, currency)}</span>
-          {hasDiscount && (
-            <span className="text-xs text-muted-foreground line-through">{formatPrice(original, currency)}</span>
-          )}
+
+      <div className="p-3 flex-1 flex flex-col gap-1.5 min-w-0">
+        <h3 className="text-sm font-bold line-clamp-2 min-w-0">{p.name}</h3>
+        {p.warranty_days > 0 && (
+          <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+            <ShieldCheck className="size-3.5 shrink-0" />
+            ضمان {p.warranty_days} يوم
+          </div>
+        )}
+        <div className="mt-auto pt-2 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+          <div className="min-w-0">
+            <div className="text-base font-black text-primary truncate">{formatPrice(localized, currency)}</div>
+            {hasDiscount && (
+              <div className="text-[11px] text-muted-foreground line-through truncate">
+                {formatPrice(original, currency)}
+              </div>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={onAdd}
+            aria-label={`أضف ${p.name} إلى السلة`}
+            className="size-9 shrink-0 rounded-lg border border-border flex items-center justify-center hover:bg-secondary transition-colors duration-150"
+          >
+            <ShoppingCart className="size-4" />
+          </button>
         </div>
       </div>
     </Link>
