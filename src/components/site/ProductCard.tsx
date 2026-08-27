@@ -33,7 +33,7 @@ export function ProductCard({ p }: { p: any }) {
     <Link
       to="/product/$slug"
       params={{ slug: p.slug }}
-      className="group rounded-xl border border-border bg-card overflow-hidden flex flex-col transition-colors duration-150 hover:border-primary/60"
+      className="group rounded-xl border border-border bg-card overflow-hidden flex flex-col transition-colors duration-150 hover:border-lime/60"
     >
       <div className="relative aspect-[4/5] bg-secondary overflow-hidden">
         {p.main_image ? (
@@ -51,7 +51,7 @@ export function ProductCard({ p }: { p: any }) {
           </div>
         )}
         {hasDiscount && (
-          <span className="absolute top-2 right-2 rounded-md bg-primary px-2 py-0.5 text-[11px] font-bold text-primary-foreground">
+          <span className="absolute top-2 right-2 rounded-md bg-lime px-2 py-0.5 text-[11px] font-bold text-lime-foreground">
             خصم {p.discount_percent}%
           </span>
         )}
@@ -72,7 +72,7 @@ export function ProductCard({ p }: { p: any }) {
         )}
         <div className="mt-auto pt-2 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
           <div className="min-w-0">
-            <div className="text-base font-black text-primary truncate">{formatPrice(localized, currency)}</div>
+            <div className="text-base font-black text-lime truncate">{formatPrice(localized, currency)}</div>
             {hasDiscount && (
               <div className="text-[11px] text-muted-foreground line-through truncate">
                 {formatPrice(original, currency)}
@@ -83,7 +83,7 @@ export function ProductCard({ p }: { p: any }) {
             type="button"
             onClick={onAdd}
             aria-label={`أضف ${p.name} إلى السلة`}
-            className="size-9 shrink-0 rounded-lg border border-border flex items-center justify-center hover:bg-secondary transition-colors duration-150"
+            className="size-9 shrink-0 rounded-lg border border-border flex items-center justify-center hover:bg-secondary hover:border-lime hover:text-lime transition-colors duration-150"
           >
             <ShoppingCart className="size-4" />
           </button>
