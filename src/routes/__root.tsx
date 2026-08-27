@@ -12,6 +12,8 @@ import { useAutoRefreshOnDeploy } from "@/lib/use-auto-refresh";
 import { useGlobalAutoSave } from "@/lib/use-global-autosave";
 import { GlobalRealtime } from "@/lib/realtime/global-realtime";
 import { setUiScope } from "@/lib/ui-state";
+import { saveLastLocation } from "@/lib/last-location";
+
 
 
 
@@ -130,6 +132,20 @@ function RootComponent() {
   const router = useRouter();
   useAutoRefreshOnDeploy();
   useGlobalAutoSave();
+
+  // حفظ آخر مكان (مسار + query) على مستوى الموقع كله حتى يرجع المستخدم
+  // لنفس الصفحة/القسم بعد أي تحديث أو إعادة دخول.
+  useEffect(() => {
+    const record = () => {
+      if (typeof window === "undefined") return;
+      saveLastLocation(`${window.location.pathname}${window.location.search}`);
+    };
+    record();
+    const unsub = router.subscribe("onResolved", record);
+    return () => unsub();
+  }, [router]);
+
+
 
   useEffect(() => {
     // نطاق حفظ حالة الواجهة = المستخدم الحالي (حتى لا تتداخل حالة
