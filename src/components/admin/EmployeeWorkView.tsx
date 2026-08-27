@@ -1785,14 +1785,7 @@ export function EmployeeWorkView({
         <div className="flex flex-wrap items-center gap-2 mb-4">
 
           <div className="flex min-w-0 items-center gap-2">
-            <div className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-full bg-secondary/80 text-foreground/80">
-              {avatar ? (
-                <img src={avatar} alt={name} className="size-full object-cover" />
-              ) : (
-                <User className="size-8" />
-              )}
-            </div>
-              <div className="min-w-0">
+            <div className="min-w-0">
                 <div className="truncate text-xl font-black">{name}</div>
                 <div className="mt-1 flex items-center gap-1.5 text-sm text-foreground/70">
                   {st.data?.holding === true ? (
