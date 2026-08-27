@@ -14,13 +14,36 @@ import { useAdminTheme } from "@/lib/use-admin-theme";
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async ({ location }) => {
-    const { data, error } = await supabase.auth.getUser();
-    if (error || !data.user) {
-      const next = `${location.pathname}${location.searchStr ?? ""}`;
-      throw redirect({ to: "/auth", search: next && next !== "/" ? { next } : {} });
+    // نعتمد على الجلسة المحفوظة محليًا أولاً: أي خطأ شبكة مؤقت لا يجوز أن يطرد المستخدم.
+    const { data: sessionData } = await supabase.auth.getSession();
+    let session = sessionData.session;
+
+    if (session) {
+      const expMs = (session.expires_at ?? 0) * 1000;
+      // قرّبت على الانتهاء؟ نحاول التجديد، وفي حال فشل الشبكة نكمل بالجلسة الحالية.
+      if (expMs && expMs - Date.now() < 60_000) {
+        try {
+          const { data: refreshed } = await supabase.auth.refreshSession();
+          if (refreshed.session) session = refreshed.session;
+        } catch {
+          /* تجاهل: نكمل بالجلسة الحالية */
+        }
+      }
+      return { user: session.user };
     }
-    return { user: data.user };
+
+    // لا توجد جلسة محلية إطلاقًا: نتأكد مرة واحدة من السيرفر قبل التحويل.
+    try {
+      const { data } = await supabase.auth.getUser();
+      if (data.user) return { user: data.user };
+    } catch {
+      /* فشل شبكة: لا نطرد المستخدم */
+    }
+
+    const next = `${location.pathname}${location.searchStr ?? ""}`;
+    throw redirect({ to: "/auth", search: next && next !== "/" ? { next } : {} });
   },
+
   component: DeviceGate,
   errorComponent: StaffError,
 });
