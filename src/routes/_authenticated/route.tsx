@@ -14,13 +14,36 @@ import { useAdminTheme } from "@/lib/use-admin-theme";
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async ({ location }) => {
-    const { data, error } = await supabase.auth.getUser();
-    if (error || !data.user) {
-      const next = `${location.pathname}${location.searchStr ?? ""}`;
-      throw redirect({ to: "/auth", search: next && next !== "/" ? { next } : {} });
+    // نعتمد على الجلسة المحفوظة محليًا أولاً: أي خطأ شبكة مؤقت لا يجوز أن يطرد المستخدم.
+    const { data: sessionData } = await supabase.auth.getSession();
+    let session = sessionData.session;
+
+    if (session) {
+      const expMs = (session.expires_at ?? 0) * 1000;
+      // قرّبت على الانتهاء؟ نحاول التجديد، وفي حال فشل الشبكة نكمل بالجلسة الحالية.
+      if (expMs && expMs - Date.now() < 60_000) {
+        try {
+          const { data: refreshed } = await supabase.auth.refreshSession();
+          if (refreshed.session) session = refreshed.session;
+        } catch {
+          /* تجاهل: نكمل بالجلسة الحالية */
+        }
+      }
+      return { user: session.user };
     }
-    return { user: data.user };
+
+    // لا توجد جلسة محلية إطلاقًا: نتأكد مرة واحدة من السيرفر قبل التحويل.
+    try {
+      const { data } = await supabase.auth.getUser();
+      if (data.user) return { user: data.user };
+    } catch {
+      /* فشل شبكة: لا نطرد المستخدم */
+    }
+
+    const next = `${location.pathname}${location.searchStr ?? ""}`;
+    throw redirect({ to: "/auth", search: next && next !== "/" ? { next } : {} });
   },
+
   component: DeviceGate,
   errorComponent: StaffError,
 });
@@ -28,6 +51,37 @@ export const Route = createFileRoute("/_authenticated")({
 // شاشة خطأ داخل لوحة الأدمن/الموظف بنفس الألوان الرمادية + رسالة الخطأ الحقيقية.
 function StaffError({ error, reset }: { error: Error; reset: () => void }) {
   useAdminTheme();
+  const [recovering, setRecovering] = useState(false);
+
+  // أخطاء التوكن المؤقتة (Unauthorized) نحاول تجديد الجلسة تلقائيًا مرة واحدة
+  // بدل إظهار خطأ وإجبار المستخدم على تسجيل الدخول من جديد.
+  useEffect(() => {
+    const msg = error?.message ?? "";
+    if (!/unauthorized|invalid token|jwt|failed to fetch|network/i.test(msg)) return;
+    let cancelled = false;
+    setRecovering(true);
+    (async () => {
+      try {
+        await supabase.auth.refreshSession();
+      } catch {
+        /* تجاهل */
+      }
+      if (cancelled) return;
+      const { data } = await supabase.auth.getSession();
+      setRecovering(false);
+      if (data.session) reset();
+    })();
+    return () => { cancelled = true; };
+  }, [error, reset]);
+
+  if (recovering) {
+    return (
+      <div className="admin-theme min-h-dvh flex items-center justify-center">
+        <Loader2 className="size-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="admin-theme min-h-dvh flex items-center justify-center p-6" dir="rtl">
       <div className="card-surface rounded-2xl p-8 max-w-md w-full text-center space-y-3">
@@ -44,6 +98,7 @@ function StaffError({ error, reset }: { error: Error; reset: () => void }) {
     </div>
   );
 }
+
 
 
 function DeviceGate() {
