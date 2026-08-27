@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ShoppingBag, Search, Sparkles, Shield, Zap, ArrowLeft } from "lucide-react";
+import { ShoppingBag, Search, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
@@ -68,57 +68,50 @@ function Home() {
       <Header />
       <main className="flex-1">
         {/* HERO */}
-        <section className="relative overflow-hidden">
-          <div className="absolute inset-0 pointer-events-none">
-            <div className="absolute top-20 right-10 size-72 rounded-full bg-primary/30 blur-3xl animate-floaty" />
-            <div className="absolute bottom-10 left-20 size-96 rounded-full bg-accent/20 blur-3xl animate-floaty" style={{ animationDelay: "2s" }} />
-          </div>
-          <div className="container mx-auto px-4 py-20 md:py-28 relative">
-            <div className="max-w-4xl mx-auto text-center">
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full card-surface text-xs mb-6">
-                <Sparkles className="size-3 text-primary" />
-                منصة رقمية احترافية · ضمان حقيقي · تسليم فوري
-              </div>
-              <h1 className="text-4xl md:text-6xl lg:text-7xl font-black leading-tight">
-                <span className="text-gradient">متجر الاشتراكات الرقمية</span>
+        <section className="border-b border-border">
+          <div className="container mx-auto px-4 py-16 md:py-20">
+            <div className="max-w-3xl">
+              <h1 className="text-3xl font-semibold leading-tight md:text-5xl">
+                متجر الاشتراكات الرقمية
               </h1>
-              <p className="mt-6 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
-                اشتراكات، أدوات ذكاء اصطناعي، منتجات تصميم، وقوالب كانفا احترافية — جاهزة للاستخدام، بأسعار مناسبة لبلدك.
+              <p className="mt-4 max-w-2xl text-base text-muted-foreground md:text-lg">
+                اشتراكات، أدوات ذكاء اصطناعي، منتجات تصميم، وقوالب كانفا جاهزة للاستخدام،
+                بأسعار مناسبة لبلدك.
               </p>
-              <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+              <div className="mt-8 flex flex-wrap items-center gap-3">
                 <Link to="/shop">
-                  <Button size="lg" className="gradient-primary text-white glow-purple gap-2 h-12 px-8 text-base font-bold">
-                    <ShoppingBag className="size-5" />
+                  <Button size="lg" className="h-10 gap-2 px-6 text-sm font-medium">
+                    <ShoppingBag className="size-4" />
                     تسوق الآن
                   </Button>
                 </Link>
                 <Link to="/track">
-                  <Button size="lg" variant="outline" className="gap-2 h-12 px-8 text-base border-primary/40 hover:bg-primary/10">
-                    <Search className="size-5" />
+                  <Button size="lg" variant="outline" className="h-10 gap-2 px-6 text-sm font-medium">
+                    <Search className="size-4" />
                     تتبع طلبك
                   </Button>
                 </Link>
               </div>
 
-              <div className="mt-12 grid grid-cols-3 max-w-2xl mx-auto gap-3">
+              <dl className="mt-10 grid max-w-xl grid-cols-3 gap-4 border-t border-border pt-6">
                 {[
-                  { icon: Zap, label: "تسليم فوري" },
-                  { icon: Shield, label: "ضمان حقيقي" },
-                  { icon: Sparkles, label: "أسعار تنافسية" },
+                  { label: "التسليم", value: "فوري" },
+                  { label: "الضمان", value: "حقيقي" },
+                  { label: "الأسعار", value: "بعملة بلدك" },
                 ].map((f) => (
-                  <div key={f.label} className="card-surface rounded-xl p-3 text-center">
-                    <f.icon className="size-5 mx-auto text-primary mb-1" />
-                    <div className="text-xs">{f.label}</div>
+                  <div key={f.label}>
+                    <dt className="text-xs text-muted-foreground">{f.label}</dt>
+                    <dd className="mt-1 text-sm font-medium">{f.value}</dd>
                   </div>
                 ))}
-              </div>
+              </dl>
             </div>
           </div>
         </section>
 
         {/* COUNTDOWN */}
         {(timerQ.isLoading || timerQ.data) && (
-          <section className="container mx-auto px-4 -mt-12 pt-1 pb-2 flex justify-center min-h-[9rem]">
+          <section className="container mx-auto flex min-h-[8rem] justify-center px-4 py-8">
             {timerQ.data && (
               <Countdown endsAt={timerQ.data.ends_at} title={timerQ.data.title} subtitle={timerQ.data.subtitle ?? undefined} />
             )}
@@ -127,56 +120,50 @@ function Home() {
 
         {/* CATEGORIES */}
         <section className="container mx-auto px-4 py-12">
-          <div className="flex items-end justify-between mb-8">
-            <div className="flex items-center gap-3">
-              <span className="h-8 w-1.5 rounded-full bg-primary" />
-              <div>
-                <h2 className="text-3xl font-black">الأقسام</h2>
-                <p className="text-muted-foreground text-sm mt-1">تصفح جميع الأقسام</p>
-              </div>
+          <div className="mb-6 flex items-end justify-between border-b border-border pb-4">
+            <div>
+              <h2 className="text-xl font-semibold">الأقسام</h2>
+              <p className="mt-1 text-sm text-muted-foreground">تصفح جميع الأقسام</p>
             </div>
-            <Link to="/shop" className="text-primary text-sm flex items-center gap-1 hover:gap-2 transition-all">
+            <Link to="/shop" className="flex items-center gap-1.5 text-sm text-primary">
               كل المنتجات <ArrowLeft className="size-4" />
             </Link>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
             {categoriesQ.isLoading &&
-              Array.from({ length: 4 }).map((_, i) => (
-                <div key={`cat-skeleton-${i}`} className="card-surface rounded-2xl p-4 h-[16rem] animate-pulse" />
+              Array.from({ length: 5 }).map((_, i) => (
+                <div key={`cat-skeleton-${i}`} className="h-[14rem] rounded-lg border border-border bg-card" />
               ))}
-            {(categoriesQ.data ?? []).map((c: any, i: number) => (
+            {(categoriesQ.data ?? []).map((c: any) => (
               <Link
                 key={c.id}
                 to="/shop"
                 search={{ category: c.slug } as any}
-                className="group relative rounded-2xl p-[1px] bg-gradient-to-br from-white/10 via-transparent to-transparent hover:from-primary/60 hover:to-primary/10 transition-all duration-300 animate-slide-up"
-                style={{ animationDelay: `${i * 80}ms` }}
+                className="flex flex-col overflow-hidden rounded-lg border border-border bg-card transition-colors hover:border-foreground/25"
               >
-                <div className="relative overflow-hidden card-surface rounded-[15px] flex flex-col transition-transform duration-300 group-hover:-translate-y-1">
-                  <div className="relative w-full aspect-square overflow-hidden bg-muted/20 flex items-center justify-center">
-                    {c.banner_image ? (
-                      <img
-                        src={c.banner_image}
-                        alt={c.name}
-                        width={480}
-                        height={480}
-                        loading="lazy"
-                        className="absolute inset-0 w-full h-full object-fill transition-transform duration-500 group-hover:scale-105"
-                      />
-                    ) : (
-                      <div className="text-6xl transition-transform duration-500 group-hover:scale-110">{c.icon ?? "🎁"}</div>
-                    )}
-                  </div>
-                  <div className="relative shrink-0 border-t border-border/50 bg-card/80 px-3 py-2.5 font-bold text-sm text-center line-clamp-1 w-full group-hover:text-primary transition-colors">
-                    {c.name}
-                  </div>
+                <div className="relative flex aspect-square w-full items-center justify-center overflow-hidden bg-secondary">
+                  {c.banner_image ? (
+                    <img
+                      src={c.banner_image}
+                      alt={c.name}
+                      width={480}
+                      height={480}
+                      loading="lazy"
+                      className="absolute inset-0 h-full w-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-xs text-muted-foreground">لا توجد صورة</span>
+                  )}
                 </div>
-
+                <div className="shrink-0 border-t border-border px-3 py-2.5 text-center text-sm font-medium line-clamp-1">
+                  {c.name}
+                </div>
               </Link>
             ))}
           </div>
 
         </section>
+
 
       </main>
       <Footer />

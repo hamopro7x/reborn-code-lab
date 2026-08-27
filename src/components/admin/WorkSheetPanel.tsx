@@ -13,9 +13,9 @@ import employeesBg from "@/assets/employees-bg.png.asset.json";
 const CHIP_BASE =
   "inline-flex flex-row-reverse items-center gap-2 rounded-full px-4 py-2 text-sm font-extrabold text-white transition";
 const CHIP_ON =
-  "bg-[#1a1a1a] text-blue-300 shadow-[0_0_20px_-4px_oklch(0.55_0.28_305/0.7),0_0_0_1px_oklch(0.55_0.28_305/0.5)] ring-1 ring-blue-500/40";
+  "bg-secondary text-foreground ring-1 ring-primary/50";
 const CHIP_OFF =
-  "bg-[#0d0d0d] opacity-80 shadow-[0_6px_20px_-6px_rgba(0,0,0,0.9)] hover:opacity-95 hover:ring-1 hover:ring-blue-500/20";
+  "bg-card hover:bg-secondary";
 
 type Employee = {
   user_id: string;
@@ -55,7 +55,7 @@ function EmployeePickerMenu({
         align="center"
         className="w-auto max-w-[92vw] border-0 bg-transparent p-0 shadow-none"
       >
-        <div className="w-[330px] overflow-hidden rounded-xl border border-border/50 bg-[oklch(0.135_0_0)] shadow-2xl">
+        <div className="w-[330px] overflow-hidden rounded-lg border border-border bg-popover shadow-lg">
           <div className="data-table-head truncate px-3 py-1.5 text-center text-[11px] font-bold">
             اختر الموظف
           </div>
@@ -75,8 +75,8 @@ function EmployeePickerMenu({
                         onClick={() => onSelect(emp)}
                         className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-right text-xs font-bold transition ${
                           active
-                            ? "bg-[#1a1a1a] text-blue-300 ring-1 ring-blue-500/40"
-                            : "bg-[#111] text-white/85 hover:bg-[#181818]"
+                            ? "bg-secondary text-foreground ring-1 ring-primary/50"
+                            : "bg-card text-foreground/85 hover:bg-secondary"
                         }`}
                       >
                         <span className="grid size-7 shrink-0 place-items-center overflow-hidden rounded-full bg-white/10 text-[10px] text-white/60">
@@ -163,7 +163,7 @@ function ShiftPickerMenu({
         align="center"
         className="w-auto max-w-[92vw] border-0 bg-transparent p-0 shadow-none"
       >
-        <div className="w-[420px] max-w-[92vw] overflow-hidden rounded-2xl border border-border/40 bg-[oklch(0.115_0_0)] p-3 shadow-2xl">
+        <div className="w-[420px] max-w-[92vw] overflow-hidden rounded-lg border border-border bg-popover p-3 shadow-lg">
 
       {/* Header */}
       <div className="relative mb-3 overflow-hidden rounded-xl bg-[linear-gradient(180deg,#1636e6,#0a24c4)] px-3 py-2.5 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_2px_6px_rgba(0,0,0,0.55)]">

@@ -97,14 +97,14 @@ function AuthPage() {
     <div dir="rtl" className="admin-theme min-h-screen flex items-center justify-center px-4 py-12 bg-background">
       <div className="w-full max-w-md">
         <div className="text-center mb-6">
-          <div className="size-14 rounded-2xl gradient-primary mx-auto flex items-center justify-center glow-purple mb-3">
+          <div className="size-14 rounded-lg gradient-primary mx-auto flex items-center justify-center glow-purple mb-3">
             <ShieldCheck className="size-7 text-white" />
           </div>
-          <h1 className="text-2xl font-black text-gradient">لوحة التحكم</h1>
+          <h1 className="text-2xl font-semibold text-gradient">لوحة التحكم</h1>
           <p className="text-xs text-muted-foreground mt-1">دخول الأدمن والموظفين</p>
         </div>
 
-        <div className="card-surface rounded-3xl p-8 glow-purple animate-slide-up">
+        <div className="card-surface rounded-lg p-8 glow-purple animate-slide-up">
           <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
             <Lock className="size-3.5" />
             <span>الوصول مقيّد ومؤمّن</span>

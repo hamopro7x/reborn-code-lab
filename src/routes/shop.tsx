@@ -63,7 +63,7 @@ function Shop() {
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8">
         <div className="mb-8 animate-slide-up">
-          <h1 className="text-4xl font-black text-gradient">المتجر</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">المتجر</h1>
           <p className="text-muted-foreground mt-2">تصفح كل المنتجات الرقمية</p>
         </div>
 
@@ -76,18 +76,19 @@ function Shop() {
         </div>
 
         <div className="mb-6 flex flex-wrap gap-2">
-          <button onClick={() => setActiveCat(undefined)} className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${!activeCat ? "gradient-primary text-white glow-purple" : "card-surface hover:bg-primary/10"}`}>
+          <button onClick={() => setActiveCat(undefined)} className={`rounded border px-3 py-1.5 text-sm transition-colors ${!activeCat ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-muted-foreground hover:text-foreground"}`}>
             الكل
           </button>
           {(categoriesQ.data ?? []).map((c: any) => (
-            <button key={c.id} onClick={() => setActiveCat(c.slug)} className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${activeCat === c.slug ? "gradient-primary text-white glow-purple" : "card-surface hover:bg-primary/10"}`}>
-              <span className="mr-1">{c.icon}</span>{c.name}
+            <button key={c.id} onClick={() => setActiveCat(c.slug)} className={`rounded border px-3 py-1.5 text-sm transition-colors ${activeCat === c.slug ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-muted-foreground hover:text-foreground"}`}>
+              {c.name}
             </button>
           ))}
         </div>
 
+
         {filtered.length === 0 ? (
-          <div className="card-surface rounded-2xl p-16 text-center text-muted-foreground">
+          <div className="card-surface rounded-lg p-16 text-center text-muted-foreground">
             لا توجد منتجات مطابقة.
           </div>
         ) : (

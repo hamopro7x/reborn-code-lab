@@ -35,9 +35,9 @@ function CartPage() {
     <div className="min-h-screen flex flex-col">
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8 max-w-5xl">
-        <h1 className="text-4xl font-black text-gradient mb-8">سلة التسوق</h1>
+        <h1 className="text-4xl font-semibold text-gradient mb-8">سلة التسوق</h1>
         {items.length === 0 ? (
-          <div className="card-surface rounded-3xl p-16 text-center">
+          <div className="card-surface rounded-lg p-16 text-center">
             <ShoppingBag className="size-16 mx-auto text-muted-foreground mb-4" />
             <p className="text-lg mb-6">السلة فارغة</p>
             <Link to="/shop"><Button className="gradient-primary text-white">تصفح المتجر</Button></Link>
@@ -49,8 +49,8 @@ function CartPage() {
                 const priceEgp = computeDiscountedPrice(i.basePriceEgp, i.discountPercent);
                 const localized = convertFromEgp(priceEgp * i.quantity, rate, currency.code);
                 return (
-                  <div key={i.productId} className="card-surface rounded-2xl p-4 flex items-center gap-4">
-                    <div className="size-16 rounded-xl bg-primary/10 flex items-center justify-center overflow-hidden shrink-0">
+                  <div key={i.productId} className="card-surface rounded-lg p-4 flex items-center gap-4">
+                    <div className="size-16 rounded-lg bg-primary/10 flex items-center justify-center overflow-hidden shrink-0">
                       {i.image ? <img src={i.image} alt={i.name} className="w-full h-full object-cover" /> : <span className="text-2xl">🎁</span>}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -71,11 +71,11 @@ function CartPage() {
               })}
             </div>
             <div>
-              <div className="card-surface rounded-2xl p-6 sticky top-24 glow-purple">
+              <div className="card-surface rounded-lg p-6 sticky top-24 glow-purple">
                 <h2 className="font-bold text-lg mb-4">ملخص الطلب</h2>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between"><span className="text-muted-foreground">عدد المنتجات</span><span>{count}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">الإجمالي</span><span className="font-black text-lg text-gradient">{formatPrice(convertFromEgp(totalEgp, rate, currency.code), currency)}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">الإجمالي</span><span className="font-semibold text-lg text-gradient">{formatPrice(convertFromEgp(totalEgp, rate, currency.code), currency)}</span></div>
                 </div>
                 <Button onClick={() => navigate({ to: "/checkout" })} className="gradient-primary text-white w-full mt-6 h-11">إتمام الشراء</Button>
               </div>
