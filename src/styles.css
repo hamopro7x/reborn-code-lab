@@ -181,8 +181,8 @@
   --card-foreground: oklch(0.97 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.97 0 0);
-  --primary: oklch(0.42 0 0);
-  --primary-foreground: oklch(0.98 0 0);
+  --primary: oklch(0.55 0.15 258);
+  --primary-foreground: oklch(0.99 0 0);
   --secondary: oklch(0.26 0 0);
   --secondary-foreground: oklch(0.96 0 0);
   --muted: oklch(0.24 0 0);
@@ -191,16 +191,16 @@
   --accent-foreground: oklch(0.97 0 0);
   --border: oklch(0.34 0 0 / 0.6);
   --input: oklch(0.27 0 0);
-  --ring: oklch(0.62 0.02 260);
+  --ring: oklch(0.55 0.15 258);
   --sidebar: oklch(0.13 0 0);
   --sidebar-foreground: oklch(0.95 0 0);
-  --sidebar-primary: oklch(0.42 0 0);
-  --sidebar-primary-foreground: oklch(0.98 0 0);
+  --sidebar-primary: oklch(0.55 0.15 258);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
   --sidebar-accent: oklch(0.26 0 0);
   --sidebar-accent-foreground: oklch(0.97 0 0);
   --sidebar-border: oklch(0.3 0 0 / 0.6);
-  --sidebar-ring: oklch(0.62 0.02 260);
-  --chart-1: oklch(0.72 0 0);
+  --sidebar-ring: oklch(0.55 0.15 258);
+  --chart-1: oklch(0.55 0.15 258);
   --chart-2: oklch(0.6 0 0);
   --chart-3: oklch(0.48 0 0);
   --chart-4: oklch(0.82 0 0);
@@ -211,11 +211,12 @@
 }
 
 .admin-theme .card-surface {
-  background: linear-gradient(180deg, oklch(0.215 0 0 / 0.95), oklch(0.175 0 0 / 0.95));
+  background: oklch(0.205 0 0);
   border: 1px solid oklch(0.34 0 0 / 0.6);
 }
 .admin-theme .gradient-primary {
-  background-image: linear-gradient(135deg, oklch(0.34 0 0), oklch(0.26 0 0));
+  background-image: none;
+  background-color: var(--primary);
 }
 .admin-theme .text-gradient {
   background-image: none;
@@ -224,16 +225,17 @@
   color: var(--foreground);
 }
 .admin-theme .glow-purple {
-  box-shadow: 0 0 0 1px oklch(0.4 0 0 / 0.6), 0 10px 30px -12px oklch(0 0 0 / 0.7);
+  box-shadow: none;
+  border: 1px solid oklch(0.34 0 0 / 0.6);
 }
 
 /* ===== Unified data tables (Admin + Employee dashboards only) ===== */
 .data-surface {
-  background-color: oklch(0.115 0 0);
-  border: 1.5px solid oklch(0.45 0.03 264 / 0.85);
-  border-radius: 1rem;
+  background-color: oklch(0.135 0 0);
+  border: 1px solid oklch(0.32 0 0 / 0.8);
+  border-radius: 0.5rem;
   overflow: hidden;
-  box-shadow: 0 0 0 1px oklch(0 0 0 / 0.6), 0 10px 28px -18px oklch(0 0 0 / 0.9);
+  box-shadow: none;
 }
 
 .data-table {
