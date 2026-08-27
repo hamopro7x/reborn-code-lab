@@ -31,8 +31,11 @@ export const Route = createFileRoute("/shop")({
 
 function Shop() {
   const { category } = Route.useSearch();
-  const [q, setQ] = useState("");
-  const [activeCat, setActiveCat] = useState<string | undefined>(category);
+  // البحث والتصنيف يبقيان كما هما بعد تحديث الصفحة.
+  const [q, setQ] = useUiState<string>("shop", "q", "");
+  const [activeCat, setActiveCat] = useUiState<string | undefined>("shop", "cat", category);
+  useScrollRestore("shop");
+
 
   const categoriesQ = useQuery({
     queryKey: ["categories"],
