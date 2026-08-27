@@ -438,11 +438,11 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  padding-inline-start: 4px;
+  padding-right: 6px;
 }
 .nav-glider-track {
   position: absolute;
-  inset-inline-start: 0;
+  right: 0;
   top: 0;
   bottom: 0;
   width: 1px;
@@ -456,7 +456,7 @@
 }
 .nav-glider {
   position: absolute;
-  inset-inline-start: 0;
+  right: 0;
   top: 0;
   width: 2px;
   border-radius: 2px;
