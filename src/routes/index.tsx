@@ -30,10 +30,10 @@ export const Route = createFileRoute("/")({
 });
 
 const features = [
-  { icon: Users, title: "آلاف العملاء", body: "يثقون بنا" },
   { icon: Zap, title: "تسليم فوري", body: "يصل لحسابك مباشرة" },
-  { icon: BadgeCheck, title: "منتجات أصلية", body: "جودة مضمونة" },
+  { icon: ShieldCheck, title: "ضمان حقيقي", body: "استبدال أو استرجاع" },
   { icon: Tags, title: "أسعار تنافسية", body: "أفضل الأسعار دائمًا" },
+  { icon: Headphones, title: "دعم العملاء", body: "متاح في أي وقت" },
 ];
 
 function SectionHeading({ title, to }: { title: string; to?: string }) {
