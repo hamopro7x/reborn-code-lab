@@ -200,7 +200,7 @@ function P2PLinkMenu({ ledgerId, onLinked }: { ledgerId: string; onLinked?: () =
         align="center"
         className="w-auto max-w-[92vw] border-0 bg-transparent p-0 shadow-none"
       >
-        <div className="w-[330px] overflow-hidden rounded-lg border border-border bg-popover shadow-lg">
+        <div className="w-[330px] overflow-hidden rounded-xl border border-border/50 bg-[oklch(0.135_0_0)] shadow-2xl">
           <div className="data-table-head truncate px-3 py-1.5 text-center text-[11px] font-bold">
             شفتات {myName || "الموظف"}
           </div>
@@ -1785,14 +1785,7 @@ export function EmployeeWorkView({
         <div className="flex flex-wrap items-center gap-2 mb-4">
 
           <div className="flex min-w-0 items-center gap-2">
-            <div className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-full bg-secondary/80 text-foreground/80">
-              {avatar ? (
-                <img src={avatar} alt={name} className="size-full object-cover" />
-              ) : (
-                <User className="size-8" />
-              )}
-            </div>
-              <div className="min-w-0">
+            <div className="min-w-0">
                 <div className="truncate text-xl font-black">{name}</div>
                 <div className="mt-1 flex items-center gap-1.5 text-sm text-foreground/70">
                   {st.data?.holding === true ? (
@@ -1922,7 +1915,7 @@ export function EmployeeWorkView({
                 }`}
               >
                 <span className="whitespace-nowrap">{t.label}</span>
-                <Icon className="size-4 shrink-0 text-muted-foreground" />
+                <Icon className="size-4 shrink-0 text-[oklch(0.88_0.06_255)] drop-shadow-[0_0_4px_oklch(0.6_0.15_258/0.6)]" />
               </button>
             );
           })}

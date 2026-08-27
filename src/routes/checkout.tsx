@@ -160,20 +160,20 @@ function CheckoutPage() {
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
         {bannerQ.data?.enabled && (bannerQ.data.title || bannerQ.data.subtitle) && (
-          <div className="mb-6 relative overflow-hidden rounded-lg gradient-primary p-5 md:p-6 text-white animate-slide-up">
+          <div className="mb-6 relative overflow-hidden rounded-2xl gradient-primary p-5 md:p-6 text-white shadow-lg animate-slide-up">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.15),transparent_60%)]" />
             <div className="relative flex items-start gap-3">
-              <div className="size-10 rounded-lg bg-white/20 flex items-center justify-center shrink-0 backdrop-blur">
+              <div className="size-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0 backdrop-blur">
                 <Sparkles className="size-5" />
               </div>
               <div className="min-w-0">
-                {bannerQ.data.title && <div className="font-semibold text-lg md:text-xl">{bannerQ.data.title}</div>}
+                {bannerQ.data.title && <div className="font-black text-lg md:text-xl">{bannerQ.data.title}</div>}
                 {bannerQ.data.subtitle && <div className="text-sm text-white/90 mt-1">{bannerQ.data.subtitle}</div>}
               </div>
             </div>
           </div>
         )}
-        <h1 className="text-3xl font-semibold text-gradient mb-6">إتمام الشراء</h1>
+        <h1 className="text-3xl font-black text-gradient mb-6">إتمام الشراء</h1>
 
         <div className="flex items-center gap-2 mb-8 text-sm">
           {[["info","بياناتك"],["payment","الدفع"],["screenshot","إثبات التحويل"],["done","تم"]].map(([k,l],i) => (
@@ -187,7 +187,7 @@ function CheckoutPage() {
 
         {step === "info" && (
           <form onSubmit={submitInfo} className="grid md:grid-cols-3 gap-6">
-            <div className="md:col-span-2 card-surface rounded-lg p-6 space-y-4">
+            <div className="md:col-span-2 card-surface rounded-2xl p-6 space-y-4">
               <h2 className="font-bold text-lg mb-2">بياناتك</h2>
               <div><Label>الاسم الكامل</Label><Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} required /></div>
               <div><Label>البريد الإلكتروني</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required /></div>
@@ -200,7 +200,7 @@ function CheckoutPage() {
               <div>
                 <Label>رقم الواتساب</Label>
                 <div className="flex gap-2">
-                  <div className="w-24 h-10 rounded-md border border-input bg-input flex items-center justify-center text-sm num">
+                  <div className="w-24 h-10 rounded-md border border-input bg-input flex items-center justify-center text-sm font-mono">
                     {countriesQ.data?.find((c: any) => c.code === form.country_code)?.dial_code}
                   </div>
                   <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} required placeholder="1017873279" />
@@ -208,7 +208,7 @@ function CheckoutPage() {
               </div>
               <Button type="submit" className="bg-black hover:bg-black/90 text-white w-full h-10 text-sm">متابعة إلى الدفع</Button>
             </div>
-            <div className="card-surface rounded-lg p-6 h-fit">
+            <div className="card-surface rounded-2xl p-6 h-fit">
               <h3 className="font-bold mb-4">الملخص</h3>
               <div className="space-y-2 text-sm">
                 {items.map((i) => (
@@ -216,7 +216,7 @@ function CheckoutPage() {
                     <span className="truncate">{i.name} × {i.quantity}</span>
                   </div>
                 ))}
-                <div className="border-t border-border pt-2 mt-2 flex justify-between font-semibold text-lg">
+                <div className="border-t border-border pt-2 mt-2 flex justify-between font-black text-lg">
                   <span>الإجمالي</span>
                   <span className="text-gradient">{formatPrice(total, currency)}</span>
                 </div>
@@ -230,7 +230,7 @@ function CheckoutPage() {
             <div className="md:col-span-2 space-y-3">
               <h2 className="font-bold text-lg mb-2">اختر طريقة الدفع</h2>
               {(paymentQ.data ?? []).map((pm: any) => (
-                <button key={pm.id} onClick={() => setSelectedPayment(pm)} className={`w-full text-right card-surface rounded-lg p-5 hover:bg-primary/5 transition-all ${selectedPayment?.id === pm.id ? "glow-purple ring-2 ring-primary" : ""}`}>
+                <button key={pm.id} onClick={() => setSelectedPayment(pm)} className={`w-full text-right card-surface rounded-2xl p-5 hover:bg-primary/5 transition-all ${selectedPayment?.id === pm.id ? "glow-purple ring-2 ring-primary" : ""}`}>
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="font-bold">{pm.name}</div>
@@ -241,12 +241,12 @@ function CheckoutPage() {
                 </button>
               ))}
               {selectedPayment && (
-                <div className="card-surface rounded-lg p-5 mt-4 border-2 border-primary/40">
+                <div className="card-surface rounded-2xl p-5 mt-4 border-2 border-primary/40">
                   <div className="text-sm text-muted-foreground mb-2">حوّل المبلغ إلى:</div>
-                  <div className="num text-2xl font-semibold text-gradient mb-2 flex items-center gap-2">
+                  <div className="font-mono text-2xl font-black text-gradient mb-2 flex items-center gap-2">
                     {paymentDetailsQ.data?.account_number ?? "..."}
                     {paymentDetailsQ.data?.account_number && (
-                      <button onClick={() => { navigator.clipboard.writeText(paymentDetailsQ.data!.account_number); toast.success("تم النسخ"); }} aria-label="نسخ رقم الحساب" className="text-primary transition-transform">
+                      <button onClick={() => { navigator.clipboard.writeText(paymentDetailsQ.data!.account_number); toast.success("تم النسخ"); }} aria-label="نسخ رقم الحساب" className="text-primary hover:scale-110 transition-transform">
                         <Copy className="size-5" />
                       </button>
                     )}
@@ -254,7 +254,7 @@ function CheckoutPage() {
                   {paymentDetailsQ.data?.account_name && <div className="text-xs text-muted-foreground">{paymentDetailsQ.data.account_name}</div>}
                   <div className="font-bold text-sm text-white mt-2">بعد التحويل اكد الطلب ورفع صورة الاثبات</div>
                   {paymentDetailsQ.data?.instructions && <div className="text-xs text-muted-foreground mt-2">{paymentDetailsQ.data.instructions}</div>}
-                  <div className="mt-3 font-semibold text-lg">المبلغ: <span className="text-gradient">{formatPrice(total, currency)}</span></div>
+                  <div className="mt-3 font-black text-lg">المبلغ: <span className="text-gradient">{formatPrice(total, currency)}</span></div>
                 </div>
               )}
 
@@ -263,23 +263,23 @@ function CheckoutPage() {
                 <Button onClick={createOrder} disabled={!selectedPayment} className="bg-black hover:bg-black/90 text-white flex-1 h-10 text-sm">تأكيد الطلب ورفع صورة التحويل</Button>
               </div>
             </div>
-            <div className="card-surface rounded-lg p-6 h-fit">
+            <div className="card-surface rounded-2xl p-6 h-fit">
               <h3 className="font-bold mb-4">الإجمالي</h3>
-              <div className="text-2xl font-semibold text-gradient">{formatPrice(total, currency)}</div>
+              <div className="text-2xl font-black text-gradient">{formatPrice(total, currency)}</div>
             </div>
           </div>
         )}
 
         {step === "screenshot" && (
-          <div className="card-surface rounded-lg p-8 max-w-xl mx-auto text-center">
+          <div className="card-surface rounded-2xl p-8 max-w-xl mx-auto text-center">
             <div className="size-16 rounded-full gradient-primary mx-auto flex items-center justify-center mb-4 glow-purple">
               <Upload className="size-8 text-white" />
             </div>
             <h2 className="font-bold text-xl mb-2">ارفع صورة إثبات التحويل</h2>
-            <p className="text-sm text-muted-foreground mb-6">تم إنشاء طلبك بكود: <span className="num font-bold text-primary">{orderCode}</span></p>
+            <p className="text-sm text-muted-foreground mb-6">تم إنشاء طلبك بكود: <span className="font-mono font-bold text-primary">{orderCode}</span></p>
             <label className="block cursor-pointer">
               <input type="file" accept="image/*" onChange={(e) => setScreenshotFile(e.target.files?.[0] ?? null)} className="hidden" />
-              <div className="border-2 border-dashed border-primary/40 rounded-lg p-8 hover:bg-primary/5 transition-all">
+              <div className="border-2 border-dashed border-primary/40 rounded-2xl p-8 hover:bg-primary/5 transition-all">
                 {screenshotFile ? (
                   <>
                     <CheckCircle2 className="size-8 text-primary mx-auto mb-2" />

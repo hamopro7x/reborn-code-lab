@@ -48,51 +48,45 @@
 }
 
 :root {
-  --radius: 0.5rem;
-
-  /* Neutral graphite surfaces + a single blue accent (design rules: one accent) */
-  --background: oklch(0.16 0 0);
-  --foreground: oklch(0.96 0 0);
-  --card: oklch(0.2 0 0);
-  --card-foreground: oklch(0.96 0 0);
-  --popover: oklch(0.22 0 0);
-  --popover-foreground: oklch(0.96 0 0);
-  --primary: oklch(0.55 0.15 258);
-  --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.26 0 0);
-  --secondary-foreground: oklch(0.95 0 0);
-  --muted: oklch(0.24 0 0);
-  --muted-foreground: oklch(0.72 0 0);
-  --accent: oklch(0.55 0.15 258);
-  --accent-foreground: oklch(0.99 0 0);
-  --destructive: oklch(0.55 0.19 25);
-  --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.32 0 0 / 0.7);
-  --input: oklch(0.26 0 0);
-  --ring: oklch(0.55 0.15 258);
-  --gold: oklch(0.88 0 0);
-  --chart-1: oklch(0.55 0.15 258);
-  --chart-2: oklch(0.74 0 0);
-  --chart-3: oklch(0.6 0 0);
-  --chart-4: oklch(0.46 0 0);
-  --chart-5: oklch(0.36 0 0);
-  --sidebar: oklch(0.13 0 0);
-  --sidebar-foreground: oklch(0.94 0 0);
-  --sidebar-primary: oklch(0.55 0.15 258);
-  --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.24 0 0);
-  --sidebar-accent-foreground: oklch(0.96 0 0);
-  --sidebar-border: oklch(0.3 0 0 / 0.7);
-  --sidebar-ring: oklch(0.55 0.15 258);
-
-  --font-heading: "Space Grotesk", "IBM Plex Sans Arabic", system-ui, sans-serif;
-  --font-body: "IBM Plex Sans Arabic", system-ui, -apple-system, sans-serif;
-  --font-num: "IBM Plex Mono", ui-monospace, monospace;
+  --radius: 0.875rem;
+  --background: oklch(0.08 0.02 285);
+  --foreground: oklch(0.97 0.01 300);
+  --card: oklch(0.13 0.035 285);
+  --card-foreground: oklch(0.97 0.01 300);
+  --popover: oklch(0.14 0.04 285);
+  --popover-foreground: oklch(0.97 0.01 300);
+  --primary: oklch(0.62 0.24 300);
+  --primary-foreground: oklch(0.99 0.005 300);
+  --secondary: oklch(0.19 0.04 285);
+  --secondary-foreground: oklch(0.97 0.01 300);
+  --muted: oklch(0.17 0.03 285);
+  --muted-foreground: oklch(0.72 0.03 295);
+  --accent: oklch(0.55 0.28 305);
+  --accent-foreground: oklch(0.99 0.005 300);
+  --destructive: oklch(0.62 0.25 20);
+  --destructive-foreground: oklch(0.98 0.005 300);
+  --border: oklch(0.28 0.05 295 / 0.5);
+  --input: oklch(0.2 0.04 290);
+  --ring: oklch(0.62 0.24 300);
+  --gold: oklch(0.82 0.15 85);
+  --chart-1: oklch(0.62 0.24 300);
+  --chart-2: oklch(0.7 0.2 200);
+  --chart-3: oklch(0.75 0.15 85);
+  --chart-4: oklch(0.55 0.25 340);
+  --chart-5: oklch(0.6 0.22 250);
+  --sidebar: oklch(0.1 0.025 285);
+  --sidebar-foreground: oklch(0.95 0.01 300);
+  --sidebar-primary: oklch(0.62 0.24 300);
+  --sidebar-primary-foreground: oklch(0.99 0.005 300);
+  --sidebar-accent: oklch(0.19 0.04 285);
+  --sidebar-accent-foreground: oklch(0.97 0.01 300);
+  --sidebar-border: oklch(0.24 0.04 290 / 0.5);
+  --sidebar-ring: oklch(0.62 0.24 300);
 }
 
 .dark {
-  --background: oklch(0.16 0 0);
-  --foreground: oklch(0.96 0 0);
+  --background: oklch(0.08 0.02 285);
+  --foreground: oklch(0.97 0.01 300);
 }
 
 @layer base {
@@ -101,55 +95,29 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
-    background-image: none;
-    font-family: var(--font-body);
-    font-size: 15px;
-    line-height: 1.55;
-    -webkit-font-smoothing: antialiased;
+    background-image:
+      radial-gradient(1200px 600px at 15% -10%, oklch(0.35 0.22 300 / 0.35), transparent 60%),
+      radial-gradient(1000px 500px at 100% 10%, oklch(0.4 0.18 320 / 0.25), transparent 60%),
+      radial-gradient(800px 400px at 50% 110%, oklch(0.3 0.2 285 / 0.3), transparent 60%);
+    background-attachment: fixed;
+    font-family: "Cairo", "Tajawal", system-ui, -apple-system, sans-serif;
   }
-  h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-heading);
-    font-weight: 600;
-    letter-spacing: -0.01em;
-    line-height: 1.2;
-  }
-  h1 { font-size: clamp(1.75rem, 3.4vw, 3rem); }
-  h2 { font-size: clamp(1.375rem, 2.2vw, 1.75rem); }
-  h3 { font-size: 1.125rem; }
-  button, input, select, textarea { font-family: inherit; }
 }
 
-/* Numbers, amounts, codes */
-@utility num {
-  font-family: var(--font-num);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0;
-}
-
-/* Legacy names kept, redefined flat: no gradients, no glow (design rules) */
 @utility gradient-primary {
-  background-image: none;
-  background-color: var(--primary);
-  color: var(--primary-foreground);
+  background-image: linear-gradient(135deg, oklch(0.55 0.28 305), oklch(0.5 0.3 285), oklch(0.4 0.25 270));
 }
 @utility gradient-gold {
-  background-image: none;
-  background-color: oklch(0.28 0 0);
-  color: var(--foreground);
+  background-image: linear-gradient(135deg, oklch(0.85 0.15 85), oklch(0.75 0.18 60));
 }
 @utility text-gradient {
-  background-image: none;
-  -webkit-background-clip: initial;
-  background-clip: initial;
-  color: var(--foreground);
+  background-image: linear-gradient(135deg, oklch(0.95 0.05 300), oklch(0.75 0.3 305), oklch(0.6 0.28 285));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 @utility glow-purple {
-  box-shadow: none;
-  border: 1px solid var(--border);
-}
-@utility card-surface {
-  background-color: var(--card);
-  border: 1px solid var(--border);
+  box-shadow: 0 0 0 1px oklch(0.6 0.25 300 / 0.4), 0 10px 40px -10px oklch(0.5 0.3 300 / 0.5), 0 0 60px -10px oklch(0.55 0.28 305 / 0.4);
 }
 @utility scrollbar-hide {
   -ms-overflow-style: none;
@@ -159,16 +127,24 @@
   display: none;
 }
 
-/* Motion: entrance only, no hover lift/scale/glow (design rules) */
-@keyframes slideUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-.animate-slide-up { animation: slideUp 0.18s ease-out both; }
-.animate-floaty { animation: none; }
-.animate-glow-pulse { animation: none; }
-.animate-arrow-nudge { animation: none; }
+
+@keyframes floaty { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+@keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
+@keyframes glowPulse { 0%,100%{box-shadow:0 0 40px -10px oklch(0.6 0.3 300 / 0.5)} 50%{box-shadow:0 0 70px -5px oklch(0.65 0.32 305 / 0.85)} }
+@keyframes slideUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+@keyframes arrowNudge { 0%,100%{transform:translateY(-50%) translateX(0)} 50%{transform:translateY(-50%) translateX(var(--nudge, 12px))} }
+
+.animate-floaty { animation: floaty 6s ease-in-out infinite; }
+.animate-glow-pulse { animation: glowPulse 3s ease-in-out infinite; }
+.animate-slide-up { animation: slideUp 0.4s ease-out both; }
+.animate-arrow-nudge { animation: arrowNudge 1.1s ease-in-out infinite; }
 
 @keyframes wmFloat {
   0%   { top: 8%;  left: 6%; }
-  50%  { top: 60%; left: 60%; }
+  20%  { top: 70%; left: 78%; }
+  40%  { top: 45%; left: 20%; }
+  60%  { top: 15%; left: 65%; }
+  80%  { top: 80%; left: 35%; }
   100% { top: 8%;  left: 6%; }
 }
 .wm-float { animation: wmFloat 22s ease-in-out infinite; }
@@ -181,8 +157,8 @@
   --card-foreground: oklch(0.97 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.97 0 0);
-  --primary: oklch(0.55 0.15 258);
-  --primary-foreground: oklch(0.99 0 0);
+  --primary: oklch(0.42 0 0);
+  --primary-foreground: oklch(0.98 0 0);
   --secondary: oklch(0.26 0 0);
   --secondary-foreground: oklch(0.96 0 0);
   --muted: oklch(0.24 0 0);
@@ -191,16 +167,16 @@
   --accent-foreground: oklch(0.97 0 0);
   --border: oklch(0.34 0 0 / 0.6);
   --input: oklch(0.27 0 0);
-  --ring: oklch(0.55 0.15 258);
+  --ring: oklch(0.62 0.02 260);
   --sidebar: oklch(0.13 0 0);
   --sidebar-foreground: oklch(0.95 0 0);
-  --sidebar-primary: oklch(0.55 0.15 258);
-  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-primary: oklch(0.42 0 0);
+  --sidebar-primary-foreground: oklch(0.98 0 0);
   --sidebar-accent: oklch(0.26 0 0);
   --sidebar-accent-foreground: oklch(0.97 0 0);
   --sidebar-border: oklch(0.3 0 0 / 0.6);
-  --sidebar-ring: oklch(0.55 0.15 258);
-  --chart-1: oklch(0.55 0.15 258);
+  --sidebar-ring: oklch(0.62 0.02 260);
+  --chart-1: oklch(0.72 0 0);
   --chart-2: oklch(0.6 0 0);
   --chart-3: oklch(0.48 0 0);
   --chart-4: oklch(0.82 0 0);
@@ -211,12 +187,11 @@
 }
 
 .admin-theme .card-surface {
-  background: oklch(0.205 0 0);
+  background: linear-gradient(180deg, oklch(0.215 0 0 / 0.95), oklch(0.175 0 0 / 0.95));
   border: 1px solid oklch(0.34 0 0 / 0.6);
 }
 .admin-theme .gradient-primary {
-  background-image: none;
-  background-color: var(--primary);
+  background-image: linear-gradient(135deg, oklch(0.34 0 0), oklch(0.26 0 0));
 }
 .admin-theme .text-gradient {
   background-image: none;
@@ -225,17 +200,16 @@
   color: var(--foreground);
 }
 .admin-theme .glow-purple {
-  box-shadow: none;
-  border: 1px solid oklch(0.34 0 0 / 0.6);
+  box-shadow: 0 0 0 1px oklch(0.4 0 0 / 0.6), 0 10px 30px -12px oklch(0 0 0 / 0.7);
 }
 
 /* ===== Unified data tables (Admin + Employee dashboards only) ===== */
 .data-surface {
-  background-color: oklch(0.135 0 0);
-  border: 1px solid oklch(0.32 0 0 / 0.8);
-  border-radius: 0.5rem;
+  background-color: oklch(0.115 0 0);
+  border: 1.5px solid oklch(0.45 0.03 264 / 0.85);
+  border-radius: 1rem;
   overflow: hidden;
-  box-shadow: none;
+  box-shadow: 0 0 0 1px oklch(0 0 0 / 0.6), 0 10px 28px -18px oklch(0 0 0 / 0.9);
 }
 
 .data-table {
@@ -249,28 +223,35 @@
   padding: 0.75rem;
   white-space: nowrap;
 }
-/* Flat header row: solid tone, no pills, no gradients */
+/* Navy segmented header bar (blue pills) */
 .data-table thead {
-  background-color: oklch(0.24 0 0);
+  background-color: oklch(0.17 0.06 265);
 }
 .data-table thead th {
   position: relative;
+  isolation: isolate;
   background-color: transparent;
   background-image: none;
   border: none;
-  border-bottom: 1px solid oklch(0.34 0 0 / 0.8);
-  color: oklch(0.78 0 0);
-  font-weight: 600;
+  color: oklch(0.98 0 0);
+  font-weight: 700;
   font-size: 11px;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
   text-align: center;
-  padding: 0.55rem 0.75rem;
+  padding: 0.6rem 0.75rem;
 }
 .data-table thead th::before {
-  content: none;
+  content: "";
+  position: absolute;
+  inset: 4px 3px;
+  border-radius: 0.5rem;
+  background-image: linear-gradient(180deg, oklch(0.42 0.16 264), oklch(0.31 0.14 264));
+  box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.18), 0 1px 3px oklch(0 0 0 / 0.45);
+  z-index: -1;
 }
 .data-table thead th > * {
   position: relative;
+  z-index: 1;
 }
 
 .data-table tbody td {
@@ -301,22 +282,21 @@
 }
 
 .data-table-head {
-  background-image: none;
-  background-color: oklch(0.24 0 0);
-  color: oklch(0.78 0 0);
-  border-bottom: 1px solid oklch(0.34 0 0 / 0.8);
+  background-image: linear-gradient(180deg, oklch(0.42 0.16 264), oklch(0.31 0.14 264));
+  color: oklch(0.98 0 0);
+  border-bottom: 1px solid oklch(0.35 0.12 264 / 0.8);
 }
 
-/* Summary row inside thead: compact neutral bar above the column labels */
+/* Summary row inside thead: dark compact bar with vertical separators, above the blue pill header */
 .data-table thead tr.summary-row th {
-  background: oklch(0.19 0 0);
+  background: oklch(0.16 0.02 264);
   border: none;
-  border-bottom: 1px solid oklch(0.32 0 0 / 0.7);
+  border-bottom: none;
   padding: 0.5rem 0.7rem;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 800;
   text-align: right;
-  color: oklch(0.96 0 0);
+  color: oklch(0.99 0 0);
 }
 
 .data-table thead tr.summary-row th::before {
@@ -324,48 +304,48 @@
 }
 /* Vertical separators between summary cells (RTL: first DOM child is the rightmost column) */
 .data-table thead tr.summary-row th:not(:first-child) {
-  border-right: 1px solid oklch(0.34 0 0 / 0.7);
+  border-right: 1px solid oklch(0.55 0.14 264 / 0.65);
 }
 .summary-row .summary-pill {
   display: inline-flex;
   align-items: center;
   justify-content: flex-start;
   gap: 0.35rem;
-  border-radius: 0.25rem;
-  border: 1px solid oklch(0.34 0 0 / 0.8);
-  background-color: oklch(0.14 0 0);
-  padding: 0.15rem 0.5rem;
-  font-size: 11px;
-  font-weight: 500;
-  color: oklch(0.9 0 0);
+  border-radius: 999px;
+  border: 1px solid oklch(0.35 0.12 264 / 0.7);
+  background-color: oklch(0.07 0 0);
+  padding: 0.15rem 0.6rem;
+  font-size: 10px;
+  font-weight: 700;
+  color: oklch(0.96 0 0);
   white-space: nowrap;
 }
 .summary-row .summary-pill .value {
-  font-family: var(--font-num);
-  color: oklch(0.98 0 0);
+  color: oklch(0.82 0.15 85);
 }
 
-/* Admin-only summary text: plain text above columns */
+/* Admin-only summary text: no pill border, just plain text above columns */
 .summary-row.admin-summary .summary-text {
   display: inline-flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 0.4rem;
-  font-size: 12px;
-  font-weight: 600;
-  color: oklch(0.9 0 0);
+  gap: 0.45rem;
+  font-size: 13px;
+  font-weight: 800;
+  color: oklch(0.99 0 0);
   white-space: nowrap;
+  text-shadow: 0 1px 2px oklch(0 0 0 / 0.5);
 }
 
 .summary-row.admin-summary .summary-text .value {
-  font-family: var(--font-num);
-  color: oklch(0.98 0 0);
-  font-weight: 600;
+  color: #ffffff;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-shadow: 0 0 4px oklch(0.7 0 0 / 0.35);
 }
 .summary-row.admin-summary .summary-text .value-muted {
-  font-family: var(--font-num);
-  color: oklch(0.72 0 0);
-  font-weight: 500;
+  color: oklch(0.78 0 0);
+  font-weight: 700;
 }
 
 
@@ -373,18 +353,18 @@
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  border: 1px solid oklch(0.34 0 0 / 0.9);
-  background-color: oklch(0.22 0 0);
+  border: 1px solid oklch(0.34 0 0 / 0.8);
+  background-color: oklch(0.2 0 0);
   color: oklch(0.9 0 0);
-  border-radius: 0.25rem;
+  border-radius: 999px;
   padding: 0.25rem 0.625rem;
-  font-size: 11px;
-  font-weight: 500;
-  transition: background-color 0.12s, border-color 0.12s;
+  font-size: 10px;
+  font-weight: 700;
+  transition: background-color 0.15s, border-color 0.15s;
 }
 .table-btn:hover {
-  background-color: oklch(0.28 0 0);
-  border-color: oklch(0.44 0 0 / 0.9);
+  background-color: oklch(0.26 0 0);
+  border-color: oklch(0.45 0 0 / 0.9);
 }
 
 /* ===== Admin free spreadsheet: exact reference look ===== */
@@ -437,11 +417,9 @@
 .admin-sheet-table thead th > * {
   display: block;
   height: 44px;
-  border-radius: 0.375rem;
-  background-image: none;
-  background-color: oklch(0.26 0 0);
-  border: 1px solid oklch(0.36 0 0 / 0.8);
-  box-shadow: none;
+  border-radius: 14px;
+  background-image: linear-gradient(180deg, #1636e6, #0a24c4);
+  box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.18), 0 2px 6px oklch(0 0 0 / 0.55);
 }
 .admin-sheet-table tbody td {
   background-color: oklch(0.055 0 0);
