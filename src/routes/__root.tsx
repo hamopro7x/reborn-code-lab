@@ -12,6 +12,8 @@ import { useAutoRefreshOnDeploy } from "@/lib/use-auto-refresh";
 import { useGlobalAutoSave } from "@/lib/use-global-autosave";
 import { GlobalRealtime } from "@/lib/realtime/global-realtime";
 import { setUiScope } from "@/lib/ui-state";
+import { saveLastLocation } from "@/lib/last-location";
+
 
 
 
