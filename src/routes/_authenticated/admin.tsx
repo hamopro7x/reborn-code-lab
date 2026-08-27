@@ -130,10 +130,15 @@ function Admin() {
     if (role !== "admin" && role !== "employee") return;
     identityFn().then((v: any) => setMe(v)).catch(() => {});
   }, [role, identityFn]);
-  // Employees only see the sections the admin shared with them
+  // Employees only see the sections the admin shared with them.
+  // مهم: لا نحوّل القسم قبل تحميل قائمة الأقسام المشتركة، وإلا يرجع الموظف
+  // للطلبات بعد كل Refresh بدل ما يفضل في نفس القسم.
   useEffect(() => {
-    if (isEmployee && !employeeAllowed(panel)) setPanel("orders");
-  }, [isEmployee, panel, shared.join(",")]);
+    if (!isEmployee || !sharedQ.isSuccess) return;
+    if (!employeeAllowed(panel)) setPanel("orders");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEmployee, sharedQ.isSuccess, panel, shared.join(",")]);
+
 
   if (role === null) return <div className="p-8 text-center">جاري التحقق...</div>;
   if (role !== "admin" && role !== "employee") {
