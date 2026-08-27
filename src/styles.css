@@ -301,21 +301,22 @@
 }
 
 .data-table-head {
-  background-image: linear-gradient(180deg, oklch(0.42 0.16 264), oklch(0.31 0.14 264));
-  color: oklch(0.98 0 0);
-  border-bottom: 1px solid oklch(0.35 0.12 264 / 0.8);
+  background-image: none;
+  background-color: oklch(0.24 0 0);
+  color: oklch(0.78 0 0);
+  border-bottom: 1px solid oklch(0.34 0 0 / 0.8);
 }
 
-/* Summary row inside thead: dark compact bar with vertical separators, above the blue pill header */
+/* Summary row inside thead: compact neutral bar above the column labels */
 .data-table thead tr.summary-row th {
-  background: oklch(0.16 0.02 264);
+  background: oklch(0.19 0 0);
   border: none;
-  border-bottom: none;
+  border-bottom: 1px solid oklch(0.32 0 0 / 0.7);
   padding: 0.5rem 0.7rem;
-  font-size: 13px;
-  font-weight: 800;
+  font-size: 12px;
+  font-weight: 600;
   text-align: right;
-  color: oklch(0.99 0 0);
+  color: oklch(0.96 0 0);
 }
 
 .data-table thead tr.summary-row th::before {
@@ -323,48 +324,48 @@
 }
 /* Vertical separators between summary cells (RTL: first DOM child is the rightmost column) */
 .data-table thead tr.summary-row th:not(:first-child) {
-  border-right: 1px solid oklch(0.55 0.14 264 / 0.65);
+  border-right: 1px solid oklch(0.34 0 0 / 0.7);
 }
 .summary-row .summary-pill {
   display: inline-flex;
   align-items: center;
   justify-content: flex-start;
   gap: 0.35rem;
-  border-radius: 999px;
-  border: 1px solid oklch(0.35 0.12 264 / 0.7);
-  background-color: oklch(0.07 0 0);
-  padding: 0.15rem 0.6rem;
-  font-size: 10px;
-  font-weight: 700;
-  color: oklch(0.96 0 0);
+  border-radius: 0.25rem;
+  border: 1px solid oklch(0.34 0 0 / 0.8);
+  background-color: oklch(0.14 0 0);
+  padding: 0.15rem 0.5rem;
+  font-size: 11px;
+  font-weight: 500;
+  color: oklch(0.9 0 0);
   white-space: nowrap;
 }
 .summary-row .summary-pill .value {
-  color: oklch(0.82 0.15 85);
+  font-family: var(--font-num);
+  color: oklch(0.98 0 0);
 }
 
-/* Admin-only summary text: no pill border, just plain text above columns */
+/* Admin-only summary text: plain text above columns */
 .summary-row.admin-summary .summary-text {
   display: inline-flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 0.45rem;
-  font-size: 13px;
-  font-weight: 800;
-  color: oklch(0.99 0 0);
+  gap: 0.4rem;
+  font-size: 12px;
+  font-weight: 600;
+  color: oklch(0.9 0 0);
   white-space: nowrap;
-  text-shadow: 0 1px 2px oklch(0 0 0 / 0.5);
 }
 
 .summary-row.admin-summary .summary-text .value {
-  color: #ffffff;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  text-shadow: 0 0 4px oklch(0.7 0 0 / 0.35);
+  font-family: var(--font-num);
+  color: oklch(0.98 0 0);
+  font-weight: 600;
 }
 .summary-row.admin-summary .summary-text .value-muted {
-  color: oklch(0.78 0 0);
-  font-weight: 700;
+  font-family: var(--font-num);
+  color: oklch(0.72 0 0);
+  font-weight: 500;
 }
 
 
@@ -372,18 +373,18 @@
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  border: 1px solid oklch(0.34 0 0 / 0.8);
-  background-color: oklch(0.2 0 0);
+  border: 1px solid oklch(0.34 0 0 / 0.9);
+  background-color: oklch(0.22 0 0);
   color: oklch(0.9 0 0);
-  border-radius: 999px;
+  border-radius: 0.25rem;
   padding: 0.25rem 0.625rem;
-  font-size: 10px;
-  font-weight: 700;
-  transition: background-color 0.15s, border-color 0.15s;
+  font-size: 11px;
+  font-weight: 500;
+  transition: background-color 0.12s, border-color 0.12s;
 }
 .table-btn:hover {
-  background-color: oklch(0.26 0 0);
-  border-color: oklch(0.45 0 0 / 0.9);
+  background-color: oklch(0.28 0 0);
+  border-color: oklch(0.44 0 0 / 0.9);
 }
 
 /* ===== Admin free spreadsheet: exact reference look ===== */
