@@ -123,7 +123,7 @@ function ProductPage() {
     <PageShell>
       <Link to="/shop" className="text-sm text-muted-foreground hover:text-primary flex items-center gap-1 mb-6"><ArrowLeft className="size-4" />العودة للمتجر</Link>
       <div className="grid md:grid-cols-2 gap-8 animate-slide-up">
-        <div className="card-surface rounded-3xl overflow-hidden aspect-square relative">
+        <div className="card-surface rounded-lg overflow-hidden aspect-square relative">
           {p.main_image ? (
             <img src={p.main_image} alt={p.name} className="w-full h-full object-contain" />
           ) : (
@@ -137,7 +137,7 @@ function ProductPage() {
         </div>
         <div>
           {p.category && <span className="text-xs text-primary font-bold">{p.category.icon} {p.category.name}</span>}
-          <h1 className="text-3xl md:text-4xl font-black mt-2">{p.name}</h1>
+          <h1 className="text-3xl md:text-4xl font-semibold mt-2">{p.name}</h1>
           {avgRating > 0 && (
             <div className="flex items-center gap-1 mt-2">
               {[1,2,3,4,5].map((n) => <Star key={n} className={`size-4 ${n <= Math.round(avgRating) ? "fill-yellow-400 text-yellow-400" : "text-muted"}`} />)}
@@ -147,12 +147,12 @@ function ProductPage() {
           <p className="mt-4 text-muted-foreground leading-relaxed">{p.description}</p>
 
           <div className="mt-6 flex items-baseline gap-3">
-            <span className="text-4xl font-black text-gradient">{formatPrice(localized, currency)}</span>
+            <span className="text-4xl font-semibold text-gradient">{formatPrice(localized, currency)}</span>
             {hasDiscount && <span className="text-lg text-muted-foreground line-through">{formatPrice(original, currency)}</span>}
           </div>
 
           {p.warranty_days > 0 && (
-            <div className="mt-4 card-surface rounded-xl p-4 flex items-center gap-3">
+            <div className="mt-4 card-surface rounded-lg p-4 flex items-center gap-3">
               <ShieldCheck className="size-6 text-primary" />
               <div>
                 <div className="font-bold">ضمان {p.warranty_days} يوم</div>
@@ -170,7 +170,7 @@ function ProductPage() {
 
       {(upsellQ.data ?? []).length > 0 && (
         <section className="mt-16">
-          <h2 className="text-2xl font-black mb-6">قد يعجبك أيضاً</h2>
+          <h2 className="text-2xl font-semibold mb-6">قد يعجبك أيضاً</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {upsellQ.data!.map((up: any) => <ProductCard key={up.id} p={up} />)}
           </div>
@@ -179,10 +179,10 @@ function ProductPage() {
 
       {(reviewsQ.data ?? []).length > 0 && (
         <section className="mt-16">
-          <h2 className="text-2xl font-black mb-6">آراء العملاء</h2>
+          <h2 className="text-2xl font-semibold mb-6">آراء العملاء</h2>
           <div className="grid md:grid-cols-2 gap-4">
             {reviewsQ.data!.map((r: any) => (
-              <div key={r.id} className="card-surface rounded-2xl p-5">
+              <div key={r.id} className="card-surface rounded-lg p-5">
                 <div className="flex items-center justify-between">
                   <div className="font-bold">{r.customer_name}</div>
                   <div className="flex">{[1,2,3,4,5].map((n) => <Star key={n} className={`size-3.5 ${n <= r.rating ? "fill-yellow-400 text-yellow-400" : "text-muted"}`} />)}</div>

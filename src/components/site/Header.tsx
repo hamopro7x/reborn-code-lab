@@ -19,8 +19,8 @@ function NavLink({ to, label, active }: { to: string; label: string; active: boo
   return (
     <Link
       to={to}
-      className={`px-4 py-2 rounded-lg text-sm transition-colors ${
-        active ? "bg-primary/20 text-primary" : "hover:bg-secondary text-foreground/80 hover:text-foreground"
+      className={`rounded px-3 py-2 text-sm transition-colors ${
+        active ? "text-foreground" : "text-muted-foreground hover:text-foreground"
       }`}
     >
       {label}
@@ -34,12 +34,12 @@ export function Header() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border/40 backdrop-blur-xl bg-background/80">
+    <header className="sticky top-0 z-50 border-b border-border bg-background">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
         <Link to="/" className="flex items-center gap-2 shrink-0">
-          <img src={logoAsset.url} alt="شعار متجر الاشتراكات الرقمية" width={36} height={36} className="size-9 rounded-xl glow-purple" />
+          <img src={logoAsset.url} alt="شعار متجر الاشتراكات الرقمية" width={36} height={36} className="size-9 rounded" />
           <div className="hidden sm:block">
-            <div className="font-bold text-sm leading-none text-gradient">متجر الاشتراكات</div>
+            <div className="text-sm font-semibold leading-none">متجر الاشتراكات</div>
             <div className="text-[10px] text-muted-foreground mt-1">الرقمية الاحترافية</div>
           </div>
         </Link>
@@ -63,8 +63,8 @@ export function Header() {
               <DropdownMenuLabel>اختر العملة</DropdownMenuLabel>
               <DropdownMenuSeparator />
               {currencies.map((c) => (
-                <DropdownMenuItem key={c.code} onClick={() => setCurrency(c)} className={currency.code === c.code ? "bg-primary/10" : ""}>
-                  <span className="font-mono w-10">{c.symbol}</span>
+                <DropdownMenuItem key={c.code} onClick={() => setCurrency(c)} className={currency.code === c.code ? "bg-secondary" : ""}>
+                  <span className="num w-10">{c.symbol}</span>
                   <span className="mr-2">{c.name}</span>
                 </DropdownMenuItem>
               ))}
@@ -75,7 +75,7 @@ export function Header() {
             <Button variant="ghost" size="sm" className="relative" aria-label="سلة التسوق">
               <ShoppingCart className="size-5" />
               {count > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 size-5 rounded-full gradient-primary text-white text-[10px] font-bold flex items-center justify-center animate-glow-pulse">{count}</span>
+                <span className="num absolute -right-0.5 -top-0.5 flex size-5 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground">{count}</span>
               )}
             </Button>
           </Link>
