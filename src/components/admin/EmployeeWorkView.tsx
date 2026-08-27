@@ -200,7 +200,7 @@ function P2PLinkMenu({ ledgerId, onLinked }: { ledgerId: string; onLinked?: () =
         align="center"
         className="w-auto max-w-[92vw] border-0 bg-transparent p-0 shadow-none"
       >
-        <div className="w-[330px] overflow-hidden rounded-lg border border-border bg-popover shadow-lg">
+        <div className="w-[330px] overflow-hidden rounded-xl border border-border/50 bg-[oklch(0.135_0_0)] shadow-2xl">
           <div className="data-table-head truncate px-3 py-1.5 text-center text-[11px] font-bold">
             شفتات {myName || "الموظف"}
           </div>
@@ -1922,7 +1922,7 @@ export function EmployeeWorkView({
                 }`}
               >
                 <span className="whitespace-nowrap">{t.label}</span>
-                <Icon className="size-4 shrink-0 text-muted-foreground" />
+                <Icon className="size-4 shrink-0 text-[oklch(0.88_0.06_255)] drop-shadow-[0_0_4px_oklch(0.6_0.15_258/0.6)]" />
               </button>
             );
           })}

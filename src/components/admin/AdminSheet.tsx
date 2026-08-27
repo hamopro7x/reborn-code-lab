@@ -254,7 +254,7 @@ export function AdminSheet() {
         <button
           type="button"
           onClick={addColumn}
-          className="inline-flex flex-row-reverse items-center gap-1.5 rounded-md bg-primary px-2.5 py-1 text-[13px] font-medium text-primary-foreground hover:bg-primary/90"
+          className="inline-flex flex-row-reverse items-center gap-1.5 rounded-md bg-[#1d4ed8] px-2.5 py-1 text-[13px] font-bold text-white shadow hover:brightness-110"
         >
           <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white/25">
             <Plus className="h-3 w-3" />
@@ -265,7 +265,7 @@ export function AdminSheet() {
           type="button"
           onClick={handleDeleteClick}
           className={`inline-flex flex-row-reverse items-center gap-1.5 rounded-md px-2.5 py-1 text-[13px] font-bold text-white shadow hover:brightness-110 ${
-            deleteMode ? "bg-destructive" : "bg-primary"
+            deleteMode ? "bg-[#b91c1c]" : "bg-[#1d4ed8]"
           }`}
         >
           <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white/25">
@@ -277,7 +277,7 @@ export function AdminSheet() {
           <button
             type="button"
             onClick={deleteAll}
-            className="inline-flex flex-row-reverse items-center gap-1.5 rounded-md bg-destructive px-2.5 py-1 text-[13px] font-medium text-destructive-foreground hover:bg-destructive/90"
+            className="inline-flex flex-row-reverse items-center gap-1.5 rounded-md bg-[#7f1d1d] px-2.5 py-1 text-[13px] font-bold text-white shadow hover:brightness-110"
           >
             <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white/25">
               <Trash2 className="h-3 w-3" />

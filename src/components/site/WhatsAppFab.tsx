@@ -6,7 +6,7 @@ export function WhatsAppFab({ phone = "201120373986" }: { phone?: string }) {
       href={`https://wa.me/${phone}`}
       target="_blank"
       rel="noreferrer"
-      className="fixed bottom-6 left-6 z-40 flex h-11 items-center justify-center gap-2 rounded-full border border-border bg-card px-4 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
+      className="fixed bottom-6 left-6 z-40 h-14 pl-4 pr-5 rounded-full flex items-center justify-center gap-2 bg-[#25D366] text-white shadow-lg animate-glow-pulse hover:scale-105 transition-transform font-bold"
       aria-label="واتساب"
     >
       <MessageCircle className="size-6" />

@@ -1237,7 +1237,7 @@ function CategoriesTab() {
           const label = c.name || "قسم";
           const initial = label.trim().charAt(0);
           return (
-            <div key={c.id} className="bg-card border border-border/60 rounded-lg p-4 flex flex-col items-center text-center gap-3 hover:border-foreground/25 transition-colors">
+            <div key={c.id} className="bg-card border border-border/60 rounded-2xl p-4 flex flex-col items-center text-center gap-3 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all">
               <div className="relative">
                 <div className="size-20 rounded-full gradient-primary ring-4 ring-background flex items-center justify-center text-2xl font-black text-white shadow-xl">
                   {initial}
@@ -1706,11 +1706,11 @@ function CoursesTab({ isAdmin }: { isAdmin: boolean }) {
               <div key={c.id}
                 onMouseEnter={prefetchCourse}
                 onTouchStart={prefetchCourse}
-                className="bg-card border border-border/60 rounded-lg overflow-hidden flex flex-col p-2 hover:border-foreground/25 transition-colors">
+                className="bg-card border border-border/60 rounded-2xl overflow-hidden flex flex-col p-2 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all">
                 <Link to="/courses/$id" params={{ id: c.id }} className="block group">
                   <div className="relative aspect-[16/10] bg-black overflow-hidden rounded-xl">
                     {c.cover_url ? (
-                      <img src={c.cover_url} alt={c.title} className="w-full h-full object-cover" loading="lazy" />
+                      <img src={c.cover_url} alt={c.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
                     ) : (
                       <div className="w-full h-full gradient-primary flex items-center justify-center"><PlayCircle className="size-12 text-white/70" /></div>
                     )}
