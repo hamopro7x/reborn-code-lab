@@ -96,7 +96,7 @@ export function Countdown({ endsAt, title, subtitle }: { endsAt: string; title: 
   const titleTail = titleParts[titleParts.length - 1];
 
   return (
-    <div className="relative overflow-hidden rounded-xl w-full max-w-3xl mx-auto border border-primary/25 bg-gradient-to-b from-[oklch(0.11 0 0)]/95 to-[oklch(0.08 0 0)]/95 backdrop-blur-xl px-2 py-1.5 md:px-4 md:py-2 shadow-[0_10px_40px_-12px_oklch(0.5_0.3_300/0.5)]">
+    <div className="relative overflow-hidden rounded-xl w-full max-w-3xl mx-auto border border-primary/25 bg-gradient-to-b from-[oklch(0.11 0 0)]/95 to-[oklch(0.08 0 0)]/95 backdrop-blur-xl px-2 py-1.5 md:px-4 md:py-2 shadow-[0_10px_40px_-12px_oklch(0.6_0.25_120/0.5)]">
       {/* ambient glows */}
       <div className="pointer-events-none absolute -top-20 right-1/4 size-48 rounded-full bg-primary/20 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-20 left-1/4 size-48 rounded-full bg-accent/15 blur-3xl" />
