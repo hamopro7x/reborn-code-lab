@@ -33,7 +33,7 @@ import { ReportsTab } from "@/components/admin/ReportsTab";
 import { AdminBackProvider, useAdminBack, useAdminBackTarget } from "@/components/admin/back-nav";
 import { BybitTab, ApiKeyPanel } from "@/components/admin/BybitTab";
 import { RedotPayPanel } from "@/components/admin/RedotPayPanel";
-import { FileBarChart, MonitorPlay, Image as ImageIcon, ChevronUp, ChevronDown, WalletCards, KeyRound, ClipboardList } from "lucide-react";
+import { FileBarChart, MonitorPlay, Image as ImageIcon, ChevronUp, ChevronDown, WalletCards, KeyRound, ClipboardList, Table2 } from "lucide-react";
 import { WorkSheetPanel } from "@/components/admin/WorkSheetPanel";
 import { LessonUploader } from "@/components/admin/LessonUploader";
 import { DeviceMonitorGrid } from "@/components/admin/DeviceMonitorGrid";
