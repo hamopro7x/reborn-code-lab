@@ -15,6 +15,7 @@ import {
   SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarTrigger,
   SidebarHeader, SidebarFooter,
 } from "@/components/ui/sidebar";
+import { SidebarGlider } from "@/components/admin/SidebarGlider";
 import {
   LayoutDashboard, Package, Layers, ShoppingCart, CreditCard, Coins, Clock, Settings2,
   Plus, Trash2, Edit, ExternalLink, Check, X, TrendingUp, DollarSign, Users, Bell, Loader2,
@@ -220,23 +221,25 @@ function Admin() {
             </div>
           </SidebarHeader>
           <SidebarContent>
-            {visibleNavGroups.map((g) => (
-              <SidebarGroup key={g.label}>
-                <SidebarGroupLabel>{g.label}</SidebarGroupLabel>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    {g.items.filter((i) => adminOnly || employeeAllowed(i.key)).map((i) => (
-                      <SidebarMenuItem key={i.key}>
-                        <SidebarMenuButton isActive={panel === i.key} onClick={() => setPanel(i.key)}>
-                          <i.icon className="size-4" />
-                          <span>{i.label}</span>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    ))}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </SidebarGroup>
-            ))}
+            <SidebarGlider activeKey={panel}>
+              {visibleNavGroups.map((g) => (
+                <SidebarGroup key={g.label}>
+                  <SidebarGroupLabel>{g.label}</SidebarGroupLabel>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {g.items.filter((i) => adminOnly || employeeAllowed(i.key)).map((i) => (
+                        <SidebarMenuItem key={i.key}>
+                          <SidebarMenuButton isActive={panel === i.key} onClick={() => setPanel(i.key)}>
+                            <i.icon className="size-4" />
+                            <span>{i.label}</span>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      ))}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </SidebarGroup>
+              ))}
+            </SidebarGlider>
           </SidebarContent>
           <SidebarFooter className="border-t border-sidebar-border">
             <SidebarMenu>
