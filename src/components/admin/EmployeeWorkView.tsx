@@ -1785,6 +1785,13 @@ export function EmployeeWorkView({
         <div className="flex flex-wrap items-center gap-2 mb-4">
 
           <div className="flex min-w-0 items-center gap-2">
+            <div className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-full border border-[oklch(0.55_0.14_255/0.55)] bg-[oklch(0.11_0.02_270)]">
+              {avatar ? (
+                <img src={avatar} alt={name} className="size-full object-cover" />
+              ) : (
+                <User className="size-7 text-foreground/70" />
+              )}
+            </div>
             <div className="min-w-0">
                 <div className="truncate text-xl font-black">{name}</div>
                 <div className="mt-1 flex items-center gap-1.5 text-sm text-foreground/70">
