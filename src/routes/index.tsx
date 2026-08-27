@@ -207,7 +207,7 @@ function Home() {
                     key={c.id}
                     to="/shop"
                     search={{ category: c.slug } as any}
-                    className="rounded-xl border border-border bg-card overflow-hidden flex flex-col transition-colors duration-150 hover:border-lime/60"
+                    className="group rounded-xl border border-border bg-card overflow-hidden flex flex-col transition-colors duration-150 hover:border-lime/60"
                   >
                     <div className="aspect-[4/3] bg-secondary overflow-hidden">
                       {c.banner_image ? (
