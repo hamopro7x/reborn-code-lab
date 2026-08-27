@@ -8,7 +8,6 @@ import { toast } from "sonner";
 import { useAdminTheme } from "@/lib/use-admin-theme";
 import { ShieldCheck, Lock } from "lucide-react";
 import { readLastLocation } from "@/lib/last-location";
-import "../auth-stars.css";
 
 
 function safeNext(value: unknown) {
@@ -95,13 +94,8 @@ function AuthPage() {
 
 
   return (
-    <div dir="rtl" className="admin-theme min-h-screen flex items-center justify-center px-4 py-12 relative overflow-hidden">
-      <div className="stars-container" aria-hidden="true">
-        <div id="stars" />
-        <div id="stars2" />
-        <div id="stars3" />
-      </div>
-      <div className="w-full max-w-md relative z-10">
+    <div dir="rtl" className="admin-theme min-h-screen flex items-center justify-center px-4 py-12 bg-background">
+      <div className="w-full max-w-md">
         <div className="text-center mb-6">
           <div className="size-14 rounded-2xl gradient-primary mx-auto flex items-center justify-center glow-purple mb-3">
             <ShieldCheck className="size-7 text-white" />
