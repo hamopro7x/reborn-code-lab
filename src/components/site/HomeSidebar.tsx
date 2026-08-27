@@ -40,6 +40,9 @@ export function HomeSidebar({
   categories: any[];
   loading?: boolean;
 }) {
+  const activeCategory = useRouterState({
+    select: (s) => (s.location.search as any)?.category as string | undefined,
+  });
   const fetchPayments = useServerFn(listPublicPaymentMethods);
   const paymentsQ = useQuery({
     queryKey: ["public-payment-methods"],
