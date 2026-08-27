@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useAdminTheme } from "@/lib/use-admin-theme";
 import { ShieldCheck, Lock } from "lucide-react";
+import { readLastLocation } from "@/lib/last-location";
+
 
 function safeNext(value: unknown) {
   return typeof value === "string" && value.startsWith("/") && !value.startsWith("//") ? value : undefined;
