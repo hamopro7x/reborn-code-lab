@@ -276,7 +276,7 @@ function CoinBalanceCard({ coin }: { coin: CoinRow }) {
               className="size-[38px] shrink-0 rounded-full object-cover"
             />
           ) : (
-            <span className="grid size-[38px] shrink-0 place-items-center rounded-full bg-[oklch(0.18_0.03_285)] border border-border/50">
+            <span className="grid size-[38px] shrink-0 place-items-center rounded-full bg-[oklch(0.18 0 0)] border border-border/50">
               <CoinLogo coin={coin.coin} />
             </span>
           )}

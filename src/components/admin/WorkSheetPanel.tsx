@@ -13,7 +13,7 @@ import employeesBg from "@/assets/employees-bg.png.asset.json";
 const CHIP_BASE =
   "inline-flex flex-row-reverse items-center gap-2 rounded-full px-4 py-2 text-sm font-extrabold text-white transition";
 const CHIP_ON =
-  "bg-[#1a1a1a] text-blue-300 shadow-[0_0_20px_-4px_oklch(0.55_0.28_305/0.7),0_0_0_1px_oklch(0.55_0.28_305/0.5)] ring-1 ring-blue-500/40";
+  "bg-[#1a1a1a] text-blue-300 shadow-[0_0_20px_-4px_oklch(0.78_0.24_120/0.7),0_0_0_1px_oklch(0.78_0.24_120/0.5)] ring-1 ring-blue-500/40";
 const CHIP_OFF =
   "bg-[#0d0d0d] opacity-80 shadow-[0_6px_20px_-6px_rgba(0,0,0,0.9)] hover:opacity-95 hover:ring-1 hover:ring-blue-500/20";
 
@@ -209,7 +209,7 @@ function ShiftPickerMenu({
                   onClick={() => onSelect({ ...sh, label: `شفت رقم ${number}` })}
                   className={`flex flex-1 items-stretch gap-2 rounded-xl border px-2 py-2 text-right transition ${
                     active
-                      ? "border-blue-500/40 bg-[oklch(0.13_0_0)] shadow-[0_0_20px_-6px_oklch(0.55_0.28_305/0.5)]"
+                      ? "border-blue-500/40 bg-[oklch(0.13_0_0)] shadow-[0_0_20px_-6px_oklch(0.78_0.24_120/0.5)]"
                       : "border-white/5 bg-[oklch(0.095_0_0)] hover:bg-[oklch(0.11_0_0)]"
                   }`}
                 >

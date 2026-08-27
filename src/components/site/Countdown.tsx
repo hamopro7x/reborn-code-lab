@@ -23,8 +23,8 @@ function Ring({ value, max, children }: { value: number; max: number; children: 
       <svg viewBox="0 0 110 110" className="absolute inset-0 w-full h-full -rotate-90">
         <defs>
           <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="oklch(0.75 0.28 305)" />
-            <stop offset="100%" stopColor="oklch(0.55 0.3 285)" />
+            <stop offset="0%" stopColor="oklch(0.78 0.24 120)" />
+            <stop offset="100%" stopColor="oklch(0.65 0.22 120)" />
           </linearGradient>
         </defs>
         {/* ticks */}
@@ -41,7 +41,7 @@ function Ring({ value, max, children }: { value: number; max: number; children: 
               y1={y1}
               x2={x2}
               y2={y2}
-              stroke="oklch(0.6 0.25 300)"
+              stroke="oklch(0.65 0.22 120)"
               strokeOpacity={i % 5 === 0 ? 0.55 : 0.28}
               strokeWidth={i % 5 === 0 ? 1.4 : 0.8}
               strokeLinecap="round"
@@ -58,7 +58,7 @@ function Ring({ value, max, children }: { value: number; max: number; children: 
           strokeWidth="3.5"
           strokeLinecap="round"
           strokeDasharray={`${dash} ${c - dash}`}
-          style={{ filter: "drop-shadow(0 0 6px oklch(0.65 0.3 300 / 0.7))" }}
+          style={{ filter: "drop-shadow(0 0 6px oklch(0.78 0.24 120 / 0.7))" }}
         />
       </svg>
       <div className="relative z-10">{children}</div>
@@ -96,7 +96,7 @@ export function Countdown({ endsAt, title, subtitle }: { endsAt: string; title: 
   const titleTail = titleParts[titleParts.length - 1];
 
   return (
-    <div className="relative overflow-hidden rounded-xl w-full max-w-3xl mx-auto border border-primary/25 bg-gradient-to-b from-[oklch(0.11_0.04_285)]/95 to-[oklch(0.08_0.03_285)]/95 backdrop-blur-xl px-2 py-1.5 md:px-4 md:py-2 shadow-[0_10px_40px_-12px_oklch(0.5_0.3_300/0.5)]">
+    <div className="relative overflow-hidden rounded-xl w-full max-w-3xl mx-auto border border-primary/25 bg-gradient-to-b from-[oklch(0.11 0 0)]/95 to-[oklch(0.08 0 0)]/95 backdrop-blur-xl px-2 py-1.5 md:px-4 md:py-2 shadow-[0_10px_40px_-12px_oklch(0.5_0.3_300/0.5)]">
       {/* ambient glows */}
       <div className="pointer-events-none absolute -top-20 right-1/4 size-48 rounded-full bg-primary/20 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-20 left-1/4 size-48 rounded-full bg-accent/15 blur-3xl" />
@@ -133,12 +133,12 @@ export function Countdown({ endsAt, title, subtitle }: { endsAt: string; title: 
       <div className="relative grid grid-cols-4 gap-1 md:gap-2">
         {units.map((u) => (
           <div key={u.key} className="flex items-center">
-            <div className="relative flex-1 rounded-lg border border-primary/30 bg-[oklch(0.1_0.035_285)]/60 backdrop-blur-md p-0.5 md:p-1 flex flex-col items-center gap-0 md:gap-0.5 overflow-hidden">
+            <div className="relative flex-1 rounded-lg border border-primary/30 bg-[oklch(0.1 0 0)]/60 backdrop-blur-md p-0.5 md:p-1 flex flex-col items-center gap-0 md:gap-0.5 overflow-hidden">
               {/* card inner glow */}
               <div className="absolute inset-0 rounded-lg bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
               <div className="absolute -inset-px rounded-lg bg-gradient-to-b from-primary/20 via-transparent to-primary/10 opacity-40 pointer-events-none" style={{ mask: "linear-gradient(#000,#000) content-box, linear-gradient(#000,#000)", WebkitMask: "linear-gradient(#000,#000) content-box, linear-gradient(#000,#000)", WebkitMaskComposite: "xor", padding: 1 }} />
               <Ring value={u.value} max={u.max}>
-                <span className="font-black text-sm md:text-base text-foreground tabular-nums leading-none" style={{ textShadow: "0 0 12px oklch(0.7 0.28 300 / 0.4)" }}>
+                <span className="font-black text-sm md:text-base text-foreground tabular-nums leading-none" style={{ textShadow: "0 0 12px oklch(0.78 0.24 120 / 0.4)" }}>
                   {pad(u.value)}
                 </span>
               </Ring>
@@ -155,7 +155,7 @@ export function Countdown({ endsAt, title, subtitle }: { endsAt: string; title: 
       <div className="relative mt-1.5 md:mt-2 flex justify-center">
         <Link
           to="/shop"
-          className="group relative inline-flex items-center gap-0.5 md:gap-1 rounded-md border border-gold/40 bg-[oklch(0.1_0.03_285)]/80 backdrop-blur-md pr-1.5 pl-0.5 md:pr-2 md:pl-1 py-0.5 md:py-0.5 overflow-hidden hover:-translate-y-0.5 transition-transform"
+          className="group relative inline-flex items-center gap-0.5 md:gap-1 rounded-md border border-gold/40 bg-[oklch(0.1 0 0)]/80 backdrop-blur-md pr-1.5 pl-0.5 md:pr-2 md:pl-1 py-0.5 md:py-0.5 overflow-hidden hover:-translate-y-0.5 transition-transform"
           style={{ boxShadow: "0 6px 20px -6px oklch(0.82 0.15 85 / 0.35), inset 0 1px 0 0 oklch(0.85 0.15 85 / 0.15)" }}
         >
           <span className="absolute inset-0 bg-gradient-to-l from-gold/10 via-transparent to-transparent pointer-events-none" />
