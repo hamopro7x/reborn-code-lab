@@ -816,6 +816,10 @@ function mapCardTxn(t: any): CardTxn {
       detail: sanitize({
         // ---- core identifiers ----
         txnId: pick(t, ["txnId", "transactionId", "id"]),
+        // Purchase identity shared by the authorisation and settlement copies;
+        // stored so audits can see exactly how a purchase was collapsed.
+        canonicalId: canonicalIdOfRaw(t),
+
         orderId: pick(t, ["orderNo", "orderId", "referenceId", "refId"]),
         paymentId: pick(t, ["paymentId", "orderNo"]),
         authCode: pick(t, ["authCode", "authorizationCode"]),
