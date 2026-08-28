@@ -7,6 +7,8 @@
  * only labels and formats what the source transaction already contains.
  */
 import { formatDateTime } from "@/lib/format";
+import { canonicalAmounts } from "@/lib/bybit-spend";
+
 
 export type FieldDef = [string, string];
 
