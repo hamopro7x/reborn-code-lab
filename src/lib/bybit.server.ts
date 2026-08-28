@@ -683,6 +683,8 @@ export async function fetchOverview(accountId?: string) {
     dayFees: archivedSpend.dayFees,
     dayStart,
     monthStart,
+    monthEnd,
+
     txnCount: archivedSpend.txnCount,
     lastTxnTime: archivedSpend.lastTxnTime,
     // Purchases whose amount Bybit reported in a non-USD currency: reported, so
