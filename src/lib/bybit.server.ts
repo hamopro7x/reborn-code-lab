@@ -1,6 +1,6 @@
 import { createHmac } from "crypto";
 import { normalizeBybitError, type BybitError } from "./bybit-errors";
-import { sumSpend, sumSpendByCard, type SpendRow } from "./bybit-spend";
+import { sumSpend, sumSpendByCard, auditSpend, getCanonicalTransactionIdentity, type SpendRow } from "./bybit-spend";
 
 
 const BASE = "https://api.bybit.com";
@@ -326,6 +326,12 @@ const cardInflight = new Map<string, Promise<any[]>>();
 
 const CARD_QUERY_TYPES = ["SIDE_QUERY_AUTH", "SIDE_QUERY_FINANCIAL", "SIDE_QUERY_REFUND"];
 
+/**
+ * Storage key of ONE raw Bybit record (not of a purchase).
+ * Raw authorisation and settlement records are kept side by side for auditing;
+ * deciding that two records are the SAME purchase is the job of
+ * `getCanonicalTransactionIdentity` in ./bybit-spend, which every total uses.
+ */
 function cardRowKey(t: any) {
   return String(
     t?.txnId
@@ -333,6 +339,24 @@ function cardRowKey(t: any) {
       ?? [t?.txnCreate, t?.merchName, t?.pan4, t?.side, t?.basicAmount ?? t?.transactionAmount].join("-"),
   );
 }
+
+/** Canonical purchase identity of a raw provider row (shared engine, stored for audit). */
+function canonicalIdOfRaw(t: any) {
+  return getCanonicalTransactionIdentity({
+    txnId: String(t?.txnId ?? t?.transactionId ?? t?.id ?? ""),
+    amount: num(t?.basicAmount ?? t?.transactionAmount),
+    time: Number(t?.txnCreate ?? 0),
+    detail: {
+      paymentId: t?.paymentId,
+      orderNo: t?.orderNo,
+      orderId: t?.orderId,
+      referenceId: t?.referenceId,
+      refId: t?.refId,
+      merchName: t?.merchName,
+    },
+  });
+}
+
 
 /** Bybit Card expects POST filters and pagination in the signed JSON body. */
 async function callCardPage(params: Record<string, unknown>, creds: Creds) {
@@ -424,7 +448,10 @@ async function fetchCardPages(maxRows: number, creds: Creds): Promise<any[]> {
 async function callCard(limit: number, accountId?: string, creds?: Creds): Promise<any[]> {
   const key = accountId ?? "default";
   const cached = cardCache.get(key);
-  if (cached && Date.now() - cached.at < 30_000) return cached.rows;
+  // Short TTL: a settlement can land seconds after its authorisation, and a
+  // cached authorisation must never be treated as the final record.
+  if (cached && Date.now() - cached.at < 10_000) return cached.rows;
+
   const running = cardInflight.get(key);
   if (running) return running;
   const p = fetchCardPages(Math.max(limit, 100), creds ?? (await getCreds(accountId)))
@@ -446,65 +473,12 @@ const STABLES = new Set(["USDT", "USDC", "USD", "DAI", "FDUSD", "TUSD", "BUSD"])
 // purchase archived as both an authorisation and a settlement is counted once.
 
 
-/* ---------- dynamic card-limit reset window ---------- */
+/* The card-limit "reset window" probe used to define a SECOND month start that
+ * no caller used. There is now exactly one definition of dayStart/monthStart —
+ * `spendWindows()` below (UTC) — shared by dashboard, reports, monthly spend,
+ * per-card spend and transaction filters. */
 
-const CARD_LIMIT_PATHS = [
-  "/v5/card/limit/query",
-  "/v5/card/query-limit",
-  "/v5/card/account/query-limit",
-];
-const RESET_KEY_RE = /(reset|refresh|renew|nextcycle|cyclestart|cycleend)/i;
-const resetCache = new Map<string, { at: number; next: number | null }>();
 
-/** Walks any Bybit payload for a "next reset" timestamp (ms or s). */
-function findResetTs(node: unknown, now: number, depth = 0): number | null {
-  if (depth > 6 || node === null || typeof node !== "object") return null;
-  for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
-    if (v && typeof v === "object") {
-      const nested = findResetTs(v, now, depth + 1);
-      if (nested) return nested;
-      continue;
-    }
-    if (!RESET_KEY_RE.test(k)) continue;
-    let n = Number(v);
-    if (!Number.isFinite(n) || n <= 0) continue;
-    if (n < 1e12) n *= 1000; // seconds → ms
-    // plausible: within the next 48h
-    if (n > now && n - now < 48 * 3600_000) return n;
-  }
-  return null;
-}
-
-/**
- * Asks Bybit itself when the card limit cycle resets. If Bybit ever changes the
- * reset hour, the dashboard follows automatically. Falls back to Bybit server
- * time at 00:00 UTC (the current behaviour) when no reset field is exposed.
- */
-async function nextResetFromBybit(accountId: string | undefined, creds?: Creds): Promise<number | null> {
-  const key = accountId ?? "default";
-  const cached = resetCache.get(key);
-  if (cached && Date.now() - cached.at < 10 * 60_000) return cached.next;
-
-  const now = Date.now();
-  let next: number | null = null;
-  for (const path of CARD_LIMIT_PATHS) {
-    try {
-      const res = await call("POST", path, {}, creds);
-      next = findResetTs(res, now);
-      if (next) break;
-    } catch {
-      try {
-        const res = await call("GET", path, {}, creds);
-        next = findResetTs(res, now);
-        if (next) break;
-      } catch {
-        /* endpoint unavailable for this key */
-      }
-    }
-  }
-  resetCache.set(key, { at: now, next });
-  return next;
-}
 
 /** Bybit server clock (falls back to local time). */
 async function bybitNow(): Promise<number> {
@@ -519,25 +493,6 @@ async function bybitNow(): Promise<number> {
   return Date.now();
 }
 
-/** Current day/month spend window boundaries, aligned to Bybit's own reset. */
-async function spendWindow(accountId?: string, creds?: Creds) {
-  const nowMs = await bybitNow();
-  const next = await nextResetFromBybit(accountId, creds);
-  const DAY = 24 * 3600_000;
-  if (next) {
-    // roll back full days from the announced reset to get the current cycle start
-    let dayStart = next - DAY;
-    while (dayStart > nowMs) dayStart -= DAY;
-    const d = new Date(dayStart);
-    const monthStart = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1) + (dayStart % DAY === 0 ? 0 : dayStart % DAY);
-    return { dayStart, monthStart: Math.min(monthStart, dayStart) };
-  }
-  const n = new Date(nowMs);
-  return {
-    dayStart: Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate()),
-    monthStart: Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), 1),
-  };
-}
 
 /**
  * Fixed spend cycles, computed independently of each other:
@@ -601,19 +556,37 @@ export async function computeSpend(accountId: string | undefined, dayStart: numb
     /* balances should still render if the archive is temporarily unavailable */
   }
 
-  const totals = sumSpend(
-    collected.map((row: any) => ({
-      txnId: String(row.txn_id ?? ""),
-      amount: num(row.amount),
-      time: Number(row.txn_time ?? 0),
-      status: row.status,
-      type: row.txn_type,
-      currency: row.currency,
-      detail: (row.detail ?? {}) as Record<string, unknown>,
-    })),
-    dayStart,
-    monthStart,
-  );
+  const engineRows: SpendRow[] = collected.map((row: any) => ({
+    txnId: String(row.txn_id ?? ""),
+    amount: num(row.amount),
+    time: Number(row.txn_time ?? 0),
+    status: row.status,
+    type: row.txn_type,
+    currency: row.currency,
+    detail: (row.detail ?? {}) as Record<string, unknown>,
+  }));
+
+  const totals = sumSpend(engineRows, dayStart, monthStart);
+
+  // Opt-in audit trail (BYBIT_SPEND_AUDIT=1): raw rows → canonical transactions
+  // → counted spend. Ids/amounts/statuses only, never credentials.
+  if (process.env["BYBIT_SPEND_AUDIT"] === "1") {
+    const audit = auditSpend(engineRows, dayStart, monthStart);
+    console.log(
+      "[bybit-spend audit]",
+      JSON.stringify({
+        account: accountId ?? "all",
+        rawRows: engineRows.length,
+        canonical: audit.canonicalCount,
+        excluded: audit.excludedCount,
+        counted: totals.countedTxns,
+        skippedNonUsd: totals.skippedNonUsd,
+        monthSpend: totals.monthSpend,
+        daySpend: totals.daySpend,
+        sample: audit.entries.slice(0, 25),
+      }),
+    );
+  }
 
   return {
     daySpend: totals.daySpend,
@@ -625,6 +598,7 @@ export async function computeSpend(accountId: string | undefined, dayStart: numb
     skippedNonUsd: totals.skippedNonUsd,
   };
 }
+
 
 
 async function spotPrices(): Promise<Record<string, number>> {
@@ -792,6 +766,10 @@ function mapCardTxn(t: any): CardTxn {
       detail: sanitize({
         // ---- core identifiers ----
         txnId: pick(t, ["txnId", "transactionId", "id"]),
+        // Purchase identity shared by the authorisation and settlement copies;
+        // stored so audits can see exactly how a purchase was collapsed.
+        canonicalId: canonicalIdOfRaw(t),
+
         orderId: pick(t, ["orderNo", "orderId", "referenceId", "refId"]),
         paymentId: pick(t, ["paymentId", "orderNo"]),
         authCode: pick(t, ["authCode", "authorizationCode"]),
