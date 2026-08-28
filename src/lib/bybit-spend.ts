@@ -180,8 +180,10 @@ function usdCandidates(row: SpendRow): { base: number | null; amounts: number[];
  * details, reports, dashboard) reads these instead of recomputing amounts, so
  * the number shown for a purchase is exactly the number that enters spend.
  *
- * `spendUsd` is null when Bybit reported no USD-denominated amount — nothing is
- * guessed, the row is surfaced as `skippedNonUsd` instead.
+ * `spendUsd` is the amount Bybit actually charged to the card (fee included,
+ * exactly as Bybit counts it against the card limits) — never a re-derived or
+ * fee-adjusted figure. It is null when Bybit reported no USD-denominated
+ * amount; nothing is guessed, the row is surfaced as `skippedNonUsd` instead.
  */
 export type CanonicalAmounts = {
   grossAmount: number | null;
@@ -208,36 +210,19 @@ export function canonicalAmounts(row: SpendRow): CanonicalAmounts {
   // Nonsense fee (>= the amount itself) is ignored rather than trusted.
   const fee = explicitFee > 0 && explicitFee < base ? explicitFee : 0;
 
-  if (fee === 0) {
-    // No usable fee field. Bybit still charges a fee inside the total on some
-    // rows: the charged total sits a few cents above the transaction amount.
-    // That gap IS the fee, so the smaller (fee-free) figure is the purchase.
-    if (usdNetField !== null) {
-      const gap = base - usdNetField;
-      // Only a fee-sized gap counts (never a different purchase or a rounding
-      // artefact), so nothing is deducted when the two figures agree.
-      if (gap > 0.0049 && gap <= base * 0.15) {
-        return { grossAmount: base, fee: gap, netAmount: usdNetField, currency, spendUsd: usdNetField };
-      }
-    }
-    return { grossAmount: base, fee: 0, netAmount: base, currency, spendUsd: base };
-  }
+  // `base` (basicAmount) is the total Bybit charged the card. Some rows report
+  // it fee-free instead, and then another USD field equals base + fee: that
+  // larger figure is the charged total.
+  const grossFromFee = usdAmounts.find((a) => close(a, base + fee));
+  const gross = fee > 0 && grossFromFee !== undefined ? grossFromFee : base;
+  const netCandidate =
+    usdNetField !== null && usdNetField <= gross + 0.005 ? usdNetField : gross - fee;
+  const netAmount = netCandidate > 0 ? netCandidate : gross;
 
-  // The API already separated the purchase from its fee: base + fee equals a
-  // reported total, so base is the real purchase value — do not deduct again.
-  if (usdAmounts.some((a) => close(a, base + fee))) {
-    return { grossAmount: base + fee, fee, netAmount: base, currency, spendUsd: base };
-  }
-  // Some other field already equals base - fee → that is the fee-free amount.
-  const net = usdAmounts.find((a) => close(a, base - fee));
-  if (net !== undefined) {
-    return { grossAmount: base, fee, netAmount: net, currency, spendUsd: net };
-  }
-  // Otherwise base is the fee-inclusive total: strip the fees out of it.
-  const stripped = base - fee;
-  const netAmount = stripped > 0 ? stripped : base;
-  return { grossAmount: base, fee: stripped > 0 ? fee : 0, netAmount, currency, spendUsd: netAmount };
+  // Spend is the charged total: the fee is reported, never deducted from it.
+  return { grossAmount: gross, fee, netAmount, currency, spendUsd: gross };
 }
+
 
 /**
  * Fee actually charged inside this purchase, in USD.
