@@ -180,19 +180,39 @@ function Home() {
             {/* PRODUCTS */}
             <section>
               <SectionHeading title="أحدث المنتجات" to="/shop" />
-              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
-                {(featuredQ.isLoading || latestQ.isLoading) &&
-                  Array.from({ length: 5 }).map((_, i) => (
+              {(featuredQ.isLoading || latestQ.isLoading) && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
+                  {Array.from({ length: 5 }).map((_, i) => (
                     <div key={`p-sk-${i}`} className="rounded-xl border border-border bg-card h-[16rem] animate-pulse" />
                   ))}
-                {featured.map((p: any) => (
-                  <ProductCard key={p.id} p={p} />
-                ))}
-              </div>
+                </div>
+              )}
+              {featured.length > 0 && (
+                <ProductRail ariaLabel="أحدث المنتجات">
+                  {featured.map((p: any) => (
+                    <ProductCard key={p.id} p={p} />
+                  ))}
+                </ProductRail>
+              )}
               {!featuredQ.isLoading && !latestQ.isLoading && featured.length === 0 && (
                 <p className="text-sm text-muted-foreground">لا توجد منتجات متاحة حاليًا.</p>
               )}
             </section>
+
+            {/* TOP-UP CARDS */}
+            {topups.length > 0 && (
+              <section>
+                <SectionHeading title="بطاقات الشحن" to="/shop" />
+                <ProductRail
+                  ariaLabel="بطاقات الشحن"
+                  itemClassName="w-[72%] sm:w-[46%] md:w-[32%] xl:w-[24%]"
+                >
+                  {topups.map((p: any) => (
+                    <TopupCard key={p.id} p={p} />
+                  ))}
+                </ProductRail>
+              </section>
+            )}
 
             {/* CATEGORIES / CARDS SECTION */}
             <section>
