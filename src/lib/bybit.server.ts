@@ -326,6 +326,12 @@ const cardInflight = new Map<string, Promise<any[]>>();
 
 const CARD_QUERY_TYPES = ["SIDE_QUERY_AUTH", "SIDE_QUERY_FINANCIAL", "SIDE_QUERY_REFUND"];
 
+/**
+ * Storage key of ONE raw Bybit record (not of a purchase).
+ * Raw authorisation and settlement records are kept side by side for auditing;
+ * deciding that two records are the SAME purchase is the job of
+ * `getCanonicalTransactionIdentity` in ./bybit-spend, which every total uses.
+ */
 function cardRowKey(t: any) {
   return String(
     t?.txnId
@@ -333,6 +339,24 @@ function cardRowKey(t: any) {
       ?? [t?.txnCreate, t?.merchName, t?.pan4, t?.side, t?.basicAmount ?? t?.transactionAmount].join("-"),
   );
 }
+
+/** Canonical purchase identity of a raw provider row (shared engine, stored for audit). */
+function canonicalIdOfRaw(t: any) {
+  return getCanonicalTransactionIdentity({
+    txnId: String(t?.txnId ?? t?.transactionId ?? t?.id ?? ""),
+    amount: num(t?.basicAmount ?? t?.transactionAmount),
+    time: Number(t?.txnCreate ?? 0),
+    detail: {
+      paymentId: t?.paymentId,
+      orderNo: t?.orderNo,
+      orderId: t?.orderId,
+      referenceId: t?.referenceId,
+      refId: t?.refId,
+      merchName: t?.merchName,
+    },
+  });
+}
+
 
 /** Bybit Card expects POST filters and pagination in the signed JSON body. */
 async function callCardPage(params: Record<string, unknown>, creds: Creds) {
