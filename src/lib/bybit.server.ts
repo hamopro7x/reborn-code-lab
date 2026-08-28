@@ -473,65 +473,12 @@ const STABLES = new Set(["USDT", "USDC", "USD", "DAI", "FDUSD", "TUSD", "BUSD"])
 // purchase archived as both an authorisation and a settlement is counted once.
 
 
-/* ---------- dynamic card-limit reset window ---------- */
+/* The card-limit "reset window" probe used to define a SECOND month start that
+ * no caller used. There is now exactly one definition of dayStart/monthStart —
+ * `spendWindows()` below (UTC) — shared by dashboard, reports, monthly spend,
+ * per-card spend and transaction filters. */
 
-const CARD_LIMIT_PATHS = [
-  "/v5/card/limit/query",
-  "/v5/card/query-limit",
-  "/v5/card/account/query-limit",
-];
-const RESET_KEY_RE = /(reset|refresh|renew|nextcycle|cyclestart|cycleend)/i;
-const resetCache = new Map<string, { at: number; next: number | null }>();
 
-/** Walks any Bybit payload for a "next reset" timestamp (ms or s). */
-function findResetTs(node: unknown, now: number, depth = 0): number | null {
-  if (depth > 6 || node === null || typeof node !== "object") return null;
-  for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
-    if (v && typeof v === "object") {
-      const nested = findResetTs(v, now, depth + 1);
-      if (nested) return nested;
-      continue;
-    }
-    if (!RESET_KEY_RE.test(k)) continue;
-    let n = Number(v);
-    if (!Number.isFinite(n) || n <= 0) continue;
-    if (n < 1e12) n *= 1000; // seconds → ms
-    // plausible: within the next 48h
-    if (n > now && n - now < 48 * 3600_000) return n;
-  }
-  return null;
-}
-
-/**
- * Asks Bybit itself when the card limit cycle resets. If Bybit ever changes the
- * reset hour, the dashboard follows automatically. Falls back to Bybit server
- * time at 00:00 UTC (the current behaviour) when no reset field is exposed.
- */
-async function nextResetFromBybit(accountId: string | undefined, creds?: Creds): Promise<number | null> {
-  const key = accountId ?? "default";
-  const cached = resetCache.get(key);
-  if (cached && Date.now() - cached.at < 10 * 60_000) return cached.next;
-
-  const now = Date.now();
-  let next: number | null = null;
-  for (const path of CARD_LIMIT_PATHS) {
-    try {
-      const res = await call("POST", path, {}, creds);
-      next = findResetTs(res, now);
-      if (next) break;
-    } catch {
-      try {
-        const res = await call("GET", path, {}, creds);
-        next = findResetTs(res, now);
-        if (next) break;
-      } catch {
-        /* endpoint unavailable for this key */
-      }
-    }
-  }
-  resetCache.set(key, { at: now, next });
-  return next;
-}
 
 /** Bybit server clock (falls back to local time). */
 async function bybitNow(): Promise<number> {
