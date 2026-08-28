@@ -493,25 +493,6 @@ async function bybitNow(): Promise<number> {
   return Date.now();
 }
 
-/** Current day/month spend window boundaries, aligned to Bybit's own reset. */
-async function spendWindow(accountId?: string, creds?: Creds) {
-  const nowMs = await bybitNow();
-  const next = await nextResetFromBybit(accountId, creds);
-  const DAY = 24 * 3600_000;
-  if (next) {
-    // roll back full days from the announced reset to get the current cycle start
-    let dayStart = next - DAY;
-    while (dayStart > nowMs) dayStart -= DAY;
-    const d = new Date(dayStart);
-    const monthStart = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1) + (dayStart % DAY === 0 ? 0 : dayStart % DAY);
-    return { dayStart, monthStart: Math.min(monthStart, dayStart) };
-  }
-  const n = new Date(nowMs);
-  return {
-    dayStart: Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate()),
-    monthStart: Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), 1),
-  };
-}
 
 /**
  * Fixed spend cycles, computed independently of each other:
