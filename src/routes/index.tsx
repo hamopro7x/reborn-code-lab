@@ -8,6 +8,8 @@ import { WhatsAppFab } from "@/components/site/WhatsAppFab";
 import { ProductCard } from "@/components/site/ProductCard";
 import { Countdown } from "@/components/site/Countdown";
 import { HomeSidebar } from "@/components/site/HomeSidebar";
+import { ProductRail } from "@/components/site/ProductRail";
+import { TopupCard } from "@/components/site/TopupCard";
 import { HeroCarousel, type HeroSlide } from "@/components/site/HeroCarousel";
 import { useEffect, useMemo } from "react";
 import { useCurrency } from "@/lib/currency-context";
@@ -99,6 +101,14 @@ function Home() {
   const featuredRaw = featuredQ.data ?? [];
   // لو مفيش منتجات مميزة نعرض الأحدث من نفس البيانات الموجودة.
   const featured = featuredRaw.length ? featuredRaw : (latestQ.data ?? []);
+
+  // بطاقات الشحن = منتجات الأقسام التي تمثل بطاقات/شحن في قاعدة البيانات نفسها.
+  const topups = useMemo(() => {
+    const all = latestQ.data ?? [];
+    const isTopup = (p: any) => /card|top ?up|شحن|بطاق/i.test(`${p.category?.name ?? ""} ${p.name}`);
+    const matched = all.filter(isTopup);
+    return matched.length ? matched : [];
+  }, [latestQ.data]);
 
   // شرائح الهيرو مبنية على البيانات الموجودة (منتجات مميزة ثم أقسام) بدون أي بيانات ثابتة.
   const slides: HeroSlide[] = useMemo(() => {
