@@ -31,14 +31,15 @@ describe("monthly spend engine", () => {
     expect(totals.countedTxns).toBe(1);
   });
 
-  it("still counts an authorisation that has no settlement yet", () => {
+  it("keeps an authorisation for daily visibility but excludes it from monthly successful spend", () => {
     const totals = sumSpend(
       [row({ txnId: "auth-2", amount: 12, time: DAY_START + 1000, detail: { tradeStatus: "0", side: "1", paymentId: "P2", basicAmount: 12, basicCurrency: "USD" } })],
       DAY_START,
       MONTH_START,
     );
     expect(totals.daySpend).toBe(12);
-    expect(totals.monthSpend).toBe(12);
+    expect(totals.monthSpend).toBe(0);
+    expect(totals.countedTxns).toBe(0);
   });
 
   it("excludes refunds, reversals and failed rows", () => {
@@ -348,7 +349,7 @@ describe("canonical transactions", () => {
     expect(audit.entries.find((e) => e.rawTxnId === "F")?.counted).toBe(true);
     expect(audit.entries.find((e) => e.rawTxnId === "A")?.reason).toContain("duplicate");
     expect(audit.entries.find((e) => e.rawTxnId === "R")?.reason).toContain("excluded");
-    expect(audit.totals.monthSpend).toBe(9);
+    expect(audit.totals.monthSpend).toBe(0);
   });
 
   it("account monthly spend equals the sum of the per-card spends", () => {

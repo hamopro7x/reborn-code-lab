@@ -7,7 +7,7 @@
  *        ↓ normalize            (readRow)
  *        ↓ canonical identity   (getCanonicalTransactionIdentity)
  *        ↓ deduplicate          (sumSpend: one winner per identity)
- *        ↓ auth/settlement      (settlement wins, otherwise authorisation)
+ *        ↓ auth/settlement      (only settled purchases enter monthly spend)
  *        ↓ status validation    (spendKind)
  *        ↓ currency validation  (usdCandidates → skippedNonUsd)
  *        ↓ gross / fee / net    (canonicalAmounts)
@@ -27,9 +27,9 @@
  *                 identity (paymentId / orderNo / orderId / referenceId / refId,
  *                 and only as a last resort the record-level txnId).
  *  2. winner    — per identity keep the settled row when it exists, otherwise
- *                 the still-authorised row. An unsettled authorisation is
- *                 counted exactly once and a settled purchase is never counted
- *                 twice, even when the two copies carry different txnIds.
+ *                 retain the still-authorised row for auditing. Monthly spend
+ *                 only counts settled purchases, so pending holds never inflate
+ *                 the total and a settlement is never counted twice.
  *  3. excluded  — refunds/reversals, failed rows and zero amounts never count.
  *  4. currency  — the amount is read from a USD-denominated field Bybit itself
  *                 returns; no exchange rate is ever guessed, no rounding.
@@ -381,8 +381,11 @@ export function sumSpend(
     }
     if (usd <= 0) continue;
     const time = Number(txn.winner.time ?? 0);
-    countedTxns += 1;
-    if (time >= monthStart && time < monthEnd) {
+    if (txn.kind === "settled") countedTxns += 1;
+    // Bybit's successful-transactions total contains completed financial rows,
+    // not outstanding authorisation holds (tradeStatus=0). Keep authorisations
+    // in the archive/canonical map, but never include them in Monthly Spend.
+    if (txn.kind === "settled" && time >= monthStart && time < monthEnd) {
       monthSpend += usd;
       monthFees += fee;
     }
@@ -475,6 +478,7 @@ export function auditSpend(
     if (kind === "excluded") reason = "excluded: refund/reversed/failed";
     else if (!isWinner) reason = "duplicate of the canonical transaction";
     else if (amounts.spendUsd === null) reason = "no USD-denominated amount (skippedNonUsd)";
+    else if (kind === "authorised") reason = "pending authorisation (not included in monthly spend)";
     else if (!inWindow) reason = "outside the requested window";
     else reason = kind === "settled" ? "counted (settlement)" : "counted (authorisation, not settled yet)";
     return {
@@ -482,7 +486,7 @@ export function auditSpend(
       canonicalId,
       side: text(d["side"]) || text(row.type),
       tradeStatus: text(d["tradeStatus"]),
-      counted: isWinner && kind !== "excluded" && amounts.spendUsd !== null && inWindow,
+      counted: isWinner && kind === "settled" && amounts.spendUsd !== null && inWindow,
       isWinner,
       reason,
       grossAmount: amounts.grossAmount,
