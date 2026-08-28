@@ -95,16 +95,17 @@ describe("monthly spend engine", () => {
     expect(totals.monthSpend).toBe(1246);
   });
 
-  it("subtracts a fee that is included inside the total amount", () => {
+  it("counts the charged total, fee included, when the fee sits inside it", () => {
     const totals = sumSpend(
       [row({ txnId: "fee1", amount: 16.54, detail: { tradeStatus: "1", side: "1", paymentId: "F1", basicAmount: 16.54, basicCurrency: "USD", foreignTxnFee: 0.32 } })],
       DAY_START,
       MONTH_START,
     );
-    expect(totals.monthSpend).toBeCloseTo(16.22, 10);
+    expect(totals.monthSpend).toBeCloseTo(16.54, 10);
+    expect(totals.monthFees).toBeCloseTo(0.32, 10);
   });
 
-  it("does not subtract the fee twice when the API already separates it", () => {
+  it("counts the charged total when the API reports the amount fee-free", () => {
     const totals = sumSpend(
       [
         row({
@@ -116,7 +117,7 @@ describe("monthly spend engine", () => {
       DAY_START,
       MONTH_START,
     );
-    expect(totals.monthSpend).toBeCloseTo(16.22, 10);
+    expect(totals.monthSpend).toBeCloseTo(16.54, 10);
   });
 
   it("counts duplicated fee field names once", () => {
@@ -125,8 +126,10 @@ describe("monthly spend engine", () => {
       DAY_START,
       MONTH_START,
     );
-    expect(totals.monthSpend).toBeCloseTo(10, 10);
+    expect(totals.monthSpend).toBeCloseTo(10.5, 10);
+    expect(totals.monthFees).toBeCloseTo(0.5, 10);
   });
+
 
 
 
