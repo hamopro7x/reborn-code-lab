@@ -468,7 +468,12 @@ export type SpendAuditEntry = {
   time: number;
 };
 
-export function auditSpend(rows: SpendRow[], dayStart = 0, monthStart = 0) {
+export function auditSpend(
+  rows: SpendRow[],
+  dayStart = 0,
+  monthStart = 0,
+  monthEnd: number = Number.POSITIVE_INFINITY,
+) {
   const { transactions, excluded } = canonicalize(rows);
   const winnerRawIds = new Set<string>();
   for (const t of transactions.values()) winnerRawIds.add(`${t.canonicalId}|${text(t.winner.txnId)}`);
@@ -479,7 +484,8 @@ export function auditSpend(rows: SpendRow[], dayStart = 0, monthStart = 0) {
     const kind = spendKind(row);
     const isWinner = winnerRawIds.has(`${canonicalId}|${text(row.txnId)}`);
     const amounts = canonicalAmounts(row);
-    const inWindow = Number(row.time ?? 0) >= monthStart;
+    const rowTime = Number(row.time ?? 0);
+    const inWindow = rowTime >= monthStart && rowTime < monthEnd;
     let reason = "";
     if (kind === "excluded") reason = "excluded: refund/reversed/failed";
     else if (!isWinner) reason = "duplicate of the canonical transaction";
@@ -507,6 +513,6 @@ export function auditSpend(rows: SpendRow[], dayStart = 0, monthStart = 0) {
     entries,
     canonicalCount: transactions.size,
     excludedCount: excluded.length,
-    totals: sumSpend(rows, dayStart, monthStart),
+    totals: sumSpend(rows, dayStart, monthStart, monthEnd),
   };
 }
