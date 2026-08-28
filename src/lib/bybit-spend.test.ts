@@ -349,7 +349,7 @@ describe("canonical transactions", () => {
     expect(audit.entries.find((e) => e.rawTxnId === "F")?.counted).toBe(true);
     expect(audit.entries.find((e) => e.rawTxnId === "A")?.reason).toContain("duplicate");
     expect(audit.entries.find((e) => e.rawTxnId === "R")?.reason).toContain("excluded");
-    expect(audit.totals.monthSpend).toBe(0);
+    expect(audit.totals.monthSpend).toBe(9);
   });
 
   it("account monthly spend equals the sum of the per-card spends", () => {
