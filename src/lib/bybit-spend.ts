@@ -254,6 +254,37 @@ export function spendFeeChargedUsd(row: SpendRow): number {
 export function spendUsd(row: SpendRow): number | null {
   return canonicalAmounts(row).spendUsd;
 }
+/**
+ * THE single definition of the Bybit monthly spend cycle.
+ *
+ * Bybit does not reset spend on the 1st: the LAST calendar day of a month is the
+ * first day of the next cycle. So a 31-day month opens its new cycle on the
+ * 31st, a 30-day month on the 30th, February on the 28th (29th in a leap year).
+ * The last day is always derived from the calendar, never hard-coded.
+ *
+ * Boundaries are UTC midnight (Bybit timestamps are epoch-ms UTC) and the window
+ * is half-open: `periodStart <= time < periodEnd`, so a transaction belongs to
+ * exactly one cycle and no millisecond can fall between two cycles.
+ */
+export type MonthlySpendPeriod = { periodStart: number; periodEnd: number };
+
+/** UTC midnight of the last calendar day of the given year/month (0-based). */
+function cycleAnchor(year: number, month: number): number {
+  const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  return Date.UTC(year, month, lastDay, 0, 0, 0, 0);
+}
+
+export function getMonthlySpendPeriod(nowMs: number): MonthlySpendPeriod {
+  const n = new Date(nowMs);
+  const year = n.getUTCFullYear();
+  const month = n.getUTCMonth();
+  const thisAnchor = cycleAnchor(year, month);
+  if (nowMs >= thisAnchor) {
+    return { periodStart: thisAnchor, periodEnd: cycleAnchor(year, month + 1) };
+  }
+  return { periodStart: cycleAnchor(year, month - 1), periodEnd: thisAnchor };
+}
+
 
 export type SpendTotals = {
   daySpend: number;
