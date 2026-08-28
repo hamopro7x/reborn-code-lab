@@ -369,9 +369,16 @@ export function canonicalize(rows: Iterable<SpendRow>): {
 /**
  * Collapses duplicates into canonical transactions, then sums each window
  * independently from the transaction's OWN timestamp.
+ * The monthly window is the Bybit cycle from {@link getMonthlySpendPeriod} and is
+ * half-open: `monthStart <= time < monthEnd`.
  * The same function backs every account and every caller.
  */
-export function sumSpend(rows: Iterable<SpendRow>, dayStart: number, monthStart: number): SpendTotals {
+export function sumSpend(
+  rows: Iterable<SpendRow>,
+  dayStart: number,
+  monthStart: number,
+  monthEnd: number = Number.POSITIVE_INFINITY,
+): SpendTotals {
   const { transactions, lastTxnTime } = canonicalize(rows);
 
   let daySpend = 0;
@@ -390,7 +397,7 @@ export function sumSpend(rows: Iterable<SpendRow>, dayStart: number, monthStart:
     if (usd <= 0) continue;
     const time = Number(txn.winner.time ?? 0);
     countedTxns += 1;
-    if (time >= monthStart) {
+    if (time >= monthStart && time < monthEnd) {
       monthSpend += usd;
       monthFees += fee;
     }
@@ -403,8 +410,16 @@ export function sumSpend(rows: Iterable<SpendRow>, dayStart: number, monthStart:
   return { daySpend, monthSpend, dayFees, monthFees, countedTxns, skippedNonUsd, lastTxnTime };
 }
 
-/** Per-card spend uses the very same engine, so card and account totals agree. */
-export function sumSpendByCard(rows: Iterable<SpendRow>, pan4Of: (row: SpendRow) => string) {
+/**
+ * Per-card spend uses the very same engine, so card and account totals agree.
+ * `spend` is the lifetime archived spend; `monthSpend` is the current Bybit
+ * monthly cycle when a `period` is supplied.
+ */
+export function sumSpendByCard(
+  rows: Iterable<SpendRow>,
+  pan4Of: (row: SpendRow) => string,
+  period?: MonthlySpendPeriod,
+) {
   const grouped = new Map<string, SpendRow[]>();
   for (const row of rows) {
     const pan4 = pan4Of(row).trim();
@@ -413,18 +428,24 @@ export function sumSpendByCard(rows: Iterable<SpendRow>, pan4Of: (row: SpendRow)
     list.push(row);
     grouped.set(pan4, list);
   }
-  const out = new Map<string, { spend: number; countedTxns: number; totalTxns: number; lastUsed: number }>();
+  const out = new Map<
+    string,
+    { spend: number; monthSpend: number; countedTxns: number; totalTxns: number; lastUsed: number }
+  >();
   for (const [pan4, list] of grouped) {
-    const totals = sumSpend(list, 0, 0);
+    const lifetime = sumSpend(list, 0, 0);
+    const cycle = period ? sumSpend(list, 0, period.periodStart, period.periodEnd) : null;
     out.set(pan4, {
-      spend: totals.monthSpend, // monthStart = 0 → every archived purchase
-      countedTxns: totals.countedTxns,
+      spend: lifetime.monthSpend, // monthStart = 0, no end → every archived purchase
+      monthSpend: cycle ? cycle.monthSpend : lifetime.monthSpend,
+      countedTxns: lifetime.countedTxns,
       totalTxns: list.length,
-      lastUsed: totals.lastTxnTime,
+      lastUsed: lifetime.lastTxnTime,
     });
   }
   return out;
 }
+
 
 /**
  * Audit view: explains, per raw row, why it did or did not reach spend.
