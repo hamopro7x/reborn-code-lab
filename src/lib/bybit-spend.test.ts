@@ -260,11 +260,13 @@ describe("canonical transactions", () => {
     expect(totals.monthSpend).toBe(42);
   });
 
-  it("case 11: gross + fee + net never deducts the fee twice", () => {
+  it("case 11: gross / fee / net — spend is the charged total, fee never deducted twice", () => {
     const feeInclusive = canonicalAmounts(
       row({ txnId: "g1", amount: 16.54, detail: { tradeStatus: "1", side: "1", paymentId: "G1", basicAmount: 16.54, basicCurrency: "USD", foreignTxnFee: 0.32 } }),
     );
-    expect(feeInclusive.spendUsd).toBeCloseTo(16.22, 10);
+    expect(feeInclusive.spendUsd).toBeCloseTo(16.54, 10);
+    expect(feeInclusive.grossAmount).toBeCloseTo(16.54, 10);
+    expect(feeInclusive.netAmount).toBeCloseTo(16.22, 10);
     expect(feeInclusive.fee).toBeCloseTo(0.32, 10);
 
     const alreadyNet = canonicalAmounts(
@@ -274,9 +276,10 @@ describe("canonical transactions", () => {
         detail: { tradeStatus: "1", side: "1", paymentId: "G2", basicAmount: 16.22, basicCurrency: "USD", transactionAmount: 16.54, transactionCurrency: "USD", foreignTxnFee: 0.32 },
       }),
     );
-    expect(alreadyNet.spendUsd).toBeCloseTo(16.22, 10);
-    expect(alreadyNet.netAmount).toBeCloseTo(16.22, 10);
+    expect(alreadyNet.spendUsd).toBeCloseTo(16.54, 10);
+    expect(alreadyNet.grossAmount).toBeCloseTo(16.54, 10);
   });
+
 
   it("case 12: foreign currency is never assumed to be USD", () => {
     const amounts = canonicalAmounts(
