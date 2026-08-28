@@ -13,8 +13,10 @@ import { Search } from "lucide-react";
 
 export const Route = createFileRoute("/shop")({
   component: Shop,
-  validateSearch: (s: Record<string, unknown>): { category?: string } =>
-    typeof s.category === "string" ? { category: s.category } : {},
+  validateSearch: (s: Record<string, unknown>): { category?: string; q?: string } => ({
+    ...(typeof s.category === "string" ? { category: s.category } : {}),
+    ...(typeof s.q === "string" ? { q: s.q } : {}),
+  }),
   head: () => ({
     meta: [
       { title: "المتجر — كل المنتجات الرقمية | متجر الاشتراكات" },
@@ -32,9 +34,9 @@ export const Route = createFileRoute("/shop")({
 });
 
 function Shop() {
-  const { category } = Route.useSearch();
+  const { category, q: qParam } = Route.useSearch();
   // البحث والتصنيف يبقيان كما هما بعد تحديث الصفحة.
-  const [q, setQ] = useUiState<string>("shop", "q", "");
+  const [q, setQ] = useUiState<string>("shop", "q", qParam ?? "");
   const [activeCat, setActiveCat] = useUiState<string | undefined>("shop", "cat", category);
   useScrollRestore("shop");
 
