@@ -1,29 +1,40 @@
 /**
  * ONE spend engine for every Bybit account and every API path.
  *
+ * Pipeline (the only pipeline in the project):
+ *
+ *   Bybit raw rows
+ *        ↓ normalize            (readRow)
+ *        ↓ canonical identity   (getCanonicalTransactionIdentity)
+ *        ↓ deduplicate          (sumSpend: one winner per identity)
+ *        ↓ auth/settlement      (settlement wins, otherwise authorisation)
+ *        ↓ status validation    (spendKind)
+ *        ↓ currency validation  (usdCandidates → skippedNonUsd)
+ *        ↓ gross / fee / net    (canonicalAmounts)
+ *        ↓ daily / monthly / per-card spend
+ *
  * Bybit archives a single card purchase more than once:
  *   - SIDE_QUERY_AUTH       → the authorisation row (tradeStatus "0")
  *   - SIDE_QUERY_FINANCIAL  → the settlement row for the SAME purchase
- *     (tradeStatus "1"), with a different txnId
+ *     (tradeStatus "1"), usually with a DIFFERENT txnId
  *   - SIDE_QUERY_REFUND     → reversal rows
  *
- * Summing raw rows therefore counts the same purchase twice whenever both its
- * authorisation and its settlement are archived — that is the real source of a
- * total that reads a few dollars above the account's actual spend. Nothing is
- * added or subtracted by hand anywhere: the fix is to collapse each purchase to
- * ONE row before summing, and to sum a USD-denominated amount.
+ * Raw rows are never deleted — they stay in the archive for auditing and for the
+ * transaction list. Only canonical transactions enter any total.
  *
  * Rules (identical for daily, monthly and per-card spend, all accounts):
- *  1. identity  — rows that describe the same purchase share one identity
- *                 (paymentId/orderNo when Bybit exposes it, else txnId).
+ *  1. identity  — rows that describe the same purchase share one canonical
+ *                 identity (paymentId / orderNo / orderId / referenceId / refId,
+ *                 and only as a last resort the record-level txnId).
  *  2. winner    — per identity keep the settled row when it exists, otherwise
- *                 the still-authorised row. So an unsettled authorisation is
- *                 counted exactly once (today's spend stays complete) and a
- *                 settled purchase is never counted twice.
+ *                 the still-authorised row. An unsettled authorisation is
+ *                 counted exactly once and a settled purchase is never counted
+ *                 twice, even when the two copies carry different txnIds.
  *  3. excluded  — refunds/reversals, failed rows and zero amounts never count.
- *  4. currency  — the amount is read from the USD-denominated field Bybit
- *                 returns; no rounding is applied at any step.
- *  5. window    — a row belongs to a window purely by its own timestamp.
+ *  4. currency  — the amount is read from a USD-denominated field Bybit itself
+ *                 returns; no exchange rate is ever guessed, no rounding.
+ *  5. window    — a row belongs to a window purely by its own transaction
+ *                 timestamp, never by the time the data reached the server.
  */
 
 export type SpendRow = {
@@ -41,6 +52,17 @@ const STABLE_USD = new Set(["USD", "USDT", "USDC", "DAI", "FDUSD", "TUSD", "BUSD
 /** Bybit `side` values that describe a refund/reversal rather than a purchase. */
 const REFUND_SIDES = new Set(["3", "5", "6", "7", "10", "11"]);
 
+/**
+ * Business identifiers Bybit exposes for one purchase, in priority order.
+ * The authorisation copy and the settlement copy of the same purchase share the
+ * first of these that the account actually returns; `txnId` is a record id, not
+ * a business id, so it is only the last resort.
+ */
+const IDENTITY_KEYS = ["paymentId", "orderNo", "orderId", "referenceId", "refId"] as const;
+
+/** Placeholder values Bybit sends for "no identifier" — never an identity. */
+const JUNK_IDS = new Set(["", "0", "-", "--", "null", "undefined", "none", "n/a", "na", "false"]);
+
 const numeric = (v: unknown) => {
   const n = Number(v ?? NaN);
   return Number.isFinite(n) ? n : null;
@@ -48,15 +70,31 @@ const numeric = (v: unknown) => {
 
 const text = (v: unknown) => (v === null || v === undefined ? "" : String(v));
 
-/** Stable identity for a purchase across the auth/settlement/page duplicates. */
-export function spendIdentity(row: SpendRow): string {
+const cleanId = (v: unknown) => {
+  const s = text(v).trim();
+  return JUNK_IDS.has(s.toLowerCase()) ? "" : s;
+};
+
+/**
+ * THE canonical identity of a purchase — the single source of truth for
+ * "are these two raw records the same transaction?". Used by the spend engine,
+ * per-card spend, reports and the audit view alike.
+ */
+export function getCanonicalTransactionIdentity(row: SpendRow): string {
   const d = row.detail ?? {};
-  const payment = text(d["paymentId"]).trim();
-  if (payment) return `p:${payment}`;
-  const txn = text(d["txnId"]).trim() || text(row.txnId).trim();
-  if (txn) return `t:${txn}`;
-  return `c:${row.time}|${text(d["merchantName"])}|${Math.abs(row.amount)}`;
+  for (const key of IDENTITY_KEYS) {
+    const v = cleanId(d[key]);
+    if (v) return `${key}:${v}`;
+  }
+  const txn = cleanId(d["txnId"]) || cleanId(row.txnId);
+  if (txn) return `txnId:${txn}`;
+  // Nothing identifying at all: fall back to the purchase's own coordinates so
+  // the same row arriving from two pages still collapses into one transaction.
+  return `composite:${row.time}|${text(d["merchantName"] ?? d["merchName"])}|${Math.abs(row.amount)}`;
 }
+
+/** Backwards-compatible alias; there is only ONE identity function. */
+export const spendIdentity = getCanonicalTransactionIdentity;
 
 type Kind = "settled" | "authorised" | "excluded";
 
@@ -91,7 +129,7 @@ export function spendFeeUsd(row: SpendRow): number {
   if (feeCurrency && !STABLE_USD.has(feeCurrency)) return 0;
 
   const seen = new Set<number>();
-  for (const key of ["foreignTxnFee", "feeAmount", "fee", "handlingFee"]) {
+  for (const key of ["foreignTxnFee", "foreignTransactionFee", "feeAmount", "fee", "handlingFee", "totalFees"]) {
     const n = numeric(d[key]);
     if (n === null || n === 0) continue;
     seen.add(Math.abs(n));
@@ -102,8 +140,7 @@ export function spendFeeUsd(row: SpendRow): number {
 }
 
 /** USD-denominated amounts reported for a purchase; `base` is the preferred one. */
-
-function usdCandidates(row: SpendRow): { base: number | null; amounts: number[] } {
+function usdCandidates(row: SpendRow): { base: number | null; amounts: number[]; currency: string } {
   const d = row.detail ?? {};
   const candidates: Array<[unknown, unknown]> = [
     [d["basicAmount"], d["basicCurrency"]],
@@ -134,78 +171,89 @@ function usdCandidates(row: SpendRow): { base: number | null; amounts: number[] 
     const n = numeric(d[key]);
     if (n !== null && n !== 0 && usdCurrency) usdAmounts.push(Math.abs(n));
   }
-  return { base, amounts: usdAmounts };
+  const reported = text(d["basicCurrency"] ?? d["transactionCurrency"] ?? row.currency ?? d["localCurrency"]).toUpperCase();
+  return { base, amounts: usdAmounts, currency: usdCurrency ? "USD" : reported };
+}
+
+/**
+ * THE official financial figures of one transaction. Every screen (transaction
+ * details, reports, dashboard) reads these instead of recomputing amounts, so
+ * the number shown for a purchase is exactly the number that enters spend.
+ *
+ * `spendUsd` is null when Bybit reported no USD-denominated amount — nothing is
+ * guessed, the row is surfaced as `skippedNonUsd` instead.
+ */
+export type CanonicalAmounts = {
+  grossAmount: number | null;
+  fee: number;
+  netAmount: number | null;
+  currency: string;
+  spendUsd: number | null;
+};
+
+export function canonicalAmounts(row: SpendRow): CanonicalAmounts {
+  const d = row.detail ?? {};
+  const { base, amounts: usdAmounts, currency } = usdCandidates(row);
+  if (base === null) {
+    return { grossAmount: null, fee: 0, netAmount: null, currency, spendUsd: null };
+  }
+
+  const close = (a: number, b: number) => Math.abs(a - b) < 0.005;
+  const netField = numeric(d["transactionAmount"]);
+  const netFieldCur = text(d["transactionCurrency"]).toUpperCase();
+  const usdNetField =
+    netField !== null && netField !== 0 && STABLE_USD.has(netFieldCur) ? Math.abs(netField) : null;
+
+  const explicitFee = spendFeeUsd(row);
+  // Nonsense fee (>= the amount itself) is ignored rather than trusted.
+  const fee = explicitFee > 0 && explicitFee < base ? explicitFee : 0;
+
+  if (fee === 0) {
+    // No usable fee field. Bybit still charges a fee inside the total on some
+    // rows: the charged total sits a few cents above the transaction amount.
+    // That gap IS the fee, so the smaller (fee-free) figure is the purchase.
+    if (usdNetField !== null) {
+      const gap = base - usdNetField;
+      // Only a fee-sized gap counts (never a different purchase or a rounding
+      // artefact), so nothing is deducted when the two figures agree.
+      if (gap > 0.0049 && gap <= base * 0.15) {
+        return { grossAmount: base, fee: gap, netAmount: usdNetField, currency, spendUsd: usdNetField };
+      }
+    }
+    return { grossAmount: base, fee: 0, netAmount: base, currency, spendUsd: base };
+  }
+
+  // The API already separated the purchase from its fee: base + fee equals a
+  // reported total, so base is the real purchase value — do not deduct again.
+  if (usdAmounts.some((a) => close(a, base + fee))) {
+    return { grossAmount: base + fee, fee, netAmount: base, currency, spendUsd: base };
+  }
+  // Some other field already equals base - fee → that is the fee-free amount.
+  const net = usdAmounts.find((a) => close(a, base - fee));
+  if (net !== undefined) {
+    return { grossAmount: base, fee, netAmount: net, currency, spendUsd: net };
+  }
+  // Otherwise base is the fee-inclusive total: strip the fees out of it.
+  const stripped = base - fee;
+  const netAmount = stripped > 0 ? stripped : base;
+  return { grossAmount: base, fee: stripped > 0 ? fee : 0, netAmount, currency, spendUsd: netAmount };
 }
 
 /**
  * Fee actually charged inside this purchase, in USD.
- * Reads the provider's own fee field when present; otherwise derives it from the
- * fee-sized gap between the charged total and the transaction amount. Returns 0
- * when the purchase genuinely carries no fee — never the purchase value itself.
+ * Thin read of {@link canonicalAmounts} — kept so existing callers keep working.
  */
 export function spendFeeChargedUsd(row: SpendRow): number {
-  const { base } = usdCandidates(row);
-  if (base === null) return 0;
-
-  const explicit = spendFeeUsd(row);
-  if (explicit > 0) return explicit >= base ? 0 : explicit;
-
-  const d = row.detail ?? {};
-  const net = numeric(d["transactionAmount"]);
-  const netCur = text(d["transactionCurrency"]).toUpperCase();
-  if (net !== null && net !== 0 && STABLE_USD.has(netCur)) {
-    const gap = base - Math.abs(net);
-    if (gap > 0.0049 && gap <= base * 0.15) return gap;
-  }
-  return 0;
+  return canonicalAmounts(row).fee;
 }
 
 /**
  * Actual purchase value in USD, excluding every fee charged inside it.
- * Bybit sometimes reports a fee-inclusive total (16.54 with a 0.32 fee) and
- * sometimes the net amount already separated from the fee (16.22 + 0.32).
- * The fee is only subtracted when the chosen figure is fee-inclusive, so no
- * amount is ever deducted twice. Returns null when no field is USD-denominated.
+ * Thin read of {@link canonicalAmounts}; null when no field is USD-denominated.
  */
 export function spendUsd(row: SpendRow): number | null {
-  const d = row.detail ?? {};
-  const { base, amounts: usdAmounts } = usdCandidates(row);
-
-
-  if (base === null) return null;
-
-  let fee = spendFeeUsd(row);
-  if (fee <= 0) {
-    // No explicit fee field. Bybit still charges a fee inside the total on some
-    // rows: the charged total sits a few cents above the transaction amount.
-    // That gap IS the fee, so the smaller (fee-free) figure is the purchase.
-    const net = numeric(d["transactionAmount"]);
-    const netCur = text(d["transactionCurrency"]).toUpperCase();
-    if (net !== null && net !== 0 && STABLE_USD.has(netCur)) {
-      const netAbs = Math.abs(net);
-      const gap = base - netAbs;
-      // Only a fee-sized gap counts (never a different purchase or a rounding
-      // artefact), so nothing is deducted when the two figures agree.
-      if (gap > 0.0049 && gap <= base * 0.15) return netAbs;
-    }
-    return base;
-  }
-  // Nonsense fee (>= the amount itself) is ignored rather than trusted.
-  if (fee >= base) return base;
-
-  const close = (a: number, b: number) => Math.abs(a - b) < 0.005;
-
-  // The API already separated the purchase from its fee: base + fee equals a
-  // reported total, so base is the real purchase value — do not deduct again.
-  if (usdAmounts.some((a) => close(a, base! + fee))) return base;
-  // Some other field already equals base - fee → that is the fee-free amount.
-  const net = usdAmounts.find((a) => close(a, base! - fee));
-  if (net !== undefined) return net;
-  // Otherwise base is the fee-inclusive total: strip the fees out of it.
-  const stripped = base - fee;
-  return stripped > 0 ? stripped : base;
+  return canonicalAmounts(row).spendUsd;
 }
-
 
 export type SpendTotals = {
   daySpend: number;
@@ -220,33 +268,80 @@ export type SpendTotals = {
   lastTxnTime: number;
 };
 
+/** One canonical transaction, resolved from every raw record that describes it. */
+export type CanonicalTxn = {
+  canonicalId: string;
+  winner: SpendRow;
+  kind: Exclude<Kind, "excluded">;
+  /** raw records that collapsed into this transaction (winner included) */
+  rawTxnIds: string[];
+  amounts: CanonicalAmounts;
+};
+
 /**
- * Collapses duplicates, then sums each window independently.
- * The same function backs every account and every caller.
+ * Raw rows → canonical transactions. No row is mutated or dropped from the
+ * archive here; this only decides which record represents each purchase.
  */
-export function sumSpend(rows: Iterable<SpendRow>, dayStart: number, monthStart: number): SpendTotals {
-  const winners = new Map<string, SpendRow>();
+export function canonicalize(rows: Iterable<SpendRow>): {
+  transactions: Map<string, CanonicalTxn>;
+  excluded: Array<{ row: SpendRow; canonicalId: string; reason: string }>;
+  lastTxnTime: number;
+} {
+  const transactions = new Map<string, CanonicalTxn>();
+  const excluded: Array<{ row: SpendRow; canonicalId: string; reason: string }> = [];
   let lastTxnTime = 0;
+  const seenRaw = new Set<string>();
 
   for (const row of rows) {
     const time = Number(row.time ?? 0);
     if (time > lastTxnTime) lastTxnTime = time;
 
+    const canonicalId = getCanonicalTransactionIdentity(row);
     const kind = spendKind(row);
-    if (kind === "excluded") continue;
-
-    const id = spendIdentity(row);
-    const current = winners.get(id);
-    if (!current) {
-      winners.set(id, row);
+    if (kind === "excluded") {
+      excluded.push({ row, canonicalId, reason: "refund/reversed/failed" });
       continue;
     }
+
+    // The very same raw record can be returned by two pages of one endpoint.
+    const rawKey = `${canonicalId}|${text(row.detail?.["txnId"]) || text(row.txnId)}|${kind}|${time}`;
+    if (seenRaw.has(rawKey)) continue;
+    seenRaw.add(rawKey);
+
+    const current = transactions.get(canonicalId);
+    if (!current) {
+      transactions.set(canonicalId, {
+        canonicalId,
+        winner: row,
+        kind,
+        rawTxnIds: [text(row.txnId)],
+        amounts: canonicalAmounts(row),
+      });
+      continue;
+    }
+    current.rawTxnIds.push(text(row.txnId));
     // Settlement wins over authorisation; between equals keep the earlier
     // timestamp so a purchase stays inside the window it was made in.
-    const currentKind = spendKind(current);
-    if (kind === "settled" && currentKind !== "settled") winners.set(id, row);
-    else if (kind === currentKind && time && time < Number(current.time ?? 0)) winners.set(id, row);
+    const promote =
+      (kind === "settled" && current.kind !== "settled") ||
+      (kind === current.kind && time > 0 && time < Number(current.winner.time ?? 0));
+    if (promote) {
+      current.winner = row;
+      current.kind = kind;
+      current.amounts = canonicalAmounts(row);
+    }
   }
+
+  return { transactions, excluded, lastTxnTime };
+}
+
+/**
+ * Collapses duplicates into canonical transactions, then sums each window
+ * independently from the transaction's OWN timestamp.
+ * The same function backs every account and every caller.
+ */
+export function sumSpend(rows: Iterable<SpendRow>, dayStart: number, monthStart: number): SpendTotals {
+  const { transactions, lastTxnTime } = canonicalize(rows);
 
   let daySpend = 0;
   let monthSpend = 0;
@@ -255,15 +350,14 @@ export function sumSpend(rows: Iterable<SpendRow>, dayStart: number, monthStart:
   let countedTxns = 0;
   let skippedNonUsd = 0;
 
-  for (const row of winners.values()) {
-    const usd = spendUsd(row);
+  for (const txn of transactions.values()) {
+    const { spendUsd: usd, fee } = txn.amounts;
     if (usd === null) {
       skippedNonUsd += 1;
       continue;
     }
     if (usd <= 0) continue;
-    const time = Number(row.time ?? 0);
-    const fee = spendFeeChargedUsd(row);
+    const time = Number(txn.winner.time ?? 0);
     countedTxns += 1;
     if (time >= monthStart) {
       monthSpend += usd;
@@ -277,7 +371,6 @@ export function sumSpend(rows: Iterable<SpendRow>, dayStart: number, monthStart:
 
   return { daySpend, monthSpend, dayFees, monthFees, countedTxns, skippedNonUsd, lastTxnTime };
 }
-
 
 /** Per-card spend uses the very same engine, so card and account totals agree. */
 export function sumSpendByCard(rows: Iterable<SpendRow>, pan4Of: (row: SpendRow) => string) {
@@ -300,4 +393,68 @@ export function sumSpendByCard(rows: Iterable<SpendRow>, pan4Of: (row: SpendRow)
     });
   }
   return out;
+}
+
+/**
+ * Audit view: explains, per raw row, why it did or did not reach spend.
+ * Contains only amounts, ids and statuses that already live in the archive —
+ * never credentials or API secrets — so it is safe to log in production.
+ */
+export type SpendAuditEntry = {
+  rawTxnId: string;
+  canonicalId: string;
+  side: string;
+  tradeStatus: string;
+  counted: boolean;
+  isWinner: boolean;
+  reason: string;
+  grossAmount: number | null;
+  fee: number;
+  netAmount: number | null;
+  currency: string;
+  spendUsd: number | null;
+  time: number;
+};
+
+export function auditSpend(rows: SpendRow[], dayStart = 0, monthStart = 0) {
+  const { transactions, excluded } = canonicalize(rows);
+  const winnerRawIds = new Set<string>();
+  for (const t of transactions.values()) winnerRawIds.add(`${t.canonicalId}|${text(t.winner.txnId)}`);
+
+  const entries: SpendAuditEntry[] = rows.map((row) => {
+    const canonicalId = getCanonicalTransactionIdentity(row);
+    const d = row.detail ?? {};
+    const kind = spendKind(row);
+    const isWinner = winnerRawIds.has(`${canonicalId}|${text(row.txnId)}`);
+    const amounts = canonicalAmounts(row);
+    const inWindow = Number(row.time ?? 0) >= monthStart;
+    let reason = "";
+    if (kind === "excluded") reason = "excluded: refund/reversed/failed";
+    else if (!isWinner) reason = "duplicate of the canonical transaction";
+    else if (amounts.spendUsd === null) reason = "no USD-denominated amount (skippedNonUsd)";
+    else if (!inWindow) reason = "outside the requested window";
+    else reason = kind === "settled" ? "counted (settlement)" : "counted (authorisation, not settled yet)";
+    return {
+      rawTxnId: text(row.txnId),
+      canonicalId,
+      side: text(d["side"]) || text(row.type),
+      tradeStatus: text(d["tradeStatus"]),
+      counted: isWinner && kind !== "excluded" && amounts.spendUsd !== null && inWindow,
+      isWinner,
+      reason,
+      grossAmount: amounts.grossAmount,
+      fee: amounts.fee,
+      netAmount: amounts.netAmount,
+      currency: amounts.currency,
+      spendUsd: amounts.spendUsd,
+      time: Number(row.time ?? 0),
+    };
+  });
+
+  return {
+    entries,
+    canonicalCount: transactions.size,
+    excludedCount: excluded.length,
+    totals: sumSpend(rows, dayStart, monthStart),
+  };
 }
