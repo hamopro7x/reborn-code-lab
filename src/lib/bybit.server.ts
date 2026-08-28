@@ -556,19 +556,37 @@ export async function computeSpend(accountId: string | undefined, dayStart: numb
     /* balances should still render if the archive is temporarily unavailable */
   }
 
-  const totals = sumSpend(
-    collected.map((row: any) => ({
-      txnId: String(row.txn_id ?? ""),
-      amount: num(row.amount),
-      time: Number(row.txn_time ?? 0),
-      status: row.status,
-      type: row.txn_type,
-      currency: row.currency,
-      detail: (row.detail ?? {}) as Record<string, unknown>,
-    })),
-    dayStart,
-    monthStart,
-  );
+  const engineRows: SpendRow[] = collected.map((row: any) => ({
+    txnId: String(row.txn_id ?? ""),
+    amount: num(row.amount),
+    time: Number(row.txn_time ?? 0),
+    status: row.status,
+    type: row.txn_type,
+    currency: row.currency,
+    detail: (row.detail ?? {}) as Record<string, unknown>,
+  }));
+
+  const totals = sumSpend(engineRows, dayStart, monthStart);
+
+  // Opt-in audit trail (BYBIT_SPEND_AUDIT=1): raw rows → canonical transactions
+  // → counted spend. Ids/amounts/statuses only, never credentials.
+  if (process.env["BYBIT_SPEND_AUDIT"] === "1") {
+    const audit = auditSpend(engineRows, dayStart, monthStart);
+    console.log(
+      "[bybit-spend audit]",
+      JSON.stringify({
+        account: accountId ?? "all",
+        rawRows: engineRows.length,
+        canonical: audit.canonicalCount,
+        excluded: audit.excludedCount,
+        counted: totals.countedTxns,
+        skippedNonUsd: totals.skippedNonUsd,
+        monthSpend: totals.monthSpend,
+        daySpend: totals.daySpend,
+        sample: audit.entries.slice(0, 25),
+      }),
+    );
+  }
 
   return {
     daySpend: totals.daySpend,
@@ -580,6 +598,7 @@ export async function computeSpend(accountId: string | undefined, dayStart: numb
     skippedNonUsd: totals.skippedNonUsd,
   };
 }
+
 
 
 async function spotPrices(): Promise<Record<string, number>> {
