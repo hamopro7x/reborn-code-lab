@@ -254,6 +254,37 @@ export function spendFeeChargedUsd(row: SpendRow): number {
 export function spendUsd(row: SpendRow): number | null {
   return canonicalAmounts(row).spendUsd;
 }
+/**
+ * THE single definition of the Bybit monthly spend cycle.
+ *
+ * Bybit does not reset spend on the 1st: the LAST calendar day of a month is the
+ * first day of the next cycle. So a 31-day month opens its new cycle on the
+ * 31st, a 30-day month on the 30th, February on the 28th (29th in a leap year).
+ * The last day is always derived from the calendar, never hard-coded.
+ *
+ * Boundaries are UTC midnight (Bybit timestamps are epoch-ms UTC) and the window
+ * is half-open: `periodStart <= time < periodEnd`, so a transaction belongs to
+ * exactly one cycle and no millisecond can fall between two cycles.
+ */
+export type MonthlySpendPeriod = { periodStart: number; periodEnd: number };
+
+/** UTC midnight of the last calendar day of the given year/month (0-based). */
+function cycleAnchor(year: number, month: number): number {
+  const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  return Date.UTC(year, month, lastDay, 0, 0, 0, 0);
+}
+
+export function getMonthlySpendPeriod(nowMs: number): MonthlySpendPeriod {
+  const n = new Date(nowMs);
+  const year = n.getUTCFullYear();
+  const month = n.getUTCMonth();
+  const thisAnchor = cycleAnchor(year, month);
+  if (nowMs >= thisAnchor) {
+    return { periodStart: thisAnchor, periodEnd: cycleAnchor(year, month + 1) };
+  }
+  return { periodStart: cycleAnchor(year, month - 1), periodEnd: thisAnchor };
+}
+
 
 export type SpendTotals = {
   daySpend: number;
@@ -338,9 +369,16 @@ export function canonicalize(rows: Iterable<SpendRow>): {
 /**
  * Collapses duplicates into canonical transactions, then sums each window
  * independently from the transaction's OWN timestamp.
+ * The monthly window is the Bybit cycle from {@link getMonthlySpendPeriod} and is
+ * half-open: `monthStart <= time < monthEnd`.
  * The same function backs every account and every caller.
  */
-export function sumSpend(rows: Iterable<SpendRow>, dayStart: number, monthStart: number): SpendTotals {
+export function sumSpend(
+  rows: Iterable<SpendRow>,
+  dayStart: number,
+  monthStart: number,
+  monthEnd: number = Number.POSITIVE_INFINITY,
+): SpendTotals {
   const { transactions, lastTxnTime } = canonicalize(rows);
 
   let daySpend = 0;
@@ -359,7 +397,7 @@ export function sumSpend(rows: Iterable<SpendRow>, dayStart: number, monthStart:
     if (usd <= 0) continue;
     const time = Number(txn.winner.time ?? 0);
     countedTxns += 1;
-    if (time >= monthStart) {
+    if (time >= monthStart && time < monthEnd) {
       monthSpend += usd;
       monthFees += fee;
     }
@@ -372,8 +410,16 @@ export function sumSpend(rows: Iterable<SpendRow>, dayStart: number, monthStart:
   return { daySpend, monthSpend, dayFees, monthFees, countedTxns, skippedNonUsd, lastTxnTime };
 }
 
-/** Per-card spend uses the very same engine, so card and account totals agree. */
-export function sumSpendByCard(rows: Iterable<SpendRow>, pan4Of: (row: SpendRow) => string) {
+/**
+ * Per-card spend uses the very same engine, so card and account totals agree.
+ * `spend` is the lifetime archived spend; `monthSpend` is the current Bybit
+ * monthly cycle when a `period` is supplied.
+ */
+export function sumSpendByCard(
+  rows: Iterable<SpendRow>,
+  pan4Of: (row: SpendRow) => string,
+  period?: MonthlySpendPeriod,
+) {
   const grouped = new Map<string, SpendRow[]>();
   for (const row of rows) {
     const pan4 = pan4Of(row).trim();
@@ -382,18 +428,24 @@ export function sumSpendByCard(rows: Iterable<SpendRow>, pan4Of: (row: SpendRow)
     list.push(row);
     grouped.set(pan4, list);
   }
-  const out = new Map<string, { spend: number; countedTxns: number; totalTxns: number; lastUsed: number }>();
+  const out = new Map<
+    string,
+    { spend: number; monthSpend: number; countedTxns: number; totalTxns: number; lastUsed: number }
+  >();
   for (const [pan4, list] of grouped) {
-    const totals = sumSpend(list, 0, 0);
+    const lifetime = sumSpend(list, 0, 0);
+    const cycle = period ? sumSpend(list, 0, period.periodStart, period.periodEnd) : null;
     out.set(pan4, {
-      spend: totals.monthSpend, // monthStart = 0 → every archived purchase
-      countedTxns: totals.countedTxns,
+      spend: lifetime.monthSpend, // monthStart = 0, no end → every archived purchase
+      monthSpend: cycle ? cycle.monthSpend : lifetime.monthSpend,
+      countedTxns: lifetime.countedTxns,
       totalTxns: list.length,
-      lastUsed: totals.lastTxnTime,
+      lastUsed: lifetime.lastTxnTime,
     });
   }
   return out;
 }
+
 
 /**
  * Audit view: explains, per raw row, why it did or did not reach spend.
@@ -416,7 +468,12 @@ export type SpendAuditEntry = {
   time: number;
 };
 
-export function auditSpend(rows: SpendRow[], dayStart = 0, monthStart = 0) {
+export function auditSpend(
+  rows: SpendRow[],
+  dayStart = 0,
+  monthStart = 0,
+  monthEnd: number = Number.POSITIVE_INFINITY,
+) {
   const { transactions, excluded } = canonicalize(rows);
   const winnerRawIds = new Set<string>();
   for (const t of transactions.values()) winnerRawIds.add(`${t.canonicalId}|${text(t.winner.txnId)}`);
@@ -427,7 +484,8 @@ export function auditSpend(rows: SpendRow[], dayStart = 0, monthStart = 0) {
     const kind = spendKind(row);
     const isWinner = winnerRawIds.has(`${canonicalId}|${text(row.txnId)}`);
     const amounts = canonicalAmounts(row);
-    const inWindow = Number(row.time ?? 0) >= monthStart;
+    const rowTime = Number(row.time ?? 0);
+    const inWindow = rowTime >= monthStart && rowTime < monthEnd;
     let reason = "";
     if (kind === "excluded") reason = "excluded: refund/reversed/failed";
     else if (!isWinner) reason = "duplicate of the canonical transaction";
@@ -455,6 +513,6 @@ export function auditSpend(rows: SpendRow[], dayStart = 0, monthStart = 0) {
     entries,
     canonicalCount: transactions.size,
     excludedCount: excluded.length,
-    totals: sumSpend(rows, dayStart, monthStart),
+    totals: sumSpend(rows, dayStart, monthStart, monthEnd),
   };
 }

@@ -1,6 +1,13 @@
 import { createHmac } from "crypto";
 import { normalizeBybitError, type BybitError } from "./bybit-errors";
-import { sumSpend, sumSpendByCard, auditSpend, getCanonicalTransactionIdentity, type SpendRow } from "./bybit-spend";
+import {
+  sumSpend,
+  sumSpendByCard,
+  auditSpend,
+  getCanonicalTransactionIdentity,
+  getMonthlySpendPeriod,
+  type SpendRow,
+} from "./bybit-spend";
 
 
 const BASE = "https://api.bybit.com";
@@ -497,7 +504,9 @@ async function bybitNow(): Promise<number> {
 /**
  * Fixed spend cycles, computed independently of each other:
  *  - daily  : today 03:00 Cairo (= 00:00 UTC) — unchanged, already correct
- *  - monthly: the 1st of the month at 00:00 UTC (previous month when earlier)
+ *  - monthly: the Bybit cycle from getMonthlySpendPeriod() — it opens on the LAST
+ *    calendar day of the month at 00:00 UTC and is half-open
+ *    (monthStart <= time < monthEnd). There is no other definition anywhere.
  */
 export function spendWindows(nowMs: number) {
   const n = new Date(nowMs);
@@ -506,11 +515,9 @@ export function spendWindows(nowMs: number) {
   let dayStart = Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate(), 0);
   if (nowMs < dayStart) dayStart -= DAY;
 
-  // Monthly cycle anchor: 1st day of the month at 00:00 UTC
-  let monthStart = Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), 1, 0);
-  if (nowMs < monthStart) monthStart = Date.UTC(n.getUTCFullYear(), n.getUTCMonth() - 1, 1, 0);
+  const { periodStart, periodEnd } = getMonthlySpendPeriod(nowMs);
 
-  return { dayStart, monthStart };
+  return { dayStart, monthStart: periodStart, monthEnd: periodEnd };
 }
 
 
@@ -523,7 +530,12 @@ export function spendWindows(nowMs: number) {
  * USD-denominated amount. That engine — not this loop — decides what counts, so
  * every account and every caller produces the same total.
  */
-export async function computeSpend(accountId: string | undefined, dayStart: number, monthStart: number) {
+export async function computeSpend(
+  accountId: string | undefined,
+  dayStart: number,
+  monthStart: number,
+  monthEnd: number = Number.POSITIVE_INFINITY,
+) {
   const collected: SpendRow[] = [];
 
   const seenRows = new Set<string>();
@@ -566,12 +578,12 @@ export async function computeSpend(accountId: string | undefined, dayStart: numb
     detail: (row.detail ?? {}) as Record<string, unknown>,
   }));
 
-  const totals = sumSpend(engineRows, dayStart, monthStart);
+  const totals = sumSpend(engineRows, dayStart, monthStart, monthEnd);
 
   // Opt-in audit trail (BYBIT_SPEND_AUDIT=1): raw rows → canonical transactions
   // → counted spend. Ids/amounts/statuses only, never credentials.
   if (process.env["BYBIT_SPEND_AUDIT"] === "1") {
-    const audit = auditSpend(engineRows, dayStart, monthStart);
+    const audit = auditSpend(engineRows, dayStart, monthStart, monthEnd);
     console.log(
       "[bybit-spend audit]",
       JSON.stringify({
@@ -659,8 +671,8 @@ export async function fetchOverview(accountId?: string) {
   // Spending is always computed from the archived transactions of THIS account,
   // independently for the daily and the monthly window. Limits returned by
   // Bybit are never used as a source for spending.
-  const { dayStart, monthStart } = spendWindows(await bybitNow().catch(() => Date.now()));
-  const archivedSpend = await computeSpend(accountId, dayStart, monthStart);
+  const { dayStart, monthStart, monthEnd } = spendWindows(await bybitNow().catch(() => Date.now()));
+  const archivedSpend = await computeSpend(accountId, dayStart, monthStart, monthEnd);
   const daySpend = archivedSpend.daySpend;
 
   return {
@@ -671,6 +683,8 @@ export async function fetchOverview(accountId?: string) {
     dayFees: archivedSpend.dayFees,
     dayStart,
     monthStart,
+    monthEnd,
+
     txnCount: archivedSpend.txnCount,
     lastTxnTime: archivedSpend.lastTxnTime,
     // Purchases whose amount Bybit reported in a non-USD currency: reported, so
@@ -1346,6 +1360,7 @@ export async function fetchCards(accountId?: string): Promise<BybitCard[]> {
       pan4: String(t.pan4 ?? ""),
     })) as Array<SpendRow & { pan4: string }>,
     (row) => (row as SpendRow & { pan4: string }).pan4,
+    getMonthlySpendPeriod(Date.now()),
   );
   const currencyByPan = new Map<string, string>();
   for (const t of rows) {
@@ -1861,17 +1876,17 @@ export async function fetchLedgerPage(opts: {
  * newly added account is included automatically and a removed one drops out.
  */
 export async function computeSpendAllAccounts() {
-  const { dayStart, monthStart } = spendWindows(await bybitNow().catch(() => Date.now()));
+  const { dayStart, monthStart, monthEnd } = spendWindows(await bybitNow().catch(() => Date.now()));
   const accounts = await listAccounts();
   const totals = { daySpend: 0, monthSpend: 0, dayFees: 0, monthFees: 0 };
   for (const acc of accounts) {
-    const t = await computeSpend(acc.id, dayStart, monthStart);
+    const t = await computeSpend(acc.id, dayStart, monthStart, monthEnd);
     totals.daySpend += t.daySpend;
     totals.monthSpend += t.monthSpend;
     totals.dayFees += t.dayFees;
     totals.monthFees += t.monthFees;
   }
-  return { ...totals, accounts: accounts.length, dayStart, monthStart };
+  return { ...totals, accounts: accounts.length, dayStart, monthStart, monthEnd };
 }
 
 /**
