@@ -87,31 +87,34 @@ export function fmtFieldValue(key: string, value: unknown): string {
 }
 
 /**
- * Fee breakdown read from the transaction's own values — identical logic to the
- * account panel, so the monthly-spend figure matches the source row.
+ * Financial breakdown of one transaction — a thin read of the ONE spend engine
+ * (`canonicalAmounts` in ./bybit-spend). Transaction details, reports and
+ * monthly spend therefore always show the same gross / fee / net / spend.
  */
-export function txnFeeBreakdown(input: { amount?: unknown; detail?: Record<string, unknown> | null }) {
-  const d = (input.detail ?? {}) as Record<string, unknown>;
-  const abs = (v: unknown) => {
-    const n = Number(v ?? NaN);
-    return Number.isFinite(n) ? Math.abs(n) : null;
+export function txnFeeBreakdown(input: {
+  amount?: unknown;
+  currency?: unknown;
+  detail?: Record<string, unknown> | null;
+}) {
+  const d = input.detail ?? null;
+  const a = canonicalAmounts({
+    txnId: "",
+    amount: Number(input.amount ?? 0) || 0,
+    time: 0,
+    currency: input.currency ?? d?.["basicCurrency"] ?? d?.["transactionCurrency"] ?? "USD",
+    detail: d,
+  });
+  return {
+    total: a.grossAmount,
+    fee: a.fee || null,
+    spend: a.spendUsd ?? a.netAmount,
+    grossAmount: a.grossAmount,
+    netAmount: a.netAmount,
+    currency: a.currency,
+    spendUsd: a.spendUsd,
   };
-  const total = abs(input.amount) ?? abs(d["basicAmount"]) ?? abs(d["grossAmount"]);
-  const net = abs(d["transactionAmount"]) ?? abs(d["basicAmount"]);
-
-  let fee: number | null = null;
-  for (const k of ["foreignTxnFee", "feeAmount", "fee", "handlingFee"]) {
-    const n = abs(d[k]);
-    if (n) {
-      fee = n;
-      break;
-    }
-  }
-  if (fee === null && total !== null && net !== null && total - net > 0.0049) fee = total - net;
-
-  const spend = fee !== null && total !== null ? total - fee : (net ?? total);
-  return { total, fee, spend };
 }
+
 
 export const TXN_SECTIONS: { title: string; defs: FieldDef[] }[] = [
   { title: "بيانات المعاملة الأساسية", defs: CORE_FIELDS },
