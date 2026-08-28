@@ -758,13 +758,14 @@ function mapCardTxn(t: any): CardTxn {
       ["3", "5", "6", "7", "10", "11"].includes(side) ||
       tradeStatus === "3" ||
       /REFUND|REVERS|CHARGEBACK/.test(upper);
+    // Bybit only returns card rows that already reached a financial outcome.
+    // Anything that is not explicitly a refund or a decline is a real purchase,
+    // so we never surface "pending" for card transactions.
     const status: CardTxn["status"] = isRefund
       ? "refund"
       : tradeStatus === "2" || /FAIL|DECLIN|REJECT|CANCEL/.test(upper)
         ? "failed"
-        : tradeStatus === "0"
-          ? "pending"
-          : "success";
+        : "success";
 
 
     return {
@@ -932,18 +933,17 @@ function mapStoredRow(r: any): CardTxn {
     ["3", "5", "6", "7", "10", "11"].includes(side) ||
     tradeStatus === "3" ||
     /REFUND|REVERS|CHARGEBACK/.test(upper);
+  // The status persisted at ingest time is the source of truth. A stored
+  // "pending" is a stale authorisation snapshot, so it is re-derived below and
+  // card rows never render as pending.
   const stored: CardTxn["status"] | null =
-    r.status === "success" || r.status === "failed" || r.status === "refund" || r.status === "pending" ? r.status : null;
+    r.status === "success" || r.status === "failed" || r.status === "refund" ? r.status : null;
   const derived: CardTxn["status"] = isRefund
     ? "refund"
     : tradeStatus === "2" || /FAIL|DECLIN|REJECT|CANCEL/.test(upper)
       ? "failed"
-      : tradeStatus === "0"
-        ? "pending"
-        : "success";
-  // Raw provider state wins over stale ingest-time labels. Older authorisation
-  // rows were stored as success and must render as pending until settled.
-  const status: CardTxn["status"] = isRefund || tradeStatus ? derived : (stored ?? derived);
+      : "success";
+  const status: CardTxn["status"] = isRefund ? "refund" : (stored ?? derived);
 
 
 
@@ -991,11 +991,8 @@ export async function fetchCardTxnsPage(opts: {
 
   const scoped = (q: any) => (opts.accountId ? q.eq("account_id", opts.accountId) : q);
 
-  const applyStatus = (q: any, s: "all" | "success" | "failed" | "refund") => {
-    if (s === "all") return q;
-    if (s === "success") return q.eq("status", "success").eq("detail->>tradeStatus", "1");
-    return q.eq("status", s);
-  };
+  const applyStatus = (q: any, s: "all" | "success" | "failed" | "refund") =>
+    s === "all" ? q : q.eq("status", s);
 
   // Page rows and the count for the same scope in a single round trip; the
   // three extra per-status counts were never rendered and cost a full scan each.

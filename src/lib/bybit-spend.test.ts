@@ -31,15 +31,14 @@ describe("monthly spend engine", () => {
     expect(totals.countedTxns).toBe(1);
   });
 
-  it("keeps an authorisation for daily visibility but excludes it from monthly successful spend", () => {
+  it("still counts an authorisation that has no settlement yet", () => {
     const totals = sumSpend(
       [row({ txnId: "auth-2", amount: 12, time: DAY_START + 1000, detail: { tradeStatus: "0", side: "1", paymentId: "P2", basicAmount: 12, basicCurrency: "USD" } })],
       DAY_START,
       MONTH_START,
     );
     expect(totals.daySpend).toBe(12);
-    expect(totals.monthSpend).toBe(0);
-    expect(totals.countedTxns).toBe(0);
+    expect(totals.monthSpend).toBe(12);
   });
 
   it("excludes refunds, reversals and failed rows", () => {
