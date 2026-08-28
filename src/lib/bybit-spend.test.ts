@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { auditSpend, canonicalAmounts, canonicalize, getCanonicalTransactionIdentity, sumSpend, sumSpendByCard, type SpendRow } from "./bybit-spend";
+import { auditSpend, canonicalAmounts, canonicalize, getCanonicalTransactionIdentity, getMonthlySpendPeriod, sumSpend, sumSpendByCard, type SpendRow } from "./bybit-spend";
 
 const MONTH_START = Date.UTC(2026, 7, 1);
 const DAY_START = Date.UTC(2026, 7, 17);
@@ -356,5 +356,87 @@ describe("canonical transactions", () => {
     const cardTotal = [...perCard.values()].reduce((s, c) => s + c.spend, 0);
     expect(cardTotal).toBeCloseTo(account.monthSpend, 10);
     expect(cardTotal).toBeCloseTo(15.5, 10);
+  });
+});
+
+describe("Bybit monthly spend cycle (getMonthlySpendPeriod)", () => {
+  const iso = (ms: number) => new Date(ms).toISOString();
+
+  it("31-day month: the cycle opens on the 31st", () => {
+    const p = getMonthlySpendPeriod(Date.UTC(2026, 7, 31, 0, 0, 0));
+    expect(iso(p.periodStart)).toBe("2026-08-31T00:00:00.000Z");
+    expect(iso(p.periodEnd)).toBe("2026-09-30T00:00:00.000Z");
+  });
+
+  it("30-day month: the cycle opens on the 30th", () => {
+    const p = getMonthlySpendPeriod(Date.UTC(2026, 8, 30, 12, 0, 0));
+    expect(iso(p.periodStart)).toBe("2026-09-30T00:00:00.000Z");
+    expect(iso(p.periodEnd)).toBe("2026-10-31T00:00:00.000Z");
+  });
+
+  it("February 28: the cycle opens on the 28th", () => {
+    const p = getMonthlySpendPeriod(Date.UTC(2026, 1, 28, 5, 0, 0));
+    expect(iso(p.periodStart)).toBe("2026-02-28T00:00:00.000Z");
+    expect(iso(p.periodEnd)).toBe("2026-03-31T00:00:00.000Z");
+  });
+
+  it("February 29 in a leap year: the cycle opens on the 29th", () => {
+    const p = getMonthlySpendPeriod(Date.UTC(2028, 1, 29, 0, 0, 1));
+    expect(iso(p.periodStart)).toBe("2028-02-29T00:00:00.000Z");
+    expect(iso(p.periodEnd)).toBe("2028-03-31T00:00:00.000Z");
+    const before = getMonthlySpendPeriod(Date.UTC(2028, 1, 28, 23, 59, 59));
+    expect(iso(before.periodStart)).toBe("2028-01-31T00:00:00.000Z");
+    expect(iso(before.periodEnd)).toBe("2028-02-29T00:00:00.000Z");
+  });
+
+  it("before the anchor day the previous cycle is still open", () => {
+    const p = getMonthlySpendPeriod(Date.UTC(2026, 8, 15));
+    expect(iso(p.periodStart)).toBe("2026-08-31T00:00:00.000Z");
+    expect(iso(p.periodEnd)).toBe("2026-09-30T00:00:00.000Z");
+  });
+
+  it("boundaries are half-open, so every transaction lands in exactly one cycle", () => {
+    const { periodStart, periodEnd } = getMonthlySpendPeriod(Date.UTC(2026, 8, 15));
+    const stamps = [
+      periodStart - 60_000, // one minute before the cycle
+      periodStart, // exactly at the start
+      periodStart + 15.5 * 3600_000, // during the first day
+      periodEnd - 1, // last millisecond of the cycle
+      periodEnd, // exactly at the next cycle start
+    ];
+    const rows = stamps.map((time, i) =>
+      row({
+        txnId: `b${i}`,
+        amount: 10,
+        time,
+        detail: { tradeStatus: "1", side: "1", paymentId: `B${i}`, basicAmount: 10, basicCurrency: "USD" },
+      }),
+    );
+
+    const current = sumSpend(rows, 0, periodStart, periodEnd);
+    expect(current.monthSpend).toBe(30); // start, first day, last ms
+
+    const previous = getMonthlySpendPeriod(periodStart - 1);
+    const prior = sumSpend(rows, 0, previous.periodStart, previous.periodEnd);
+    expect(prior.monthSpend).toBe(10); // only the minute-before row
+
+    const next = getMonthlySpendPeriod(periodEnd);
+    const upcoming = sumSpend(rows, 0, next.periodStart, next.periodEnd);
+    expect(upcoming.monthSpend).toBe(10); // only the row exactly at the next start
+
+    expect(prior.monthSpend + current.monthSpend + upcoming.monthSpend).toBe(50);
+  });
+
+  it("per-card monthly spend uses the same cycle as the account", () => {
+    const { periodStart, periodEnd } = getMonthlySpendPeriod(Date.UTC(2026, 8, 15));
+    const rows = [
+      { ...row({ txnId: "p1", amount: 20, time: periodStart, detail: { tradeStatus: "1", side: "1", paymentId: "P1", basicAmount: 20, basicCurrency: "USD" } }), pan4: "1111" },
+      { ...row({ txnId: "p2", amount: 5, time: periodStart - 1, detail: { tradeStatus: "1", side: "1", paymentId: "P2", basicAmount: 5, basicCurrency: "USD" } }), pan4: "2222" },
+    ] as Array<SpendRow & { pan4: string }>;
+    const account = sumSpend(rows, 0, periodStart, periodEnd);
+    const perCard = sumSpendByCard(rows, (r) => (r as SpendRow & { pan4: string }).pan4, { periodStart, periodEnd });
+    const cardTotal = [...perCard.values()].reduce((s, c) => s + c.monthSpend, 0);
+    expect(cardTotal).toBeCloseTo(account.monthSpend, 10);
+    expect(cardTotal).toBe(20);
   });
 });
