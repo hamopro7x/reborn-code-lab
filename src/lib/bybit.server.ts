@@ -448,7 +448,10 @@ async function fetchCardPages(maxRows: number, creds: Creds): Promise<any[]> {
 async function callCard(limit: number, accountId?: string, creds?: Creds): Promise<any[]> {
   const key = accountId ?? "default";
   const cached = cardCache.get(key);
-  if (cached && Date.now() - cached.at < 30_000) return cached.rows;
+  // Short TTL: a settlement can land seconds after its authorisation, and a
+  // cached authorisation must never be treated as the final record.
+  if (cached && Date.now() - cached.at < 10_000) return cached.rows;
+
   const running = cardInflight.get(key);
   if (running) return running;
   const p = fetchCardPages(Math.max(limit, 100), creds ?? (await getCreds(accountId)))
