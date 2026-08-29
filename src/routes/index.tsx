@@ -148,6 +148,11 @@ function Home() {
     <div className="min-h-screen flex flex-col">
       <Header />
 
+      {/* Banner full-width, flush under header */}
+      <div className="px-4 md:px-6 lg:px-8">
+        <HeroCarousel slides={slides} badges={heroBadges} />
+      </div>
+
       <main className="flex-1 container mx-auto px-4 py-6">
         {/* Mobile / tablet categories strip */}
         <nav aria-label="الأقسام" className="lg:hidden -mx-4 px-4 mb-4 overflow-x-auto scrollbar-hide">
@@ -167,7 +172,6 @@ function Home() {
         </nav>
 
         <div className="min-w-0 space-y-8">
-          <HeroCarousel slides={slides} badges={heroBadges} />
 
           {(timerQ.isLoading || timerQ.data) && (
             <div className="flex justify-center">
