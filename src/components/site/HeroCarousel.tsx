@@ -167,7 +167,7 @@ export function HeroBannerView({ banner, preview }: { banner: HeroBanner; previe
 
       {/* الكروت الصغيرة + الأزرار الجانبية */}
       {(hasBadges || sideButtons) && (
-        <div className="hidden md:flex md:order-1 flex-col justify-center gap-3 p-6 min-w-0">
+        <div className="relative hidden md:flex md:order-1 flex-col justify-center gap-3 p-6 min-w-0">
           <BadgeCards banner={banner} />
           {sideButtons && <ButtonRow banner={banner} />}
         </div>
