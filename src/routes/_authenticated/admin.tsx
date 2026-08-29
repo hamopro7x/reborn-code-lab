@@ -41,6 +41,7 @@ import { AdminSheet } from "@/components/admin/AdminSheet";
 import { LessonUploader } from "@/components/admin/LessonUploader";
 import { DeviceMonitorGrid } from "@/components/admin/DeviceMonitorGrid";
 import { EmployeeDevices } from "@/components/admin/DeviceMonitorGrid";
+import { HeroBannerManager } from "@/components/admin/HeroBannerManager";
 
 
 type PanelKey =
