@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import {
   heroIcon,
   isInternalUrl,
+  type HeroBadgeItem,
   type HeroBanner,
+  type HeroButton,
   type HeroLayerKey,
   type HeroPositions,
 } from "@/lib/hero-banners";
@@ -18,69 +20,48 @@ const alignClass = {
 
 const justifyClass = { start: "justify-start", center: "justify-center", end: "justify-end" } as const;
 
-function ButtonRow({ banner }: { banner: HeroBanner }) {
-  const buttons = banner.buttons.filter((b) => b.enabled && b.label.trim());
-  if (!buttons.length) return null;
-  return (
-    <div className={`flex flex-wrap items-center gap-3 ${justifyClass[banner.text_align]}`}>
-      {buttons.map((b) => {
-        const Icon = heroIcon(b.icon);
-        const cls =
-          b.variant === "teal"
-            ? "bg-teal text-teal-foreground hover:bg-teal/90"
-            : b.variant === "outline"
-              ? "bg-transparent border border-border text-foreground hover:bg-muted"
-              : "";
-        const inner = (
-          <Button
-            className={`px-6 rounded-full font-bold gap-2 ${cls}`}
-            style={{ height: banner.button_size, fontSize: Math.max(13, Math.round(banner.button_size * 0.34)) }}
-          >
-            {b.label}
-            {Icon && <Icon className="size-4" />}
-          </Button>
-        );
-        return isInternalUrl(b.url) ? (
-          <Link key={b.id} to={b.url as any}>
-            {inner}
-          </Link>
-        ) : (
-          <a key={b.id} href={b.url} target="_blank" rel="noreferrer noopener">
-            {inner}
-          </a>
-        );
-      })}
-    </div>
+function HeroButtonItem({ banner, b }: { banner: HeroBanner; b: HeroButton }) {
+  const Icon = heroIcon(b.icon);
+  const cls =
+    b.variant === "teal"
+      ? "bg-teal text-teal-foreground hover:bg-teal/90"
+      : b.variant === "outline"
+        ? "bg-transparent border border-border text-foreground hover:bg-muted"
+        : "";
+  const inner = (
+    <Button
+      className={`px-6 rounded-full font-bold gap-2 ${cls}`}
+      style={{ height: banner.button_size, fontSize: Math.max(13, Math.round(banner.button_size * 0.34)) }}
+    >
+      {b.label}
+      {Icon && <Icon className="size-4" />}
+    </Button>
+  );
+  return isInternalUrl(b.url) ? (
+    <Link to={b.url as any}>{inner}</Link>
+  ) : (
+    <a href={b.url} target="_blank" rel="noreferrer noopener">
+      {inner}
+    </a>
   );
 }
 
-function BadgeCards({ banner }: { banner: HeroBanner }) {
-  const badges = banner.badges.filter((b) => b.enabled && (b.title.trim() || b.value.trim()));
-  if (!badges.length) return null;
+function BadgeCard({ b }: { b: HeroBadgeItem }) {
+  const Icon = heroIcon(b.icon);
   return (
-    <div className="flex flex-col gap-3">
-      {badges.map((b) => {
-        const Icon = heroIcon(b.icon);
-        return (
-          <div
-            key={b.id}
-            className="flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2.5 w-[170px]"
-          >
-            {Icon && (
-              <span
-                className="flex size-9 shrink-0 items-center justify-center rounded-lg text-white"
-                style={{ backgroundColor: b.color }}
-              >
-                <Icon className="size-4" />
-              </span>
-            )}
-            <span className="flex flex-col min-w-0">
-              {b.title && <span className="text-[11px] text-muted-foreground truncate">{b.title}</span>}
-              {b.value && <span className="text-sm font-bold text-foreground truncate">{b.value}</span>}
-            </span>
-          </div>
-        );
-      })}
+    <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2.5 w-[170px]">
+      {Icon && (
+        <span
+          className="flex size-9 shrink-0 items-center justify-center rounded-lg text-white"
+          style={{ backgroundColor: b.color }}
+        >
+          <Icon className="size-4" />
+        </span>
+      )}
+      <span className="flex flex-col min-w-0">
+        {b.title && <span className="text-[11px] text-muted-foreground truncate">{b.title}</span>}
+        {b.value && <span className="text-sm font-bold text-foreground truncate">{b.value}</span>}
+      </span>
     </div>
   );
 }
@@ -128,16 +109,18 @@ export function HeroBannerView({
 }: {
   banner: HeroBanner;
   preview?: boolean;
-  /** يسمح بتحريك العناصر بالماوس داخل المعاينة. */
+  /** يسمح بتحريك كل عنصر بالماوس داخل المعاينة. */
   editable?: boolean;
   onPositionsChange?: (p: HeroPositions) => void;
 }) {
-  const hasBadges = banner.badges.some((b) => b.enabled && (b.title.trim() || b.value.trim()));
   const hasMedia = banner.media_type !== "none";
   const sideButtons = banner.buttons_position === "side";
   const pos = banner.positions ?? {};
   const rootRef = useRef<HTMLDivElement>(null);
   const canDrag = Boolean(editable && onPositionsChange);
+
+  const buttons = banner.buttons.filter((b) => b.enabled && b.label.trim());
+  const badges = banner.badges.filter((b) => b.enabled && (b.title.trim() || b.value.trim()));
 
   function startDrag(key: HeroLayerKey, e: React.PointerEvent<HTMLDivElement>) {
     if (!canDrag) return;
@@ -170,7 +153,17 @@ export function HeroBannerView({
   }
 
   /** غلاف عنصر: إمّا في التخطيط الطبيعي أو بموضع حر مطلق. */
-  function Layer({ k, className, children }: { k: HeroLayerKey; className?: string; children: React.ReactNode }) {
+  function Layer({
+    k,
+    className,
+    style,
+    children,
+  }: {
+    k: HeroLayerKey;
+    className?: string;
+    style?: React.CSSProperties;
+    children: React.ReactNode;
+  }) {
     const p = pos[k];
     const dragCls = canDrag ? "cursor-move touch-none outline-dashed outline-1 outline-offset-2 outline-border" : "";
     if (p) {
@@ -178,67 +171,85 @@ export function HeroBannerView({
         <div
           onPointerDown={(e) => startDrag(k, e)}
           className={`absolute z-10 ${dragCls} ${className ?? ""}`}
-          style={{ left: `${p.x}%`, top: `${p.y}%` }}
+          style={{ left: `${p.x}%`, top: `${p.y}%`, ...style }}
         >
           {children}
         </div>
       );
     }
     return (
-      <div onPointerDown={(e) => startDrag(k, e)} className={`${dragCls} ${className ?? ""}`}>
+      <div onPointerDown={(e) => startDrag(k, e)} className={`${dragCls} ${className ?? ""}`} style={style}>
         {children}
       </div>
     );
   }
 
-  const titleBlock = (
-    <>
-      {banner.show_title && banner.title && (
+  /** العناصر التي لها موضع حر تُرسم مباشرة داخل الحاوية بدل التخطيط الطبيعي. */
+  const freeKeys = new Set(Object.keys(pos));
+
+  const titleEl =
+    banner.show_title && banner.title ? (
+      <Layer k="title">
         <h1
           className="font-black leading-tight line-clamp-3"
           style={{ fontSize: `clamp(${banner.title_size_mobile}px, 4vw, ${banner.title_size}px)` }}
         >
           {banner.title}
         </h1>
-      )}
-      {banner.show_subtitle && banner.subtitle && (
+      </Layer>
+    ) : null;
+
+  const subtitleEl =
+    banner.show_subtitle && banner.subtitle ? (
+      <Layer k="subtitle" style={freeKeys.has("subtitle") ? undefined : { marginTop: banner.gap_title_subtitle }}>
         <p
           className="text-hero-foreground/70 line-clamp-3 max-w-md"
-          style={{
-            marginTop: banner.show_title && banner.title ? banner.gap_title_subtitle : 0,
-            fontSize: `clamp(${banner.subtitle_size_mobile}px, 2vw, ${banner.subtitle_size}px)`,
-          }}
+          style={{ fontSize: `clamp(${banner.subtitle_size_mobile}px, 2vw, ${banner.subtitle_size}px)` }}
         >
           {banner.subtitle}
         </p>
-      )}
-    </>
-  );
-
-  const contentLayer = (
-    <Layer k="content" className={`flex flex-col min-w-0 ${alignClass[banner.content_position_x]}`}>
-      {titleBlock}
-      {!pos.buttons && (
-        <div className={sideButtons ? "md:hidden w-full" : "w-full"} style={{ marginTop: banner.gap_subtitle_buttons }}>
-          <ButtonRow banner={banner} />
-        </div>
-      )}
-    </Layer>
-  );
-
-  const buttonsLayer = pos.buttons ? (
-    <Layer k="buttons">
-      <ButtonRow banner={banner} />
-    </Layer>
-  ) : null;
-
-  const badgesLayer =
-    hasBadges || sideButtons ? (
-      <Layer k="badges" className="flex flex-col gap-3">
-        <BadgeCards banner={banner} />
-        {sideButtons && !pos.buttons && <div className="hidden md:block"><ButtonRow banner={banner} /></div>}
       </Layer>
     ) : null;
+
+  const subtitle2El =
+    banner.show_subtitle2 && banner.subtitle2 ? (
+      <Layer k="subtitle2" style={freeKeys.has("subtitle2") ? undefined : { marginTop: banner.gap_title_subtitle }}>
+        <p
+          className="text-hero-foreground/70 line-clamp-3 max-w-md"
+          style={{ fontSize: `clamp(${banner.subtitle2_size_mobile}px, 2vw, ${banner.subtitle2_size}px)` }}
+        >
+          {banner.subtitle2}
+        </p>
+      </Layer>
+    ) : null;
+
+  const buttonEls = buttons.map((b) => (
+    <Layer key={b.id} k={`btn:${b.id}`}>
+      <HeroButtonItem banner={banner} b={b} />
+    </Layer>
+  ));
+
+  const badgeEls = badges.map((b) => (
+    <Layer key={b.id} k={`bdg:${b.id}`}>
+      <BadgeCard b={b} />
+    </Layer>
+  ));
+
+  const flowButtons = buttons.filter((b) => !freeKeys.has(`btn:${b.id}`));
+  const flowBadges = badges.filter((b) => !freeKeys.has(`bdg:${b.id}`));
+
+  const buttonRow = flowButtons.length ? (
+    <div
+      className={`flex flex-wrap items-center gap-3 ${justifyClass[banner.text_align]}`}
+      style={{ marginTop: banner.gap_subtitle_buttons }}
+    >
+      {buttonEls.filter((_, i) => !freeKeys.has(`btn:${buttons[i]!.id}`))}
+    </div>
+  ) : null;
+
+  const badgesColumn = flowBadges.length ? (
+    <div className="flex flex-col gap-3">{badgeEls.filter((_, i) => !freeKeys.has(`bdg:${badges[i]!.id}`))}</div>
+  ) : null;
 
   return (
     <div
@@ -268,20 +279,29 @@ export function HeroBannerView({
       )}
 
       {/* العناصر ذات المواضع الحرة */}
-      {pos.content && contentLayer}
-      {buttonsLayer}
-      {pos.badges && badgesLayer}
+      {freeKeys.has("title") && titleEl}
+      {freeKeys.has("subtitle") && subtitleEl}
+      {freeKeys.has("subtitle2") && subtitle2El}
+      {buttonEls.filter((_, i) => freeKeys.has(`btn:${buttons[i]!.id}`))}
+      {badgeEls.filter((_, i) => freeKeys.has(`bdg:${badges[i]!.id}`))}
 
       {/* التخطيط الطبيعي لبقية العناصر */}
       <div className="relative h-full grid md:grid-cols-[auto_minmax(0,1fr)]">
         <div
           className={`relative md:order-2 p-6 md:p-10 flex flex-col min-w-0 overflow-hidden ${justifyClass[banner.content_position_y]} ${alignClass[banner.content_position_x]}`}
         >
-          {!pos.content && contentLayer}
+          {!freeKeys.has("title") && titleEl}
+          {!freeKeys.has("subtitle") && subtitleEl}
+          {!freeKeys.has("subtitle2") && subtitle2El}
+          {!sideButtons && buttonRow}
+          {sideButtons && <div className="md:hidden w-full">{buttonRow}</div>}
         </div>
 
-        {!pos.badges && badgesLayer && (
-          <div className="hidden md:flex md:order-1 flex-col justify-center gap-3 p-6 min-w-0">{badgesLayer}</div>
+        {(badgesColumn || sideButtons) && (
+          <div className="hidden md:flex md:order-1 flex-col justify-center gap-3 p-6 min-w-0">
+            {badgesColumn}
+            {sideButtons && buttonRow}
+          </div>
         )}
       </div>
     </div>
@@ -324,7 +344,7 @@ export function HeroCarousel({ banners }: { banners: HeroBanner[] }) {
       }}
       aria-label="عروض مميزة"
     >
-      <HeroBannerView banner={active} />
+      <HeroBannerView banner={active!} />
 
       {banners.length > 1 && (
         <>

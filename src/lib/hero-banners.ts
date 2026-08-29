@@ -59,18 +59,18 @@ export type HeroMediaType = "image" | "video" | "color" | "none";
 
 export type HeroMediaFit = "cover" | "contain";
 
-/** مفاتيح العناصر القابلة للتحريك الحر داخل البانر. */
-export type HeroLayerKey = "content" | "buttons" | "badges";
+/** مفاتيح العناصر القابلة للتحريك الحر داخل البانر (title / subtitle / subtitle2 / btn:id / bdg:id). */
+export type HeroLayerKey = string;
 
 /** موضع حر بالنسبة المئوية من أبعاد البانر. */
 export type HeroPos = { x: number; y: number };
 
 export type HeroPositions = Partial<Record<HeroLayerKey, HeroPos>>;
 
-export const HERO_LAYER_LABELS: Record<HeroLayerKey, string> = {
-  content: "النص",
-  buttons: "الأزرار",
-  badges: "الكروت",
+export const HERO_LAYER_LABELS: Record<string, string> = {
+  title: "العنوان",
+  subtitle: "الوصف",
+  subtitle2: "الوصف الثاني",
 };
 
 export type HeroBanner = {
@@ -79,6 +79,8 @@ export type HeroBanner = {
   show_title: boolean;
   subtitle: string;
   show_subtitle: boolean;
+  subtitle2: string;
+  show_subtitle2: boolean;
   media_type: HeroMediaType;
   media_fit: HeroMediaFit;
   media_url: string | null;
@@ -102,6 +104,8 @@ export type HeroBanner = {
   title_size_mobile: number;
   subtitle_size: number;
   subtitle_size_mobile: number;
+  subtitle2_size: number;
+  subtitle2_size_mobile: number;
   button_size: number;
   buttons: HeroButton[];
   badges: HeroBadgeItem[];
@@ -133,6 +137,8 @@ export const HERO_DEFAULTS: Omit<HeroBanner, "id"> = {
   show_title: true,
   subtitle: "اشتراكات وأدوات وقوالب جاهزة للاستخدام مع ضمان حقيقي وتسليم فوري.",
   show_subtitle: true,
+  subtitle2: "",
+  show_subtitle2: false,
   media_type: "image",
   media_fit: "cover",
   media_url: null,
@@ -156,6 +162,8 @@ export const HERO_DEFAULTS: Omit<HeroBanner, "id"> = {
   title_size_mobile: 24,
   subtitle_size: 16,
   subtitle_size_mobile: 14,
+  subtitle2_size: 16,
+  subtitle2_size_mobile: 14,
   button_size: 44,
   buttons: [],
   badges: [],
@@ -167,8 +175,9 @@ export const HERO_DEFAULTS: Omit<HeroBanner, "id"> = {
 /** تطبيع المواضع الحرة: نسب مئوية بين 0 و100 فقط. */
 export function normalizePositions(raw: any): HeroPositions {
   const out: HeroPositions = {};
-  for (const k of ["content", "buttons", "badges"] as HeroLayerKey[]) {
-    const p = raw?.[k];
+  if (!raw || typeof raw !== "object") return out;
+  for (const k of Object.keys(raw)) {
+    const p = raw[k];
     const x = Number(p?.x);
     const y = Number(p?.y);
     if (Number.isFinite(x) && Number.isFinite(y)) {
@@ -212,6 +221,8 @@ export function normalizeBanner(row: any): HeroBanner {
     show_title: row?.show_title !== false,
     subtitle: String(row?.subtitle ?? d.subtitle),
     show_subtitle: row?.show_subtitle !== false,
+    subtitle2: String(row?.subtitle2 ?? ""),
+    show_subtitle2: row?.show_subtitle2 === true,
     media_type: (["image", "video", "color", "none"].includes(row?.media_type) ? row.media_type : d.media_type) as HeroMediaType,
     media_fit: (row?.media_fit === "contain" ? "contain" : "cover") as HeroMediaFit,
     media_url: row?.media_url ?? null,
@@ -235,6 +246,8 @@ export function normalizeBanner(row: any): HeroBanner {
     title_size_mobile: num(row?.title_size_mobile, d.title_size_mobile),
     subtitle_size: num(row?.subtitle_size, d.subtitle_size),
     subtitle_size_mobile: num(row?.subtitle_size_mobile, d.subtitle_size_mobile),
+    subtitle2_size: num(row?.subtitle2_size, d.subtitle2_size),
+    subtitle2_size_mobile: num(row?.subtitle2_size_mobile, d.subtitle2_size_mobile),
     button_size: num(row?.button_size, d.button_size),
     buttons,
     badges,
