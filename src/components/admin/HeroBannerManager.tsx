@@ -163,9 +163,21 @@ export function HeroBannerManager() {
     persistOrder(list);
   }
 
-  const preview = useMemo(() => editing, [editing]);
+  function openEditor(b: HeroBanner, isNewBanner: boolean) {
+    setEditing(b);
+    setIsNew(isNewBanner);
+    setSnapshot(JSON.stringify(bannerToRow(b)));
+  }
 
-  return (
+  function closeEditor() {
+    const dirty = editing && JSON.stringify(bannerToRow(editing)) !== snapshot;
+    if (dirty && !confirm("هناك تغييرات غير محفوظة، الرجوع سيفقدها. متابعة؟")) return;
+    setEditing(null);
+    setSnapshot("");
+  }
+
+  if (!editing)
+    return (
     <div>
       <div className="flex items-center justify-between mb-3">
         <div>
