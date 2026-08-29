@@ -1,229 +1,128 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, ArrowLeft, Percent, Zap, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { heroIcon, isInternalUrl, type HeroBanner } from "@/lib/hero-banners";
 
-const alignClass = {
-  start: "items-start text-start",
-  center: "items-center text-center",
-  end: "items-end text-end",
-} as const;
+export type HeroSlide = {
+  id: string;
+  title: string;
+  subtitle?: string | null;
+  image?: string | null;
+  to: string;
+  params?: Record<string, string>;
+  cta?: string;
+};
 
-const justifyClass = { start: "justify-start", center: "justify-center", end: "justify-end" } as const;
+export type HeroBadge = { title: string; value: string };
 
-function ButtonRow({ banner }: { banner: HeroBanner }) {
-  const buttons = banner.buttons.filter((b) => b.enabled && b.label.trim());
-  if (!buttons.length) return null;
-  return (
-    <div className={`flex flex-wrap items-center gap-3 ${justifyClass[banner.text_align]}`}>
-      {buttons.map((b) => {
-        const Icon = heroIcon(b.icon);
-        const cls =
-          b.variant === "teal"
-            ? "bg-teal text-teal-foreground hover:bg-teal/90"
-            : b.variant === "outline"
-              ? "bg-transparent border border-border text-foreground hover:bg-muted"
-              : "";
-        const inner = (
-          <Button
-            className={`px-6 rounded-full font-bold gap-2 ${cls}`}
-            style={{ height: banner.button_size, fontSize: Math.max(13, Math.round(banner.button_size * 0.34)) }}
-          >
-            {b.label}
-            {Icon && <Icon className="size-4" />}
-          </Button>
-        );
-        return isInternalUrl(b.url) ? (
-          <Link key={b.id} to={b.url as any}>
-            {inner}
-          </Link>
-        ) : (
-          <a key={b.id} href={b.url} target="_blank" rel="noreferrer noopener">
-            {inner}
-          </a>
-        );
-      })}
-    </div>
-  );
+function badgeStyle(title: string) {
+  if (title.includes("خصم")) return { Icon: Percent, bg: "bg-[#e2445c]" };
+  if (title.includes("تسليم")) return { Icon: Zap, bg: "bg-[#2f7ef7]" };
+  return { Icon: Package, bg: "bg-primary" };
 }
 
-function BadgeCards({ banner }: { banner: HeroBanner }) {
-  const badges = banner.badges.filter((b) => b.enabled && (b.title.trim() || b.value.trim()));
-  if (!badges.length) return null;
-  return (
-    <div className="flex flex-col gap-3">
-      {badges.map((b) => {
-        const Icon = heroIcon(b.icon);
-        return (
-          <div
-            key={b.id}
-            className="flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2.5 w-[170px]"
-          >
-            {Icon && (
-              <span
-                className="flex size-9 shrink-0 items-center justify-center rounded-lg text-white"
-                style={{ backgroundColor: b.color }}
-              >
-                <Icon className="size-4" />
-              </span>
-            )}
-            <span className="flex flex-col min-w-0">
-              {b.title && <span className="text-[11px] text-muted-foreground truncate">{b.title}</span>}
-              {b.value && <span className="text-sm font-bold text-foreground truncate">{b.value}</span>}
-            </span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function Media({ banner, preview }: { banner: HeroBanner; preview?: boolean }) {
-  if (banner.media_type === "video" && banner.media_url) {
-    return (
-      <video
-        key={banner.media_url}
-        src={banner.media_url}
-        poster={banner.poster_url ?? undefined}
-        autoPlay={banner.video_autoplay}
-        muted={banner.video_muted || banner.video_autoplay}
-        loop={banner.video_loop}
-        playsInline
-        controls={false}
-        preload={preview ? "metadata" : "auto"}
-        className="w-full h-full object-cover"
-      />
-    );
-  }
-  if (banner.media_type === "image" && banner.media_url) {
-    return (
-      <img
-        key={banner.media_url}
-        src={banner.media_url}
-        alt={banner.title || "بانر"}
-        width={900}
-        height={600}
-        className="w-full h-full object-cover"
-        loading={preview ? "lazy" : "eager"}
-      />
-    );
-  }
-  return <div className="w-full h-full" style={{ backgroundColor: banner.background_color ?? undefined }} />;
-}
-
-/** عرض بانر واحد — يُستخدم في الصفحة الرئيسية وفي المعاينة داخل لوحة الإدارة. */
-export function HeroBannerView({ banner, preview }: { banner: HeroBanner; preview?: boolean }) {
-  const hasBadges = banner.badges.some((b) => b.enabled && (b.title.trim() || b.value.trim()));
-  const hasMedia = banner.media_type !== "none";
-  const sideButtons = banner.buttons_position === "side";
-
-  return (
-    <div
-      className="relative h-[260px] md:h-[340px] grid md:grid-cols-[1fr_auto_minmax(0,1fr)] overflow-hidden"
-      style={{ backgroundColor: banner.background_color ?? undefined }}
-    >
-      {/* الخلفية / الوسائط — حجم ثابت مهما كان حجم الملف الأصلي */}
-      {hasMedia && (
-        <div className="absolute inset-y-0 left-0 w-full md:static md:w-auto md:order-2 overflow-hidden md:aspect-[4/3] md:h-full">
-          <Media banner={banner} preview={preview} />
-          {banner.overlay_enabled && (
-            <>
-              <div
-                className="absolute inset-0 md:hidden"
-                style={{ backgroundColor: banner.overlay_color, opacity: Math.min(1, banner.overlay_opacity + 0.4) }}
-              />
-              <div
-                className="absolute inset-0 hidden md:block"
-                style={{ backgroundColor: banner.overlay_color, opacity: banner.overlay_opacity }}
-              />
-            </>
-          )}
-        </div>
-      )}
-
-      {/* النصوص */}
-      <div
-        className={`relative md:order-3 p-6 md:p-10 flex flex-col min-w-0 overflow-hidden ${justifyClass[banner.content_position_y]} ${alignClass[banner.content_position_x]}`}
-      >
-        {banner.show_title && banner.title && (
-          <h1
-            className="font-black leading-tight line-clamp-3"
-            style={{ fontSize: `clamp(${banner.title_size_mobile}px, 4vw, ${banner.title_size}px)` }}
-          >
-            {banner.title}
-          </h1>
-        )}
-        {banner.show_subtitle && banner.subtitle && (
-          <p
-            className="text-hero-foreground/70 line-clamp-3 max-w-md"
-            style={{
-              marginTop: banner.show_title && banner.title ? banner.gap_title_subtitle : 0,
-              fontSize: `clamp(${banner.subtitle_size_mobile}px, 2vw, ${banner.subtitle_size}px)`,
-            }}
-          >
-            {banner.subtitle}
-          </p>
-        )}
-        <div className={sideButtons ? "md:hidden w-full" : "w-full"} style={{ marginTop: banner.gap_subtitle_buttons }}>
-          <ButtonRow banner={banner} />
-        </div>
-      </div>
-
-      {/* الكروت الصغيرة + الأزرار الجانبية */}
-      {(hasBadges || sideButtons) && (
-        <div className="hidden md:flex md:order-1 flex-col justify-center gap-3 p-6 min-w-0">
-          <BadgeCards banner={banner} />
-          {sideButtons && <ButtonRow banner={banner} />}
-        </div>
-      )}
-    </div>
-  );
-}
-
-export function HeroCarousel({ banners }: { banners: HeroBanner[] }) {
+export function HeroCarousel({ slides, badges = [] }: { slides: HeroSlide[]; badges?: HeroBadge[] }) {
   const [index, setIndex] = useState(0);
   const paused = useRef(false);
-  const touchX = useRef<number | null>(null);
 
   useEffect(() => {
-    if (banners.length < 2) return;
+    if (slides.length < 2) return;
     const id = window.setInterval(() => {
-      if (!paused.current) setIndex((i) => (i + 1) % banners.length);
+      if (!paused.current) setIndex((i) => (i + 1) % slides.length);
     }, 6000);
     return () => window.clearInterval(id);
-  }, [banners.length]);
+  }, [slides.length]);
 
   useEffect(() => {
-    if (index > banners.length - 1) setIndex(0);
-  }, [banners.length, index]);
+    if (index > slides.length - 1) setIndex(0);
+  }, [slides.length, index]);
 
-  if (!banners.length) return null;
-  const active = banners[Math.min(index, banners.length - 1)];
+  if (!slides.length) return null;
+  const active = slides[Math.min(index, slides.length - 1)];
+  const shownBadges = badges.slice(0, 3);
+
+  const ctaButtons = (
+    <>
+      <Link to={active.to as any} params={active.params as any}>
+        <Button size="lg" className="h-11 px-6 rounded-full font-bold gap-2">
+          {active.cta ?? "تسوق الآن"}
+          <ArrowLeft className="size-4" />
+        </Button>
+      </Link>
+      <Link to="/track">
+        <Button size="lg" className="h-11 px-6 rounded-full font-bold bg-teal text-teal-foreground hover:bg-teal/90">
+          تتبع طلبك
+        </Button>
+      </Link>
+    </>
+  );
 
   return (
     <section
       className="relative overflow-hidden rounded-b-2xl border border-border bg-hero text-hero-foreground"
       onMouseEnter={() => (paused.current = true)}
       onMouseLeave={() => (paused.current = false)}
-      onTouchStart={(e) => (touchX.current = e.touches[0]?.clientX ?? null)}
-      onTouchEnd={(e) => {
-        const start = touchX.current;
-        touchX.current = null;
-        if (start == null || banners.length < 2) return;
-        const dx = (e.changedTouches[0]?.clientX ?? start) - start;
-        if (Math.abs(dx) < 40) return;
-        setIndex((i) => (dx < 0 ? (i + 1) % banners.length : (i - 1 + banners.length) % banners.length));
-      }}
       aria-label="عروض مميزة"
     >
-      <HeroBannerView banner={active} />
+      <div className="relative h-[260px] md:h-[340px] grid md:grid-cols-[1fr_auto_minmax(0,1fr)] overflow-hidden">
+        {/* Artwork — ثابت الحجم مهما كان حجم الصورة الأصلية */}
+        <div className="absolute inset-y-0 left-0 w-full md:static md:w-auto md:order-2 overflow-hidden md:aspect-[4/3] md:h-full">
+          {active.image ? (
+            <img
+              key={active.id}
+              src={active.image}
+              alt={active.title}
+              width={900}
+              height={600}
+              className="w-full h-full object-cover opacity-30 md:opacity-100 transition-opacity duration-500"
+              loading="eager"
+            />
+          ) : (
+            <div className="w-full h-full bg-hero" />
+          )}
+          <div className="absolute inset-0 bg-hero/75 md:bg-transparent" />
+        </div>
 
-      {banners.length > 1 && (
+        {/* Text + CTAs — الآن على الشمال */}
+        <div className="relative md:order-3 p-6 md:p-10 flex flex-col justify-center gap-4 min-w-0 overflow-hidden">
+          <h1 className="text-2xl md:text-4xl font-black leading-tight line-clamp-3">{active.title}</h1>
+          {active.subtitle && (
+            <p className="text-sm md:text-base text-hero-foreground/70 line-clamp-3 max-w-md">{active.subtitle}</p>
+          )}
+          <div className="flex flex-wrap items-center gap-3 pt-1">
+            {ctaButtons}
+          </div>
+        </div>
+
+        {/* Badges — الآن على اليمين، كل واحد في كارت منفصل */}
+        <div className="hidden md:flex md:order-1 flex-col justify-center gap-3 p-6 min-w-0">
+          {shownBadges.map((b) => {
+            const { Icon, bg } = badgeStyle(b.title);
+            return (
+              <div
+                key={b.title}
+                className="flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2.5 w-[170px]"
+              >
+                <span className={`flex size-9 shrink-0 items-center justify-center rounded-lg text-white ${bg}`}>
+                  <Icon className="size-4" />
+                </span>
+                <span className="flex flex-col min-w-0">
+                  <span className="text-[11px] text-muted-foreground truncate">{b.title}</span>
+                  <span className="text-sm font-bold text-foreground truncate">{b.value}</span>
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+
+
+      {slides.length > 1 && (
         <>
           <button
             type="button"
-            onClick={() => setIndex((i) => (i - 1 + banners.length) % banners.length)}
+            onClick={() => setIndex((i) => (i - 1 + slides.length) % slides.length)}
             aria-label="السابق"
             className="absolute top-1/2 -translate-y-1/2 right-3 size-9 rounded-full border border-border bg-card text-card-foreground flex items-center justify-center hover:bg-muted transition-colors"
           >
@@ -231,14 +130,14 @@ export function HeroCarousel({ banners }: { banners: HeroBanner[] }) {
           </button>
           <button
             type="button"
-            onClick={() => setIndex((i) => (i + 1) % banners.length)}
+            onClick={() => setIndex((i) => (i + 1) % slides.length)}
             aria-label="التالي"
             className="absolute top-1/2 -translate-y-1/2 left-3 size-9 rounded-full border border-border bg-card text-card-foreground flex items-center justify-center hover:bg-muted transition-colors"
           >
             <ChevronLeft className="size-4" />
           </button>
           <div className="absolute bottom-3 left-0 right-0 flex items-center justify-center gap-2">
-            {banners.map((s, i) => (
+            {slides.map((s, i) => (
               <button
                 key={s.id}
                 type="button"
