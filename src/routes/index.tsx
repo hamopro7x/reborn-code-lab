@@ -10,7 +10,7 @@ import { Countdown } from "@/components/site/Countdown";
 
 import { ProductRail } from "@/components/site/ProductRail";
 import { TopupCard } from "@/components/site/TopupCard";
-
+import { HeroCarousel, type HeroSlide } from "@/components/site/HeroCarousel";
 import { useEffect, useMemo } from "react";
 import { useCurrency } from "@/lib/currency-context";
 
@@ -96,6 +96,16 @@ function Home() {
   // لو مفيش منتجات مميزة نعرض الأحدث من نفس البيانات الموجودة.
   const featured = featuredRaw.length ? featuredRaw : (latestQ.data ?? []);
 
+  // Badges الهيرو مبنية على بيانات المنتجات الفعلية (أعلى خصم + عدد المنتجات).
+  const heroBadges = useMemo(() => {
+    const all = latestQ.data ?? [];
+    const maxDiscount = all.reduce((m: number, p: any) => Math.max(m, Number(p.discount_percent ?? 0)), 0);
+    const list: { title: string; value: string }[] = [];
+    if (maxDiscount > 0) list.push({ title: "خصومات تصل إلى", value: `${maxDiscount}%` });
+    list.push({ title: "تسليم فوري", value: "بعد الدفع مباشرة" });
+    if (all.length) list.push({ title: "منتجات متاحة", value: `${all.length}+` });
+    return list;
+  }, [latestQ.data]);
 
   // بطاقات الشحن = منتجات الأقسام التي تمثل بطاقات/شحن في قاعدة البيانات نفسها.
   const topups = useMemo(() => {
@@ -105,38 +115,43 @@ function Home() {
     return matched.length ? matched : [];
   }, [latestQ.data]);
 
+  // شرائح الهيرو مبنية على البيانات الموجودة (منتجات مميزة ثم أقسام) بدون أي بيانات ثابتة.
+  const slides: HeroSlide[] = useMemo(() => {
+    const fromProducts: HeroSlide[] = featured.slice(0, 3).map((p: any) => ({
+      id: `p-${p.id}`,
+      title: p.name,
+      subtitle: p.short_description ?? p.description ?? null,
+      image: p.main_image,
+      to: "/product/$slug",
+      params: { slug: p.slug },
+      cta: "اطلب الآن",
+    }));
+    if (fromProducts.length) return fromProducts;
+    const fromCats: HeroSlide[] = categories.slice(0, 3).map((c: any) => ({
+      id: `c-${c.id}`,
+      title: c.name,
+      subtitle: c.description ?? null,
+      image: c.banner_image,
+      to: "/shop",
+    }));
+    if (fromCats.length) return fromCats;
+    return [{
+      id: "default",
+      title: "أفضل المنتجات الرقمية بأسعار مميزة",
+      subtitle: "اشتراكات وأدوات وقوالب جاهزة للاستخدام مع ضمان حقيقي وتسليم فوري.",
+      image: null,
+      to: "/shop",
+    }];
+  }, [featured, categories]);
 
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
 
-      {/* Hero نصي بسيط بدون كرت */}
-      <section className="relative overflow-hidden">
-        
-        <div className="relative container mx-auto px-4 py-16 md:py-24 text-center flex flex-col items-center gap-5">
-          <h1 className="text-4xl md:text-6xl font-extrabold leading-tight bg-gradient-to-l from-fuchsia-300 via-purple-400 to-indigo-400 bg-clip-text text-transparent">
-            متجر الاشتراكات الرقمية
-          </h1>
-          <p className="max-w-2xl text-sm md:text-lg text-muted-foreground leading-relaxed">
-            اشتراكات، أدوات ذكاء اصطناعي، منتجات تصميم، وقوالب كانفا احترافية — جاهزة للاستخدام، بأسعار مناسبة لبلدك.
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-            <Link
-              to="/shop"
-              className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-6 py-3 text-sm font-bold text-white hover:bg-violet-500 transition-colors duration-150"
-            >
-              تسوق الآن
-              <ArrowLeft className="size-4" />
-            </Link>
-            <Link
-              to="/track"
-              className="inline-flex items-center gap-2 rounded-xl border border-violet-500/40 bg-transparent px-6 py-3 text-sm font-bold text-foreground hover:bg-violet-500/10 transition-colors duration-150"
-            >
-              تتبع طلبك
-            </Link>
-          </div>
-        </div>
-      </section>
+      {/* Banner full-width, flush under header */}
+      <div>
+        <HeroCarousel slides={slides} badges={heroBadges} />
+      </div>
 
       <main className="flex-1 container mx-auto px-4 py-6">
         {/* Mobile / tablet categories strip */}
