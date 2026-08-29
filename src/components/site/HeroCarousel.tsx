@@ -67,7 +67,7 @@ export function HeroCarousel({ slides, badges = [] }: { slides: HeroSlide[]; bad
             <p className="text-sm md:text-base text-muted-foreground line-clamp-3 max-w-md">{active.subtitle}</p>
           )}
           {badges.length > 0 && (
-            <ul className="flex flex-wrap gap-2 pt-1 lg:hidden">
+            <ul className="hidden sm:flex lg:hidden flex-wrap gap-2 pt-1">
               {badges.map((b) => (
                 <li key={b.title} className="rounded-lg border border-border bg-background/70 px-2.5 py-1 text-[11px]">
                   <span className="text-muted-foreground">{b.title} </span>
