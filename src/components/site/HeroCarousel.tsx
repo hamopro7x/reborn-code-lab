@@ -41,9 +41,9 @@ export function HeroCarousel({ slides, badges = [] }: { slides: HeroSlide[]; bad
       onMouseLeave={() => (paused.current = false)}
       aria-label="عروض مميزة"
     >
-      <div className="relative min-h-[260px] md:min-h-[340px] grid md:grid-cols-2">
-        {/* Artwork */}
-        <div className="absolute inset-0 md:static md:order-1 overflow-hidden">
+      <div className="relative h-[260px] md:h-[340px] grid md:grid-cols-2 overflow-hidden">
+        {/* Artwork — ثابت الحجم مهما كان حجم الصورة الأصلية */}
+        <div className="absolute inset-y-0 left-0 w-full md:w-1/2 md:order-1 overflow-hidden">
           {active.image ? (
             <img
               key={active.id}
