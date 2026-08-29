@@ -42,13 +42,13 @@ function SectionHeading({ title, to }: { title: string; to?: string }) {
   return (
     <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 mb-4">
       <div className="flex min-w-0 items-center gap-3">
-        <span className="h-6 w-1 shrink-0 rounded-full bg-lime" />
-        <h2 className="truncate text-lg md:text-xl font-bold">{title}</h2>
+        <span className="h-6 w-1 shrink-0 rounded-full bg-primary" />
+        <h2 className="truncate text-lg md:text-xl font-bold text-foreground">{title}</h2>
       </div>
       {to && (
         <Link
           to={to as any}
-          className="shrink-0 rounded-lg border border-border px-3 py-1.5 text-xs hover:bg-secondary hover:border-lime hover:text-lime transition-colors duration-150 inline-flex items-center gap-1.5"
+          className="shrink-0 rounded-lg bg-card text-card-foreground px-3 py-1.5 text-xs hover:bg-primary hover:text-primary-foreground transition-colors duration-150 inline-flex items-center gap-1.5"
         >
           عرض الكل
           <ArrowLeft className="size-3.5" />
