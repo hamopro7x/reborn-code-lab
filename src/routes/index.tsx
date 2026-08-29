@@ -7,7 +7,7 @@ import { Footer } from "@/components/site/Footer";
 import { WhatsAppFab } from "@/components/site/WhatsAppFab";
 import { ProductCard } from "@/components/site/ProductCard";
 import { Countdown } from "@/components/site/Countdown";
-import { HomeSidebar } from "@/components/site/HomeSidebar";
+
 import { ProductRail } from "@/components/site/ProductRail";
 import { TopupCard } from "@/components/site/TopupCard";
 import { HeroCarousel, type HeroSlide } from "@/components/site/HeroCarousel";
@@ -166,103 +166,93 @@ function Home() {
           </ul>
         </nav>
 
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_260px] xl:grid-cols-[minmax(0,1fr)_280px]">
-          {/* CONTENT */}
-          <div className="min-w-0 space-y-8 lg:order-1">
-            <HeroCarousel slides={slides} badges={heroBadges} />
+        <div className="min-w-0 space-y-8">
+          <HeroCarousel slides={slides} badges={heroBadges} />
 
-            {(timerQ.isLoading || timerQ.data) && (
-              <div className="flex justify-center">
-                {timerQ.data && (
-                  <Countdown endsAt={timerQ.data.ends_at} title={timerQ.data.title} subtitle={timerQ.data.subtitle ?? undefined} />
-                )}
-              </div>
-            )}
-
-
-            {/* PRODUCTS */}
-            <section>
-              <SectionHeading title="أحدث المنتجات" to="/shop" />
-              {(featuredQ.isLoading || latestQ.isLoading) && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <div key={`p-sk-${i}`} className="rounded-xl border border-border bg-card h-[16rem] animate-pulse" />
-                  ))}
-                </div>
+          {(timerQ.isLoading || timerQ.data) && (
+            <div className="flex justify-center">
+              {timerQ.data && (
+                <Countdown endsAt={timerQ.data.ends_at} title={timerQ.data.title} subtitle={timerQ.data.subtitle ?? undefined} />
               )}
-              {featured.length > 0 && (
-                <ProductRail ariaLabel="أحدث المنتجات">
-                  {featured.map((p: any) => (
-                    <ProductCard key={p.id} p={p} />
-                  ))}
-                </ProductRail>
-              )}
-              {!featuredQ.isLoading && !latestQ.isLoading && featured.length === 0 && (
-                <p className="text-sm text-muted-foreground">لا توجد منتجات متاحة حاليًا.</p>
-              )}
-            </section>
+            </div>
+          )}
 
-            {/* TOP-UP CARDS */}
-            {topups.length > 0 && (
-              <section>
-                <SectionHeading title="بطاقات الشحن" to="/shop" />
-                <ProductRail
-                  ariaLabel="بطاقات الشحن"
-                  itemClassName="w-[72%] sm:w-[46%] md:w-[32%] xl:w-[24%]"
-                >
-                  {topups.map((p: any) => (
-                    <TopupCard key={p.id} p={p} />
-                  ))}
-                </ProductRail>
-              </section>
-            )}
 
-            {/* CATEGORIES / CARDS SECTION */}
-            <section>
-              <SectionHeading title="تصفح الأقسام" to="/shop" />
+          {/* PRODUCTS */}
+          <section>
+            <SectionHeading title="أحدث المنتجات" to="/shop" />
+            {(featuredQ.isLoading || latestQ.isLoading) && (
               <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
-                {categoriesQ.isLoading &&
-                  Array.from({ length: 5 }).map((_, i) => (
-                    <div key={`c-sk-${i}`} className="rounded-xl border border-border bg-card h-[10rem] animate-pulse" />
-                  ))}
-                {categories.map((c: any) => (
-                  <Link
-                    key={c.id}
-                    to="/shop"
-                    search={{ category: c.slug } as any}
-                    className="group rounded-xl border border-border bg-card text-card-foreground overflow-hidden flex flex-col transition-colors duration-150 hover:border-primary"
-                  >
-                    <div className="aspect-[4/3] bg-muted overflow-hidden">
-                      {c.banner_image ? (
-                        <img
-                          src={c.banner_image}
-                          alt={c.name}
-                          width={400}
-                          height={300}
-                          loading="lazy"
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground px-2 text-center">
-                          {c.name}
-                        </div>
-                      )}
-                    </div>
-                    <div className="px-3 py-2.5 text-sm font-bold text-center truncate border-t border-border">
-                      {c.name}
-                    </div>
-                  </Link>
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={`p-sk-${i}`} className="rounded-xl border border-border bg-card h-[16rem] animate-pulse" />
                 ))}
               </div>
-            </section>
-          </div>
+            )}
+            {featured.length > 0 && (
+              <ProductRail ariaLabel="أحدث المنتجات">
+                {featured.map((p: any) => (
+                  <ProductCard key={p.id} p={p} />
+                ))}
+              </ProductRail>
+            )}
+            {!featuredQ.isLoading && !latestQ.isLoading && featured.length === 0 && (
+              <p className="text-sm text-muted-foreground">لا توجد منتجات متاحة حاليًا.</p>
+            )}
+          </section>
 
-          {/* SIDEBAR (right in RTL) */}
-          <aside className="hidden lg:block lg:order-2 min-w-0">
-            <div className="sticky top-20">
-              <HomeSidebar categories={categories} loading={categoriesQ.isLoading} />
+          {/* TOP-UP CARDS */}
+          {topups.length > 0 && (
+            <section>
+              <SectionHeading title="بطاقات الشحن" to="/shop" />
+              <ProductRail
+                ariaLabel="بطاقات الشحن"
+                itemClassName="w-[72%] sm:w-[46%] md:w-[32%] xl:w-[24%]"
+              >
+                {topups.map((p: any) => (
+                  <TopupCard key={p.id} p={p} />
+                ))}
+              </ProductRail>
+            </section>
+          )}
+
+          {/* CATEGORIES / CARDS SECTION */}
+          <section>
+            <SectionHeading title="تصفح الأقسام" to="/shop" />
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
+              {categoriesQ.isLoading &&
+                Array.from({ length: 5 }).map((_, i) => (
+                  <div key={`c-sk-${i}`} className="rounded-xl border border-border bg-card h-[10rem] animate-pulse" />
+                ))}
+              {categories.map((c: any) => (
+                <Link
+                  key={c.id}
+                  to="/shop"
+                  search={{ category: c.slug } as any}
+                  className="group rounded-xl border border-border bg-card text-card-foreground overflow-hidden flex flex-col transition-colors duration-150 hover:border-primary"
+                >
+                  <div className="aspect-[4/3] bg-muted overflow-hidden">
+                    {c.banner_image ? (
+                      <img
+                        src={c.banner_image}
+                        alt={c.name}
+                        width={400}
+                        height={300}
+                        loading="lazy"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground px-2 text-center">
+                        {c.name}
+                      </div>
+                    )}
+                  </div>
+                  <div className="px-3 py-2.5 text-sm font-bold text-center truncate border-t border-border">
+                    {c.name}
+                  </div>
+                </Link>
+              ))}
             </div>
-          </aside>
+          </section>
         </div>
       </main>
 
