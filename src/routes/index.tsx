@@ -163,7 +163,7 @@ function Home() {
                 <Link
                   to="/shop"
                   search={{ category: c.slug } as any}
-                  className="block whitespace-nowrap rounded-lg border border-border bg-card px-3 py-2 text-xs hover:bg-secondary transition-colors duration-150"
+                  className="block whitespace-nowrap rounded-lg bg-panel text-panel-foreground px-3 py-2 text-xs font-bold hover:bg-card hover:text-card-foreground transition-colors duration-150"
                 >
                   {c.name}
                 </Link>
@@ -186,10 +186,10 @@ function Home() {
             )}
 
             {/* FEATURES BAR */}
-            <ul className="grid grid-cols-2 lg:grid-cols-4 rounded-2xl border border-border bg-card divide-y divide-border lg:divide-y-0 lg:divide-x lg:divide-x-reverse">
+            <ul className="grid grid-cols-2 lg:grid-cols-4 rounded-2xl border border-border bg-card text-card-foreground divide-y divide-border lg:divide-y-0 lg:divide-x lg:divide-x-reverse">
               {features.map((f) => (
                 <li key={f.title} className="flex items-center gap-3 p-4 min-w-0">
-                  <f.icon className="size-5 shrink-0 text-lime" />
+                  <f.icon className="size-5 shrink-0 text-primary" />
                   <div className="min-w-0">
                     <div className="text-sm font-bold truncate">{f.title}</div>
                     <div className="text-xs text-muted-foreground truncate">{f.body}</div>
@@ -248,9 +248,9 @@ function Home() {
                     key={c.id}
                     to="/shop"
                     search={{ category: c.slug } as any}
-                    className="group rounded-xl border border-border bg-card overflow-hidden flex flex-col transition-colors duration-150 hover:border-lime/60"
+                    className="group rounded-xl border border-border bg-card text-card-foreground overflow-hidden flex flex-col transition-colors duration-150 hover:border-primary"
                   >
-                    <div className="aspect-[4/3] bg-secondary overflow-hidden">
+                    <div className="aspect-[4/3] bg-muted overflow-hidden">
                       {c.banner_image ? (
                         <img
                           src={c.banner_image}
@@ -266,7 +266,7 @@ function Home() {
                         </div>
                       )}
                     </div>
-                    <div className="px-3 py-2.5 text-sm font-bold text-center truncate border-t border-border group-hover:text-lime">
+                    <div className="px-3 py-2.5 text-sm font-bold text-center truncate border-t border-border">
                       {c.name}
                     </div>
                   </Link>
