@@ -80,9 +80,18 @@ function Home() {
     queryKey: ["currencies"],
     queryFn: async () => (await supabase.from("currencies").select("*").eq("active", true).order("sort_order")).data ?? [],
   });
+  // بنرات الصفحة الرئيسية من النظام الجديد (hero_banners) — النشطة والمرتبة فقط.
+  const bannersQ = useQuery({
+    queryKey: ["hero-banners"],
+    queryFn: async () =>
+      (await supabase.from("hero_banners").select("*").eq("active", true).order("sort_order")).data ?? [],
+    staleTime: 60_000,
+  });
+  // fallback آمن للإعداد القديم لو الجدول الجديد فاضي لأي سبب.
   const heroQ = useQuery({
     queryKey: ["hero"],
     queryFn: async () => (await supabase.from("site_settings").select("value").eq("key", "hero").maybeSingle()).data?.value as any,
+    staleTime: 60_000,
   });
 
   useEffect(() => {
