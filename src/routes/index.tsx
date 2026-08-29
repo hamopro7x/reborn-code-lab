@@ -124,27 +124,37 @@ function Home() {
     return matched.length ? matched : [];
   }, [latestQ.data]);
 
-  const slides: HeroSlide[] = useMemo(() => {
-    const h = (heroQ.data ?? {}) as any;
-    return [{
-      id: "hero",
-      title: h.title || "أفضل المنتجات الرقمية بأسعار مميزة",
-      subtitle: h.subtitle || "اشتراكات وأدوات وقوالب جاهزة للاستخدام مع ضمان حقيقي وتسليم فوري.",
-      image: h.image || null,
-      to: "/shop",
-    }];
-  }, [heroQ.data]);
+  const banners: HeroBanner[] = useMemo(() => {
+    const rows = bannersQ.data ?? [];
+    if (rows.length) return rows.map(normalizeBanner);
+    const h = (heroQ.data ?? null) as any;
+    if (!h) return [];
+    return [
+      normalizeBanner({
+        id: "legacy-hero",
+        title: h.title,
+        subtitle: h.subtitle,
+        media_type: h.image ? "image" : "color",
+        media_url: h.image || null,
+        badges: [{ id: "b1", enabled: true, title: "تسليم فوري", value: "بعد الدفع مباشرة", icon: "Zap", color: "#2f7ef7" }],
+        buttons: [
+          { id: "b1", enabled: true, label: "تسوق الآن", url: "/shop", icon: "ArrowLeft", variant: "primary" },
+          { id: "b2", enabled: true, label: "تتبع طلبك", url: "/track", icon: "none", variant: "teal" },
+        ],
+      }),
+    ];
+  }, [bannersQ.data, heroQ.data]);
 
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
 
-      {/* Banner full-width, flush under header — يظهر بعد تحميل إعدادات الأدمن عشان مايبانش النص الافتراضي لحظة التحديث */}
+      {/* Banner full-width, flush under header — يظهر بعد تحميل بيانات البنرات عشان مايبانش نص افتراضي لحظة التحديث */}
       <div>
-        {heroQ.isLoading ? (
+        {bannersQ.isLoading ? (
           <div className="h-[260px] md:h-[340px] rounded-b-2xl bg-card border-b border-border" aria-hidden />
         ) : (
-          <HeroCarousel slides={slides} badges={heroBadges} />
+          <HeroCarousel banners={banners} />
         )}
       </div>
 
