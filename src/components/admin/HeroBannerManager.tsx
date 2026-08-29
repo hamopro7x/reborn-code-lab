@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowRight, Copy, GripVertical, Plus, Trash2, Edit } from "lucide-react";
+import { Copy, GripVertical, Plus, Trash2, Edit } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { HeroBannerView } from "@/components/site/HeroCarousel";
 import {
   HERO_ICON_KEYS,
@@ -97,7 +98,6 @@ export function HeroBannerManager() {
   const [isNew, setIsNew] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [snapshot, setSnapshot] = useState("");
   const dragIndex = useRef<number | null>(null);
 
   function refresh() {
@@ -115,8 +115,7 @@ export function HeroBannerManager() {
     setSaving(false);
     if (res.error) return toast.error(res.error.message);
     toast.success("تم حفظ البانر");
-    setIsNew(false);
-    setSnapshot(JSON.stringify(row));
+    setEditing(null);
     refresh();
   }
 
@@ -164,21 +163,9 @@ export function HeroBannerManager() {
     persistOrder(list);
   }
 
-  function openEditor(b: HeroBanner, isNewBanner: boolean) {
-    setEditing(b);
-    setIsNew(isNewBanner);
-    setSnapshot(JSON.stringify(bannerToRow(b)));
-  }
+  const preview = useMemo(() => editing, [editing]);
 
-  function closeEditor() {
-    const dirty = editing && JSON.stringify(bannerToRow(editing)) !== snapshot;
-    if (dirty && !confirm("هناك تغييرات غير محفوظة، الرجوع سيفقدها. متابعة؟")) return;
-    setEditing(null);
-    setSnapshot("");
-  }
-
-  if (!editing)
-    return (
+  return (
     <div>
       <div className="flex items-center justify-between mb-3">
         <div>
@@ -187,7 +174,8 @@ export function HeroBannerManager() {
         </div>
         <Button
           onClick={() => {
-            openEditor(blankBanner(order.length), true);
+            setEditing(blankBanner(order.length));
+            setIsNew(true);
           }}
           className="gap-2"
         >
@@ -228,7 +216,7 @@ export function HeroBannerManager() {
             </div>
             {b.active ? <Badge>نشط</Badge> : <Badge variant="secondary">متوقف</Badge>}
             <Switch checked={b.active} onCheckedChange={() => toggleActive(b)} aria-label="تفعيل" />
-            <Button size="icon" variant="ghost" onClick={() => openEditor(b, false)} aria-label="تعديل">
+            <Button size="icon" variant="ghost" onClick={() => { setEditing(b); setIsNew(false); }} aria-label="تعديل">
               <Edit className="size-4" />
             </Button>
             <Button size="icon" variant="ghost" onClick={() => duplicate(b)} aria-label="نسخ">
@@ -240,31 +228,22 @@ export function HeroBannerManager() {
           </div>
         ))}
       </div>
-      </div>
-    );
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <Button variant="ghost" className="gap-2" onClick={closeEditor}>
-          <ArrowRight className="size-4" /> رجوع إلى البنرات
-        </Button>
-        <h2 className="text-lg font-bold">{isNew ? "بانر جديد" : "تعديل البنر"}</h2>
-      </div>
+      <Dialog open={!!editing} onOpenChange={(v) => !v && setEditing(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{isNew ? "بانر جديد" : "تعديل البانر"}</DialogTitle>
+          </DialogHeader>
 
-      <div className="grid items-start gap-4 lg:grid-cols-2">
-        {/* معاينة مباشرة — نفس عرض البنر الحقيقي */}
-        <div className="lg:sticky lg:top-4">
-          <Label className="text-xs">معاينة مباشرة</Label>
-          <div className="mt-1 overflow-hidden rounded-2xl border border-border bg-hero text-hero-foreground">
-            <HeroBannerView banner={editing} preview />
-          </div>
-        </div>
-
-        <div className="min-w-0 space-y-5">
-          <h3 className="text-sm font-bold">إعدادات البنر</h3>
-
-
+          {editing && (
+            <div className="space-y-5">
+              {/* Live Preview */}
+              <div>
+                <Label className="text-xs">معاينة مباشرة</Label>
+                <div className="mt-1 overflow-hidden rounded-2xl border border-border bg-hero text-hero-foreground">
+                  {preview && <HeroBannerView banner={preview} preview />}
+                </div>
+              </div>
 
               {/* المحتوى */}
               <section className="space-y-3">
@@ -660,20 +639,22 @@ export function HeroBannerManager() {
                 ))}
               </section>
 
-          <label className="flex items-center gap-2 text-sm">
-            <Switch checked={editing.active} onCheckedChange={(v) => setEditing({ ...editing, active: v })} /> بانر نشط
-          </label>
+              <label className="flex items-center gap-2 text-sm">
+                <Switch checked={editing.active} onCheckedChange={(v) => setEditing({ ...editing, active: v })} /> بانر نشط
+              </label>
+            </div>
+          )}
 
-          <div className="flex items-center gap-2 border-t border-border pt-4">
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setEditing(null)}>
+              إلغاء
+            </Button>
             <Button onClick={save} disabled={saving || uploading}>
-              حفظ التغييرات
+              حفظ
             </Button>
-            <Button variant="ghost" onClick={closeEditor}>
-              رجوع
-            </Button>
-          </div>
-        </div>
-      </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -120,26 +120,31 @@ export function HeroBannerView({ banner, preview }: { banner: HeroBanner; previe
 
   return (
     <div
-      className="relative h-[260px] md:h-[340px] grid md:grid-cols-[1fr_minmax(0,1fr)] overflow-hidden"
+      className="relative h-[260px] md:h-[340px] grid md:grid-cols-[1fr_auto_minmax(0,1fr)] overflow-hidden"
       style={{ backgroundColor: banner.background_color ?? undefined }}
     >
-      {/* الخلفية / الوسائط — طبقة خلفية كاملة تغطي البنر بالكامل */}
+      {/* الخلفية / الوسائط — حجم ثابت مهما كان حجم الملف الأصلي */}
       {hasMedia && (
-        <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute inset-y-0 left-0 w-full md:static md:w-auto md:order-2 overflow-hidden md:aspect-[4/3] md:h-full">
           <Media banner={banner} preview={preview} />
+          {banner.overlay_enabled && (
+            <>
+              <div
+                className="absolute inset-0 md:hidden"
+                style={{ backgroundColor: banner.overlay_color, opacity: Math.min(1, banner.overlay_opacity + 0.4) }}
+              />
+              <div
+                className="absolute inset-0 hidden md:block"
+                style={{ backgroundColor: banner.overlay_color, opacity: banner.overlay_opacity }}
+              />
+            </>
+          )}
         </div>
-      )}
-      {hasMedia && banner.overlay_enabled && (
-        <div
-          className="absolute inset-0"
-          style={{ backgroundColor: banner.overlay_color, opacity: banner.overlay_opacity }}
-          aria-hidden
-        />
       )}
 
       {/* النصوص */}
       <div
-        className={`relative md:order-2 p-6 md:p-10 flex flex-col min-w-0 overflow-hidden ${justifyClass[banner.content_position_y]} ${alignClass[banner.content_position_x]}`}
+        className={`relative md:order-3 p-6 md:p-10 flex flex-col min-w-0 overflow-hidden ${justifyClass[banner.content_position_y]} ${alignClass[banner.content_position_x]}`}
       >
         {banner.show_title && banner.title && (
           <h1
@@ -167,7 +172,7 @@ export function HeroBannerView({ banner, preview }: { banner: HeroBanner; previe
 
       {/* الكروت الصغيرة + الأزرار الجانبية */}
       {(hasBadges || sideButtons) && (
-        <div className="relative hidden md:flex md:order-1 flex-col justify-center gap-3 p-6 min-w-0">
+        <div className="hidden md:flex md:order-1 flex-col justify-center gap-3 p-6 min-w-0">
           <BadgeCards banner={banner} />
           {sideButtons && <ButtonRow banner={banner} />}
         </div>
