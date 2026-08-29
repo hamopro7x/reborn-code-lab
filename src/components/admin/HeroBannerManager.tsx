@@ -240,10 +240,30 @@ export function HeroBannerManager() {
           </div>
         ))}
       </div>
+      </div>
+    );
 
-    </div>
-  );
-}
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <Button variant="ghost" className="gap-2" onClick={closeEditor}>
+          <ArrowRight className="size-4" /> رجوع إلى البنرات
+        </Button>
+        <h2 className="text-lg font-bold">{isNew ? "بانر جديد" : "تعديل البنر"}</h2>
+      </div>
+
+      <div className="grid items-start gap-4 lg:grid-cols-2">
+        {/* معاينة مباشرة — نفس عرض البنر الحقيقي */}
+        <div className="lg:sticky lg:top-4">
+          <Label className="text-xs">معاينة مباشرة</Label>
+          <div className="mt-1 overflow-hidden rounded-2xl border border-border bg-hero text-hero-foreground">
+            <HeroBannerView banner={editing} preview />
+          </div>
+        </div>
+
+        <div className="min-w-0 space-y-5">
+          <h3 className="text-sm font-bold">إعدادات البنر</h3>
+
 
 
               {/* المحتوى */}
