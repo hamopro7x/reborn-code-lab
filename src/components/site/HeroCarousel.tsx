@@ -181,6 +181,7 @@ export function HeroBannerView({ banner, preview }: { banner: HeroBanner; previe
           {sideButtons && <ButtonRow banner={banner} />}
         </div>
       )}
+      </div>
     </div>
   );
 }
