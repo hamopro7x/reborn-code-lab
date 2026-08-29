@@ -35,7 +35,7 @@ function CartPage() {
     <div className="min-h-screen flex flex-col">
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8 max-w-5xl">
-        <h1 className="text-4xl font-black text-gradient mb-8">سلة التسوق</h1>
+        <h1 className="text-4xl font-black text-foreground mb-8">سلة التسوق</h1>
         {items.length === 0 ? (
           <div className="card-surface rounded-3xl p-16 text-center">
             <ShoppingBag className="size-16 mx-auto text-muted-foreground mb-4" />

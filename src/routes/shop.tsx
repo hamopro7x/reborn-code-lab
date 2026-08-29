@@ -65,8 +65,8 @@ function Shop() {
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8">
         <div className="mb-8 animate-slide-up">
-          <h1 className="text-4xl font-black text-gradient">المتجر</h1>
-          <p className="text-muted-foreground mt-2">تصفح كل المنتجات الرقمية</p>
+          <h1 className="text-4xl font-black text-foreground">المتجر</h1>
+          <p className="text-foreground/70 mt-2">تصفح كل المنتجات الرقمية</p>
         </div>
 
         <div className="mb-6 flex gap-3 flex-col md:flex-row">

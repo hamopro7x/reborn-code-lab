@@ -173,7 +173,7 @@ function CheckoutPage() {
             </div>
           </div>
         )}
-        <h1 className="text-3xl font-black text-gradient mb-6">إتمام الشراء</h1>
+        <h1 className="text-3xl font-black text-foreground mb-6">إتمام الشراء</h1>
 
         <div className="flex items-center gap-2 mb-8 text-sm">
           {[["info","بياناتك"],["payment","الدفع"],["screenshot","إثبات التحويل"],["done","تم"]].map(([k,l],i) => (
