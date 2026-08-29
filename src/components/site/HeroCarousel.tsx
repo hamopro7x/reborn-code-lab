@@ -36,7 +36,7 @@ export function HeroCarousel({ slides, badges = [] }: { slides: HeroSlide[]; bad
 
   return (
     <section
-      className="relative overflow-hidden rounded-2xl border border-border bg-hero text-hero-foreground"
+      className="relative overflow-hidden rounded-b-2xl border border-border bg-hero text-hero-foreground"
       onMouseEnter={() => (paused.current = true)}
       onMouseLeave={() => (paused.current = false)}
       aria-label="عروض مميزة"
