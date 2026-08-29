@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Copy, GripVertical, Plus, Trash2, Edit } from "lucide-react";
+import { ArrowRight, Copy, GripVertical, Plus, Trash2, Edit } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { HeroBannerView } from "@/components/site/HeroCarousel";
 import {
   HERO_ICON_KEYS,
@@ -98,6 +97,7 @@ export function HeroBannerManager() {
   const [isNew, setIsNew] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [snapshot, setSnapshot] = useState("");
   const dragIndex = useRef<number | null>(null);
 
   function refresh() {
@@ -115,7 +115,8 @@ export function HeroBannerManager() {
     setSaving(false);
     if (res.error) return toast.error(res.error.message);
     toast.success("تم حفظ البانر");
-    setEditing(null);
+    setIsNew(false);
+    setSnapshot(JSON.stringify(row));
     refresh();
   }
 
@@ -186,8 +187,7 @@ export function HeroBannerManager() {
         </div>
         <Button
           onClick={() => {
-            setEditing(blankBanner(order.length));
-            setIsNew(true);
+            openEditor(blankBanner(order.length), true);
           }}
           className="gap-2"
         >
@@ -228,7 +228,7 @@ export function HeroBannerManager() {
             </div>
             {b.active ? <Badge>نشط</Badge> : <Badge variant="secondary">متوقف</Badge>}
             <Switch checked={b.active} onCheckedChange={() => toggleActive(b)} aria-label="تفعيل" />
-            <Button size="icon" variant="ghost" onClick={() => { setEditing(b); setIsNew(false); }} aria-label="تعديل">
+            <Button size="icon" variant="ghost" onClick={() => openEditor(b, false)} aria-label="تعديل">
               <Edit className="size-4" />
             </Button>
             <Button size="icon" variant="ghost" onClick={() => duplicate(b)} aria-label="نسخ">
