@@ -56,7 +56,7 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur">
+    <header className="sticky top-0 z-50 border-b border-border bg-card text-card-foreground">
       <div className="container mx-auto px-4 h-16 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
         <Link to="/" className="flex items-center gap-2 shrink-0">
           <img
@@ -83,11 +83,7 @@ export function Header() {
                 key={c.id}
                 to="/shop"
                 search={{ category: c.slug } as any}
-                className={`px-4 py-2 rounded-lg text-sm transition-colors duration-150 ${
-                  activeCategory === c.slug
-                    ? "bg-secondary text-lime font-bold"
-                    : "hover:bg-secondary text-foreground/80 hover:text-foreground"
-                }`}
+                className={`${pillBase} ${activeCategory === c.slug ? pillActive : pillIdle}`}
               >
                 {c.name}
               </Link>
