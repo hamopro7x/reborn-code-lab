@@ -167,47 +167,7 @@ function Home() {
         </nav>
 
         <div className="min-w-0 space-y-8">
-          <div className="space-y-0">
-            <HeroCarousel slides={slides} badges={heroBadges} />
-
-            {/* CATEGORIES / CARDS SECTION */}
-            <section>
-              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
-                {categoriesQ.isLoading &&
-                  Array.from({ length: 5 }).map((_, i) => (
-                    <div key={`c-sk-${i}`} className="rounded-xl border border-border bg-card h-[10rem] animate-pulse" />
-                  ))}
-                {categories.map((c: any) => (
-                  <Link
-                    key={c.id}
-                    to="/shop"
-                    search={{ category: c.slug } as any}
-                    className="group rounded-xl border border-border bg-card text-card-foreground overflow-hidden flex flex-col transition-colors duration-150 hover:border-primary"
-                  >
-                    <div className="aspect-[4/3] bg-muted overflow-hidden">
-                      {c.banner_image ? (
-                        <img
-                          src={c.banner_image}
-                          alt={c.name}
-                          width={400}
-                          height={300}
-                          loading="lazy"
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground px-2 text-center">
-                          {c.name}
-                        </div>
-                      )}
-                    </div>
-                    <div className="px-3 py-2.5 text-sm font-bold text-center truncate border-t border-border">
-                      {c.name}
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          </div>
+          <HeroCarousel slides={slides} badges={heroBadges} />
 
           {(timerQ.isLoading || timerQ.data) && (
             <div className="flex justify-center">
@@ -254,6 +214,45 @@ function Home() {
               </ProductRail>
             </section>
           )}
+
+          {/* CATEGORIES / CARDS SECTION */}
+          <section>
+            <SectionHeading title="تصفح الأقسام" to="/shop" />
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
+              {categoriesQ.isLoading &&
+                Array.from({ length: 5 }).map((_, i) => (
+                  <div key={`c-sk-${i}`} className="rounded-xl border border-border bg-card h-[10rem] animate-pulse" />
+                ))}
+              {categories.map((c: any) => (
+                <Link
+                  key={c.id}
+                  to="/shop"
+                  search={{ category: c.slug } as any}
+                  className="group rounded-xl border border-border bg-card text-card-foreground overflow-hidden flex flex-col transition-colors duration-150 hover:border-primary"
+                >
+                  <div className="aspect-[4/3] bg-muted overflow-hidden">
+                    {c.banner_image ? (
+                      <img
+                        src={c.banner_image}
+                        alt={c.name}
+                        width={400}
+                        height={300}
+                        loading="lazy"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground px-2 text-center">
+                        {c.name}
+                      </div>
+                    )}
+                  </div>
+                  <div className="px-3 py-2.5 text-sm font-bold text-center truncate border-t border-border">
+                    {c.name}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>
         </div>
       </main>
 
