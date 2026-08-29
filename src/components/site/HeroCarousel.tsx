@@ -80,6 +80,7 @@ function BadgeCards({ banner }: { banner: HeroBanner }) {
 }
 
 function Media({ banner, preview }: { banner: HeroBanner; preview?: boolean }) {
+  const fit = banner.media_fit === "contain" ? "object-contain" : "object-cover";
   if (banner.media_type === "video" && banner.media_url) {
     return (
       <video
@@ -92,7 +93,7 @@ function Media({ banner, preview }: { banner: HeroBanner; preview?: boolean }) {
         playsInline
         controls={false}
         preload={preview ? "metadata" : "auto"}
-        className="w-full h-full object-cover"
+        className={`w-full h-full ${fit}`}
       />
     );
   }
@@ -104,7 +105,7 @@ function Media({ banner, preview }: { banner: HeroBanner; preview?: boolean }) {
         alt={banner.title || "بانر"}
         width={900}
         height={600}
-        className="w-full h-full object-cover"
+        className={`w-full h-full ${fit}`}
         loading={preview ? "lazy" : "eager"}
       />
     );
@@ -113,13 +114,129 @@ function Media({ banner, preview }: { banner: HeroBanner; preview?: boolean }) {
 }
 
 /** عرض بانر واحد — يُستخدم في الصفحة الرئيسية وفي المعاينة داخل لوحة الإدارة. */
-export function HeroBannerView({ banner, preview }: { banner: HeroBanner; preview?: boolean }) {
+export function HeroBannerView({
+  banner,
+  preview,
+  editable,
+  onPositionsChange,
+}: {
+  banner: HeroBanner;
+  preview?: boolean;
+  /** يسمح بتحريك العناصر بالماوس داخل المعاينة. */
+  editable?: boolean;
+  onPositionsChange?: (p: HeroPositions) => void;
+}) {
   const hasBadges = banner.badges.some((b) => b.enabled && (b.title.trim() || b.value.trim()));
   const hasMedia = banner.media_type !== "none";
   const sideButtons = banner.buttons_position === "side";
+  const pos = banner.positions ?? {};
+  const rootRef = useRef<HTMLDivElement>(null);
+  const canDrag = Boolean(editable && onPositionsChange);
+
+  function startDrag(key: HeroLayerKey, e: React.PointerEvent<HTMLDivElement>) {
+    if (!canDrag) return;
+    const root = rootRef.current;
+    if (!root) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const el = e.currentTarget;
+    const box = el.getBoundingClientRect();
+    const container = root.getBoundingClientRect();
+    const grabX = e.clientX - box.left;
+    const grabY = e.clientY - box.top;
+
+    const move = (ev: PointerEvent) => {
+      const maxX = Math.max(0, container.width - box.width);
+      const maxY = Math.max(0, container.height - box.height);
+      const px = Math.min(maxX, Math.max(0, ev.clientX - container.left - grabX));
+      const py = Math.min(maxY, Math.max(0, ev.clientY - container.top - grabY));
+      onPositionsChange?.({
+        ...pos,
+        [key]: { x: (px / container.width) * 100, y: (py / container.height) * 100 },
+      });
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  }
+
+  /** غلاف عنصر: إمّا في التخطيط الطبيعي أو بموضع حر مطلق. */
+  function Layer({ k, className, children }: { k: HeroLayerKey; className?: string; children: React.ReactNode }) {
+    const p = pos[k];
+    const dragCls = canDrag ? "cursor-move touch-none outline-dashed outline-1 outline-offset-2 outline-border" : "";
+    if (p) {
+      return (
+        <div
+          onPointerDown={(e) => startDrag(k, e)}
+          className={`absolute z-10 ${dragCls} ${className ?? ""}`}
+          style={{ left: `${p.x}%`, top: `${p.y}%` }}
+        >
+          {children}
+        </div>
+      );
+    }
+    return (
+      <div onPointerDown={(e) => startDrag(k, e)} className={`${dragCls} ${className ?? ""}`}>
+        {children}
+      </div>
+    );
+  }
+
+  const titleBlock = (
+    <>
+      {banner.show_title && banner.title && (
+        <h1
+          className="font-black leading-tight line-clamp-3"
+          style={{ fontSize: `clamp(${banner.title_size_mobile}px, 4vw, ${banner.title_size}px)` }}
+        >
+          {banner.title}
+        </h1>
+      )}
+      {banner.show_subtitle && banner.subtitle && (
+        <p
+          className="text-hero-foreground/70 line-clamp-3 max-w-md"
+          style={{
+            marginTop: banner.show_title && banner.title ? banner.gap_title_subtitle : 0,
+            fontSize: `clamp(${banner.subtitle_size_mobile}px, 2vw, ${banner.subtitle_size}px)`,
+          }}
+        >
+          {banner.subtitle}
+        </p>
+      )}
+    </>
+  );
+
+  const contentLayer = (
+    <Layer k="content" className={`flex flex-col min-w-0 ${alignClass[banner.content_position_x]}`}>
+      {titleBlock}
+      {!pos.buttons && (
+        <div className={sideButtons ? "md:hidden w-full" : "w-full"} style={{ marginTop: banner.gap_subtitle_buttons }}>
+          <ButtonRow banner={banner} />
+        </div>
+      )}
+    </Layer>
+  );
+
+  const buttonsLayer = pos.buttons ? (
+    <Layer k="buttons">
+      <ButtonRow banner={banner} />
+    </Layer>
+  ) : null;
+
+  const badgesLayer =
+    hasBadges || sideButtons ? (
+      <Layer k="badges" className="flex flex-col gap-3">
+        <BadgeCards banner={banner} />
+        {sideButtons && !pos.buttons && <div className="hidden md:block"><ButtonRow banner={banner} /></div>}
+      </Layer>
+    ) : null;
 
   return (
     <div
+      ref={rootRef}
       className="relative h-[260px] md:h-[340px] overflow-hidden"
       style={{ backgroundColor: banner.background_color ?? undefined }}
     >
@@ -144,43 +261,22 @@ export function HeroBannerView({ banner, preview }: { banner: HeroBanner; previe
         </>
       )}
 
-      {/* المحتوى فوق الوسائط */}
+      {/* العناصر ذات المواضع الحرة */}
+      {pos.content && contentLayer}
+      {buttonsLayer}
+      {pos.badges && badgesLayer}
+
+      {/* التخطيط الطبيعي لبقية العناصر */}
       <div className="relative h-full grid md:grid-cols-[auto_minmax(0,1fr)]">
-      <div
-        className={`relative md:order-2 p-6 md:p-10 flex flex-col min-w-0 overflow-hidden ${justifyClass[banner.content_position_y]} ${alignClass[banner.content_position_x]}`}
-      >
-
-        {banner.show_title && banner.title && (
-          <h1
-            className="font-black leading-tight line-clamp-3"
-            style={{ fontSize: `clamp(${banner.title_size_mobile}px, 4vw, ${banner.title_size}px)` }}
-          >
-            {banner.title}
-          </h1>
-        )}
-        {banner.show_subtitle && banner.subtitle && (
-          <p
-            className="text-hero-foreground/70 line-clamp-3 max-w-md"
-            style={{
-              marginTop: banner.show_title && banner.title ? banner.gap_title_subtitle : 0,
-              fontSize: `clamp(${banner.subtitle_size_mobile}px, 2vw, ${banner.subtitle_size}px)`,
-            }}
-          >
-            {banner.subtitle}
-          </p>
-        )}
-        <div className={sideButtons ? "md:hidden w-full" : "w-full"} style={{ marginTop: banner.gap_subtitle_buttons }}>
-          <ButtonRow banner={banner} />
+        <div
+          className={`relative md:order-2 p-6 md:p-10 flex flex-col min-w-0 overflow-hidden ${justifyClass[banner.content_position_y]} ${alignClass[banner.content_position_x]}`}
+        >
+          {!pos.content && contentLayer}
         </div>
-      </div>
 
-      {/* الكروت الصغيرة + الأزرار الجانبية */}
-      {(hasBadges || sideButtons) && (
-        <div className="hidden md:flex md:order-1 flex-col justify-center gap-3 p-6 min-w-0">
-          <BadgeCards banner={banner} />
-          {sideButtons && <ButtonRow banner={banner} />}
-        </div>
-      )}
+        {!pos.badges && badgesLayer && (
+          <div className="hidden md:flex md:order-1 flex-col justify-center gap-3 p-6 min-w-0">{badgesLayer}</div>
+        )}
       </div>
     </div>
   );
