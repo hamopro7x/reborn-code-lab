@@ -660,22 +660,20 @@ export function HeroBannerManager() {
                 ))}
               </section>
 
-              <label className="flex items-center gap-2 text-sm">
-                <Switch checked={editing.active} onCheckedChange={(v) => setEditing({ ...editing, active: v })} /> بانر نشط
-              </label>
-            </div>
-          )}
+          <label className="flex items-center gap-2 text-sm">
+            <Switch checked={editing.active} onCheckedChange={(v) => setEditing({ ...editing, active: v })} /> بانر نشط
+          </label>
 
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setEditing(null)}>
-              إلغاء
-            </Button>
+          <div className="flex items-center gap-2 border-t border-border pt-4">
             <Button onClick={save} disabled={saving || uploading}>
-              حفظ
+              حفظ التغييرات
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <Button variant="ghost" onClick={closeEditor}>
+              رجوع
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
