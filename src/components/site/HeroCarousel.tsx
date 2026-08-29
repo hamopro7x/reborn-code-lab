@@ -35,6 +35,22 @@ export function HeroCarousel({ slides, badges = [] }: { slides: HeroSlide[]; bad
   const active = slides[Math.min(index, slides.length - 1)];
   const shownBadges = badges.slice(0, 3);
 
+  const ctaButtons = (
+    <>
+      <Link to={active.to as any} params={active.params as any}>
+        <Button size="lg" className="h-11 px-6 font-bold gap-2">
+          {active.cta ?? "تسوق الآن"}
+          <ArrowLeft className="size-4" />
+        </Button>
+      </Link>
+      <Link to="/track">
+        <Button size="lg" className="h-11 px-6 font-bold bg-teal text-teal-foreground hover:bg-teal/90">
+          تتبع طلبك
+        </Button>
+      </Link>
+    </>
+  );
+
   return (
     <section
       className="relative overflow-hidden rounded-b-2xl border border-border bg-hero text-hero-foreground"
@@ -67,18 +83,8 @@ export function HeroCarousel({ slides, badges = [] }: { slides: HeroSlide[]; bad
           {active.subtitle && (
             <p className="text-sm md:text-base text-hero-foreground/70 line-clamp-3 max-w-md">{active.subtitle}</p>
           )}
-          <div className="flex flex-wrap items-center gap-3 pt-1">
-            <Link to={active.to as any} params={active.params as any}>
-              <Button size="lg" className="h-11 px-6 font-bold gap-2">
-                {active.cta ?? "تسوق الآن"}
-                <ArrowLeft className="size-4" />
-              </Button>
-            </Link>
-            <Link to="/track">
-              <Button size="lg" className="h-11 px-6 font-bold bg-teal text-teal-foreground hover:bg-teal/90">
-                تتبع طلبك
-              </Button>
-            </Link>
+          <div className="flex md:hidden flex-wrap items-center gap-3 pt-1">
+            {ctaButtons}
           </div>
         </div>
 
@@ -94,6 +100,9 @@ export function HeroCarousel({ slides, badges = [] }: { slides: HeroSlide[]; bad
                 <span className="text-sm font-black text-primary">{b.value}</span>
               </div>
             ))}
+            <div className="flex flex-wrap items-center gap-3 pt-1">
+              {ctaButtons}
+            </div>
           </div>
         )}
       </div>
