@@ -100,6 +100,9 @@ export function HeroCarousel({ slides, badges = [] }: { slides: HeroSlide[]; bad
                 <span className="text-sm font-black text-primary">{b.value}</span>
               </div>
             ))}
+            <div className="flex flex-wrap items-center gap-3 pt-1">
+              {ctaButtons}
+            </div>
           </div>
         )}
       </div>
