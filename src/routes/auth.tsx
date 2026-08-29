@@ -97,14 +97,14 @@ function AuthPage() {
     <div dir="rtl" className="admin-theme min-h-screen flex items-center justify-center px-4 py-12 bg-background">
       <div className="w-full max-w-md">
         <div className="text-center mb-6">
-          <div className="size-14 rounded-2xl gradient-primary mx-auto flex items-center justify-center glow-purple mb-3">
-            <ShieldCheck className="size-7 text-white" />
+          <div className="size-14 rounded-2xl gradient-primary mx-auto flex items-center justify-center mb-3">
+            <ShieldCheck className="size-7 text-primary-foreground" />
           </div>
           <h1 className="text-2xl font-black text-gradient">لوحة التحكم</h1>
           <p className="text-xs text-muted-foreground mt-1">دخول الأدمن والموظفين</p>
         </div>
 
-        <div className="card-surface rounded-3xl p-8 glow-purple animate-slide-up">
+        <div className="card-surface rounded-3xl p-8 animate-slide-up">
           <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
             <Lock className="size-3.5" />
             <span>الوصول مقيّد ومؤمّن</span>
@@ -125,7 +125,7 @@ function AuthPage() {
               <Label>كلمة المرور</Label>
               <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} minLength={6} required autoComplete={mode === "signup" ? "new-password" : "current-password"} />
             </div>
-            <Button type="submit" disabled={loading} className="gradient-primary text-white w-full h-11">
+            <Button type="submit" disabled={loading} className="gradient-primary w-full h-11">
               {loading ? "..." : mode === "signup" ? "إنشاء حساب الأدمن" : "دخول"}
             </Button>
           </form>

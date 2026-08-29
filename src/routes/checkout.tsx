@@ -230,7 +230,7 @@ function CheckoutPage() {
             <div className="md:col-span-2 space-y-3">
               <h2 className="font-bold text-lg mb-2">اختر طريقة الدفع</h2>
               {(paymentQ.data ?? []).map((pm: any) => (
-                <button key={pm.id} onClick={() => setSelectedPayment(pm)} className={`w-full text-right card-surface rounded-2xl p-5 hover:bg-primary/5 transition-all ${selectedPayment?.id === pm.id ? "glow-purple ring-2 ring-primary" : ""}`}>
+                <button key={pm.id} onClick={() => setSelectedPayment(pm)} className={`w-full text-right card-surface rounded-2xl p-5 hover:bg-primary/5 transition-all ${selectedPayment?.id === pm.id ? "ring-2 ring-primary" : ""}`}>
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="font-bold">{pm.name}</div>

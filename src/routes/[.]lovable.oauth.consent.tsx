@@ -67,9 +67,9 @@ function Consent() {
 
   return (
     <main dir="rtl" className="min-h-screen flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md card-surface rounded-3xl p-8 glow-purple">
+      <div className="w-full max-w-md card-surface rounded-3xl p-8">
         <div className="size-14 rounded-2xl gradient-primary mx-auto flex items-center justify-center mb-4">
-          <ShieldCheck className="size-7 text-white" />
+          <ShieldCheck className="size-7 text-primary-foreground" />
         </div>
         <h1 className="text-xl font-black text-center text-gradient">ربط {clientName} بحسابك</h1>
         <p className="text-sm text-muted-foreground text-center mt-3">
@@ -81,7 +81,7 @@ function Consent() {
           </p>
         )}
         <div className="flex gap-2 mt-6">
-          <Button disabled={busy} onClick={() => decide(true)} className="flex-1 h-11 gradient-primary text-white">
+          <Button disabled={busy} onClick={() => decide(true)} className="flex-1 h-11 gradient-primary">
             موافقة
           </Button>
           <Button disabled={busy} variant="outline" onClick={() => decide(false)} className="flex-1 h-11">
