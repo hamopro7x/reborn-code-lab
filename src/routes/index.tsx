@@ -149,7 +149,7 @@ function Home() {
       <Header />
 
       {/* Banner full-width, flush under header */}
-      <div className="px-4 md:px-6 lg:px-8">
+      <div>
         <HeroCarousel slides={slides} badges={heroBadges} />
       </div>
 
