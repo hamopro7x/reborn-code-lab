@@ -96,16 +96,6 @@ function Home() {
   // لو مفيش منتجات مميزة نعرض الأحدث من نفس البيانات الموجودة.
   const featured = featuredRaw.length ? featuredRaw : (latestQ.data ?? []);
 
-  // Badges الهيرو مبنية على بيانات المنتجات الفعلية (أعلى خصم + عدد المنتجات).
-  const heroBadges = useMemo(() => {
-    const all = latestQ.data ?? [];
-    const maxDiscount = all.reduce((m: number, p: any) => Math.max(m, Number(p.discount_percent ?? 0)), 0);
-    const list: { title: string; value: string }[] = [];
-    if (maxDiscount > 0) list.push({ title: "خصومات تصل إلى", value: `${maxDiscount}%` });
-    list.push({ title: "تسليم فوري", value: "بعد الدفع مباشرة" });
-    if (all.length) list.push({ title: "منتجات متاحة", value: `${all.length}+` });
-    return list;
-  }, [latestQ.data]);
 
   // بطاقات الشحن = منتجات الأقسام التي تمثل بطاقات/شحن في قاعدة البيانات نفسها.
   const topups = useMemo(() => {
@@ -115,34 +105,6 @@ function Home() {
     return matched.length ? matched : [];
   }, [latestQ.data]);
 
-  // شرائح الهيرو مبنية على البيانات الموجودة (منتجات مميزة ثم أقسام) بدون أي بيانات ثابتة.
-  const slides: HeroSlide[] = useMemo(() => {
-    const fromProducts: HeroSlide[] = featured.slice(0, 3).map((p: any) => ({
-      id: `p-${p.id}`,
-      title: p.name,
-      subtitle: p.short_description ?? p.description ?? null,
-      image: p.main_image,
-      to: "/product/$slug",
-      params: { slug: p.slug },
-      cta: "اطلب الآن",
-    }));
-    if (fromProducts.length) return fromProducts;
-    const fromCats: HeroSlide[] = categories.slice(0, 3).map((c: any) => ({
-      id: `c-${c.id}`,
-      title: c.name,
-      subtitle: c.description ?? null,
-      image: c.banner_image,
-      to: "/shop",
-    }));
-    if (fromCats.length) return fromCats;
-    return [{
-      id: "default",
-      title: "أفضل المنتجات الرقمية بأسعار مميزة",
-      subtitle: "اشتراكات وأدوات وقوالب جاهزة للاستخدام مع ضمان حقيقي وتسليم فوري.",
-      image: null,
-      to: "/shop",
-    }];
-  }, [featured, categories]);
 
   return (
     <div className="min-h-screen flex flex-col">
