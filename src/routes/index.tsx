@@ -112,7 +112,7 @@ function Home() {
 
       {/* Hero نصي بسيط بدون كرت */}
       <section className="relative overflow-hidden">
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-[radial-gradient(ellipse_at_bottom,rgba(124,58,237,0.18),transparent_70%)]" />
+        
         <div className="relative container mx-auto px-4 py-16 md:py-24 text-center flex flex-col items-center gap-5">
           <h1 className="text-4xl md:text-6xl font-extrabold leading-tight bg-gradient-to-l from-fuchsia-300 via-purple-400 to-indigo-400 bg-clip-text text-transparent">
             متجر الاشتراكات الرقمية
