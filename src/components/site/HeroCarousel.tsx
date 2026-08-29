@@ -33,6 +33,7 @@ export function HeroCarousel({ slides, badges = [] }: { slides: HeroSlide[]; bad
 
   if (!slides.length) return null;
   const active = slides[Math.min(index, slides.length - 1)];
+  const shownBadges = badges.slice(0, 3);
 
   return (
     <section
@@ -41,9 +42,9 @@ export function HeroCarousel({ slides, badges = [] }: { slides: HeroSlide[]; bad
       onMouseLeave={() => (paused.current = false)}
       aria-label="عروض مميزة"
     >
-      <div className="relative h-[260px] md:h-[340px] grid md:grid-cols-2 overflow-hidden">
+      <div className="relative h-[260px] md:h-[340px] grid md:grid-cols-[1fr_auto_minmax(0,1fr)] overflow-hidden">
         {/* Artwork — ثابت الحجم مهما كان حجم الصورة الأصلية */}
-        <div className="absolute inset-y-0 left-0 w-full md:w-1/2 md:order-1 overflow-hidden">
+        <div className="absolute inset-y-0 left-0 w-full md:static md:w-auto md:order-2 overflow-hidden md:aspect-[4/3] md:h-full">
           {active.image ? (
             <img
               key={active.id}
@@ -61,7 +62,7 @@ export function HeroCarousel({ slides, badges = [] }: { slides: HeroSlide[]; bad
         </div>
 
         {/* Text */}
-        <div className="relative md:order-2 p-6 md:p-10 flex flex-col justify-center gap-4 min-w-0 overflow-hidden">
+        <div className="relative md:order-1 p-6 md:p-10 flex flex-col justify-center gap-4 min-w-0 overflow-hidden">
           <h1 className="text-2xl md:text-4xl font-black leading-tight line-clamp-3">{active.title}</h1>
           {active.subtitle && (
             <p className="text-sm md:text-base text-hero-foreground/70 line-clamp-3 max-w-md">{active.subtitle}</p>
@@ -80,7 +81,23 @@ export function HeroCarousel({ slides, badges = [] }: { slides: HeroSlide[]; bad
             </Link>
           </div>
         </div>
+
+        {/* Badges */}
+        {shownBadges.length > 0 && (
+          <div className="hidden md:flex md:order-3 flex-col justify-center gap-3 p-6 min-w-0">
+            {shownBadges.map((b) => (
+              <div
+                key={b.title}
+                className="rounded-xl border border-border bg-card/80 px-4 py-3 flex flex-col gap-0.5"
+              >
+                <span className="text-xs text-hero-foreground/70">{b.title}</span>
+                <span className="text-sm font-black text-primary">{b.value}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
+
 
 
       {slides.length > 1 && (
