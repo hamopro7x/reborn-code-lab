@@ -864,12 +864,14 @@ export type Database = {
           gap_subtitle_buttons: number
           gap_title_subtitle: number
           id: string
+          media_fit: string
           media_path: string | null
           media_type: string
           media_url: string | null
           overlay_color: string
           overlay_enabled: boolean
           overlay_opacity: number
+          positions: Json
           poster_path: string | null
           poster_url: string | null
           show_subtitle: boolean
@@ -900,12 +902,14 @@ export type Database = {
           gap_subtitle_buttons?: number
           gap_title_subtitle?: number
           id?: string
+          media_fit?: string
           media_path?: string | null
           media_type?: string
           media_url?: string | null
           overlay_color?: string
           overlay_enabled?: boolean
           overlay_opacity?: number
+          positions?: Json
           poster_path?: string | null
           poster_url?: string | null
           show_subtitle?: boolean
@@ -936,12 +940,14 @@ export type Database = {
           gap_subtitle_buttons?: number
           gap_title_subtitle?: number
           id?: string
+          media_fit?: string
           media_path?: string | null
           media_type?: string
           media_url?: string | null
           overlay_color?: string
           overlay_enabled?: boolean
           overlay_opacity?: number
+          positions?: Json
           poster_path?: string | null
           poster_url?: string | null
           show_subtitle?: boolean
