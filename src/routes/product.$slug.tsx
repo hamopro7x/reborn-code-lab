@@ -162,7 +162,7 @@ function ProductPage() {
           )}
 
           <div className="mt-6 flex gap-2">
-            <Button onClick={handleBuyNow} size="lg" className="gradient-primary text-white glow-purple flex-1 h-12">اشترِ الآن</Button>
+            <Button onClick={handleBuyNow} size="lg" className="gradient-primary flex-1 h-12">اشترِ الآن</Button>
             <Button onClick={handleAdd} size="lg" variant="outline" className="border-primary/40 hover:bg-primary/10 h-12"><ShoppingCart className="size-5" /></Button>
           </div>
         </div>

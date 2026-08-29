@@ -78,8 +78,8 @@ function OrderPage() {
         {!o ? <div className="text-center py-16">جاري التحميل...</div> : (
           <div className="animate-slide-up">
             <div className="text-center mb-8">
-              <div className="size-16 rounded-full gradient-primary mx-auto flex items-center justify-center mb-4 glow-purple">
-                <CheckCircle2 className="size-8 text-white" />
+              <div className="size-16 rounded-full gradient-primary mx-auto flex items-center justify-center mb-4">
+                <CheckCircle2 className="size-8 text-primary-foreground" />
               </div>
               <h1 className="text-3xl font-black text-gradient">تم إرسال طلبك</h1>
               <p className="text-muted-foreground mt-2">سيتم مراجعة الدفع وتأكيد الطلب قريباً</p>
@@ -127,7 +127,7 @@ function OrderPage() {
 
             {!invoiceSent && (
               <a href={`https://wa.me/201120373986?text=${waMessage()}`} target="_blank" rel="noreferrer" onClick={markInvoiceSent}>
-                <Button className="w-full h-10 bg-black hover:bg-black/90 text-white gap-2 text-sm font-bold">
+                <Button className="w-full h-10 bg-primary hover:bg-primary/90 text-primary-foreground gap-2 text-sm font-bold">
                   <MessageCircle className="size-4" />
                   اضغط هنا لإرسال الفاتورة عبر الواتساب
                 </Button>

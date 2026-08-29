@@ -40,7 +40,7 @@ function CartPage() {
           <div className="card-surface rounded-3xl p-16 text-center">
             <ShoppingBag className="size-16 mx-auto text-muted-foreground mb-4" />
             <p className="text-lg mb-6">السلة فارغة</p>
-            <Link to="/shop"><Button className="gradient-primary text-white">تصفح المتجر</Button></Link>
+            <Link to="/shop"><Button className="gradient-primary">تصفح المتجر</Button></Link>
           </div>
         ) : (
           <div className="grid md:grid-cols-3 gap-6">
@@ -71,13 +71,13 @@ function CartPage() {
               })}
             </div>
             <div>
-              <div className="card-surface rounded-2xl p-6 sticky top-24 glow-purple">
+              <div className="card-surface rounded-2xl p-6 sticky top-24">
                 <h2 className="font-bold text-lg mb-4">ملخص الطلب</h2>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between"><span className="text-muted-foreground">عدد المنتجات</span><span>{count}</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">الإجمالي</span><span className="font-black text-lg text-gradient">{formatPrice(convertFromEgp(totalEgp, rate, currency.code), currency)}</span></div>
                 </div>
-                <Button onClick={() => navigate({ to: "/checkout" })} className="gradient-primary text-white w-full mt-6 h-11">إتمام الشراء</Button>
+                <Button onClick={() => navigate({ to: "/checkout" })} className="gradient-primary w-full mt-6 h-11">إتمام الشراء</Button>
               </div>
             </div>
           </div>

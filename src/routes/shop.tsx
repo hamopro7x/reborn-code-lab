@@ -78,11 +78,11 @@ function Shop() {
         </div>
 
         <div className="mb-6 flex flex-wrap gap-2">
-          <button onClick={() => setActiveCat(undefined)} className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${!activeCat ? "gradient-primary text-white glow-purple" : "card-surface hover:bg-primary/10"}`}>
+          <button onClick={() => setActiveCat(undefined)} className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${!activeCat ? "gradient-primary" : "card-surface hover:bg-primary/10"}`}>
             الكل
           </button>
           {(categoriesQ.data ?? []).map((c: any) => (
-            <button key={c.id} onClick={() => setActiveCat(c.slug)} className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${activeCat === c.slug ? "gradient-primary text-white glow-purple" : "card-surface hover:bg-primary/10"}`}>
+            <button key={c.id} onClick={() => setActiveCat(c.slug)} className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${activeCat === c.slug ? "gradient-primary" : "card-surface hover:bg-primary/10"}`}>
               <span className="mr-1">{c.icon}</span>{c.name}
             </button>
           ))}
