@@ -25,6 +25,42 @@ import {
 const BUCKET = "product-images";
 const TEN_YEARS = 60 * 60 * 24 * 365 * 10;
 
+/** إطار معاينة بعرض الموقع الحقيقي (1280px) مُصغّر بالتحويل — يعرض التصميم بنفس نسب الصفحة الرئيسية. */
+const SITE_WIDTH = 1280;
+const SITE_HEIGHT = 340;
+
+function ScaledPreview({ children }: { children: React.ReactNode }) {
+  const boxRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    const el = boxRef.current;
+    if (!el) return;
+    const update = () => setScale(Math.min(1, el.clientWidth / SITE_WIDTH));
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  return (
+    <div ref={boxRef} className="mt-1 w-full" style={{ height: SITE_HEIGHT * scale }}>
+      <div
+        className="overflow-hidden rounded-2xl border border-border bg-hero text-hero-foreground"
+        style={{
+          width: SITE_WIDTH,
+          height: SITE_HEIGHT,
+          transform: `scale(${scale})`,
+          transformOrigin: "top right",
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+
 async function uploadMedia(file: File, kind: "image" | "video" | "poster") {
   const path = `hero/${kind}/${Date.now()}-${file.name.replace(/[^\w.\-]/g, "_")}`;
   const { error } = await supabase.storage.from(BUCKET).upload(path, file);
@@ -250,7 +286,7 @@ export function HeroBannerManager() {
                     إعادة المواضع
                   </Button>
                 </div>
-                <div className="mt-1 overflow-hidden rounded-2xl border border-border bg-hero text-hero-foreground">
+                <ScaledPreview>
                   {preview && (
                     <HeroBannerView
                       banner={preview}
@@ -259,7 +295,8 @@ export function HeroBannerManager() {
                       onPositionsChange={(positions) => setEditing((cur) => (cur ? { ...cur, positions } : cur))}
                     />
                   )}
-                </div>
+                </ScaledPreview>
+
               </div>
 
               {/* المحتوى */}
