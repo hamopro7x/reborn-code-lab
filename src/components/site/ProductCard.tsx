@@ -55,9 +55,9 @@ export function ProductCard({ p }: { p: any }) {
             خصم {p.discount_percent}%
           </span>
         )}
-        {p.featured && (
-          <span className="absolute top-2 left-2 rounded-md border border-border bg-background/85 px-2 py-0.5 text-[10px]">
-            مميز
+        {p.category?.name && (
+          <span className="absolute top-2 left-2 rounded-md border border-border bg-background/85 px-2 py-0.5 text-[10px] max-w-[70%] truncate">
+            {p.category.name}
           </span>
         )}
       </div>

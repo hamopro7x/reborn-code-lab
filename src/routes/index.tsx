@@ -8,6 +8,8 @@ import { WhatsAppFab } from "@/components/site/WhatsAppFab";
 import { ProductCard } from "@/components/site/ProductCard";
 import { Countdown } from "@/components/site/Countdown";
 import { HomeSidebar } from "@/components/site/HomeSidebar";
+import { ProductRail } from "@/components/site/ProductRail";
+import { TopupCard } from "@/components/site/TopupCard";
 import { HeroCarousel, type HeroSlide } from "@/components/site/HeroCarousel";
 import { useEffect, useMemo } from "react";
 import { useCurrency } from "@/lib/currency-context";
@@ -100,6 +102,25 @@ function Home() {
   // لو مفيش منتجات مميزة نعرض الأحدث من نفس البيانات الموجودة.
   const featured = featuredRaw.length ? featuredRaw : (latestQ.data ?? []);
 
+  // Badges الهيرو مبنية على بيانات المنتجات الفعلية (أعلى خصم + عدد المنتجات).
+  const heroBadges = useMemo(() => {
+    const all = latestQ.data ?? [];
+    const maxDiscount = all.reduce((m: number, p: any) => Math.max(m, Number(p.discount_percent ?? 0)), 0);
+    const list: { title: string; value: string }[] = [];
+    if (maxDiscount > 0) list.push({ title: "خصومات تصل إلى", value: `${maxDiscount}%` });
+    list.push({ title: "تسليم فوري", value: "بعد الدفع مباشرة" });
+    if (all.length) list.push({ title: "منتجات متاحة", value: `${all.length}+` });
+    return list;
+  }, [latestQ.data]);
+
+  // بطاقات الشحن = منتجات الأقسام التي تمثل بطاقات/شحن في قاعدة البيانات نفسها.
+  const topups = useMemo(() => {
+    const all = latestQ.data ?? [];
+    const isTopup = (p: any) => /card|top ?up|شحن|بطاق/i.test(`${p.category?.name ?? ""} ${p.name}`);
+    const matched = all.filter(isTopup);
+    return matched.length ? matched : [];
+  }, [latestQ.data]);
+
   // شرائح الهيرو مبنية على البيانات الموجودة (منتجات مميزة ثم أقسام) بدون أي بيانات ثابتة.
   const slides: HeroSlide[] = useMemo(() => {
     const fromProducts: HeroSlide[] = featured.slice(0, 3).map((p: any) => ({
@@ -154,7 +175,7 @@ function Home() {
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_260px] xl:grid-cols-[minmax(0,1fr)_280px]">
           {/* CONTENT */}
           <div className="min-w-0 space-y-8 lg:order-1">
-            <HeroCarousel slides={slides} />
+            <HeroCarousel slides={slides} badges={heroBadges} />
 
             {(timerQ.isLoading || timerQ.data) && (
               <div className="flex justify-center">
@@ -180,19 +201,39 @@ function Home() {
             {/* PRODUCTS */}
             <section>
               <SectionHeading title="أحدث المنتجات" to="/shop" />
-              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
-                {(featuredQ.isLoading || latestQ.isLoading) &&
-                  Array.from({ length: 5 }).map((_, i) => (
+              {(featuredQ.isLoading || latestQ.isLoading) && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
+                  {Array.from({ length: 5 }).map((_, i) => (
                     <div key={`p-sk-${i}`} className="rounded-xl border border-border bg-card h-[16rem] animate-pulse" />
                   ))}
-                {featured.map((p: any) => (
-                  <ProductCard key={p.id} p={p} />
-                ))}
-              </div>
+                </div>
+              )}
+              {featured.length > 0 && (
+                <ProductRail ariaLabel="أحدث المنتجات">
+                  {featured.map((p: any) => (
+                    <ProductCard key={p.id} p={p} />
+                  ))}
+                </ProductRail>
+              )}
               {!featuredQ.isLoading && !latestQ.isLoading && featured.length === 0 && (
                 <p className="text-sm text-muted-foreground">لا توجد منتجات متاحة حاليًا.</p>
               )}
             </section>
+
+            {/* TOP-UP CARDS */}
+            {topups.length > 0 && (
+              <section>
+                <SectionHeading title="بطاقات الشحن" to="/shop" />
+                <ProductRail
+                  ariaLabel="بطاقات الشحن"
+                  itemClassName="w-[72%] sm:w-[46%] md:w-[32%] xl:w-[24%]"
+                >
+                  {topups.map((p: any) => (
+                    <TopupCard key={p.id} p={p} />
+                  ))}
+                </ProductRail>
+              </section>
+            )}
 
             {/* CATEGORIES / CARDS SECTION */}
             <section>
