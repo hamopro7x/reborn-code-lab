@@ -65,8 +65,8 @@ function Shop() {
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8">
         <div className="mb-8 animate-slide-up">
-          <h1 className="text-4xl font-black text-gradient">المتجر</h1>
-          <p className="text-muted-foreground mt-2">تصفح كل المنتجات الرقمية</p>
+          <h1 className="text-4xl font-black text-foreground">المتجر</h1>
+          <p className="text-foreground/70 mt-2">تصفح كل المنتجات الرقمية</p>
         </div>
 
         <div className="mb-6 flex gap-3 flex-col md:flex-row">
@@ -78,11 +78,11 @@ function Shop() {
         </div>
 
         <div className="mb-6 flex flex-wrap gap-2">
-          <button onClick={() => setActiveCat(undefined)} className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${!activeCat ? "gradient-primary text-white glow-purple" : "card-surface hover:bg-primary/10"}`}>
+          <button onClick={() => setActiveCat(undefined)} className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${!activeCat ? "gradient-primary" : "card-surface hover:bg-primary/10"}`}>
             الكل
           </button>
           {(categoriesQ.data ?? []).map((c: any) => (
-            <button key={c.id} onClick={() => setActiveCat(c.slug)} className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${activeCat === c.slug ? "gradient-primary text-white glow-purple" : "card-surface hover:bg-primary/10"}`}>
+            <button key={c.id} onClick={() => setActiveCat(c.slug)} className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${activeCat === c.slug ? "gradient-primary" : "card-surface hover:bg-primary/10"}`}>
               <span className="mr-1">{c.icon}</span>{c.name}
             </button>
           ))}

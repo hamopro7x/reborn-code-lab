@@ -160,7 +160,7 @@ function CheckoutPage() {
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
         {bannerQ.data?.enabled && (bannerQ.data.title || bannerQ.data.subtitle) && (
-          <div className="mb-6 relative overflow-hidden rounded-2xl gradient-primary p-5 md:p-6 text-white shadow-lg animate-slide-up">
+          <div className="mb-6 relative overflow-hidden rounded-2xl gradient-primary p-5 md:p-6 text-primary-foreground shadow-lg animate-slide-up">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.15),transparent_60%)]" />
             <div className="relative flex items-start gap-3">
               <div className="size-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0 backdrop-blur">
@@ -168,17 +168,17 @@ function CheckoutPage() {
               </div>
               <div className="min-w-0">
                 {bannerQ.data.title && <div className="font-black text-lg md:text-xl">{bannerQ.data.title}</div>}
-                {bannerQ.data.subtitle && <div className="text-sm text-white/90 mt-1">{bannerQ.data.subtitle}</div>}
+                {bannerQ.data.subtitle && <div className="text-sm text-primary-foreground/90 mt-1">{bannerQ.data.subtitle}</div>}
               </div>
             </div>
           </div>
         )}
-        <h1 className="text-3xl font-black text-gradient mb-6">إتمام الشراء</h1>
+        <h1 className="text-3xl font-black text-foreground mb-6">إتمام الشراء</h1>
 
         <div className="flex items-center gap-2 mb-8 text-sm">
           {[["info","بياناتك"],["payment","الدفع"],["screenshot","إثبات التحويل"],["done","تم"]].map(([k,l],i) => (
             <div key={k} className="flex items-center gap-2">
-              <div className={`size-8 rounded-full flex items-center justify-center font-bold text-xs ${step === k || (["payment","screenshot","done"].indexOf(step) > ["payment","screenshot","done"].indexOf(k as any)) ? "gradient-primary text-white" : "card-surface"}`}>{i+1}</div>
+              <div className={`size-8 rounded-full flex items-center justify-center font-bold text-xs ${step === k || (["payment","screenshot","done"].indexOf(step) > ["payment","screenshot","done"].indexOf(k as any)) ? "gradient-primary" : "card-surface"}`}>{i+1}</div>
               <span className={step === k ? "font-bold" : "text-muted-foreground"}>{l}</span>
               {i < 3 && <div className="w-8 h-px bg-border mx-1" />}
             </div>
@@ -206,7 +206,7 @@ function CheckoutPage() {
                   <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} required placeholder="1017873279" />
                 </div>
               </div>
-              <Button type="submit" className="bg-black hover:bg-black/90 text-white w-full h-10 text-sm">متابعة إلى الدفع</Button>
+              <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground w-full h-10 text-sm">متابعة إلى الدفع</Button>
             </div>
             <div className="card-surface rounded-2xl p-6 h-fit">
               <h3 className="font-bold mb-4">الملخص</h3>
@@ -230,7 +230,7 @@ function CheckoutPage() {
             <div className="md:col-span-2 space-y-3">
               <h2 className="font-bold text-lg mb-2">اختر طريقة الدفع</h2>
               {(paymentQ.data ?? []).map((pm: any) => (
-                <button key={pm.id} onClick={() => setSelectedPayment(pm)} className={`w-full text-right card-surface rounded-2xl p-5 hover:bg-primary/5 transition-all ${selectedPayment?.id === pm.id ? "glow-purple ring-2 ring-primary" : ""}`}>
+                <button key={pm.id} onClick={() => setSelectedPayment(pm)} className={`w-full text-right card-surface rounded-2xl p-5 hover:bg-primary/5 transition-all ${selectedPayment?.id === pm.id ? "ring-2 ring-primary" : ""}`}>
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="font-bold">{pm.name}</div>
@@ -252,7 +252,7 @@ function CheckoutPage() {
                     )}
                   </div>
                   {paymentDetailsQ.data?.account_name && <div className="text-xs text-muted-foreground">{paymentDetailsQ.data.account_name}</div>}
-                  <div className="font-bold text-sm text-white mt-2">بعد التحويل اكد الطلب ورفع صورة الاثبات</div>
+                  <div className="font-bold text-sm text-primary-foreground mt-2">بعد التحويل اكد الطلب ورفع صورة الاثبات</div>
                   {paymentDetailsQ.data?.instructions && <div className="text-xs text-muted-foreground mt-2">{paymentDetailsQ.data.instructions}</div>}
                   <div className="mt-3 font-black text-lg">المبلغ: <span className="text-gradient">{formatPrice(total, currency)}</span></div>
                 </div>
@@ -260,7 +260,7 @@ function CheckoutPage() {
 
               <div className="flex gap-2 mt-4">
                 <Button variant="outline" onClick={() => setStep("info")}><ArrowLeft className="size-4 ml-1" />رجوع</Button>
-                <Button onClick={createOrder} disabled={!selectedPayment} className="bg-black hover:bg-black/90 text-white flex-1 h-10 text-sm">تأكيد الطلب ورفع صورة التحويل</Button>
+                <Button onClick={createOrder} disabled={!selectedPayment} className="bg-primary hover:bg-primary/90 text-primary-foreground flex-1 h-10 text-sm">تأكيد الطلب ورفع صورة التحويل</Button>
               </div>
             </div>
             <div className="card-surface rounded-2xl p-6 h-fit">
@@ -272,8 +272,8 @@ function CheckoutPage() {
 
         {step === "screenshot" && (
           <div className="card-surface rounded-2xl p-8 max-w-xl mx-auto text-center">
-            <div className="size-16 rounded-full gradient-primary mx-auto flex items-center justify-center mb-4 glow-purple">
-              <Upload className="size-8 text-white" />
+            <div className="size-16 rounded-full gradient-primary mx-auto flex items-center justify-center mb-4">
+              <Upload className="size-8 text-primary-foreground" />
             </div>
             <h2 className="font-bold text-xl mb-2">ارفع صورة إثبات التحويل</h2>
             <p className="text-sm text-muted-foreground mb-6">تم إنشاء طلبك بكود: <span className="font-mono font-bold text-primary">{orderCode}</span></p>
@@ -293,7 +293,7 @@ function CheckoutPage() {
                 )}
               </div>
             </label>
-            <Button onClick={uploadScreenshot} disabled={!screenshotFile || uploading} className="bg-black hover:bg-black/90 text-white w-full mt-6 h-10 text-sm">
+            <Button onClick={uploadScreenshot} disabled={!screenshotFile || uploading} className="bg-primary hover:bg-primary/90 text-primary-foreground w-full mt-6 h-10 text-sm">
               {uploading ? "جاري الرفع..." : "إرسال الطلب"}
             </Button>
           </div>
