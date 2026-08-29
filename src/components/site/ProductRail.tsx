@@ -39,7 +39,7 @@ export function ProductRail({
   };
 
   const arrow =
-    "absolute top-1/2 -translate-y-1/2 z-10 size-9 rounded-full border border-border bg-background/90 flex items-center justify-center transition-colors duration-150 hover:bg-secondary disabled:opacity-0";
+    "absolute top-1/2 -translate-y-1/2 z-10 size-9 rounded-full border border-border bg-card text-card-foreground flex items-center justify-center transition-colors duration-150 hover:bg-primary hover:text-primary-foreground disabled:opacity-0";
 
   return (
     <div className="relative" aria-label={ariaLabel}>
