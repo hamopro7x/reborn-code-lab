@@ -61,7 +61,7 @@ export function HeroCarousel({ slides, badges = [] }: { slides: HeroSlide[]; bad
         </div>
 
         {/* Text */}
-        <div className="relative md:order-2 p-6 md:p-10 flex flex-col justify-center gap-4 min-w-0">
+        <div className="relative md:order-2 p-6 md:p-10 flex flex-col justify-center gap-4 min-w-0 overflow-hidden">
           <h1 className="text-2xl md:text-4xl font-black leading-tight line-clamp-3">{active.title}</h1>
           {active.subtitle && (
             <p className="text-sm md:text-base text-hero-foreground/70 line-clamp-3 max-w-md">{active.subtitle}</p>
