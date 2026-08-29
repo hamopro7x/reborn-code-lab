@@ -33,6 +33,7 @@ export function HeroCarousel({ slides, badges = [] }: { slides: HeroSlide[]; bad
 
   if (!slides.length) return null;
   const active = slides[Math.min(index, slides.length - 1)];
+  const shownBadges = badges.slice(0, 3);
 
   return (
     <section
