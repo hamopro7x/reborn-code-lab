@@ -78,7 +78,7 @@ export function Header() {
             {navLinks.map((l) => (
               <NavLink key={l.to} to={l.to} label={l.label} active={pathname === l.to} />
             ))}
-            {categories.slice(0, 2).map((c: any) => (
+            {categories.map((c: any) => (
               <Link
                 key={c.id}
                 to="/shop"
