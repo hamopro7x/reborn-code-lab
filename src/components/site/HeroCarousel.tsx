@@ -66,16 +66,6 @@ export function HeroCarousel({ slides, badges = [] }: { slides: HeroSlide[]; bad
           {active.subtitle && (
             <p className="text-sm md:text-base text-hero-foreground/70 line-clamp-3 max-w-md">{active.subtitle}</p>
           )}
-          {badges.length > 0 && (
-            <ul className="hidden sm:flex lg:hidden flex-wrap gap-2 pt-1">
-              {badges.map((b) => (
-                <li key={b.title} className="rounded-lg border border-border bg-card px-2.5 py-1 text-[11px] text-card-foreground">
-                  <span className="text-muted-foreground">{b.title} </span>
-                  <span className="font-bold">{b.value}</span>
-                </li>
-              ))}
-            </ul>
-          )}
           <div className="flex flex-wrap items-center gap-3 pt-1">
             <Link to={active.to as any} params={active.params as any}>
               <Button size="lg" className="h-11 px-6 font-bold gap-2">
@@ -92,16 +82,6 @@ export function HeroCarousel({ slides, badges = [] }: { slides: HeroSlide[]; bad
         </div>
       </div>
 
-      {badges.length > 0 && (
-        <ul className="absolute top-1/2 -translate-y-1/2 left-4 hidden lg:flex w-44 flex-col gap-2">
-          {badges.map((b) => (
-            <li key={b.title} className="rounded-xl border border-border bg-card px-3 py-2 text-card-foreground">
-              <div className="text-[11px] text-muted-foreground truncate">{b.title}</div>
-              <div className="text-sm font-bold truncate">{b.value}</div>
-            </li>
-          ))}
-        </ul>
-      )}
 
       {slides.length > 1 && (
         <>
