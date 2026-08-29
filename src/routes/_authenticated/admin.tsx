@@ -1533,12 +1533,9 @@ function SettingsTab() {
   const q = useQuery({ queryKey: ["settings"], queryFn: async () => (await supabase.from("site_settings").select("*")).data ?? [] });
   const [site, setSite] = useState<any>({});
   const [banner, setBanner] = useState<any>({ enabled: true, title: "", subtitle: "" });
-  const [hero, setHero] = useState<any>({ title: "", subtitle: "", image: "" });
-  const [heroUploading, setHeroUploading] = useState(false);
   useEffect(() => {
     const s = q.data?.find((x: any) => x.key === "site"); if (s) setSite(s.value);
     const b = q.data?.find((x: any) => x.key === "checkout_banner"); if (b) setBanner(b.value);
-    const h = q.data?.find((x: any) => x.key === "hero"); if (h) setHero({ title: "", subtitle: "", image: "", ...(h.value as any) });
   }, [q.data]);
 
   async function save() {
