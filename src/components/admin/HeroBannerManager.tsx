@@ -240,7 +240,7 @@ export function HeroBannerManager() {
               {/* Live Preview */}
               <div>
                 <div className="flex items-center justify-between">
-                  <Label className="text-xs">معاينة مباشرة — اسحب أي عنصر بالماوس لتحديد مكانه</Label>
+                  <Label className="text-xs">معاينة مباشرة — اسحب كل عنصر (العنوان، الوصف، كل زر، كل كرت) بالماوس لتحديد مكانه</Label>
                   <Button
                     size="sm"
                     variant="ghost"
@@ -282,6 +282,15 @@ export function HeroBannerManager() {
                     </label>
                   </div>
                   <Textarea rows={2} value={editing.subtitle} onChange={(e) => setEditing({ ...editing, subtitle: e.target.value })} />
+                </div>
+                <div>
+                  <div className="flex items-center justify-between">
+                    <Label>الوصف الثاني</Label>
+                    <label className="flex items-center gap-2 text-xs">
+                      <Switch checked={editing.show_subtitle2} onCheckedChange={(v) => setEditing({ ...editing, show_subtitle2: v })} /> إظهار
+                    </label>
+                  </div>
+                  <Textarea rows={2} value={editing.subtitle2} onChange={(e) => setEditing({ ...editing, subtitle2: e.target.value })} />
                 </div>
               </section>
 
@@ -477,6 +486,8 @@ export function HeroBannerManager() {
                   <NumField label="حجم العنوان (Mobile)" value={editing.title_size_mobile} onChange={(n) => setEditing({ ...editing, title_size_mobile: n })} max={48} />
                   <NumField label="حجم الوصف (Desktop)" value={editing.subtitle_size} onChange={(n) => setEditing({ ...editing, subtitle_size: n })} max={32} />
                   <NumField label="حجم الوصف (Mobile)" value={editing.subtitle_size_mobile} onChange={(n) => setEditing({ ...editing, subtitle_size_mobile: n })} max={28} />
+                  <NumField label="حجم الوصف الثاني (Desktop)" value={editing.subtitle2_size} onChange={(n) => setEditing({ ...editing, subtitle2_size: n })} max={32} />
+                  <NumField label="حجم الوصف الثاني (Mobile)" value={editing.subtitle2_size_mobile} onChange={(n) => setEditing({ ...editing, subtitle2_size_mobile: n })} max={28} />
                   <NumField label="ارتفاع الأزرار" value={editing.button_size} onChange={(n) => setEditing({ ...editing, button_size: n })} min={32} max={64} />
                 </div>
               </section>
