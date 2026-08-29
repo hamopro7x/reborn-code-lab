@@ -109,7 +109,7 @@ export function HeroCarousel({ slides, badges = [] }: { slides: HeroSlide[]; bad
             type="button"
             onClick={() => setIndex((i) => (i - 1 + slides.length) % slides.length)}
             aria-label="السابق"
-            className="absolute top-1/2 -translate-y-1/2 right-3 size-9 rounded-full border border-border bg-background/80 flex items-center justify-center hover:bg-secondary transition-colors"
+            className="absolute top-1/2 -translate-y-1/2 right-3 size-9 rounded-full border border-border bg-card text-card-foreground flex items-center justify-center hover:bg-muted transition-colors"
           >
             <ChevronRight className="size-4" />
           </button>
@@ -117,7 +117,7 @@ export function HeroCarousel({ slides, badges = [] }: { slides: HeroSlide[]; bad
             type="button"
             onClick={() => setIndex((i) => (i + 1) % slides.length)}
             aria-label="التالي"
-            className="absolute top-1/2 -translate-y-1/2 left-3 size-9 rounded-full border border-border bg-background/80 flex items-center justify-center hover:bg-secondary transition-colors"
+            className="absolute top-1/2 -translate-y-1/2 left-3 size-9 rounded-full border border-border bg-card text-card-foreground flex items-center justify-center hover:bg-muted transition-colors"
           >
             <ChevronLeft className="size-4" />
           </button>
