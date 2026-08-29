@@ -120,6 +120,11 @@
   }
 }
 
+@utility card-surface {
+  background-color: var(--card);
+  color: var(--card-foreground);
+  border: 1px solid var(--border);
+}
 @utility gradient-primary {
   background-color: var(--primary);
   color: var(--primary-foreground);
