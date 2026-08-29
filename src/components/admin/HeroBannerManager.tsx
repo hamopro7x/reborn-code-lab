@@ -327,7 +327,18 @@ export function HeroBannerManager() {
                       <Switch checked={editing.show_subtitle2} onCheckedChange={(v) => setEditing({ ...editing, show_subtitle2: v })} /> إظهار
                     </label>
                   </div>
-                  <Textarea rows={2} value={editing.subtitle2} onChange={(e) => setEditing({ ...editing, subtitle2: e.target.value })} />
+                  <Textarea
+                    rows={2}
+                    value={editing.subtitle2}
+                    onChange={(e) =>
+                      setEditing({
+                        ...editing,
+                        subtitle2: e.target.value,
+                        // الكتابة في الحقل تفعّل الإظهار تلقائياً حتى لا يبقى النص مخفياً.
+                        show_subtitle2: e.target.value.trim() ? true : editing.show_subtitle2,
+                      })
+                    }
+                  />
                 </div>
               </section>
 

@@ -1,0 +1,1 @@
+UPDATE public.hero_banners SET show_subtitle2 = true WHERE subtitle2 IS NOT NULL AND btrim(subtitle2) <> '' AND show_subtitle2 = false;
