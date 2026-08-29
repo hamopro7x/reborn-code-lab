@@ -35,6 +35,22 @@ export function HeroCarousel({ slides, badges = [] }: { slides: HeroSlide[]; bad
   const active = slides[Math.min(index, slides.length - 1)];
   const shownBadges = badges.slice(0, 3);
 
+  const ctaButtons = (
+    <>
+      <Link to={active.to as any} params={active.params as any}>
+        <Button size="lg" className="h-11 px-6 font-bold gap-2">
+          {active.cta ?? "تسوق الآن"}
+          <ArrowLeft className="size-4" />
+        </Button>
+      </Link>
+      <Link to="/track">
+        <Button size="lg" className="h-11 px-6 font-bold bg-teal text-teal-foreground hover:bg-teal/90">
+          تتبع طلبك
+        </Button>
+      </Link>
+    </>
+  );
+
   return (
     <section
       className="relative overflow-hidden rounded-b-2xl border border-border bg-hero text-hero-foreground"
