@@ -179,18 +179,6 @@ function Home() {
               </div>
             )}
 
-            {/* FEATURES BAR */}
-            <ul className="grid grid-cols-2 lg:grid-cols-4 rounded-2xl border border-border bg-card text-card-foreground divide-y divide-border lg:divide-y-0 lg:divide-x lg:divide-x-reverse">
-              {features.map((f) => (
-                <li key={f.title} className="flex items-center gap-3 p-4 min-w-0">
-                  <f.icon className="size-5 shrink-0 text-primary" />
-                  <div className="min-w-0">
-                    <div className="text-sm font-bold truncate">{f.title}</div>
-                    <div className="text-xs text-muted-foreground truncate">{f.body}</div>
-                  </div>
-                </li>
-              ))}
-            </ul>
 
             {/* PRODUCTS */}
             <section>
