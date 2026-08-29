@@ -79,6 +79,10 @@ function Home() {
     queryKey: ["currencies"],
     queryFn: async () => (await supabase.from("currencies").select("*").eq("active", true).order("sort_order")).data ?? [],
   });
+  const heroQ = useQuery({
+    queryKey: ["hero"],
+    queryFn: async () => (await supabase.from("site_settings").select("value").eq("key", "hero").maybeSingle()).data?.value as any,
+  });
 
   useEffect(() => {
     if (ratesQ.data) {
