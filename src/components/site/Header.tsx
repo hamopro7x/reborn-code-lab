@@ -18,14 +18,14 @@ const navLinks = [
   { to: "/track", label: "تتبع طلب" },
 ];
 
+const pillBase =
+  "px-4 py-2 rounded-lg text-sm font-bold transition-colors duration-150 whitespace-nowrap";
+const pillActive = "bg-panel text-panel-foreground";
+const pillIdle = "bg-panel/85 text-panel-foreground hover:bg-panel";
+
 function NavLink({ to, label, active }: { to: string; label: string; active: boolean }) {
   return (
-    <Link
-      to={to}
-      className={`px-4 py-2 rounded-lg text-sm transition-colors duration-150 ${
-        active ? "bg-secondary text-lime font-bold" : "hover:bg-secondary text-foreground/80 hover:text-foreground"
-      }`}
-    >
+    <Link to={to} className={`${pillBase} ${active ? pillActive : pillIdle}`}>
       {label}
     </Link>
   );
