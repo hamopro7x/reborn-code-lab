@@ -81,7 +81,23 @@ export function HeroCarousel({ slides, badges = [] }: { slides: HeroSlide[]; bad
             </Link>
           </div>
         </div>
+
+        {/* Badges */}
+        {shownBadges.length > 0 && (
+          <div className="hidden md:flex md:order-3 flex-col justify-center gap-3 p-6 min-w-0">
+            {shownBadges.map((b) => (
+              <div
+                key={b.title}
+                className="rounded-xl border border-border bg-card/80 px-4 py-3 flex flex-col gap-0.5"
+              >
+                <span className="text-xs text-hero-foreground/70">{b.title}</span>
+                <span className="text-sm font-black text-primary">{b.value}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
+
 
 
       {slides.length > 1 && (
