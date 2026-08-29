@@ -132,7 +132,7 @@
   color: var(--primary);
 }
 @utility glow-purple {
-  box-shadow: 0 0 0 1px oklch(0.78 0.24 120 / 0.55);
+  box-shadow: 0 0 0 1px var(--primary);
 }
 @utility scrollbar-hide {
   -ms-overflow-style: none;
