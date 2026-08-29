@@ -57,6 +57,22 @@ export type HeroBadgeItem = {
 
 export type HeroMediaType = "image" | "video" | "color" | "none";
 
+export type HeroMediaFit = "cover" | "contain";
+
+/** مفاتيح العناصر القابلة للتحريك الحر داخل البانر. */
+export type HeroLayerKey = "content" | "buttons" | "badges";
+
+/** موضع حر بالنسبة المئوية من أبعاد البانر. */
+export type HeroPos = { x: number; y: number };
+
+export type HeroPositions = Partial<Record<HeroLayerKey, HeroPos>>;
+
+export const HERO_LAYER_LABELS: Record<HeroLayerKey, string> = {
+  content: "النص",
+  buttons: "الأزرار",
+  badges: "الكروت",
+};
+
 export type HeroBanner = {
   id: string;
   title: string;
@@ -64,6 +80,7 @@ export type HeroBanner = {
   subtitle: string;
   show_subtitle: boolean;
   media_type: HeroMediaType;
+  media_fit: HeroMediaFit;
   media_url: string | null;
   media_path: string | null;
   poster_url: string | null;
@@ -88,6 +105,7 @@ export type HeroBanner = {
   button_size: number;
   buttons: HeroButton[];
   badges: HeroBadgeItem[];
+  positions: HeroPositions;
   sort_order: number;
   active: boolean;
 };
@@ -116,6 +134,7 @@ export const HERO_DEFAULTS: Omit<HeroBanner, "id"> = {
   subtitle: "اشتراكات وأدوات وقوالب جاهزة للاستخدام مع ضمان حقيقي وتسليم فوري.",
   show_subtitle: true,
   media_type: "image",
+  media_fit: "cover",
   media_url: null,
   media_path: null,
   poster_url: null,
@@ -140,9 +159,24 @@ export const HERO_DEFAULTS: Omit<HeroBanner, "id"> = {
   button_size: 44,
   buttons: [],
   badges: [],
+  positions: {},
   sort_order: 0,
   active: true,
 };
+
+/** تطبيع المواضع الحرة: نسب مئوية بين 0 و100 فقط. */
+export function normalizePositions(raw: any): HeroPositions {
+  const out: HeroPositions = {};
+  for (const k of ["content", "buttons", "badges"] as HeroLayerKey[]) {
+    const p = raw?.[k];
+    const x = Number(p?.x);
+    const y = Number(p?.y);
+    if (Number.isFinite(x) && Number.isFinite(y)) {
+      out[k] = { x: Math.min(100, Math.max(0, x)), y: Math.min(100, Math.max(0, y)) };
+    }
+  }
+  return out;
+}
 
 function num(v: unknown, fallback: number) {
   const n = Number(v);
@@ -179,6 +213,7 @@ export function normalizeBanner(row: any): HeroBanner {
     subtitle: String(row?.subtitle ?? d.subtitle),
     show_subtitle: row?.show_subtitle !== false,
     media_type: (["image", "video", "color", "none"].includes(row?.media_type) ? row.media_type : d.media_type) as HeroMediaType,
+    media_fit: (row?.media_fit === "contain" ? "contain" : "cover") as HeroMediaFit,
     media_url: row?.media_url ?? null,
     media_path: row?.media_path ?? null,
     poster_url: row?.poster_url ?? null,
@@ -203,6 +238,7 @@ export function normalizeBanner(row: any): HeroBanner {
     button_size: num(row?.button_size, d.button_size),
     buttons,
     badges,
+    positions: normalizePositions(row?.positions),
     sort_order: num(row?.sort_order, 0),
     active: row?.active !== false,
   };

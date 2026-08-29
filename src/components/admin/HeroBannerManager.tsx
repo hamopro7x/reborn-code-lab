@@ -239,9 +239,26 @@ export function HeroBannerManager() {
             <div className="space-y-5">
               {/* Live Preview */}
               <div>
-                <Label className="text-xs">معاينة مباشرة</Label>
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs">معاينة مباشرة — اسحب أي عنصر بالماوس لتحديد مكانه</Label>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setEditing({ ...editing, positions: {} })}
+                    disabled={!Object.keys(editing.positions ?? {}).length}
+                  >
+                    إعادة المواضع
+                  </Button>
+                </div>
                 <div className="mt-1 overflow-hidden rounded-2xl border border-border bg-hero text-hero-foreground">
-                  {preview && <HeroBannerView banner={preview} preview />}
+                  {preview && (
+                    <HeroBannerView
+                      banner={preview}
+                      preview
+                      editable
+                      onPositionsChange={(positions) => setEditing((cur) => (cur ? { ...cur, positions } : cur))}
+                    />
+                  )}
                 </div>
               </div>
 
@@ -271,7 +288,7 @@ export function HeroBannerManager() {
               {/* الوسائط */}
               <section className="space-y-3">
                 <h3 className="text-sm font-bold">الخلفية / الوسائط</h3>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   <div>
                     <Label className="text-xs">النوع</Label>
                     <Select
@@ -282,6 +299,17 @@ export function HeroBannerManager() {
                         { value: "video", label: "فيديو" },
                         { value: "color", label: "لون فقط" },
                         { value: "none", label: "بدون" },
+                      ]}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">طريقة العرض</Label>
+                    <Select
+                      value={editing.media_fit}
+                      onChange={(v) => setEditing({ ...editing, media_fit: v as HeroBanner["media_fit"] })}
+                      options={[
+                        { value: "cover", label: "تغطية كاملة (قص الأطراف)" },
+                        { value: "contain", label: "إظهار التصميم بالكامل" },
                       ]}
                     />
                   </div>
