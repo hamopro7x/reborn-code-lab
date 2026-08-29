@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
+import { ChevronLeft, ChevronRight, ArrowLeft, Percent, Zap, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export type HeroSlide = {
@@ -14,6 +14,12 @@ export type HeroSlide = {
 };
 
 export type HeroBadge = { title: string; value: string };
+
+function badgeStyle(title: string) {
+  if (title.includes("خصم")) return { Icon: Percent, bg: "bg-[#e2445c]" };
+  if (title.includes("تسليم")) return { Icon: Zap, bg: "bg-[#2f7ef7]" };
+  return { Icon: Package, bg: "bg-primary" };
+}
 
 export function HeroCarousel({ slides, badges = [] }: { slides: HeroSlide[]; badges?: HeroBadge[] }) {
   const [index, setIndex] = useState(0);
@@ -38,13 +44,13 @@ export function HeroCarousel({ slides, badges = [] }: { slides: HeroSlide[]; bad
   const ctaButtons = (
     <>
       <Link to={active.to as any} params={active.params as any}>
-        <Button size="lg" className="h-11 px-6 font-bold gap-2">
+        <Button size="lg" className="h-11 px-6 rounded-full font-bold gap-2">
           {active.cta ?? "تسوق الآن"}
           <ArrowLeft className="size-4" />
         </Button>
       </Link>
       <Link to="/track">
-        <Button size="lg" className="h-11 px-6 font-bold bg-teal text-teal-foreground hover:bg-teal/90">
+        <Button size="lg" className="h-11 px-6 rounded-full font-bold bg-teal text-teal-foreground hover:bg-teal/90">
           تتبع طلبك
         </Button>
       </Link>
@@ -77,31 +83,36 @@ export function HeroCarousel({ slides, badges = [] }: { slides: HeroSlide[]; bad
           <div className="absolute inset-0 bg-hero/75 md:bg-transparent" />
         </div>
 
-        {/* Text */}
-        <div className="relative md:order-1 p-6 md:p-10 flex flex-col justify-center gap-4 min-w-0 overflow-hidden">
+        {/* Text + CTAs — الآن على الشمال */}
+        <div className="relative md:order-3 p-6 md:p-10 flex flex-col justify-center gap-4 min-w-0 overflow-hidden">
           <h1 className="text-2xl md:text-4xl font-black leading-tight line-clamp-3">{active.title}</h1>
           {active.subtitle && (
             <p className="text-sm md:text-base text-hero-foreground/70 line-clamp-3 max-w-md">{active.subtitle}</p>
           )}
-          <div className="flex md:hidden flex-wrap items-center gap-3 pt-1">
+          <div className="flex flex-wrap items-center gap-3 pt-1">
             {ctaButtons}
           </div>
         </div>
 
-        {/* Badges + CTAs */}
-        <div className="hidden md:flex md:order-3 flex-col justify-center gap-3 p-6 min-w-0">
-          {shownBadges.map((b) => (
-            <div
-              key={b.title}
-              className="rounded-xl border border-border bg-card/80 px-4 py-3 flex flex-col gap-0.5"
-            >
-              <span className="text-xs text-hero-foreground/70">{b.title}</span>
-              <span className="text-sm font-black text-primary">{b.value}</span>
-            </div>
-          ))}
-          <div className="flex flex-wrap items-center gap-3 pt-1">
-            {ctaButtons}
-          </div>
+        {/* Badges — الآن على اليمين، كل واحد في كارت منفصل */}
+        <div className="hidden md:flex md:order-1 flex-col justify-center gap-3 p-6 min-w-0">
+          {shownBadges.map((b) => {
+            const { Icon, bg } = badgeStyle(b.title);
+            return (
+              <div
+                key={b.title}
+                className="flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2.5 w-[170px]"
+              >
+                <span className={`flex size-9 shrink-0 items-center justify-center rounded-lg text-white ${bg}`}>
+                  <Icon className="size-4" />
+                </span>
+                <span className="flex flex-col min-w-0">
+                  <span className="text-[11px] text-muted-foreground truncate">{b.title}</span>
+                  <span className="text-sm font-bold text-foreground truncate">{b.value}</span>
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
 
