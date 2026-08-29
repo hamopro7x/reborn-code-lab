@@ -229,21 +229,10 @@ export function HeroBannerManager() {
         ))}
       </div>
 
-      <Dialog open={!!editing} onOpenChange={(v) => !v && setEditing(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{isNew ? "بانر جديد" : "تعديل البانر"}</DialogTitle>
-          </DialogHeader>
+    </div>
+  );
+}
 
-          {editing && (
-            <div className="space-y-5">
-              {/* Live Preview */}
-              <div>
-                <Label className="text-xs">معاينة مباشرة</Label>
-                <div className="mt-1 overflow-hidden rounded-2xl border border-border bg-hero text-hero-foreground">
-                  {preview && <HeroBannerView banner={preview} preview />}
-                </div>
-              </div>
 
               {/* المحتوى */}
               <section className="space-y-3">
