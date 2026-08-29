@@ -1549,23 +1549,8 @@ function SettingsTab() {
     qc.invalidateQueries({ queryKey: ["settings"] });
     qc.invalidateQueries({ queryKey: ["checkout-banner"] });
   }
-  async function uploadHeroImage(file: File) {
-    setHeroUploading(true);
-    const path = `hero/${Date.now()}-${file.name}`;
-    const { error } = await supabase.storage.from("product-images").upload(path, file);
-    if (error) { setHeroUploading(false); toast.error(error.message); return; }
-    const { data, error: sErr } = await supabase.storage.from("product-images").createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
-    setHeroUploading(false);
-    if (sErr || !data?.signedUrl) { toast.error(sErr?.message || "فشل إنشاء الرابط"); return; }
-    setHero((prev: any) => ({ ...prev, image: data.signedUrl }));
-    toast.success("تم رفع الصورة، اضغط حفظ");
-  }
-  async function saveHero() {
-    const { error } = await supabase.from("site_settings").upsert({ key: "hero", value: hero, updated_at: new Date().toISOString() });
-    if (error) toast.error(error.message); else toast.success("تم حفظ بانر الرئيسية");
-    qc.invalidateQueries({ queryKey: ["settings"] });
-    qc.invalidateQueries({ queryKey: ["hero"] });
-  }
+
+
 
   return (
     <div className="max-w-2xl space-y-6">
