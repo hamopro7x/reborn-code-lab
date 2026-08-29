@@ -31,12 +31,6 @@ export const Route = createFileRoute("/")({
   }),
 });
 
-const features = [
-  { icon: Zap, title: "تسليم فوري", body: "يصل لحسابك مباشرة" },
-  { icon: ShieldCheck, title: "ضمان حقيقي", body: "استبدال أو استرجاع" },
-  { icon: Tags, title: "أسعار تنافسية", body: "أفضل الأسعار دائمًا" },
-  { icon: Headphones, title: "دعم العملاء", body: "متاح في أي وقت" },
-];
 
 function SectionHeading({ title, to }: { title: string; to?: string }) {
   return (
