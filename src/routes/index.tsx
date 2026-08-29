@@ -129,9 +129,13 @@ function Home() {
     <div className="min-h-screen flex flex-col">
       <Header />
 
-      {/* Banner full-width, flush under header */}
+      {/* Banner full-width, flush under header — يظهر بعد تحميل إعدادات الأدمن عشان مايبانش النص الافتراضي لحظة التحديث */}
       <div>
-        <HeroCarousel slides={slides} badges={heroBadges} />
+        {heroQ.isLoading ? (
+          <div className="h-[260px] md:h-[340px] rounded-b-2xl bg-card border-b border-border" aria-hidden />
+        ) : (
+          <HeroCarousel slides={slides} badges={heroBadges} />
+        )}
       </div>
 
       <main className="flex-1 container mx-auto px-4 py-6">
