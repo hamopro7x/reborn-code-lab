@@ -10,7 +10,7 @@ import { Countdown } from "@/components/site/Countdown";
 
 import { ProductRail } from "@/components/site/ProductRail";
 import { TopupCard } from "@/components/site/TopupCard";
-import { HeroCarousel, type HeroSlide } from "@/components/site/HeroCarousel";
+
 import { useEffect, useMemo } from "react";
 import { useCurrency } from "@/lib/currency-context";
 
@@ -110,10 +110,33 @@ function Home() {
     <div className="min-h-screen flex flex-col">
       <Header />
 
-      {/* Banner full-width, flush under header */}
-      <div>
-        <HeroCarousel slides={slides} badges={heroBadges} />
-      </div>
+      {/* Hero نصي بسيط بدون كرت */}
+      <section className="relative overflow-hidden">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-[radial-gradient(ellipse_at_bottom,rgba(124,58,237,0.18),transparent_70%)]" />
+        <div className="relative container mx-auto px-4 py-16 md:py-24 text-center flex flex-col items-center gap-5">
+          <h1 className="text-4xl md:text-6xl font-extrabold leading-tight bg-gradient-to-l from-fuchsia-300 via-purple-400 to-indigo-400 bg-clip-text text-transparent">
+            متجر الاشتراكات الرقمية
+          </h1>
+          <p className="max-w-2xl text-sm md:text-lg text-muted-foreground leading-relaxed">
+            اشتراكات، أدوات ذكاء اصطناعي، منتجات تصميم، وقوالب كانفا احترافية — جاهزة للاستخدام، بأسعار مناسبة لبلدك.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+            <Link
+              to="/shop"
+              className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-6 py-3 text-sm font-bold text-white hover:bg-violet-500 transition-colors duration-150"
+            >
+              تسوق الآن
+              <ArrowLeft className="size-4" />
+            </Link>
+            <Link
+              to="/track"
+              className="inline-flex items-center gap-2 rounded-xl border border-violet-500/40 bg-transparent px-6 py-3 text-sm font-bold text-foreground hover:bg-violet-500/10 transition-colors duration-150"
+            >
+              تتبع طلبك
+            </Link>
+          </div>
+        </div>
+      </section>
 
       <main className="flex-1 container mx-auto px-4 py-6">
         {/* Mobile / tablet categories strip */}
