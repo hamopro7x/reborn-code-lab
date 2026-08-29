@@ -41,6 +41,7 @@ import { AdminSheet } from "@/components/admin/AdminSheet";
 import { LessonUploader } from "@/components/admin/LessonUploader";
 import { DeviceMonitorGrid } from "@/components/admin/DeviceMonitorGrid";
 import { EmployeeDevices } from "@/components/admin/DeviceMonitorGrid";
+import { HeroBannerManager } from "@/components/admin/HeroBannerManager";
 
 
 type PanelKey =
@@ -1532,12 +1533,9 @@ function SettingsTab() {
   const q = useQuery({ queryKey: ["settings"], queryFn: async () => (await supabase.from("site_settings").select("*")).data ?? [] });
   const [site, setSite] = useState<any>({});
   const [banner, setBanner] = useState<any>({ enabled: true, title: "", subtitle: "" });
-  const [hero, setHero] = useState<any>({ title: "", subtitle: "", image: "" });
-  const [heroUploading, setHeroUploading] = useState(false);
   useEffect(() => {
     const s = q.data?.find((x: any) => x.key === "site"); if (s) setSite(s.value);
     const b = q.data?.find((x: any) => x.key === "checkout_banner"); if (b) setBanner(b.value);
-    const h = q.data?.find((x: any) => x.key === "hero"); if (h) setHero({ title: "", subtitle: "", image: "", ...(h.value as any) });
   }, [q.data]);
 
   async function save() {
@@ -1551,23 +1549,8 @@ function SettingsTab() {
     qc.invalidateQueries({ queryKey: ["settings"] });
     qc.invalidateQueries({ queryKey: ["checkout-banner"] });
   }
-  async function uploadHeroImage(file: File) {
-    setHeroUploading(true);
-    const path = `hero/${Date.now()}-${file.name}`;
-    const { error } = await supabase.storage.from("product-images").upload(path, file);
-    if (error) { setHeroUploading(false); toast.error(error.message); return; }
-    const { data, error: sErr } = await supabase.storage.from("product-images").createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
-    setHeroUploading(false);
-    if (sErr || !data?.signedUrl) { toast.error(sErr?.message || "فشل إنشاء الرابط"); return; }
-    setHero((prev: any) => ({ ...prev, image: data.signedUrl }));
-    toast.success("تم رفع الصورة، اضغط حفظ");
-  }
-  async function saveHero() {
-    const { error } = await supabase.from("site_settings").upsert({ key: "hero", value: hero, updated_at: new Date().toISOString() });
-    if (error) toast.error(error.message); else toast.success("تم حفظ بانر الرئيسية");
-    qc.invalidateQueries({ queryKey: ["settings"] });
-    qc.invalidateQueries({ queryKey: ["hero"] });
-  }
+
+
 
   return (
     <div className="max-w-2xl space-y-6">
@@ -1597,26 +1580,8 @@ function SettingsTab() {
         </div>
       </div>
 
-      <div>
-        <h2 className="text-xl font-bold mb-4">بانر الصفحة الرئيسية</h2>
-        <p className="text-xs text-muted-foreground mb-3">بانر ثابت غير مرتبط بالمنتجات — الصورة والنصوص من هنا فقط.</p>
-        <div className="card-surface rounded-2xl p-6 space-y-3">
-          <div><Label>العنوان</Label><Input value={hero.title ?? ""} onChange={(e) => setHero({ ...hero, title: e.target.value })} placeholder="أفضل المنتجات الرقمية بأسعار مميزة" /></div>
-          <div><Label>النص الفرعي</Label><Textarea rows={2} value={hero.subtitle ?? ""} onChange={(e) => setHero({ ...hero, subtitle: e.target.value })} placeholder="اشتراكات وأدوات وقوالب جاهزة للاستخدام مع ضمان حقيقي وتسليم فوري." /></div>
-          <div className="space-y-2">
-            <Label>صورة البانر</Label>
-            {hero.image ? (
-              <div className="flex items-center gap-3">
-                <img src={hero.image} alt="بانر الرئيسية" className="h-20 w-32 object-cover rounded-lg border border-border" />
-                <Button variant="ghost" size="sm" onClick={() => setHero({ ...hero, image: "" })}>حذف الصورة</Button>
-              </div>
-            ) : null}
-            <Input type="file" accept="image/*" disabled={heroUploading} onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadHeroImage(f); }} />
-            {heroUploading && <p className="text-xs text-muted-foreground">جارٍ الرفع…</p>}
-          </div>
-          <Button onClick={saveHero} className="gradient-primary text-white">حفظ بانر الرئيسية</Button>
-        </div>
-      </div>
+      <HeroBannerManager />
+
     </div>
   );
 }

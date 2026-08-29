@@ -850,6 +850,117 @@ export type Database = {
           },
         ]
       }
+      hero_banners: {
+        Row: {
+          active: boolean
+          background_color: string | null
+          badges: Json
+          button_size: number
+          buttons: Json
+          buttons_position: string
+          content_position_x: string
+          content_position_y: string
+          created_at: string
+          gap_subtitle_buttons: number
+          gap_title_subtitle: number
+          id: string
+          media_path: string | null
+          media_type: string
+          media_url: string | null
+          overlay_color: string
+          overlay_enabled: boolean
+          overlay_opacity: number
+          poster_path: string | null
+          poster_url: string | null
+          show_subtitle: boolean
+          show_title: boolean
+          sort_order: number
+          subtitle: string
+          subtitle_size: number
+          subtitle_size_mobile: number
+          text_align: string
+          title: string
+          title_size: number
+          title_size_mobile: number
+          updated_at: string
+          video_autoplay: boolean
+          video_loop: boolean
+          video_muted: boolean
+        }
+        Insert: {
+          active?: boolean
+          background_color?: string | null
+          badges?: Json
+          button_size?: number
+          buttons?: Json
+          buttons_position?: string
+          content_position_x?: string
+          content_position_y?: string
+          created_at?: string
+          gap_subtitle_buttons?: number
+          gap_title_subtitle?: number
+          id?: string
+          media_path?: string | null
+          media_type?: string
+          media_url?: string | null
+          overlay_color?: string
+          overlay_enabled?: boolean
+          overlay_opacity?: number
+          poster_path?: string | null
+          poster_url?: string | null
+          show_subtitle?: boolean
+          show_title?: boolean
+          sort_order?: number
+          subtitle?: string
+          subtitle_size?: number
+          subtitle_size_mobile?: number
+          text_align?: string
+          title?: string
+          title_size?: number
+          title_size_mobile?: number
+          updated_at?: string
+          video_autoplay?: boolean
+          video_loop?: boolean
+          video_muted?: boolean
+        }
+        Update: {
+          active?: boolean
+          background_color?: string | null
+          badges?: Json
+          button_size?: number
+          buttons?: Json
+          buttons_position?: string
+          content_position_x?: string
+          content_position_y?: string
+          created_at?: string
+          gap_subtitle_buttons?: number
+          gap_title_subtitle?: number
+          id?: string
+          media_path?: string | null
+          media_type?: string
+          media_url?: string | null
+          overlay_color?: string
+          overlay_enabled?: boolean
+          overlay_opacity?: number
+          poster_path?: string | null
+          poster_url?: string | null
+          show_subtitle?: boolean
+          show_title?: boolean
+          sort_order?: number
+          subtitle?: string
+          subtitle_size?: number
+          subtitle_size_mobile?: number
+          text_align?: string
+          title?: string
+          title_size?: number
+          title_size_mobile?: number
+          updated_at?: string
+          video_autoplay?: boolean
+          video_loop?: boolean
+          video_muted?: boolean
+        }
+        Relationships: []
+      }
       order_items: {
         Row: {
           id: string
