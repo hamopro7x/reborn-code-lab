@@ -250,7 +250,7 @@ export function HeroBannerManager() {
                     إعادة المواضع
                   </Button>
                 </div>
-                <div className="mt-1 overflow-hidden rounded-2xl border border-border bg-hero text-hero-foreground">
+                <ScaledPreview>
                   {preview && (
                     <HeroBannerView
                       banner={preview}
@@ -259,7 +259,8 @@ export function HeroBannerManager() {
                       onPositionsChange={(positions) => setEditing((cur) => (cur ? { ...cur, positions } : cur))}
                     />
                   )}
-                </div>
+                </ScaledPreview>
+
               </div>
 
               {/* المحتوى */}
