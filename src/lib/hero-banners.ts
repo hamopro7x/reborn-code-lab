@@ -57,6 +57,22 @@ export type HeroBadgeItem = {
 
 export type HeroMediaType = "image" | "video" | "color" | "none";
 
+export type HeroMediaFit = "cover" | "contain";
+
+/** مفاتيح العناصر القابلة للتحريك الحر داخل البانر. */
+export type HeroLayerKey = "content" | "buttons" | "badges";
+
+/** موضع حر بالنسبة المئوية من أبعاد البانر. */
+export type HeroPos = { x: number; y: number };
+
+export type HeroPositions = Partial<Record<HeroLayerKey, HeroPos>>;
+
+export const HERO_LAYER_LABELS: Record<HeroLayerKey, string> = {
+  content: "النص",
+  buttons: "الأزرار",
+  badges: "الكروت",
+};
+
 export type HeroBanner = {
   id: string;
   title: string;
