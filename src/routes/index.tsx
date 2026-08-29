@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Headphones, Zap, ShieldCheck, Tags, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
@@ -31,12 +31,6 @@ export const Route = createFileRoute("/")({
   }),
 });
 
-const features = [
-  { icon: Zap, title: "تسليم فوري", body: "يصل لحسابك مباشرة" },
-  { icon: ShieldCheck, title: "ضمان حقيقي", body: "استبدال أو استرجاع" },
-  { icon: Tags, title: "أسعار تنافسية", body: "أفضل الأسعار دائمًا" },
-  { icon: Headphones, title: "دعم العملاء", body: "متاح في أي وقت" },
-];
 
 function SectionHeading({ title, to }: { title: string; to?: string }) {
   return (
@@ -185,18 +179,6 @@ function Home() {
               </div>
             )}
 
-            {/* FEATURES BAR */}
-            <ul className="grid grid-cols-2 lg:grid-cols-4 rounded-2xl border border-border bg-card text-card-foreground divide-y divide-border lg:divide-y-0 lg:divide-x lg:divide-x-reverse">
-              {features.map((f) => (
-                <li key={f.title} className="flex items-center gap-3 p-4 min-w-0">
-                  <f.icon className="size-5 shrink-0 text-primary" />
-                  <div className="min-w-0">
-                    <div className="text-sm font-bold truncate">{f.title}</div>
-                    <div className="text-xs text-muted-foreground truncate">{f.body}</div>
-                  </div>
-                </li>
-              ))}
-            </ul>
 
             {/* PRODUCTS */}
             <section>
