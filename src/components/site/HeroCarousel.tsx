@@ -36,7 +36,7 @@ export function HeroCarousel({ slides, badges = [] }: { slides: HeroSlide[]; bad
 
   return (
     <section
-      className="relative overflow-hidden rounded-2xl border border-border bg-card"
+      className="relative overflow-hidden rounded-2xl border border-border bg-hero text-hero-foreground"
       onMouseEnter={() => (paused.current = true)}
       onMouseLeave={() => (paused.current = false)}
       aria-label="عروض مميزة"
@@ -51,27 +51,27 @@ export function HeroCarousel({ slides, badges = [] }: { slides: HeroSlide[]; bad
               alt={active.title}
               width={900}
               height={600}
-              className="w-full h-full object-cover opacity-40 md:opacity-100 transition-opacity duration-500"
+              className="w-full h-full object-cover opacity-30 md:opacity-100 transition-opacity duration-500"
               loading="eager"
             />
           ) : (
-            <div className="w-full h-full bg-secondary" />
+            <div className="w-full h-full bg-hero" />
           )}
-          <div className="absolute inset-0 bg-background/70 md:bg-gradient-to-l md:from-transparent md:to-background/95" />
+          <div className="absolute inset-0 bg-hero/75 md:bg-transparent" />
         </div>
 
         {/* Text */}
         <div className="relative md:order-2 p-6 md:p-10 flex flex-col justify-center gap-4 min-w-0">
           <h1 className="text-2xl md:text-4xl font-black leading-tight line-clamp-3">{active.title}</h1>
           {active.subtitle && (
-            <p className="text-sm md:text-base text-muted-foreground line-clamp-3 max-w-md">{active.subtitle}</p>
+            <p className="text-sm md:text-base text-hero-foreground/70 line-clamp-3 max-w-md">{active.subtitle}</p>
           )}
           {badges.length > 0 && (
             <ul className="hidden sm:flex lg:hidden flex-wrap gap-2 pt-1">
               {badges.map((b) => (
-                <li key={b.title} className="rounded-lg border border-border bg-background/70 px-2.5 py-1 text-[11px]">
+                <li key={b.title} className="rounded-lg border border-border bg-card px-2.5 py-1 text-[11px] text-card-foreground">
                   <span className="text-muted-foreground">{b.title} </span>
-                  <span className="font-bold text-lime">{b.value}</span>
+                  <span className="font-bold">{b.value}</span>
                 </li>
               ))}
             </ul>
@@ -84,7 +84,7 @@ export function HeroCarousel({ slides, badges = [] }: { slides: HeroSlide[]; bad
               </Button>
             </Link>
             <Link to="/track">
-              <Button size="lg" variant="outline" className="h-11 px-6">
+              <Button size="lg" className="h-11 px-6 font-bold bg-teal text-teal-foreground hover:bg-teal/90">
                 تتبع طلبك
               </Button>
             </Link>
@@ -95,9 +95,9 @@ export function HeroCarousel({ slides, badges = [] }: { slides: HeroSlide[]; bad
       {badges.length > 0 && (
         <ul className="absolute top-1/2 -translate-y-1/2 left-4 hidden lg:flex w-44 flex-col gap-2">
           {badges.map((b) => (
-            <li key={b.title} className="rounded-xl border border-border bg-background/80 px-3 py-2">
+            <li key={b.title} className="rounded-xl border border-border bg-card px-3 py-2 text-card-foreground">
               <div className="text-[11px] text-muted-foreground truncate">{b.title}</div>
-              <div className="text-sm font-bold text-lime truncate">{b.value}</div>
+              <div className="text-sm font-bold truncate">{b.value}</div>
             </li>
           ))}
         </ul>
@@ -109,7 +109,7 @@ export function HeroCarousel({ slides, badges = [] }: { slides: HeroSlide[]; bad
             type="button"
             onClick={() => setIndex((i) => (i - 1 + slides.length) % slides.length)}
             aria-label="السابق"
-            className="absolute top-1/2 -translate-y-1/2 right-3 size-9 rounded-full border border-border bg-background/80 flex items-center justify-center hover:bg-secondary transition-colors"
+            className="absolute top-1/2 -translate-y-1/2 right-3 size-9 rounded-full border border-border bg-card text-card-foreground flex items-center justify-center hover:bg-muted transition-colors"
           >
             <ChevronRight className="size-4" />
           </button>
@@ -117,7 +117,7 @@ export function HeroCarousel({ slides, badges = [] }: { slides: HeroSlide[]; bad
             type="button"
             onClick={() => setIndex((i) => (i + 1) % slides.length)}
             aria-label="التالي"
-            className="absolute top-1/2 -translate-y-1/2 left-3 size-9 rounded-full border border-border bg-background/80 flex items-center justify-center hover:bg-secondary transition-colors"
+            className="absolute top-1/2 -translate-y-1/2 left-3 size-9 rounded-full border border-border bg-card text-card-foreground flex items-center justify-center hover:bg-muted transition-colors"
           >
             <ChevronLeft className="size-4" />
           </button>

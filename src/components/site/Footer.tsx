@@ -6,7 +6,7 @@ export function Footer() {
       <div className="container mx-auto px-4 py-12 grid md:grid-cols-4 gap-8">
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <div className="size-9 rounded-lg border border-border bg-secondary flex items-center justify-center">
+            <div className="size-9 rounded-lg border border-border bg-muted flex items-center justify-center">
               <span className="text-lg font-black">م</span>
             </div>
             <span className="font-bold">متجر الاشتراكات الرقمية</span>

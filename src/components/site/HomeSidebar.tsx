@@ -53,15 +53,15 @@ export function HomeSidebar({
   return (
     <div className="space-y-4">
       {/* Categories */}
-      <nav className="rounded-2xl border border-border bg-card overflow-hidden" aria-label="الأقسام">
-        <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-border">
+      <nav className="rounded-2xl bg-panel text-panel-foreground overflow-hidden" aria-label="الأقسام">
+        <div className="flex items-center justify-between gap-2 px-4 py-3 bg-card text-card-foreground">
           <span className="font-bold text-sm">الأقسام</span>
-          <LayoutGrid className="size-4 text-muted-foreground shrink-0" />
+          <LayoutGrid className="size-4 shrink-0" />
         </div>
-        <ul className="p-2">
+        <ul className="p-2 space-y-1">
           {loading &&
             Array.from({ length: 5 }).map((_, i) => (
-              <li key={`sk-${i}`} className="h-10 m-1 rounded-lg bg-secondary/60 animate-pulse" />
+              <li key={`sk-${i}`} className="h-10 rounded-lg bg-card/20 animate-pulse" />
             ))}
           {categories.map((c: any) => {
             const Icon = iconForSlug(c.slug ?? "", c.name ?? "");
@@ -73,14 +73,14 @@ export function HomeSidebar({
                   search={{ category: c.slug } as any}
                   aria-current={isActive ? "page" : undefined}
                   className={
-                    "flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors duration-150 border-r-2 " +
+                    "flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors duration-150 " +
                     (isActive
-                      ? "bg-secondary text-lime border-lime font-bold"
-                      : "text-foreground/85 border-transparent hover:bg-secondary hover:text-foreground")
+                      ? "bg-primary/15 text-primary font-bold"
+                      : "text-panel-foreground hover:bg-card/10")
                   }
                 >
                   <span className="truncate">{c.name}</span>
-                  <Icon className={"size-4 shrink-0 " + (isActive ? "text-lime" : "text-muted-foreground")} />
+                  <Icon className="size-4 shrink-0" />
                 </Link>
               </li>
             );
@@ -89,10 +89,13 @@ export function HomeSidebar({
       </nav>
 
       {/* Perks */}
-      <ul className="rounded-2xl border border-border bg-card divide-y divide-border">
+      <ul className="rounded-2xl bg-panel p-2 space-y-2">
         {perks.map((p) => (
-          <li key={p.title} className="flex items-start gap-3 p-4">
-            <p.icon className="size-5 shrink-0 text-lime mt-0.5" />
+          <li
+            key={p.title}
+            className="flex items-start gap-3 rounded-xl bg-card text-card-foreground p-3"
+          >
+            <p.icon className="size-5 shrink-0 text-primary mt-0.5" />
             <div className="min-w-0">
               <div className="text-sm font-bold">{p.title}</div>
               <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{p.body}</p>
@@ -103,17 +106,17 @@ export function HomeSidebar({
 
       {/* Payment methods */}
       {(paymentsQ.data?.length ?? 0) > 0 && (
-        <div className="rounded-2xl border border-border bg-card p-4">
-          <div className="text-sm font-bold mb-3">طرق الدفع المتاحة</div>
+        <div className="rounded-2xl bg-panel text-panel-foreground p-3">
+          <div className="text-sm font-bold mb-3 px-1">طرق الدفع</div>
           <ul className="grid grid-cols-2 gap-2">
             {paymentsQ.data!.map((m: any) => {
               const Icon = payIcon(m.type);
               return (
                 <li
                   key={m.id}
-                  className="flex items-center gap-2 rounded-lg border border-border px-2.5 py-2 min-w-0"
+                  className="flex items-center gap-2 rounded-lg bg-card text-card-foreground px-2.5 py-2 min-w-0"
                 >
-                  <Icon className="size-4 shrink-0 text-muted-foreground" />
+                  <Icon className="size-4 shrink-0" />
                   <span className="text-xs truncate">{m.name}</span>
                 </li>
               );

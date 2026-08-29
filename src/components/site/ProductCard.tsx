@@ -33,9 +33,9 @@ export function ProductCard({ p }: { p: any }) {
     <Link
       to="/product/$slug"
       params={{ slug: p.slug }}
-      className="group rounded-xl border border-border bg-card overflow-hidden flex flex-col transition-colors duration-150 hover:border-lime/60"
+      className="group rounded-xl border border-border bg-card text-card-foreground overflow-hidden flex flex-col transition-colors duration-150 hover:border-primary"
     >
-      <div className="relative aspect-[4/5] bg-secondary overflow-hidden">
+      <div className="relative aspect-[4/5] bg-muted overflow-hidden">
         {p.main_image ? (
           <img
             src={p.main_image}
@@ -51,12 +51,12 @@ export function ProductCard({ p }: { p: any }) {
           </div>
         )}
         {hasDiscount && (
-          <span className="absolute top-2 right-2 rounded-md bg-lime px-2 py-0.5 text-[11px] font-bold text-lime-foreground">
-            خصم {p.discount_percent}%
+          <span className="absolute bottom-2 right-2 rounded-md bg-discount px-2 py-0.5 text-[11px] font-bold text-discount-foreground">
+            -{p.discount_percent}%
           </span>
         )}
         {p.category?.name && (
-          <span className="absolute top-2 left-2 rounded-md border border-border bg-background/85 px-2 py-0.5 text-[10px] max-w-[70%] truncate">
+          <span className="absolute top-2 right-2 rounded-md bg-panel px-2 py-0.5 text-[10px] font-bold text-panel-foreground max-w-[70%] truncate">
             {p.category.name}
           </span>
         )}
@@ -72,7 +72,7 @@ export function ProductCard({ p }: { p: any }) {
         )}
         <div className="mt-auto pt-2 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
           <div className="min-w-0">
-            <div className="text-base font-black text-lime truncate">{formatPrice(localized, currency)}</div>
+            <div className="text-base font-black text-card-foreground truncate">{formatPrice(localized, currency)}</div>
             {hasDiscount && (
               <div className="text-[11px] text-muted-foreground line-through truncate">
                 {formatPrice(original, currency)}
@@ -83,7 +83,7 @@ export function ProductCard({ p }: { p: any }) {
             type="button"
             onClick={onAdd}
             aria-label={`أضف ${p.name} إلى السلة`}
-            className="size-9 shrink-0 rounded-lg border border-border flex items-center justify-center hover:bg-secondary hover:border-lime hover:text-lime transition-colors duration-150"
+            className="size-9 shrink-0 rounded-lg border border-border flex items-center justify-center hover:bg-primary hover:border-primary hover:text-primary-foreground transition-colors duration-150"
           >
             <ShoppingCart className="size-4" />
           </button>
