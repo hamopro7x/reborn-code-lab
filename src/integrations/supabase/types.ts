@@ -875,11 +875,15 @@ export type Database = {
           poster_path: string | null
           poster_url: string | null
           show_subtitle: boolean
+          show_subtitle2: boolean
           show_title: boolean
           sort_order: number
           subtitle: string
           subtitle_size: number
           subtitle_size_mobile: number
+          subtitle2: string
+          subtitle2_size: number
+          subtitle2_size_mobile: number
           text_align: string
           title: string
           title_size: number
@@ -913,11 +917,15 @@ export type Database = {
           poster_path?: string | null
           poster_url?: string | null
           show_subtitle?: boolean
+          show_subtitle2?: boolean
           show_title?: boolean
           sort_order?: number
           subtitle?: string
           subtitle_size?: number
           subtitle_size_mobile?: number
+          subtitle2?: string
+          subtitle2_size?: number
+          subtitle2_size_mobile?: number
           text_align?: string
           title?: string
           title_size?: number
@@ -951,11 +959,15 @@ export type Database = {
           poster_path?: string | null
           poster_url?: string | null
           show_subtitle?: boolean
+          show_subtitle2?: boolean
           show_title?: boolean
           sort_order?: number
           subtitle?: string
           subtitle_size?: number
           subtitle_size_mobile?: number
+          subtitle2?: string
+          subtitle2_size?: number
+          subtitle2_size_mobile?: number
           text_align?: string
           title?: string
           title_size?: number
