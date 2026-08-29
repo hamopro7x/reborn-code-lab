@@ -41,9 +41,9 @@ export function HeroCarousel({ slides, badges = [] }: { slides: HeroSlide[]; bad
       onMouseLeave={() => (paused.current = false)}
       aria-label="عروض مميزة"
     >
-      <div className="relative min-h-[260px] md:min-h-[340px] grid md:grid-cols-2">
-        {/* Artwork */}
-        <div className="absolute inset-0 md:static md:order-1 overflow-hidden">
+      <div className="relative h-[260px] md:h-[340px] grid md:grid-cols-2 overflow-hidden">
+        {/* Artwork — ثابت الحجم مهما كان حجم الصورة الأصلية */}
+        <div className="absolute inset-y-0 left-0 w-full md:w-1/2 md:order-1 overflow-hidden">
           {active.image ? (
             <img
               key={active.id}
@@ -61,7 +61,7 @@ export function HeroCarousel({ slides, badges = [] }: { slides: HeroSlide[]; bad
         </div>
 
         {/* Text */}
-        <div className="relative md:order-2 p-6 md:p-10 flex flex-col justify-center gap-4 min-w-0">
+        <div className="relative md:order-2 p-6 md:p-10 flex flex-col justify-center gap-4 min-w-0 overflow-hidden">
           <h1 className="text-2xl md:text-4xl font-black leading-tight line-clamp-3">{active.title}</h1>
           {active.subtitle && (
             <p className="text-sm md:text-base text-hero-foreground/70 line-clamp-3 max-w-md">{active.subtitle}</p>
