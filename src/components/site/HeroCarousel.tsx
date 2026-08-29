@@ -2,7 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { heroIcon, isInternalUrl, type HeroBanner } from "@/lib/hero-banners";
+import {
+  heroIcon,
+  isInternalUrl,
+  type HeroBanner,
+  type HeroLayerKey,
+  type HeroPositions,
+} from "@/lib/hero-banners";
 
 const alignClass = {
   start: "items-start text-start",
