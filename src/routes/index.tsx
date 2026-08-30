@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Heart, ShoppingCart } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
@@ -219,8 +219,12 @@ function Home() {
                       </div>
                     )}
                   </div>
-                  <div className="px-3 py-2.5 text-sm font-bold text-center truncate border-t border-border">
-                    {c.name}
+                  <div className="px-3 py-2.5 flex items-center justify-between gap-2 border-t border-border">
+                    <span className="text-sm font-bold text-right truncate min-w-0">{c.name}</span>
+                    <div className="flex items-center gap-1.5 text-muted-foreground shrink-0">
+                      <Heart className="size-3.5" />
+                      <ShoppingCart className="size-3.5" />
+                    </div>
                   </div>
                 </Link>
               ))}
