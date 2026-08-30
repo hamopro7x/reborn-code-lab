@@ -19,9 +19,9 @@ const navLinks = [
 ];
 
 const pillBase =
-  "px-4 py-2 rounded-lg text-sm font-bold transition-colors duration-150 whitespace-nowrap";
-const pillActive = "bg-panel text-panel-foreground";
-const pillIdle = "bg-panel/85 text-panel-foreground hover:bg-panel";
+  "px-6 py-2 rounded-full text-sm font-bold transition-colors duration-150 whitespace-nowrap";
+const pillActive = "bg-nav-pill text-nav-pill-foreground";
+const pillIdle = "bg-nav-pill/90 text-nav-pill-foreground hover:bg-nav-pill";
 
 function NavLink({ to, label, active }: { to: string; label: string; active: boolean }) {
   return (
