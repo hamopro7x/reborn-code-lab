@@ -189,9 +189,9 @@ function Home() {
           )}
 
           {/* CATEGORIES / CARDS SECTION */}
-          <section className="max-w-4xl mx-auto">
+          <section className="md:max-w-4xl md:mx-auto">
             <SectionHeading title="تصفح الأقسام" to="/shop" />
-            <div className="grid grid-cols-3 sm:grid-cols-4 xl:grid-cols-6 gap-2 justify-items-center">
+            <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-6 gap-2 justify-items-center">
               {categoriesQ.isLoading &&
                 Array.from({ length: 5 }).map((_, i) => (
                   <div key={`c-sk-${i}`} className="rounded-xl border border-border bg-card h-[10rem] animate-pulse w-full max-w-[150px]" />
