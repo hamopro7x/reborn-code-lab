@@ -59,10 +59,6 @@ function Home() {
     queryKey: ["categories"],
     queryFn: async () => (await supabase.from("categories").select("*").eq("active", true).order("sort_order")).data ?? [],
   });
-  const featuredQ = useQuery({
-    queryKey: ["featured"],
-    queryFn: async () => (await supabase.from("products").select("*, category:categories(icon,name)").eq("active", true).eq("featured", true).order("sort_order").limit(12)).data ?? [],
-  });
   const latestQ = useQuery({
     queryKey: ["latest-products"],
     queryFn: async () => (await supabase.from("products").select("*, category:categories(icon,name)").eq("active", true).order("created_at", { ascending: false }).limit(10)).data ?? [],
