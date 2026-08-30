@@ -101,10 +101,6 @@ function Home() {
   }, [currenciesQ.data]);
 
   const categories = categoriesQ.data ?? [];
-  const featuredRaw = featuredQ.data ?? [];
-  // لو مفيش منتجات مميزة نعرض الأحدث من نفس البيانات الموجودة.
-  const featured = featuredRaw.length ? featuredRaw : (latestQ.data ?? []);
-
 
   // بطاقات الشحن = منتجات الأقسام التي تمثل بطاقات/شحن في قاعدة البيانات نفسها.
   const topups = useMemo(() => {
