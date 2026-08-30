@@ -152,8 +152,6 @@ export const HERO_DEFAULTS: Omit<HeroBanner, "id"> = {
   overlay_enabled: true,
   overlay_color: "#05070f",
   overlay_opacity: 0.35,
-  // في اتجاه RTL، "start" = اليمين، "end" = اليسار.
-  // النص الافتراضي يظهر على اليمين، والأيقونات تُضاف على اليسار في HeroBannerView.
   content_position_x: "start",
   content_position_y: "center",
   text_align: "start",
