@@ -5,7 +5,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
 import { WhatsAppFab } from "@/components/site/WhatsAppFab";
-import { ProductCard } from "@/components/site/ProductCard";
 import { Countdown } from "@/components/site/Countdown";
 
 import { ProductRail } from "@/components/site/ProductRail";
