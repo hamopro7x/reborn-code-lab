@@ -34,7 +34,7 @@ function HeroButtonItem({ banner, b }: { banner: HeroBanner; b: HeroButton }) {
       style={{ height: banner.button_size, fontSize: Math.max(13, Math.round(banner.button_size * 0.34)) }}
     >
       {b.label}
-      {Icon && <Icon className="size-4" />}
+      {Icon && <Icon className="size-4" style={{ color: "#87939f" }} />}
     </Button>
   );
   return isInternalUrl(b.url) ? (
