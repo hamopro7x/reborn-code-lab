@@ -147,13 +147,13 @@ function Home() {
       <main className="flex-1 container mx-auto px-4 py-6">
         {/* Mobile / tablet categories strip */}
         <nav aria-label="الأقسام" className="lg:hidden -mx-4 px-4 mb-4 overflow-x-auto scrollbar-hide">
-          <ul className="flex items-center gap-2 w-max">
+          <ul className="flex items-center gap-1.5 w-max">
             {categories.map((c: any) => (
               <li key={c.id}>
                 <Link
                   to="/shop"
                   search={{ category: c.slug } as any}
-                  className="block whitespace-nowrap rounded-lg bg-panel text-panel-foreground px-3 py-2 text-xs font-bold hover:bg-card hover:text-card-foreground transition-colors duration-150"
+                  className="block whitespace-nowrap rounded-lg bg-panel text-panel-foreground px-2.5 py-1.5 text-xs font-bold hover:bg-card hover:text-card-foreground transition-colors duration-150"
                 >
                   {c.name}
                 </Link>
@@ -191,7 +191,7 @@ function Home() {
           {/* CATEGORIES / CARDS SECTION */}
           <section>
             <SectionHeading title="تصفح الأقسام" to="/shop" />
-            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-2">
               {categoriesQ.isLoading &&
                 Array.from({ length: 5 }).map((_, i) => (
                   <div key={`c-sk-${i}`} className="rounded-xl border border-border bg-card h-[10rem] animate-pulse" />
