@@ -254,7 +254,7 @@ export function HeroBannerView({
   return (
     <div
       ref={rootRef}
-      className="relative h-[260px] md:h-[340px] overflow-hidden"
+      className="relative h-[150px] md:h-[230px] overflow-hidden"
       style={{ backgroundColor: banner.background_color ?? undefined }}
     >
       {/* الخلفية / الوسائط — تغطي كامل مساحة البنر */}
