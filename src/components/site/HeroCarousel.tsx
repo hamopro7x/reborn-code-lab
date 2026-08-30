@@ -67,6 +67,30 @@ function BadgeCard({ b }: { b: HeroBadgeItem }) {
   );
 }
 
+function BannerActions() {
+  return (
+    <div className="absolute top-3 left-3 z-30 flex items-center gap-2" dir="rtl">
+      <Link
+        to="/cart"
+        className="flex size-9 items-center justify-center rounded-full border border-border/50 bg-card/80 text-card-foreground backdrop-blur-sm hover:bg-card transition-colors"
+        aria-label="سلة التسوق"
+        title="سلة التسوق"
+      >
+        <ShoppingCart className="size-4" />
+      </Link>
+      <button
+        type="button"
+        onClick={() => toast.info("قائمة المفضلة قريباً")}
+        className="flex size-9 items-center justify-center rounded-full border border-border/50 bg-card/80 text-card-foreground backdrop-blur-sm hover:bg-card transition-colors"
+        aria-label="المفضلة"
+        title="المفضلة"
+      >
+        <Heart className="size-4" />
+      </button>
+    </div>
+  );
+}
+
 function Media({ banner, preview }: { banner: HeroBanner; preview?: boolean }) {
   const fit = banner.media_fit === "contain" ? "object-contain" : "object-cover";
   if (banner.media_type === "video" && banner.media_url) {
