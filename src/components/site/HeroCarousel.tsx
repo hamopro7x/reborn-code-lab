@@ -307,6 +307,9 @@ export function HeroBannerView({
         </>
       )}
 
+      {/* أيقونات الإجراءات في أقصى اليسار */}
+      <BannerActions />
+
       {/* العناصر ذات المواضع الحرة */}
       {freeKeys.has("title") && titleEl}
       {freeKeys.has("subtitle") && subtitleEl}
@@ -317,7 +320,7 @@ export function HeroBannerView({
       {/* التخطيط الطبيعي لبقية العناصر */}
       <div className="relative h-full grid md:grid-cols-[auto_minmax(0,1fr)]">
         <div
-          className={`relative md:order-2 p-6 md:p-10 flex flex-col min-w-0 overflow-hidden ${justifyClass[banner.content_position_y]} ${alignClass[banner.content_position_x]}`}
+          className={`relative ${contentOrder} p-6 md:p-10 flex flex-col min-w-0 overflow-hidden ${justifyClass[banner.content_position_y]} ${alignClass[banner.content_position_x]}`}
         >
           {!freeKeys.has("title") && titleEl}
           {!freeKeys.has("subtitle") && subtitleEl}
@@ -327,7 +330,7 @@ export function HeroBannerView({
         </div>
 
         {(badgesColumn || sideButtons) && (
-          <div className="hidden md:flex md:order-1 flex-col justify-center gap-3 p-6 min-w-0">
+          <div className={`hidden md:flex ${sideOrder} flex-col justify-center gap-3 p-6 min-w-0`}>
             {badgesColumn}
             {sideButtons && buttonRow}
           </div>
