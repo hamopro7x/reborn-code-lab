@@ -194,14 +194,14 @@ function Home() {
             <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-6 gap-2 justify-items-center">
               {categoriesQ.isLoading &&
                 Array.from({ length: 5 }).map((_, i) => (
-                  <div key={`c-sk-${i}`} className="rounded-xl border border-border bg-card h-[10rem] animate-pulse w-full max-w-[150px]" />
+                  <div key={`c-sk-${i}`} className="rounded-xl border border-border bg-card h-[10rem] animate-pulse w-full md:max-w-[150px]" />
                 ))}
               {categories.map((c: any) => (
                 <Link
                   key={c.id}
                   to="/shop"
                   search={{ category: c.slug } as any}
-                  className="group rounded-xl border border-border bg-card text-card-foreground overflow-hidden flex flex-col transition-colors duration-150 hover:border-primary w-full max-w-[150px]"
+                  className="group rounded-xl border border-border bg-card text-card-foreground overflow-hidden flex flex-col transition-colors duration-150 hover:border-primary w-full md:max-w-[150px]"
                 >
                   <div className="aspect-square bg-muted overflow-hidden">
                     {c.banner_image ? (
