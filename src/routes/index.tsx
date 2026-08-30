@@ -203,7 +203,7 @@ function Home() {
                   search={{ category: c.slug } as any}
                   className="group rounded-xl border border-border bg-card text-card-foreground overflow-hidden flex flex-col transition-colors duration-150 hover:border-primary"
                 >
-                  <div className="aspect-[4/3] bg-muted overflow-hidden">
+                  <div className="aspect-square bg-muted overflow-hidden">
                     {c.banner_image ? (
                       <img
                         src={c.banner_image}
