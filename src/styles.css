@@ -55,6 +55,8 @@
   --color-discount-foreground: var(--discount-foreground);
   --color-panel: var(--panel);
   --color-panel-foreground: var(--panel-foreground);
+  --color-nav-pill: var(--nav-pill);
+  --color-nav-pill-foreground: var(--nav-pill-foreground);
 }
 
 :root {
@@ -90,6 +92,8 @@
   --discount-foreground: #ffffff;
   --panel: #11182b;
   --panel-foreground: #f2f5fa;
+  --nav-pill: #d1d5db;
+  --nav-pill-foreground: #111827;
   --chart-1: #5b53f0;
   --chart-2: #2f7ef7;
   --chart-3: #e1b23a;
