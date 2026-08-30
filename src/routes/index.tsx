@@ -173,28 +173,6 @@ function Home() {
           )}
 
 
-          {/* PRODUCTS */}
-          <section>
-            <SectionHeading title="أحدث المنتجات" to="/shop" />
-            {(featuredQ.isLoading || latestQ.isLoading) && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <div key={`p-sk-${i}`} className="rounded-xl border border-border bg-card h-[16rem] animate-pulse" />
-                ))}
-              </div>
-            )}
-            {featured.length > 0 && (
-              <ProductRail ariaLabel="أحدث المنتجات">
-                {featured.map((p: any) => (
-                  <ProductCard key={p.id} p={p} />
-                ))}
-              </ProductRail>
-            )}
-            {!featuredQ.isLoading && !latestQ.isLoading && featured.length === 0 && (
-              <p className="text-sm text-muted-foreground">لا توجد منتجات متاحة حاليًا.</p>
-            )}
-          </section>
-
           {/* TOP-UP CARDS */}
           {topups.length > 0 && (
             <section>
