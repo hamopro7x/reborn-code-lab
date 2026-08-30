@@ -69,7 +69,7 @@ function BadgeCard({ b }: { b: HeroBadgeItem }) {
 
 function BannerActions() {
   return (
-    <div className="absolute top-3 left-3 z-30 flex items-center gap-2" dir="rtl">
+    <div className="absolute top-3 left-3 z-30 flex items-center gap-2" dir="ltr">
       <Link
         to="/cart"
         className="flex size-9 items-center justify-center rounded-full border border-border/50 bg-card/80 text-card-foreground backdrop-blur-sm hover:bg-card transition-colors"
