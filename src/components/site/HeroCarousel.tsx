@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, ShoppingCart, Heart } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   heroIcon,
@@ -66,6 +67,30 @@ function BadgeCard({ b }: { b: HeroBadgeItem }) {
   );
 }
 
+function BannerActions() {
+  return (
+    <div className="absolute top-3 left-3 z-30 flex items-center gap-2" dir="ltr">
+      <Link
+        to="/cart"
+        className="flex size-9 items-center justify-center rounded-full border border-border/50 bg-card/80 text-card-foreground backdrop-blur-sm hover:bg-card transition-colors"
+        aria-label="سلة التسوق"
+        title="سلة التسوق"
+      >
+        <ShoppingCart className="size-4" />
+      </Link>
+      <button
+        type="button"
+        onClick={() => toast.info("قائمة المفضلة قريباً")}
+        className="flex size-9 items-center justify-center rounded-full border border-border/50 bg-card/80 text-card-foreground backdrop-blur-sm hover:bg-card transition-colors"
+        aria-label="المفضلة"
+        title="المفضلة"
+      >
+        <Heart className="size-4" />
+      </button>
+    </div>
+  );
+}
+
 function Media({ banner, preview }: { banner: HeroBanner; preview?: boolean }) {
   const fit = banner.media_fit === "contain" ? "object-contain" : "object-cover";
   if (banner.media_type === "video" && banner.media_url) {
@@ -118,6 +143,10 @@ export function HeroBannerView({
   const pos = banner.positions ?? {};
   const rootRef = useRef<HTMLDivElement>(null);
   const canDrag = Boolean(editable && onPositionsChange);
+  // في RTL: "start" = اليمين، "end" = اليسار.
+  const contentFirst = banner.content_position_x === "start";
+  const contentOrder = contentFirst ? "md:order-1" : "md:order-2";
+  const sideOrder = contentFirst ? "md:order-2" : "md:order-1";
 
   const buttons = banner.buttons.filter((b) => b.enabled && b.label.trim());
   const badges = banner.badges.filter((b) => b.enabled && (b.title.trim() || b.value.trim()));
@@ -278,6 +307,9 @@ export function HeroBannerView({
         </>
       )}
 
+      {/* أيقونات الإجراءات في أقصى اليسار */}
+      <BannerActions />
+
       {/* العناصر ذات المواضع الحرة */}
       {freeKeys.has("title") && titleEl}
       {freeKeys.has("subtitle") && subtitleEl}
@@ -288,7 +320,7 @@ export function HeroBannerView({
       {/* التخطيط الطبيعي لبقية العناصر */}
       <div className="relative h-full grid md:grid-cols-[auto_minmax(0,1fr)]">
         <div
-          className={`relative md:order-2 p-6 md:p-10 flex flex-col min-w-0 overflow-hidden ${justifyClass[banner.content_position_y]} ${alignClass[banner.content_position_x]}`}
+          className={`relative ${contentOrder} p-6 md:p-10 flex flex-col min-w-0 overflow-hidden ${justifyClass[banner.content_position_y]} ${alignClass[banner.content_position_x]}`}
         >
           {!freeKeys.has("title") && titleEl}
           {!freeKeys.has("subtitle") && subtitleEl}
@@ -298,7 +330,7 @@ export function HeroBannerView({
         </div>
 
         {(badgesColumn || sideButtons) && (
-          <div className="hidden md:flex md:order-1 flex-col justify-center gap-3 p-6 min-w-0">
+          <div className={`hidden md:flex ${sideOrder} flex-col justify-center gap-3 p-6 min-w-0`}>
             {badgesColumn}
             {sideButtons && buttonRow}
           </div>
