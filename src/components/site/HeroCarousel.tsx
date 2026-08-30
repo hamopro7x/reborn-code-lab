@@ -143,6 +143,10 @@ export function HeroBannerView({
   const pos = banner.positions ?? {};
   const rootRef = useRef<HTMLDivElement>(null);
   const canDrag = Boolean(editable && onPositionsChange);
+  // في RTL: "start" = اليمين، "end" = اليسار.
+  const contentFirst = banner.content_position_x === "start";
+  const contentOrder = contentFirst ? "md:order-1" : "md:order-2";
+  const sideOrder = contentFirst ? "md:order-2" : "md:order-1";
 
   const buttons = banner.buttons.filter((b) => b.enabled && b.label.trim());
   const badges = banner.badges.filter((b) => b.enabled && (b.title.trim() || b.value.trim()));
