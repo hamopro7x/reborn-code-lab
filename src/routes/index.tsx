@@ -191,7 +191,7 @@ function Home() {
           {/* CATEGORIES / CARDS SECTION */}
           <section>
             <SectionHeading title="تصفح الأقسام" to="/shop" />
-            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-2">
               {categoriesQ.isLoading &&
                 Array.from({ length: 5 }).map((_, i) => (
                   <div key={`c-sk-${i}`} className="rounded-xl border border-border bg-card h-[10rem] animate-pulse" />
