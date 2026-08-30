@@ -189,7 +189,7 @@ function Home() {
           )}
 
           {/* CATEGORIES / CARDS SECTION */}
-          <section>
+          <section className="max-w-5xl mx-auto">
             <SectionHeading title="تصفح الأقسام" to="/shop" />
             <div className="grid grid-cols-3 sm:grid-cols-4 xl:grid-cols-6 gap-2">
               {categoriesQ.isLoading &&
