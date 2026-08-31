@@ -1106,7 +1106,7 @@ function ProductsTab() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
 
-  function newProduct() { setEditing({ name: "", slug: "", description: "", short_description: "", base_price_egp: 0, discount_percent: 0, warranty_days: 30, category_id: catsQ.data?.[0]?.id, active: true, featured: false, sort_order: 0 }); setOpen(true); }
+  function newProduct() { setEditing({ name: "", slug: "", description: "", short_description: "", base_price_egp: 0, discount_percent: 0, warranty_days: 30, warranty_text: "", category_id: catsQ.data?.[0]?.id, active: true, featured: false, sort_order: 0 }); setOpen(true); }
   function edit(p: any) { setEditing({ ...p }); setOpen(true); }
   async function del(id: string) {
     if (!confirm("حذف المنتج؟")) return;
