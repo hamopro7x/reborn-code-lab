@@ -64,12 +64,13 @@ export function ProductCard({ p }: { p: any }) {
 
       <div className="p-3 flex-1 flex flex-col gap-1.5 min-w-0">
         <h3 className="text-sm font-bold line-clamp-2 min-w-0">{p.name}</h3>
-        {p.warranty_days > 0 && (
+        {(p.warranty_text?.trim() || p.warranty_days > 0) && (
           <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
             <ShieldCheck className="size-3.5 shrink-0" />
-            ضمان {p.warranty_days} يوم
+            <span className="line-clamp-1">{p.warranty_text?.trim() || `ضمان ${p.warranty_days} يوم`}</span>
           </div>
         )}
+
         <div className="mt-auto pt-2 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
           <div className="min-w-0">
             <div className="text-base font-black text-card-foreground truncate">{formatPrice(localized, currency)}</div>
