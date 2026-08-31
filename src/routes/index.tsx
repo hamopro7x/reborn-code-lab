@@ -13,6 +13,8 @@ import { HeroCarousel } from "@/components/site/HeroCarousel";
 import { normalizeBanner, type HeroBanner } from "@/lib/hero-banners";
 import { useEffect, useMemo } from "react";
 import { useCurrency } from "@/lib/currency-context";
+import { useFavorites } from "@/lib/favorites";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({
   component: Home,
@@ -54,6 +56,7 @@ function SectionHeading({ title, to }: { title: string; to?: string }) {
 
 function Home() {
   const { setRates, setCurrencies } = useCurrency();
+  const { isFavorite, toggle } = useFavorites();
 
   const categoriesQ = useQuery({
     queryKey: ["categories"],
@@ -195,7 +198,7 @@ function Home() {
           {/* CATEGORIES / CARDS SECTION */}
           <section>
             <SectionHeading title="تصفح الأقسام" to="/shop" />
-            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-6 gap-2">
               {categoriesQ.isLoading &&
                 Array.from({ length: 5 }).map((_, i) => (
                   <div key={`c-sk-${i}`} className="rounded-xl border border-border bg-card h-[10rem] animate-pulse" />
@@ -228,7 +231,20 @@ function Home() {
                   <div className="px-3 py-2.5 flex items-center justify-between gap-2 border-t border-border">
                     <span className="text-sm font-bold text-right truncate min-w-0">{c.name}</span>
                     <div className="flex items-center gap-1.5 text-muted-foreground shrink-0">
-                      <Heart className="size-3.5" />
+                      <button
+                        type="button"
+                        aria-label={isFavorite(c.id) ? "إزالة من المفضلة" : "إضافة للمفضلة"}
+                        aria-pressed={isFavorite(c.id)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const on = toggle(c.id);
+                          toast.success(on ? "تمت الإضافة للمفضلة" : "تمت الإزالة من المفضلة");
+                        }}
+                        className="transition-colors hover:text-primary"
+                      >
+                        <Heart className={`size-3.5 ${isFavorite(c.id) ? "fill-primary text-primary" : ""}`} />
+                      </button>
                       <ShoppingCart className="size-3.5" />
                     </div>
                   </div>
