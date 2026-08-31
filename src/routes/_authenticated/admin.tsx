@@ -1171,10 +1171,22 @@ function ProductsTab() {
               <div><Label>وصف قصير</Label><Input value={editing.short_description ?? ""} onChange={(e) => setEditing({ ...editing, short_description: e.target.value })} /></div>
               <div><Label>الوصف الكامل</Label><Textarea rows={4} value={editing.description ?? ""} onChange={(e) => setEditing({ ...editing, description: e.target.value })} /></div>
               <div className="grid grid-cols-3 gap-3">
-                <div><Label>السعر (ج.م)</Label><Input type="number" value={editing.base_price_egp} onChange={(e) => setEditing({ ...editing, base_price_egp: Number(e.target.value) })} /></div>
-                <div><Label>خصم %</Label><Input type="number" value={editing.discount_percent} onChange={(e) => setEditing({ ...editing, discount_percent: Number(e.target.value) })} /></div>
-                <div><Label>ضمان (يوم)</Label><Input type="number" value={editing.warranty_days} onChange={(e) => setEditing({ ...editing, warranty_days: Number(e.target.value) })} /></div>
+                <div><Label>السعر (ج.م)</Label><Input type="number" value={editing.base_price_egp} onChange={(e) => {
+                  const base = Number(e.target.value);
+                  const after = base * (1 - Number(editing.discount_percent ?? 0) / 100);
+                  setEditing({ ...editing, base_price_egp: base, discount_percent: base > 0 ? Math.max(0, Math.min(100, Math.round((1 - after / base) * 10000) / 100)) : 0 });
+                }} /></div>
+                <div><Label>السعر بعد الخصم (ج.م)</Label><Input type="number" value={
+                  Math.round(Number(editing.base_price_egp ?? 0) * (1 - Number(editing.discount_percent ?? 0) / 100) * 100) / 100
+                } onChange={(e) => {
+                  const base = Number(editing.base_price_egp ?? 0);
+                  const after = Number(e.target.value);
+                  const pct = base > 0 ? Math.max(0, Math.min(100, Math.round((1 - after / base) * 10000) / 100)) : 0;
+                  setEditing({ ...editing, discount_percent: pct });
+                }} /></div>
+                <div><Label>الضمان</Label><Input value={editing.warranty_text ?? ""} placeholder="مثال: ضمان 30 يوم استبدال" onChange={(e) => setEditing({ ...editing, warranty_text: e.target.value })} /></div>
               </div>
+
               <div><Label>نهاية الخصم</Label><Input type="datetime-local" value={editing.discount_ends_at?.slice(0,16) ?? ""} onChange={(e) => setEditing({ ...editing, discount_ends_at: e.target.value ? new Date(e.target.value).toISOString() : null })} /></div>
               <div><Label>القسم</Label>
                 <select value={editing.category_id ?? ""} onChange={(e) => setEditing({ ...editing, category_id: e.target.value })} className="w-full h-10 rounded-md border border-input bg-input px-3 text-sm">
