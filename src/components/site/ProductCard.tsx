@@ -45,7 +45,7 @@ export function ProductCard({ p }: { p: any }) {
       params={{ slug: p.slug }}
       className="group rounded-xl border border-border bg-card text-card-foreground overflow-hidden flex flex-col transition-colors duration-150 hover:border-primary"
     >
-      <div className="relative aspect-[4/5] bg-muted overflow-hidden">
+      <div className="relative aspect-[3/4] bg-muted overflow-hidden">
         {p.main_image ? (
           <img
             src={p.main_image}
@@ -72,8 +72,8 @@ export function ProductCard({ p }: { p: any }) {
         )}
       </div>
 
-      <div className="px-2.5 pt-2 pb-2.5 flex flex-col gap-1.5 min-w-0">
-        <h3 className="text-[13px] font-bold line-clamp-1 min-w-0">{p.name}</h3>
+      <div className="px-2 pt-1.5 pb-2 flex flex-col gap-1 min-w-0">
+        <h3 className="text-xs font-bold line-clamp-1 min-w-0">{p.name}</h3>
 
         <div className="flex items-end justify-between gap-2 min-w-0">
           <div className="flex items-baseline gap-1.5 min-w-0">
