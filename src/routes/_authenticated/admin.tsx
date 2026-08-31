@@ -1115,8 +1115,8 @@ function ProductsTab() {
     if (error) toast.error(error.message); else { toast.success("تم الحذف"); qc.invalidateQueries({ queryKey: ["admin-products"] }); }
   }
   async function save() {
-    if (!editing.name || !editing.slug) { toast.error("الاسم والرابط مطلوبان"); return; }
-    const payload = { ...editing };
+    if (!editing.name) { toast.error("الاسم مطلوب"); return; }
+    const payload = { ...editing, slug: ensureSlug(editing.slug, editing.name) };
     delete payload.category;
     const op = payload.id ? supabase.from("products").update(payload).eq("id", payload.id) : supabase.from("products").insert(payload);
     const { error } = await op;
