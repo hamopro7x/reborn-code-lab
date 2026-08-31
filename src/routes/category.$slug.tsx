@@ -8,8 +8,6 @@ import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
 import { WhatsAppFab } from "@/components/site/WhatsAppFab";
 import { ProductCard } from "@/components/site/ProductCard";
-import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
 
 export const Route = createFileRoute("/category/$slug")({
   component: CategoryPage,
@@ -71,22 +69,6 @@ function CategoryPage() {
     <div className="min-h-screen flex flex-col">
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8">
-        <div className="mb-6 animate-slide-up">
-          <h1 className="text-3xl font-black text-foreground">
-            {categoryQ.data?.icon ? <span className="ml-2">{categoryQ.data.icon}</span> : null}
-            {categoryQ.data?.name ?? ""}
-          </h1>
-        </div>
-
-        <div className="mb-6 relative w-full md:w-1/4">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-          <Input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="ابحث داخل القسم..."
-            className="pr-9 h-10 text-sm bg-card/60"
-          />
-        </div>
 
         {filtered.length === 0 ? (
           <div className="card-surface rounded-2xl p-16 text-center text-muted-foreground">
