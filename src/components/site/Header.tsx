@@ -152,7 +152,7 @@ export function Header() {
                   </DropdownMenuLabel>
                   {categories.map((c: any) => (
                     <DropdownMenuItem key={c.id} asChild>
-                      <Link to="/shop" search={{ category: c.slug } as any} className="w-full cursor-pointer">
+                      <Link to="/category/$slug" params={{ slug: c.slug }} className="w-full cursor-pointer">
                         {c.name}
                       </Link>
                     </DropdownMenuItem>
