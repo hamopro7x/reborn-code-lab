@@ -1,18 +1,21 @@
 import { Link } from "@tanstack/react-router";
 import { useCurrency } from "@/lib/currency-context";
 import { convertFromEgp, formatPrice, computeDiscountedPrice } from "@/lib/format";
-import { ShieldCheck, ShoppingCart } from "lucide-react";
+import { Heart, ShoppingCart } from "lucide-react";
 import { useCart } from "@/lib/cart";
+import { useFavorites } from "@/lib/favorites";
 import { toast } from "sonner";
 
 export function ProductCard({ p }: { p: any }) {
   const { currency, rates } = useCurrency();
   const { add } = useCart();
+  const { isFavorite, toggle } = useFavorites();
   const rate = rates[currency.code] ?? 1;
   const price = computeDiscountedPrice(p.base_price_egp, p.discount_percent ?? 0);
   const localized = convertFromEgp(price, rate, currency.code);
   const original = convertFromEgp(p.base_price_egp, rate, currency.code);
   const hasDiscount = (p.discount_percent ?? 0) > 0;
+  const fav = isFavorite(p.id);
 
   const onAdd = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -29,18 +32,25 @@ export function ProductCard({ p }: { p: any }) {
     toast.success("تمت الإضافة إلى السلة");
   };
 
+  const onFav = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const added = toggle(p.id);
+    toast.success(added ? "تمت الإضافة إلى المفضلة" : "تمت الإزالة من المفضلة");
+  };
+
   return (
     <Link
       to="/product/$slug"
       params={{ slug: p.slug }}
       className="group rounded-xl border border-border bg-card text-card-foreground overflow-hidden flex flex-col transition-colors duration-150 hover:border-primary"
     >
-      <div className="relative aspect-[4/5] bg-muted overflow-hidden">
+      <div className="relative aspect-square bg-muted overflow-hidden">
         {p.main_image ? (
           <img
             src={p.main_image}
             alt={p.name}
-            width={480}
+            width={600}
             height={600}
             className="w-full h-full object-cover"
             loading="lazy"
@@ -50,44 +60,50 @@ export function ProductCard({ p }: { p: any }) {
             {p.name}
           </div>
         )}
-        {hasDiscount && (
-          <span className="absolute bottom-2 right-2 rounded-md bg-discount px-2 py-0.5 text-[11px] font-bold text-discount-foreground">
-            -{p.discount_percent}%
+        {p.category?.name && (
+          <span className="absolute top-2 right-2 rounded-md bg-panel px-2 py-0.5 text-[11px] font-bold text-panel-foreground max-w-[70%] truncate">
+            {p.category.name}
           </span>
         )}
-        {p.category?.name && (
-          <span className="absolute top-2 right-2 rounded-md bg-panel px-2 py-0.5 text-[10px] font-bold text-panel-foreground max-w-[70%] truncate">
-            {p.category.name}
+        {hasDiscount && (
+          <span className="absolute bottom-2 left-2 rounded-md bg-discount px-2 py-0.5 text-[11px] font-bold text-discount-foreground">
+            -{p.discount_percent}%
           </span>
         )}
       </div>
 
-      <div className="p-3 flex-1 flex flex-col gap-1.5 min-w-0">
-        <h3 className="text-sm font-bold line-clamp-2 min-w-0">{p.name}</h3>
-        {(p.warranty_text?.trim() || p.warranty_days > 0) && (
-          <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-            <ShieldCheck className="size-3.5 shrink-0" />
-            <span className="line-clamp-1">{p.warranty_text?.trim() || `ضمان ${p.warranty_days} يوم`}</span>
-          </div>
-        )}
+      <div className="px-3 pt-2.5 pb-3 flex flex-col gap-2 min-w-0">
+        <h3 className="text-sm font-bold line-clamp-1 min-w-0">{p.name}</h3>
 
-        <div className="mt-auto pt-2 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
-          <div className="min-w-0">
-            <div className="text-base font-black text-card-foreground truncate">{formatPrice(localized, currency)}</div>
+        <div className="flex items-end justify-between gap-2 min-w-0">
+          <div className="flex items-baseline gap-2 min-w-0">
+            <span className="text-lg font-black text-card-foreground truncate">
+              {formatPrice(localized, currency)}
+            </span>
             {hasDiscount && (
-              <div className="text-[11px] text-muted-foreground line-through truncate">
+              <span className="text-xs text-muted-foreground line-through truncate">
                 {formatPrice(original, currency)}
-              </div>
+              </span>
             )}
           </div>
-          <button
-            type="button"
-            onClick={onAdd}
-            aria-label={`أضف ${p.name} إلى السلة`}
-            className="size-9 shrink-0 rounded-lg border border-border flex items-center justify-center hover:bg-primary hover:border-primary hover:text-primary-foreground transition-colors duration-150"
-          >
-            <ShoppingCart className="size-4" />
-          </button>
+          <div className="flex items-center gap-3 shrink-0">
+            <button
+              type="button"
+              onClick={onAdd}
+              aria-label={`أضف ${p.name} إلى السلة`}
+              className="text-muted-foreground hover:text-primary transition-colors duration-150"
+            >
+              <ShoppingCart className="size-[18px]" />
+            </button>
+            <button
+              type="button"
+              onClick={onFav}
+              aria-label={fav ? `إزالة ${p.name} من المفضلة` : `أضف ${p.name} إلى المفضلة`}
+              className={fav ? "text-primary" : "text-muted-foreground hover:text-primary transition-colors duration-150"}
+            >
+              <Heart className="size-[18px]" fill={fav ? "currentColor" : "none"} />
+            </button>
+          </div>
         </div>
       </div>
     </Link>
