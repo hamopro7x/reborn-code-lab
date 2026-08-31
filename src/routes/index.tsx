@@ -13,6 +13,8 @@ import { HeroCarousel } from "@/components/site/HeroCarousel";
 import { normalizeBanner, type HeroBanner } from "@/lib/hero-banners";
 import { useEffect, useMemo } from "react";
 import { useCurrency } from "@/lib/currency-context";
+import { useFavorites } from "@/lib/favorites";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({
   component: Home,
@@ -54,6 +56,7 @@ function SectionHeading({ title, to }: { title: string; to?: string }) {
 
 function Home() {
   const { setRates, setCurrencies } = useCurrency();
+  const { isFavorite, toggle } = useFavorites();
 
   const categoriesQ = useQuery({
     queryKey: ["categories"],
