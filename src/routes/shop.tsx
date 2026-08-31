@@ -37,14 +37,10 @@ function Shop() {
   const { category, q: qParam } = Route.useSearch();
   // البحث والتصنيف يبقيان كما هما بعد تحديث الصفحة.
   const [q, setQ] = useUiState<string>("shop", "q", qParam ?? "");
-  const [activeCat, setActiveCat] = useUiState<string | undefined>("shop", "cat", category);
+  const activeCat = category;
   useScrollRestore("shop");
 
 
-  const categoriesQ = useQuery({
-    queryKey: ["categories"],
-    queryFn: async () => (await supabase.from("categories").select("*").eq("active", true).order("sort_order")).data ?? [],
-  });
   const productsQ = useQuery({
     queryKey: ["products-all"],
     queryFn: async () => (await supabase.from("products").select("*, category:categories(id,slug,name,icon)").eq("active", true).order("sort_order")).data ?? [],
