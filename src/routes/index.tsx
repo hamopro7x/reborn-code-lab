@@ -196,7 +196,7 @@ function Home() {
                 Array.from({ length: 5 }).map((_, i) => (
                   <div key={`c-sk-${i}`} className="rounded-xl border border-border bg-card h-[10rem] animate-pulse" />
                 ))}
-              {categories.map((c: any) => (
+              {categories.map((c: any, ci: number) => (
                 <Link
                   key={c.id}
                   to="/shop"
