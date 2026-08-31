@@ -204,6 +204,8 @@ function Admin() {
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background" dir="rtl">
+        {adminOnly && <HandControl />}
+
         <Sidebar side="right" collapsible="icon">
           <SidebarHeader className="border-b border-sidebar-border">
             <div className="flex items-center gap-2 p-2">
