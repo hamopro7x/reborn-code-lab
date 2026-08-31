@@ -43,6 +43,8 @@ import { DeviceMonitorGrid } from "@/components/admin/DeviceMonitorGrid";
 import { EmployeeDevices } from "@/components/admin/DeviceMonitorGrid";
 import { HeroBannerManager } from "@/components/admin/HeroBannerManager";
 import { ensureSlug } from "@/lib/slug";
+import { HandControl } from "@/components/admin/HandControl";
+
 
 
 type PanelKey =
@@ -204,6 +206,8 @@ function Admin() {
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background" dir="rtl">
+        {adminOnly && <HandControl />}
+
         <Sidebar side="right" collapsible="icon">
           <SidebarHeader className="border-b border-sidebar-border">
             <div className="flex items-center gap-2 p-2">
