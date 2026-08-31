@@ -94,6 +94,8 @@ function Media({ banner, preview }: { banner: HeroBanner; preview?: boolean }) {
         height={600}
         className={`w-full h-full ${fit}`}
         loading={preview ? "lazy" : "eager"}
+        decoding={preview ? "async" : "sync"}
+        {...(preview ? {} : { fetchPriority: "high" as const })}
       />
     );
   }

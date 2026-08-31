@@ -58,10 +58,12 @@ function Home() {
   const categoriesQ = useQuery({
     queryKey: ["categories"],
     queryFn: async () => (await supabase.from("categories").select("*").eq("active", true).order("sort_order")).data ?? [],
+    staleTime: 5 * 60_000,
   });
   const latestQ = useQuery({
     queryKey: ["latest-products"],
     queryFn: async () => (await supabase.from("products").select("*, category:categories(icon,name)").eq("active", true).order("created_at", { ascending: false }).limit(10)).data ?? [],
+    staleTime: 2 * 60_000,
   });
   const timerQ = useQuery({
     queryKey: ["timer"],
@@ -70,10 +72,12 @@ function Home() {
   const ratesQ = useQuery({
     queryKey: ["rates"],
     queryFn: async () => (await supabase.from("exchange_rates").select("*")).data ?? [],
+    staleTime: 10 * 60_000,
   });
   const currenciesQ = useQuery({
     queryKey: ["currencies"],
     queryFn: async () => (await supabase.from("currencies").select("*").eq("active", true).order("sort_order")).data ?? [],
+    staleTime: 10 * 60_000,
   });
   // بنرات الصفحة الرئيسية من النظام الجديد (hero_banners) — النشطة والمرتبة فقط.
   const bannersQ = useQuery({
@@ -196,7 +200,7 @@ function Home() {
                 Array.from({ length: 5 }).map((_, i) => (
                   <div key={`c-sk-${i}`} className="rounded-xl border border-border bg-card h-[10rem] animate-pulse" />
                 ))}
-              {categories.map((c: any) => (
+              {categories.map((c: any, ci: number) => (
                 <Link
                   key={c.id}
                   to="/shop"
@@ -210,7 +214,9 @@ function Home() {
                         alt={c.name}
                         width={400}
                         height={300}
-                        loading="lazy"
+                        loading={ci < 6 ? "eager" : "lazy"}
+                        decoding="async"
+                        {...(ci < 6 ? { fetchPriority: "high" as const } : {})}
                         className="w-full h-full object-cover"
                       />
                     ) : (
