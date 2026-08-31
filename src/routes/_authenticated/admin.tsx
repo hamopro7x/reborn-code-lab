@@ -42,6 +42,7 @@ import { LessonUploader } from "@/components/admin/LessonUploader";
 import { DeviceMonitorGrid } from "@/components/admin/DeviceMonitorGrid";
 import { EmployeeDevices } from "@/components/admin/DeviceMonitorGrid";
 import { HeroBannerManager } from "@/components/admin/HeroBannerManager";
+import { ensureSlug } from "@/lib/slug";
 
 
 type PanelKey =
