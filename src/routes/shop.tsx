@@ -64,29 +64,13 @@ function Shop() {
     <div className="min-h-screen flex flex-col">
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8">
-        <div className="mb-8 animate-slide-up">
-          <h1 className="text-4xl font-black text-foreground">المتجر</h1>
-          <p className="text-foreground/70 mt-2">تصفح كل المنتجات الرقمية</p>
-        </div>
-
         <div className="mb-6 flex gap-3 flex-col md:flex-row">
           <div className="relative w-full md:w-1/4">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
             <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="ابحث عن منتج..." className="pr-9 h-10 text-sm bg-card/60" />
           </div>
-
         </div>
 
-        <div className="mb-6 flex flex-wrap gap-2">
-          <button onClick={() => setActiveCat(undefined)} className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${!activeCat ? "gradient-primary" : "card-surface hover:bg-primary/10"}`}>
-            الكل
-          </button>
-          {(categoriesQ.data ?? []).map((c: any) => (
-            <button key={c.id} onClick={() => setActiveCat(c.slug)} className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${activeCat === c.slug ? "gradient-primary" : "card-surface hover:bg-primary/10"}`}>
-              <span className="mr-1">{c.icon}</span>{c.name}
-            </button>
-          ))}
-        </div>
 
         {filtered.length === 0 ? (
           <div className="card-surface rounded-2xl p-16 text-center text-muted-foreground">
