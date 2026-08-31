@@ -228,7 +228,20 @@ function Home() {
                   <div className="px-3 py-2.5 flex items-center justify-between gap-2 border-t border-border">
                     <span className="text-sm font-bold text-right truncate min-w-0">{c.name}</span>
                     <div className="flex items-center gap-1.5 text-muted-foreground shrink-0">
-                      <Heart className="size-3.5" />
+                      <button
+                        type="button"
+                        aria-label={isFavorite(c.id) ? "إزالة من المفضلة" : "إضافة للمفضلة"}
+                        aria-pressed={isFavorite(c.id)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const on = toggle(c.id);
+                          toast.success(on ? "تمت الإضافة للمفضلة" : "تمت الإزالة من المفضلة");
+                        }}
+                        className="transition-colors hover:text-primary"
+                      >
+                        <Heart className={`size-3.5 ${isFavorite(c.id) ? "fill-primary text-primary" : ""}`} />
+                      </button>
                       <ShoppingCart className="size-3.5" />
                     </div>
                   </div>
