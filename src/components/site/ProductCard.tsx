@@ -45,7 +45,7 @@ export function ProductCard({ p }: { p: any }) {
       params={{ slug: p.slug }}
       className="group rounded-xl border border-border bg-card text-card-foreground overflow-hidden flex flex-col transition-colors duration-150 hover:border-primary"
     >
-      <div className="relative aspect-square bg-muted overflow-hidden">
+      <div className="relative aspect-[4/5] bg-muted overflow-hidden">
         {p.main_image ? (
           <img
             src={p.main_image}
@@ -56,44 +56,44 @@ export function ProductCard({ p }: { p: any }) {
             loading="lazy"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-sm text-muted-foreground">
+          <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
             {p.name}
           </div>
         )}
         {p.category?.name && (
-          <span className="absolute top-2 right-2 rounded-md bg-panel px-2 py-0.5 text-[11px] font-bold text-panel-foreground max-w-[70%] truncate">
+          <span className="absolute top-1.5 right-1.5 rounded-md bg-panel px-1.5 py-0.5 text-[10px] font-bold text-panel-foreground max-w-[70%] truncate">
             {p.category.name}
           </span>
         )}
         {hasDiscount && (
-          <span className="absolute bottom-2 left-2 rounded-md bg-discount px-2 py-0.5 text-[11px] font-bold text-discount-foreground">
+          <span className="absolute bottom-1.5 left-1.5 rounded-md bg-discount px-1.5 py-0.5 text-[10px] font-bold text-discount-foreground">
             -{p.discount_percent}%
           </span>
         )}
       </div>
 
-      <div className="px-3 pt-2.5 pb-3 flex flex-col gap-2 min-w-0">
-        <h3 className="text-sm font-bold line-clamp-1 min-w-0">{p.name}</h3>
+      <div className="px-2.5 pt-2 pb-2.5 flex flex-col gap-1.5 min-w-0">
+        <h3 className="text-[13px] font-bold line-clamp-1 min-w-0">{p.name}</h3>
 
         <div className="flex items-end justify-between gap-2 min-w-0">
-          <div className="flex items-baseline gap-2 min-w-0">
-            <span className="text-lg font-black text-card-foreground truncate">
+          <div className="flex items-baseline gap-1.5 min-w-0">
+            <span className="text-base font-black text-card-foreground truncate">
               {formatPrice(localized, currency)}
             </span>
             {hasDiscount && (
-              <span className="text-xs text-muted-foreground line-through truncate">
+              <span className="text-[11px] text-muted-foreground line-through truncate">
                 {formatPrice(original, currency)}
               </span>
             )}
           </div>
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={onAdd}
               aria-label={`أضف ${p.name} إلى السلة`}
               className="text-muted-foreground hover:text-primary transition-colors duration-150"
             >
-              <ShoppingCart className="size-[18px]" />
+              <ShoppingCart className="size-4" />
             </button>
             <button
               type="button"
@@ -101,7 +101,7 @@ export function ProductCard({ p }: { p: any }) {
               aria-label={fav ? `إزالة ${p.name} من المفضلة` : `أضف ${p.name} إلى المفضلة`}
               className={fav ? "text-primary" : "text-muted-foreground hover:text-primary transition-colors duration-150"}
             >
-              <Heart className="size-[18px]" fill={fav ? "currentColor" : "none"} />
+              <Heart className="size-4" fill={fav ? "currentColor" : "none"} />
             </button>
           </div>
         </div>
