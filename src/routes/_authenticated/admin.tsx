@@ -42,6 +42,7 @@ import { LessonUploader } from "@/components/admin/LessonUploader";
 import { DeviceMonitorGrid } from "@/components/admin/DeviceMonitorGrid";
 import { EmployeeDevices } from "@/components/admin/DeviceMonitorGrid";
 import { HeroBannerManager } from "@/components/admin/HeroBannerManager";
+import { ensureSlug } from "@/lib/slug";
 
 
 type PanelKey =
@@ -1114,8 +1115,8 @@ function ProductsTab() {
     if (error) toast.error(error.message); else { toast.success("تم الحذف"); qc.invalidateQueries({ queryKey: ["admin-products"] }); }
   }
   async function save() {
-    if (!editing.name || !editing.slug) { toast.error("الاسم والرابط مطلوبان"); return; }
-    const payload = { ...editing };
+    if (!editing.name) { toast.error("الاسم مطلوب"); return; }
+    const payload = { ...editing, slug: ensureSlug(editing.slug, editing.name) };
     delete payload.category;
     const op = payload.id ? supabase.from("products").update(payload).eq("id", payload.id) : supabase.from("products").insert(payload);
     const { error } = await op;
@@ -1165,7 +1166,7 @@ function ProductsTab() {
           {editing && (
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
-                <div><Label>الاسم</Label><Input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value, slug: editing.slug || e.target.value.toLowerCase().replace(/\s+/g, "-").replace(/[^\w\-]/g, "") })} /></div>
+                <div><Label>الاسم</Label><Input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value, slug: editing.slug || ensureSlug(e.target.value) })} /></div>
                 <div><Label>الرابط (slug)</Label><Input value={editing.slug} onChange={(e) => setEditing({ ...editing, slug: e.target.value })} /></div>
               </div>
               <div><Label>وصف قصير</Label><Input value={editing.short_description ?? ""} onChange={(e) => setEditing({ ...editing, short_description: e.target.value })} /></div>
@@ -1228,9 +1229,9 @@ function CategoriesTab() {
   const [open, setOpen] = useState(false);
 
   async function save() {
-    if (!editing.name || !editing.slug) return toast.error("الاسم والرابط مطلوبان");
+    if (!editing.name) return toast.error("الاسم مطلوب");
     const payload: any = {
-      name: editing.name, slug: editing.slug, icon: editing.icon,
+      name: editing.name, slug: ensureSlug(editing.slug, editing.name), icon: editing.icon,
       banner_image: editing.banner_image ?? null,
       sort_order: editing.sort_order, active: editing.active,
     };
