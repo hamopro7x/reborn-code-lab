@@ -81,8 +81,8 @@ export function Header() {
             {categories.map((c: any) => (
               <Link
                 key={c.id}
-                to="/shop"
-                search={{ category: c.slug } as any}
+                to="/category/$slug"
+                params={{ slug: c.slug }}
                 className={`${pillBase} ${activeCategory === c.slug ? pillActive : pillIdle}`}
               >
                 {c.name}

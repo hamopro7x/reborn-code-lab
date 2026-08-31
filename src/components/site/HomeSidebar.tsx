@@ -69,8 +69,8 @@ export function HomeSidebar({
             return (
               <li key={c.id}>
                 <Link
-                  to="/shop"
-                  search={{ category: c.slug } as any}
+                  to="/category/$slug"
+                  params={{ slug: c.slug }}
                   aria-current={isActive ? "page" : undefined}
                   className={
                     "flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors duration-150 " +
