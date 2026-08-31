@@ -1229,9 +1229,9 @@ function CategoriesTab() {
   const [open, setOpen] = useState(false);
 
   async function save() {
-    if (!editing.name || !editing.slug) return toast.error("الاسم والرابط مطلوبان");
+    if (!editing.name) return toast.error("الاسم مطلوب");
     const payload: any = {
-      name: editing.name, slug: editing.slug, icon: editing.icon,
+      name: editing.name, slug: ensureSlug(editing.slug, editing.name), icon: editing.icon,
       banner_image: editing.banner_image ?? null,
       sort_order: editing.sort_order, active: editing.active,
     };
