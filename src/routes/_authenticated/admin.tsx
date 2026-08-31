@@ -1194,10 +1194,19 @@ function ProductsTab() {
                   {(catsQ.data ?? []).map((c: any) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
                 </select>
               </div>
-              <div><Label>صورة المنتج</Label>
-                {editing.main_image && <img src={editing.main_image} alt="" className="w-32 h-32 object-cover rounded-lg mb-2" />}
-                <input type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && uploadImage(e.target.files[0])} />
+              <div className="rounded-xl border border-border p-3">
+                <Label>صورة المنتج</Label>
+                <div className="mt-2 flex items-center gap-3">
+                  {editing.main_image
+                    ? <img src={editing.main_image} alt="" className="w-24 h-24 object-cover rounded-lg border border-border" />
+                    : <div className="w-24 h-24 rounded-lg border border-dashed border-border flex items-center justify-center text-xs text-muted-foreground">لا توجد صورة</div>}
+                  <label className="cursor-pointer rounded-lg border border-border px-4 py-2 text-sm hover:bg-primary/10">
+                    رفع صورة
+                    <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && uploadImage(e.target.files[0])} />
+                  </label>
+                </div>
               </div>
+
               <div className="flex gap-4">
                 <label className="flex items-center gap-2"><Switch checked={editing.active} onCheckedChange={(v) => setEditing({ ...editing, active: v })} /> نشط</label>
                 <label className="flex items-center gap-2"><Switch checked={editing.featured} onCheckedChange={(v) => setEditing({ ...editing, featured: v })} /> مميز</label>
