@@ -210,7 +210,9 @@ function Home() {
                         alt={c.name}
                         width={400}
                         height={300}
-                        loading="lazy"
+                        loading={ci < 6 ? "eager" : "lazy"}
+                        decoding="async"
+                        {...(ci < 6 ? { fetchPriority: "high" as const } : {})}
                         className="w-full h-full object-cover"
                       />
                     ) : (
