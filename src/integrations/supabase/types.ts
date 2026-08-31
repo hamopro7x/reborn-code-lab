@@ -1217,6 +1217,7 @@ export type Database = {
           updated_at: string
           upsell_ids: string[]
           warranty_days: number
+          warranty_text: string | null
         }
         Insert: {
           active?: boolean
@@ -1237,6 +1238,7 @@ export type Database = {
           updated_at?: string
           upsell_ids?: string[]
           warranty_days?: number
+          warranty_text?: string | null
         }
         Update: {
           active?: boolean
@@ -1257,6 +1259,7 @@ export type Database = {
           updated_at?: string
           upsell_ids?: string[]
           warranty_days?: number
+          warranty_text?: string | null
         }
         Relationships: [
           {

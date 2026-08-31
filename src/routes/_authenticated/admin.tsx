@@ -1106,7 +1106,7 @@ function ProductsTab() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
 
-  function newProduct() { setEditing({ name: "", slug: "", description: "", short_description: "", base_price_egp: 0, discount_percent: 0, warranty_days: 30, category_id: catsQ.data?.[0]?.id, active: true, featured: false, sort_order: 0 }); setOpen(true); }
+  function newProduct() { setEditing({ name: "", slug: "", description: "", short_description: "", base_price_egp: 0, discount_percent: 0, warranty_days: 30, warranty_text: "", category_id: catsQ.data?.[0]?.id, active: true, featured: false, sort_order: 0 }); setOpen(true); }
   function edit(p: any) { setEditing({ ...p }); setOpen(true); }
   async function del(id: string) {
     if (!confirm("حذف المنتج؟")) return;
@@ -1171,10 +1171,22 @@ function ProductsTab() {
               <div><Label>وصف قصير</Label><Input value={editing.short_description ?? ""} onChange={(e) => setEditing({ ...editing, short_description: e.target.value })} /></div>
               <div><Label>الوصف الكامل</Label><Textarea rows={4} value={editing.description ?? ""} onChange={(e) => setEditing({ ...editing, description: e.target.value })} /></div>
               <div className="grid grid-cols-3 gap-3">
-                <div><Label>السعر (ج.م)</Label><Input type="number" value={editing.base_price_egp} onChange={(e) => setEditing({ ...editing, base_price_egp: Number(e.target.value) })} /></div>
-                <div><Label>خصم %</Label><Input type="number" value={editing.discount_percent} onChange={(e) => setEditing({ ...editing, discount_percent: Number(e.target.value) })} /></div>
-                <div><Label>ضمان (يوم)</Label><Input type="number" value={editing.warranty_days} onChange={(e) => setEditing({ ...editing, warranty_days: Number(e.target.value) })} /></div>
+                <div><Label>السعر (ج.م)</Label><Input type="number" value={editing.base_price_egp} onChange={(e) => {
+                  const base = Number(e.target.value);
+                  const after = base * (1 - Number(editing.discount_percent ?? 0) / 100);
+                  setEditing({ ...editing, base_price_egp: base, discount_percent: base > 0 ? Math.max(0, Math.min(100, Math.round((1 - after / base) * 10000) / 100)) : 0 });
+                }} /></div>
+                <div><Label>السعر بعد الخصم (ج.م)</Label><Input type="number" value={
+                  Math.round(Number(editing.base_price_egp ?? 0) * (1 - Number(editing.discount_percent ?? 0) / 100) * 100) / 100
+                } onChange={(e) => {
+                  const base = Number(editing.base_price_egp ?? 0);
+                  const after = Number(e.target.value);
+                  const pct = base > 0 ? Math.max(0, Math.min(100, Math.round((1 - after / base) * 10000) / 100)) : 0;
+                  setEditing({ ...editing, discount_percent: pct });
+                }} /></div>
+                <div><Label>الضمان</Label><Input value={editing.warranty_text ?? ""} placeholder="مثال: ضمان 30 يوم استبدال" onChange={(e) => setEditing({ ...editing, warranty_text: e.target.value })} /></div>
               </div>
+
               <div><Label>نهاية الخصم</Label><Input type="datetime-local" value={editing.discount_ends_at?.slice(0,16) ?? ""} onChange={(e) => setEditing({ ...editing, discount_ends_at: e.target.value ? new Date(e.target.value).toISOString() : null })} /></div>
               <div><Label>القسم</Label>
                 <select value={editing.category_id ?? ""} onChange={(e) => setEditing({ ...editing, category_id: e.target.value })} className="w-full h-10 rounded-md border border-input bg-input px-3 text-sm">
@@ -1182,10 +1194,19 @@ function ProductsTab() {
                   {(catsQ.data ?? []).map((c: any) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
                 </select>
               </div>
-              <div><Label>صورة المنتج</Label>
-                {editing.main_image && <img src={editing.main_image} alt="" className="w-32 h-32 object-cover rounded-lg mb-2" />}
-                <input type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && uploadImage(e.target.files[0])} />
+              <div className="rounded-xl border border-border p-3">
+                <Label>صورة المنتج</Label>
+                <div className="mt-2 flex items-center gap-3">
+                  {editing.main_image
+                    ? <img src={editing.main_image} alt="" className="w-24 h-24 object-cover rounded-lg border border-border" />
+                    : <div className="w-24 h-24 rounded-lg border border-dashed border-border flex items-center justify-center text-xs text-muted-foreground">لا توجد صورة</div>}
+                  <label className="cursor-pointer rounded-lg border border-border px-4 py-2 text-sm hover:bg-primary/10">
+                    رفع صورة
+                    <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && uploadImage(e.target.files[0])} />
+                  </label>
+                </div>
               </div>
+
               <div className="flex gap-4">
                 <label className="flex items-center gap-2"><Switch checked={editing.active} onCheckedChange={(v) => setEditing({ ...editing, active: v })} /> نشط</label>
                 <label className="flex items-center gap-2"><Switch checked={editing.featured} onCheckedChange={(v) => setEditing({ ...editing, featured: v })} /> مميز</label>

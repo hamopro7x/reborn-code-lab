@@ -151,15 +151,16 @@ function ProductPage() {
             {hasDiscount && <span className="text-lg text-muted-foreground line-through">{formatPrice(original, currency)}</span>}
           </div>
 
-          {p.warranty_days > 0 && (
+          {(p.warranty_text?.trim() || p.warranty_days > 0) && (
             <div className="mt-4 card-surface rounded-xl p-4 flex items-center gap-3">
               <ShieldCheck className="size-6 text-primary" />
               <div>
-                <div className="font-bold">ضمان {p.warranty_days} يوم</div>
-                <div className="text-xs text-muted-foreground">في حالة توقف الاشتراك يتم استبداله</div>
+                <div className="font-bold">{p.warranty_text?.trim() || `ضمان ${p.warranty_days} يوم`}</div>
+                {!p.warranty_text?.trim() && <div className="text-xs text-muted-foreground">في حالة توقف الاشتراك يتم استبداله</div>}
               </div>
             </div>
           )}
+
 
           <div className="mt-6 flex gap-2">
             <Button onClick={handleBuyNow} size="lg" className="gradient-primary flex-1 h-12">اشترِ الآن</Button>
