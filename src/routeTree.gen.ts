@@ -21,6 +21,7 @@ import { Route as TrackRouteImport } from './routes/track'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as CategorySlugRouteImport } from './routes/category.$slug'
 import { Route as OrderCodeRouteImport } from './routes/order.$code'
 import { Route as ProductSlugRouteImport } from './routes/product.$slug'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
@@ -95,6 +96,11 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const CategorySlugRoute = CategorySlugRouteImport.update({
+  id: '/category/$slug',
+  path: '/category/$slug',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const OrderCodeRoute = OrderCodeRouteImport.update({
   id: '/order/$code',
@@ -178,6 +184,7 @@ export interface FileRoutesByFullPath {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/category/$slug': typeof CategorySlugRoute
   '/order/$code': typeof OrderCodeRoute
   '/product/$slug': typeof ProductSlugRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
@@ -204,6 +211,7 @@ export interface FileRoutesByTo {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/category/$slug': typeof CategorySlugRoute
   '/order/$code': typeof OrderCodeRoute
   '/product/$slug': typeof ProductSlugRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
@@ -232,6 +240,7 @@ export interface FileRoutesById {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
+  '/category/$slug': typeof CategorySlugRoute
   '/order/$code': typeof OrderCodeRoute
   '/product/$slug': typeof ProductSlugRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
@@ -260,6 +269,7 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/admin'
+    | '/category/$slug'
     | '/order/$code'
     | '/product/$slug'
     | '/.lovable/oauth/consent'
@@ -286,6 +296,7 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/admin'
+    | '/category/$slug'
     | '/order/$code'
     | '/product/$slug'
     | '/.lovable/oauth/consent'
@@ -313,6 +324,7 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/_authenticated/admin'
+    | '/category/$slug'
     | '/order/$code'
     | '/product/$slug'
     | '/.lovable/oauth/consent'
@@ -340,6 +352,7 @@ export interface RootRouteChildren {
   TrackRoute: typeof TrackRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  CategorySlugRoute: typeof CategorySlugRoute
   OrderCodeRoute: typeof OrderCodeRoute
   ProductSlugRoute: typeof ProductSlugRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
@@ -439,6 +452,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin'
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/category/$slug': {
+      id: '/category/$slug'
+      path: '/category/$slug'
+      fullPath: '/category/$slug'
+      preLoaderRoute: typeof CategorySlugRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/order/$code': {
       id: '/order/$code'
@@ -560,6 +580,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
+  CategorySlugRoute: CategorySlugRoute,
   OrderCodeRoute: OrderCodeRoute,
   ProductSlugRoute: ProductSlugRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,

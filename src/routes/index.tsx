@@ -158,8 +158,8 @@ function Home() {
             {categories.map((c: any) => (
               <li key={c.id}>
                 <Link
-                  to="/shop"
-                  search={{ category: c.slug } as any}
+                  to="/category/$slug"
+                  params={{ slug: c.slug }}
                   className="block whitespace-nowrap rounded-lg bg-panel text-panel-foreground px-2.5 py-1.5 text-xs font-bold hover:bg-card hover:text-card-foreground transition-colors duration-150"
                 >
                   {c.name}
@@ -206,8 +206,8 @@ function Home() {
               {categories.map((c: any, ci: number) => (
                 <Link
                   key={c.id}
-                  to="/shop"
-                  search={{ category: c.slug } as any}
+                  to="/category/$slug"
+                  params={{ slug: c.slug }}
                   className="group rounded-xl border border-border bg-card text-card-foreground overflow-hidden flex flex-col transition-colors duration-150 hover:border-primary"
                 >
                   <div className="aspect-[4/3] bg-muted overflow-hidden">

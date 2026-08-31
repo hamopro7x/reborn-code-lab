@@ -37,7 +37,10 @@ export function Header() {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const activeCategory = useRouterState({
-    select: (s) => (s.location.search as any)?.category as string | undefined,
+    select: (s) =>
+      (s.location.pathname.startsWith("/category/")
+        ? decodeURIComponent(s.location.pathname.split("/")[2] ?? "")
+        : ((s.location.search as any)?.category as string | undefined)) || undefined,
   });
   const [q, setQ] = useState("");
 
@@ -81,8 +84,8 @@ export function Header() {
             {categories.map((c: any) => (
               <Link
                 key={c.id}
-                to="/shop"
-                search={{ category: c.slug } as any}
+                to="/category/$slug"
+                params={{ slug: c.slug }}
                 className={`${pillBase} ${activeCategory === c.slug ? pillActive : pillIdle}`}
               >
                 {c.name}
@@ -152,7 +155,7 @@ export function Header() {
                   </DropdownMenuLabel>
                   {categories.map((c: any) => (
                     <DropdownMenuItem key={c.id} asChild>
-                      <Link to="/shop" search={{ category: c.slug } as any} className="w-full cursor-pointer">
+                      <Link to="/category/$slug" params={{ slug: c.slug }} className="w-full cursor-pointer">
                         {c.name}
                       </Link>
                     </DropdownMenuItem>

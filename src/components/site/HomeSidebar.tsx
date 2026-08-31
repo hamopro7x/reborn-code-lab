@@ -41,7 +41,10 @@ export function HomeSidebar({
   loading?: boolean;
 }) {
   const activeCategory = useRouterState({
-    select: (s) => (s.location.search as any)?.category as string | undefined,
+    select: (s) =>
+      (s.location.pathname.startsWith("/category/")
+        ? decodeURIComponent(s.location.pathname.split("/")[2] ?? "")
+        : ((s.location.search as any)?.category as string | undefined)) || undefined,
   });
   const fetchPayments = useServerFn(listPublicPaymentMethods);
   const paymentsQ = useQuery({
@@ -69,8 +72,8 @@ export function HomeSidebar({
             return (
               <li key={c.id}>
                 <Link
-                  to="/shop"
-                  search={{ category: c.slug } as any}
+                  to="/category/$slug"
+                  params={{ slug: c.slug }}
                   aria-current={isActive ? "page" : undefined}
                   className={
                     "flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors duration-150 " +
