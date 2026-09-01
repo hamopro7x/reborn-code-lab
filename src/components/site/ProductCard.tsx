@@ -45,7 +45,7 @@ export function ProductCard({ p }: { p: any }) {
       params={{ slug: p.slug }}
       className="group rounded-xl border border-border bg-card text-card-foreground overflow-hidden flex flex-col transition-colors duration-150 hover:border-primary"
     >
-      <div className="relative aspect-[3/2] bg-muted overflow-hidden">
+      <div className="relative aspect-[4/3] bg-muted overflow-hidden">
         {p.main_image ? (
           <img
             src={p.main_image}
