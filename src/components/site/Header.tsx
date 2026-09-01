@@ -36,12 +36,6 @@ export function Header() {
   const { currency, setCurrency, currencies } = useCurrency();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const activeCategory = useRouterState({
-    select: (s) =>
-      (s.location.pathname.startsWith("/category/")
-        ? decodeURIComponent(s.location.pathname.split("/")[2] ?? "")
-        : ((s.location.search as any)?.category as string | undefined)) || undefined,
-  });
   const [q, setQ] = useState("");
 
   // نفس مصدر الأقسام المستخدم في باقي الموقع.
@@ -80,16 +74,6 @@ export function Header() {
           <nav className="hidden lg:flex items-center gap-1 shrink-0">
             {navLinks.map((l) => (
               <NavLink key={l.to} to={l.to} label={l.label} active={pathname === l.to} />
-            ))}
-            {categories.map((c: any) => (
-              <Link
-                key={c.id}
-                to="/category/$slug"
-                params={{ slug: c.slug }}
-                className={`${pillBase} ${activeCategory === c.slug ? pillActive : pillIdle}`}
-              >
-                {c.name}
-              </Link>
             ))}
           </nav>
 
