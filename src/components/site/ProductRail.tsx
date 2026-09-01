@@ -7,7 +7,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
  */
 export function ProductRail({
   children,
-  itemClassName = "w-[36%] sm:w-[24%] md:w-[19%] xl:w-[14%]",
+  itemClassName = "w-[40%] sm:w-[27%] md:w-[21%] xl:w-[16%]",
   ariaLabel,
 }: {
   children: React.ReactNode[];
@@ -56,7 +56,7 @@ export function ProductRail({
       <ul
         ref={ref}
         onScroll={sync}
-        className="flex gap-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory scroll-smooth"
+        className="flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory scroll-smooth"
       >
         {children.map((child, i) => (
           <li key={i} className={`shrink-0 snap-start min-w-0 ${itemClassName}`}>
