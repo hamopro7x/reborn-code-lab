@@ -75,16 +75,6 @@ export function Header() {
             {navLinks.map((l) => (
               <NavLink key={l.to} to={l.to} label={l.label} active={pathname === l.to} />
             ))}
-            {categories.map((c: any) => (
-              <Link
-                key={c.id}
-                to="/category/$slug"
-                params={{ slug: c.slug }}
-                className={`${pillBase} ${activeCategory === c.slug ? pillActive : pillIdle}`}
-              >
-                {c.name}
-              </Link>
-            ))}
           </nav>
 
           <form onSubmit={submitSearch} role="search" className="relative min-w-0 flex-1 hidden md:block">
