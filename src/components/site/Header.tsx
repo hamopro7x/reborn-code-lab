@@ -36,12 +36,6 @@ export function Header() {
   const { currency, setCurrency, currencies } = useCurrency();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const activeCategory = useRouterState({
-    select: (s) =>
-      (s.location.pathname.startsWith("/category/")
-        ? decodeURIComponent(s.location.pathname.split("/")[2] ?? "")
-        : ((s.location.search as any)?.category as string | undefined)) || undefined,
-  });
   const [q, setQ] = useState("");
 
   // نفس مصدر الأقسام المستخدم في باقي الموقع.
