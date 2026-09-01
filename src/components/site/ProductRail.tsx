@@ -7,7 +7,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
  */
 export function ProductRail({
   children,
-  itemClassName = "w-[46%] sm:w-[32%] md:w-[24%] xl:w-[19%]",
+  itemClassName = "w-[40%] sm:w-[27%] md:w-[21%] xl:w-[16%]",
   ariaLabel,
 }: {
   children: React.ReactNode[];
