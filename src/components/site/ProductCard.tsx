@@ -106,6 +106,6 @@ export function ProductCard({ p }: { p: any }) {
           </div>
         </div>
       </div>
-    </Link>
+    </div>
   );
 }
