@@ -9,8 +9,6 @@ import { Countdown } from "@/components/site/Countdown";
 
 import { ProductRail } from "@/components/site/ProductRail";
 import { TopupCard } from "@/components/site/TopupCard";
-import { HeroCarousel } from "@/components/site/HeroCarousel";
-import { normalizeBanner, type HeroBanner } from "@/lib/hero-banners";
 import { useEffect, useMemo } from "react";
 import { useCurrency } from "@/lib/currency-context";
 import { useFavorites } from "@/lib/favorites";
@@ -82,19 +80,6 @@ function Home() {
     queryFn: async () => (await supabase.from("currencies").select("*").eq("active", true).order("sort_order")).data ?? [],
     staleTime: 10 * 60_000,
   });
-  // بنرات الصفحة الرئيسية من النظام الجديد (hero_banners) — النشطة والمرتبة فقط.
-  const bannersQ = useQuery({
-    queryKey: ["hero-banners"],
-    queryFn: async () =>
-      (await supabase.from("hero_banners").select("*").eq("active", true).order("sort_order")).data ?? [],
-    staleTime: 60_000,
-  });
-  // fallback آمن للإعداد القديم لو الجدول الجديد فاضي لأي سبب.
-  const heroQ = useQuery({
-    queryKey: ["hero"],
-    queryFn: async () => (await supabase.from("site_settings").select("value").eq("key", "hero").maybeSingle()).data?.value as any,
-    staleTime: 60_000,
-  });
 
   useEffect(() => {
     if (ratesQ.data) {
@@ -117,39 +102,10 @@ function Home() {
     return matched.length ? matched : [];
   }, [latestQ.data]);
 
-  const banners: HeroBanner[] = useMemo(() => {
-    const rows = bannersQ.data ?? [];
-    if (rows.length) return rows.map(normalizeBanner);
-    const h = (heroQ.data ?? null) as any;
-    if (!h) return [];
-    return [
-      normalizeBanner({
-        id: "legacy-hero",
-        title: h.title,
-        subtitle: h.subtitle,
-        media_type: h.image ? "image" : "color",
-        media_url: h.image || null,
-        badges: [{ id: "b1", enabled: true, title: "تسليم فوري", value: "بعد الدفع مباشرة", icon: "Zap", color: "#2f7ef7" }],
-        buttons: [
-          { id: "b1", enabled: true, label: "تسوق الآن", url: "/shop", icon: "ArrowLeft", variant: "primary" },
-          { id: "b2", enabled: true, label: "تتبع طلبك", url: "/track", icon: "none", variant: "teal" },
-        ],
-      }),
-    ];
-  }, [bannersQ.data, heroQ.data]);
 
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-
-      {/* Banner full-width, flush under header — يظهر بعد تحميل بيانات البنرات عشان مايبانش نص افتراضي لحظة التحديث */}
-      <div>
-        {bannersQ.isLoading ? (
-          <div className="h-[260px] md:h-[340px] rounded-b-2xl bg-card border-b border-border" aria-hidden />
-        ) : (
-          <HeroCarousel banners={banners} />
-        )}
-      </div>
 
       <main className="flex-1 container mx-auto px-4 py-6">
         {/* Mobile / tablet categories strip */}
