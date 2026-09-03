@@ -53,6 +53,8 @@ import {
   addMyManualTxn,
   saveMyManualTxn,
   getMyManualCardTxns,
+  getShiftManualCardTxns,
+  getEmployeeManualCardTxns,
   addMyManualCardTxn,
   saveMyManualCardTxn,
   clearMyManualTxns,
@@ -2095,7 +2097,7 @@ export function EmployeeWorkView({
                 mergedRows.map((r) =>
                   r.__manual ? (
                     (() => {
-                      const locked = manualLocked(r);
+                      const locked = viewing || manualLocked(r);
                       const refresh = () => void manualCardQ.refetch();
                       const mName = String(r.merchant ?? "—");
                       return (
