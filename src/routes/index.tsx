@@ -117,6 +117,12 @@ function Home() {
     <div className="min-h-screen flex flex-col">
       <Header />
 
+      {bannersQ.isLoading ? (
+        <div className="h-[150px] md:h-[230px] bg-card animate-pulse" />
+      ) : (
+        <HeroCarousel banners={banners} />
+      )}
+
       <main className="flex-1 container mx-auto px-4 py-6">
         {/* Mobile / tablet categories strip */}
         <nav aria-label="الأقسام" className="lg:hidden -mx-4 px-4 mb-4 overflow-x-auto scrollbar-hide">
@@ -136,13 +142,6 @@ function Home() {
         </nav>
 
         <div className="min-w-0 space-y-8">
-          {bannersQ.isLoading ? (
-            <div className="h-[150px] md:h-[230px] rounded-xl border border-border bg-card animate-pulse" />
-          ) : (
-            <HeroCarousel banners={banners} />
-          )}
-
-
           {(timerQ.isLoading || timerQ.data) && (
             <div className="flex justify-center">
               {timerQ.data && (

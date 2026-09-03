@@ -332,7 +332,7 @@ export function HeroCarousel({ banners }: { banners: HeroBanner[] }) {
 
   return (
     <section
-      className="relative overflow-hidden rounded-b-2xl border border-border bg-hero text-hero-foreground"
+      className="relative overflow-hidden bg-hero text-hero-foreground"
       onMouseEnter={() => (paused.current = true)}
       onMouseLeave={() => (paused.current = false)}
       onTouchStart={(e) => (touchX.current = e.touches[0]?.clientX ?? null)}
