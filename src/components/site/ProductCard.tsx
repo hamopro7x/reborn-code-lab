@@ -63,15 +63,15 @@ export function ProductCard({ p }: { p: any }) {
       </div>
 
       <div className="px-3 py-2.5 md:px-2 md:py-3 flex flex-col gap-0.5 md:gap-1 min-w-0 border-t border-border md:shrink-0">
-        <h3 className="text-xs md:text-[8px] md:leading-tight font-bold line-clamp-1 min-w-0">{p.name}</h3>
+        <h3 className="text-xs md:text-xs md:leading-tight font-bold line-clamp-1 min-w-0">{p.name}</h3>
 
         <div className="flex items-end justify-between gap-2 md:gap-1 min-w-0">
           <div className="flex items-baseline gap-1.5 md:gap-1 min-w-0">
-            <span className="text-sm md:text-[9px] font-black text-card-foreground truncate">
+            <span className="text-sm md:text-[11px] font-black text-card-foreground truncate">
               {formatPrice(localized, currency)}
             </span>
             {hasDiscount && (
-              <span className="text-[10px] md:text-[7px] text-muted-foreground line-through truncate">
+              <span className="text-[10px] md:text-[9px] text-muted-foreground line-through truncate">
                 {formatPrice(original, currency)}
               </span>
             )}
