@@ -9,9 +9,7 @@ import { Countdown } from "@/components/site/Countdown";
 
 import { ProductRail } from "@/components/site/ProductRail";
 import { TopupCard } from "@/components/site/TopupCard";
-import { HeroCarousel } from "@/components/site/HeroCarousel";
-import { normalizeBanner, type HeroBanner } from "@/lib/hero-banners";
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { useCurrency } from "@/lib/currency-context";
 import { useFavorites } from "@/lib/favorites";
 import { toast } from "sonner";
