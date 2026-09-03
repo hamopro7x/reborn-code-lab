@@ -75,7 +75,7 @@ function CategoryPage() {
             لا توجد منتجات في هذا القسم حاليًا.
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-[2cm]">
+          <div className="grid grid-cols-[repeat(2,auto)] md:grid-cols-[repeat(3,auto)] lg:grid-cols-[repeat(4,auto)] justify-center gap-3 md:gap-1">
             {filtered.map((p: any) => (
               <ProductCard key={p.id} p={p} />
             ))}
