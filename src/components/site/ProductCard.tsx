@@ -67,7 +67,7 @@ export function ProductCard({ p }: { p: any }) {
           {p.name}
         </h3>
 
-        <div className="flex items-center justify-between gap-2 min-w-0">
+        <div className="flex items-center justify-between gap-2 min-w-0" dir="ltr">
           <div className="flex items-center gap-2 md:gap-1.5 shrink-0">
             <button
               type="button"
