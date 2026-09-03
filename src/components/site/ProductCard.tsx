@@ -88,7 +88,7 @@ export function ProductCard({ p }: { p: any }) {
             </button>
           </div>
 
-          <div className="flex flex-col items-end min-w-0 shrink-0 leading-tight">
+          <div className="flex items-center justify-end gap-1.5 min-w-0 shrink-0 leading-tight">
             <span className="text-sm md:text-base font-black text-card-foreground">
               {formatPrice(localized, currency)}
             </span>
