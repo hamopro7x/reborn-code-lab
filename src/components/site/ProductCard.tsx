@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { useCurrency } from "@/lib/currency-context";
 import { convertFromEgp, formatPrice, computeDiscountedPrice } from "@/lib/format";
 import { Heart, ShoppingCart, ShieldCheck } from "lucide-react";
