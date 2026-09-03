@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 export function ProductCard({ p }: { p: any }) {
   const { currency, rates } = useCurrency();
+  const navigate = useNavigate();
   const { add } = useCart();
   const { isFavorite, toggle } = useFavorites();
   const rate = rates[currency.code] ?? 1;
