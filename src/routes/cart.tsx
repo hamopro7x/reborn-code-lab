@@ -33,6 +33,22 @@ function CartPage() {
   const { currency, rates } = useCurrency();
   const navigate = useNavigate();
   const rate = rates[currency.code] ?? 1;
+  const ids = items.map((i) => i.productId).sort();
+  const detailsQ = useQuery({
+    queryKey: ["cart-product-details", ids],
+    enabled: ids.length > 0,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("products")
+        .select("id, description, short_description, warranty_days, warranty_text, category:categories(name,icon)")
+        .in("id", ids);
+      const map: Record<string, any> = {};
+      (data ?? []).forEach((p: any) => { map[p.id] = p; });
+      return map;
+    },
+  });
+
 
   return (
     <div className="min-h-screen flex flex-col">
