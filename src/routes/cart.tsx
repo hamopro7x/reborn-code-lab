@@ -67,8 +67,10 @@ function CartPage() {
               {items.map((i) => {
                 const priceEgp = computeDiscountedPrice(i.basePriceEgp, i.discountPercent);
                 const localized = convertFromEgp(priceEgp * i.quantity, rate, currency.code);
+                const d = detailsQ.data?.[i.productId];
                 return (
-                  <div key={i.productId} className="card-surface rounded-2xl p-4 flex items-center gap-4">
+                  <div key={i.productId} className="card-surface rounded-2xl overflow-hidden">
+                  <div className="p-4 flex items-center gap-4">
                     <div className="size-16 rounded-xl bg-primary/10 flex items-center justify-center overflow-hidden shrink-0">
                       {i.image ? <img src={i.image} alt={i.name} className="w-full h-full object-cover" /> : <span className="text-2xl">🎁</span>}
                     </div>
