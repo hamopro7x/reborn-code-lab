@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useCurrency } from "@/lib/currency-context";
 import { convertFromEgp, formatPrice, computeDiscountedPrice } from "@/lib/format";
-import { Heart, ShoppingCart } from "lucide-react";
+import { Heart, ShoppingCart, ShieldCheck } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { useFavorites } from "@/lib/favorites";
 import { toast } from "sonner";
@@ -68,9 +68,10 @@ export function ProductCard({ p }: { p: any }) {
           {p.name}
         </h3>
         {warranty && (
-          <p className="text-[10px] md:text-[11px] text-muted-foreground line-clamp-1 min-w-0 leading-tight">
-            {warranty}
-          </p>
+          <div className="flex items-center gap-1 text-[10px] md:text-[11px] text-muted-foreground line-clamp-1 min-w-0 leading-tight">
+            <ShieldCheck className="size-3 md:size-3.5 shrink-0" />
+            <span>{warranty}</span>
+          </div>
         )}
 
         <div className="flex items-center justify-between gap-2 min-w-0" dir="ltr">
