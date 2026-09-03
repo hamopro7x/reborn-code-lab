@@ -591,3 +591,23 @@ export const deleteEmployeeManualTxn = createServerFn({ method: "POST" })
     const mod = await import("./work.server");
     return mod.deleteManualTxnRow(data.id);
   });
+
+/** المعاملات اليدوية لشفت محدد (أدمن — قراءة فقط). */
+export const getShiftManualCardTxns = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ shiftId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    return mod.shiftManualCardTxns(data.shiftId);
+  });
+
+/** المعاملات اليدوية لآخر شفت لموظف محدد (أدمن — قراءة فقط). */
+export const getEmployeeManualCardTxns = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ userId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    return mod.employeeManualCardTxns(data.userId);
+  });

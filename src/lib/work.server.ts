@@ -1983,3 +1983,27 @@ export async function deleteShift(shiftId: string) {
   return { ok: true };
 }
 
+
+/** المعاملات اليدوية لشفت معيّن (أدمن — قراءة فقط). */
+export async function shiftManualCardTxns(shiftId: string) {
+  const userId = await shiftOwner(shiftId);
+  if (!userId)
+    return { serverNow: new Date().toISOString(), editWindowMs: MANUAL_CARD_EDIT_MS, rows: [] as ManualCardRow[] };
+  return listManualCardTxns(userId, shiftId);
+}
+
+/** المعاملات اليدوية لآخر شفت (أو الشفت المفتوح) لموظف معيّن — أدمن. */
+export async function employeeManualCardTxns(userId: string) {
+  const db = await admin();
+  const { data } = await db
+    .from("work_shifts")
+    .select("id")
+    .eq("user_id", userId)
+    .order("started_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const shiftId = data ? String((data as any).id) : null;
+  if (!shiftId)
+    return { serverNow: new Date().toISOString(), editWindowMs: MANUAL_CARD_EDIT_MS, rows: [] as ManualCardRow[] };
+  return listManualCardTxns(userId, shiftId);
+}

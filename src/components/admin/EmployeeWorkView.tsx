@@ -53,6 +53,8 @@ import {
   addMyManualTxn,
   saveMyManualTxn,
   getMyManualCardTxns,
+  getShiftManualCardTxns,
+  getEmployeeManualCardTxns,
   addMyManualCardTxn,
   saveMyManualCardTxn,
   clearMyManualTxns,
@@ -1700,15 +1702,27 @@ export function EmployeeWorkView({
           : ["my-shift-txns"],
     });
 
-  /* ---- معاملات يدوية: قسم «المعاملات» عند الموظف فقط ---- */
+  /* ---- معاملات يدوية: عند الموظف (تعديل) وعند الأدمن (قراءة فقط) ---- */
   const manualCardFn = useServerFn(getMyManualCardTxns);
+  const manualShiftFn = useServerFn(getShiftManualCardTxns);
+  const manualEmpFn = useServerFn(getEmployeeManualCardTxns);
   const manualCardQ = useQuery({
-    queryKey: ["my-manual-card-txns"],
-    queryFn: () => manualCardFn({ data: undefined as any }),
-    enabled: !viewing && tab === "all",
+    queryKey: shiftMode
+      ? ["shift-manual-card-txns", viewShiftId]
+      : viewUserId
+        ? ["emp-manual-card-txns", viewUserId]
+        : ["my-manual-card-txns"],
+    queryFn: () =>
+      shiftMode
+        ? manualShiftFn({ data: { shiftId: viewShiftId! } })
+        : viewUserId
+          ? manualEmpFn({ data: { userId: viewUserId } })
+          : manualCardFn({ data: undefined as any }),
+    enabled: !blank && tab === "all",
     refetchInterval: 30_000,
   });
-  const manualRows: any[] = viewing || tab !== "all" ? [] : ((manualCardQ.data as any)?.rows ?? []);
+  const manualRows: any[] = blank || tab !== "all" ? [] : ((manualCardQ.data as any)?.rows ?? []);
+
   const [manualOpen, setManualOpen] = useState(false);
   const [tick, setTick] = useState(0);
   useEffect(() => {
@@ -2083,7 +2097,7 @@ export function EmployeeWorkView({
                 mergedRows.map((r) =>
                   r.__manual ? (
                     (() => {
-                      const locked = manualLocked(r);
+                      const locked = viewing || manualLocked(r);
                       const refresh = () => void manualCardQ.refetch();
                       const mName = String(r.merchant ?? "—");
                       return (
