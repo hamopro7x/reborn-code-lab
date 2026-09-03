@@ -67,11 +67,11 @@ export function ProductCard({ p }: { p: any }) {
 
         <div className="flex items-end justify-between gap-2 md:gap-1 min-w-0">
           <div className="flex items-baseline gap-1.5 md:gap-1 min-w-0">
-            <span className="text-sm md:text-xs font-black text-card-foreground truncate">
+            <span className="text-sm md:text-sm font-black text-card-foreground truncate">
               {formatPrice(localized, currency)}
             </span>
             {hasDiscount && (
-              <span className="text-[10px] md:text-[10px] text-muted-foreground line-through truncate">
+              <span className="text-[10px] md:text-[11px] text-muted-foreground line-through truncate">
                 {formatPrice(original, currency)}
               </span>
             )}
