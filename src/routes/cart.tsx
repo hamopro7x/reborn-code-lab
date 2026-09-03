@@ -1,7 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
 import { WhatsAppFab } from "@/components/site/WhatsAppFab";
@@ -88,10 +87,9 @@ function CartPage() {
                       <button onClick={() => remove(i.productId)} className="text-destructive text-xs mt-2 hover:underline flex items-center gap-1"><Trash2 className="size-3" />حذف</button>
                     </div>
                   </div>
-                  <Accordion type="single" collapsible className="border-t border-border/60">
-                    <AccordionItem value="details" className="border-b-0">
-                      <AccordionTrigger className="px-4 text-sm font-bold hover:no-underline">تفاصيل المنتج</AccordionTrigger>
-                      <AccordionContent className="px-4 pb-4">
+                  <div className="border-t border-border/60 px-4 py-4">
+                    <div className="text-sm font-bold mb-2">تفاصيل المنتج</div>
+                    <div>
                         {detailsQ.isLoading && !d ? (
                           <p className="text-xs text-muted-foreground">جاري تحميل التفاصيل...</p>
                         ) : !d ? (
@@ -116,9 +114,8 @@ function CartPage() {
                             )}
                           </div>
                         )}
-                      </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
+                    </div>
+                  </div>
                   </div>
                 );
               })}
