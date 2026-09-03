@@ -63,7 +63,7 @@ export function ProductCard({ p }: { p: any }) {
         )}
       </div>
 
-      <div className="px-3 py-2.5 md:px-2.5 md:py-3 flex flex-col gap-1.5 md:gap-2 border-t border-border shrink-0 md:min-h-[2.4cm] md:justify-center">
+      <div className="px-3 py-1.5 md:px-2.5 md:py-1.5 flex flex-col gap-0.5 md:gap-1 border-t border-border shrink-0">
         <h3 className="text-xs md:text-sm font-bold line-clamp-1 min-w-0 leading-tight">
           {p.name}
         </h3>
@@ -73,6 +73,7 @@ export function ProductCard({ p }: { p: any }) {
             <span>{warranty}</span>
           </div>
         )}
+
 
         <div className="flex items-center justify-between gap-2 min-w-0" dir="ltr">
           <div className="flex items-center gap-2 md:gap-1.5 shrink-0">
