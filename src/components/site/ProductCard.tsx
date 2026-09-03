@@ -16,6 +16,7 @@ export function ProductCard({ p }: { p: any }) {
   const original = convertFromEgp(p.base_price_egp, rate, currency.code);
   const hasDiscount = (p.discount_percent ?? 0) > 0;
   const fav = isFavorite(p.id);
+  const warranty = p.warranty_text?.trim() || (p.warranty_days > 0 ? `ضمان ${p.warranty_days} يوم` : null);
 
   const onAdd = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -66,6 +67,11 @@ export function ProductCard({ p }: { p: any }) {
         <h3 className="text-xs md:text-sm font-bold line-clamp-1 min-w-0 leading-tight">
           {p.name}
         </h3>
+        {warranty && (
+          <p className="text-[10px] md:text-[11px] text-muted-foreground line-clamp-1 min-w-0 leading-tight">
+            {warranty}
+          </p>
+        )}
 
         <div className="flex items-center justify-between gap-2 min-w-0" dir="ltr">
           <div className="flex items-center gap-2 md:gap-1.5 shrink-0">
