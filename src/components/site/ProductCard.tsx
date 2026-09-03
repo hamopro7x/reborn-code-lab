@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { useCurrency } from "@/lib/currency-context";
 import { convertFromEgp, formatPrice, computeDiscountedPrice } from "@/lib/format";
 import { Heart, ShoppingCart, ShieldCheck } from "lucide-react";
@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 export function ProductCard({ p }: { p: any }) {
   const { currency, rates } = useCurrency();
+  const navigate = useNavigate();
   const { add } = useCart();
   const { isFavorite, toggle } = useFavorites();
   const rate = rates[currency.code] ?? 1;
@@ -21,16 +22,22 @@ export function ProductCard({ p }: { p: any }) {
   const onAdd = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    add({
-      productId: p.id,
-      slug: p.slug,
-      name: p.name,
-      image: p.main_image,
-      basePriceEgp: Number(p.base_price_egp),
-      discountPercent: Number(p.discount_percent ?? 0),
-      warrantyDays: Number(p.warranty_days ?? 0),
-    });
+    try {
+      add({
+        productId: p.id,
+        slug: p.slug,
+        name: p.name,
+        image: p.main_image,
+        basePriceEgp: Number(p.base_price_egp),
+        discountPercent: Number(p.discount_percent ?? 0),
+        warrantyDays: Number(p.warranty_days ?? 0),
+      });
+    } catch {
+      toast.error("تعذر إضافة المنتج إلى السلة");
+      return;
+    }
     toast.success("تمت الإضافة إلى السلة");
+    navigate({ to: "/cart" });
   };
 
   const onFav = (e: React.MouseEvent) => {
@@ -41,9 +48,7 @@ export function ProductCard({ p }: { p: any }) {
   };
 
   return (
-    <Link
-      to="/product/$slug"
-      params={{ slug: p.slug }}
+    <div
       className="group rounded-xl border border-border bg-card text-card-foreground overflow-hidden flex flex-col transition-colors duration-150 hover:border-primary md:w-[6cm] md:h-[7cm]"
     >
       <div className="relative aspect-[4/3] md:aspect-auto md:flex-1 md:min-h-0 bg-muted overflow-hidden">
@@ -108,6 +113,6 @@ export function ProductCard({ p }: { p: any }) {
           </div>
         </div>
       </div>
-    </Link>
+    </div>
   );
 }
