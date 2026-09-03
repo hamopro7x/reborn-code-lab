@@ -62,37 +62,41 @@ export function ProductCard({ p }: { p: any }) {
         )}
       </div>
 
-      <div className="px-3 py-2.5 md:px-2 md:py-3 flex flex-col gap-0.5 md:gap-1 min-w-0 border-t border-border md:shrink-0">
-        <h3 className="text-xs md:text-sm md:leading-tight font-bold line-clamp-1 min-w-0">{p.name}</h3>
+      <div className="px-3 py-2.5 md:px-2.5 md:py-3 flex flex-col gap-1.5 md:gap-2 border-t border-border shrink-0 md:min-h-[2.4cm] md:justify-center">
+        <h3 className="text-xs md:text-sm font-bold line-clamp-1 min-w-0 leading-tight">
+          {p.name}
+        </h3>
 
-        <div className="flex items-end justify-between gap-2 md:gap-1 min-w-0">
-          <div className="flex items-baseline gap-1.5 md:gap-1 min-w-0">
-            <span className="text-sm md:text-base font-black text-card-foreground truncate">
-              {formatPrice(localized, currency)}
-            </span>
-            {hasDiscount && (
-              <span className="text-[10px] md:text-xs text-muted-foreground line-through truncate">
-                {formatPrice(original, currency)}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2 md:gap-1 shrink-0">
-            <button
-              type="button"
-              onClick={onAdd}
-              aria-label={`أضف ${p.name} إلى السلة`}
-              className="text-muted-foreground hover:text-primary transition-colors duration-150"
-            >
-              <ShoppingCart className="size-3.5 md:size-4" />
-            </button>
+        <div className="flex items-center justify-between gap-2 min-w-0">
+          <div className="flex items-center gap-2 md:gap-1.5 shrink-0">
             <button
               type="button"
               onClick={onFav}
               aria-label={fav ? `إزالة ${p.name} من المفضلة` : `أضف ${p.name} إلى المفضلة`}
               className={fav ? "text-primary" : "text-muted-foreground hover:text-primary transition-colors duration-150"}
             >
-              <Heart className="size-3.5 md:size-4" fill={fav ? "currentColor" : "none"} />
+              <Heart className="size-4 md:size-4" fill={fav ? "currentColor" : "none"} />
             </button>
+            <button
+              type="button"
+              onClick={onAdd}
+              aria-label={`أضف ${p.name} إلى السلة`}
+              className="inline-flex items-center gap-1 bg-black text-white rounded-md px-2 py-1 md:px-2 md:py-1 text-xs md:text-xs font-medium hover:bg-black/80 transition-colors shrink-0"
+            >
+              <ShoppingCart className="size-3.5 md:size-3.5 text-blue-400" />
+              <span>اطلب الآن</span>
+            </button>
+          </div>
+
+          <div className="flex flex-col items-end min-w-0 shrink-0 leading-tight">
+            <span className="text-sm md:text-base font-black text-card-foreground">
+              {formatPrice(localized, currency)}
+            </span>
+            {hasDiscount && (
+              <span className="text-[10px] md:text-xs text-muted-foreground line-through">
+                {formatPrice(original, currency)}
+              </span>
+            )}
           </div>
         </div>
       </div>
