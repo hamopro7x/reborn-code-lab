@@ -1,4 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
 import { WhatsAppFab } from "@/components/site/WhatsAppFab";
@@ -30,6 +33,22 @@ function CartPage() {
   const { currency, rates } = useCurrency();
   const navigate = useNavigate();
   const rate = rates[currency.code] ?? 1;
+  const ids = items.map((i) => i.productId).sort();
+  const detailsQ = useQuery({
+    queryKey: ["cart-product-details", ids],
+    enabled: ids.length > 0,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("products")
+        .select("id, description, short_description, warranty_days, warranty_text, category:categories(name,icon)")
+        .in("id", ids);
+      const map: Record<string, any> = {};
+      (data ?? []).forEach((p: any) => { map[p.id] = p; });
+      return map;
+    },
+  });
+
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -48,8 +67,10 @@ function CartPage() {
               {items.map((i) => {
                 const priceEgp = computeDiscountedPrice(i.basePriceEgp, i.discountPercent);
                 const localized = convertFromEgp(priceEgp * i.quantity, rate, currency.code);
+                const d = detailsQ.data?.[i.productId];
                 return (
-                  <div key={i.productId} className="card-surface rounded-2xl p-4 flex items-center gap-4">
+                  <div key={i.productId} className="card-surface rounded-2xl overflow-hidden">
+                  <div className="p-4 flex items-center gap-4">
                     <div className="size-16 rounded-xl bg-primary/10 flex items-center justify-center overflow-hidden shrink-0">
                       {i.image ? <img src={i.image} alt={i.name} className="w-full h-full object-cover" /> : <span className="text-2xl">🎁</span>}
                     </div>
@@ -66,6 +87,38 @@ function CartPage() {
                       <div className="font-bold text-gradient">{formatPrice(localized, currency)}</div>
                       <button onClick={() => remove(i.productId)} className="text-destructive text-xs mt-2 hover:underline flex items-center gap-1"><Trash2 className="size-3" />حذف</button>
                     </div>
+                  </div>
+                  <Accordion type="single" collapsible className="border-t border-border/60">
+                    <AccordionItem value="details" className="border-b-0">
+                      <AccordionTrigger className="px-4 text-sm font-bold hover:no-underline">تفاصيل المنتج</AccordionTrigger>
+                      <AccordionContent className="px-4 pb-4">
+                        {detailsQ.isLoading && !d ? (
+                          <p className="text-xs text-muted-foreground">جاري تحميل التفاصيل...</p>
+                        ) : !d ? (
+                          <p className="text-xs text-muted-foreground">لا توجد تفاصيل إضافية.</p>
+                        ) : (
+                          <div className="space-y-3 text-sm">
+                            {d.category?.name && (
+                              <div><span className="text-muted-foreground text-xs">التصنيف: </span><span className="font-bold">{d.category.icon ? `${d.category.icon} ` : ""}{d.category.name}</span></div>
+                            )}
+                            {d.short_description && <p className="text-muted-foreground leading-relaxed">{d.short_description}</p>}
+                            {d.description && (
+                              <div>
+                                <div className="font-bold text-xs mb-1">الوصف</div>
+                                <p className="text-muted-foreground leading-relaxed whitespace-pre-line">{d.description}</p>
+                              </div>
+                            )}
+                            {(d.warranty_text?.trim() || d.warranty_days > 0) && (
+                              <div>
+                                <div className="font-bold text-xs mb-1">الضمان</div>
+                                <p className="text-muted-foreground">{d.warranty_text?.trim() || `ضمان ${d.warranty_days} يوم`}</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
                   </div>
                 );
               })}
