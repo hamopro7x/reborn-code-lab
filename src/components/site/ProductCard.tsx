@@ -67,11 +67,11 @@ export function ProductCard({ p }: { p: any }) {
 
         <div className="flex items-end justify-between gap-2 md:gap-1 min-w-0">
           <div className="flex items-baseline gap-1.5 md:gap-1 min-w-0">
-            <span className="text-sm md:text-sm font-black text-card-foreground truncate">
+            <span className="text-sm md:text-base font-black text-card-foreground truncate">
               {formatPrice(localized, currency)}
             </span>
             {hasDiscount && (
-              <span className="text-[10px] md:text-[11px] text-muted-foreground line-through truncate">
+              <span className="text-[10px] md:text-xs text-muted-foreground line-through truncate">
                 {formatPrice(original, currency)}
               </span>
             )}
@@ -83,7 +83,7 @@ export function ProductCard({ p }: { p: any }) {
               aria-label={`أضف ${p.name} إلى السلة`}
               className="text-muted-foreground hover:text-primary transition-colors duration-150"
             >
-              <ShoppingCart className="size-3.5 md:size-3.5" />
+              <ShoppingCart className="size-3.5 md:size-4" />
             </button>
             <button
               type="button"
@@ -91,7 +91,7 @@ export function ProductCard({ p }: { p: any }) {
               aria-label={fav ? `إزالة ${p.name} من المفضلة` : `أضف ${p.name} إلى المفضلة`}
               className={fav ? "text-primary" : "text-muted-foreground hover:text-primary transition-colors duration-150"}
             >
-              <Heart className="size-3.5 md:size-3.5" fill={fav ? "currentColor" : "none"} />
+              <Heart className="size-3.5 md:size-4" fill={fav ? "currentColor" : "none"} />
             </button>
           </div>
         </div>
