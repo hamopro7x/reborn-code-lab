@@ -88,6 +88,38 @@ function CartPage() {
                       <button onClick={() => remove(i.productId)} className="text-destructive text-xs mt-2 hover:underline flex items-center gap-1"><Trash2 className="size-3" />حذف</button>
                     </div>
                   </div>
+                  <Accordion type="single" collapsible className="border-t border-border/60">
+                    <AccordionItem value="details" className="border-b-0">
+                      <AccordionTrigger className="px-4 text-sm font-bold hover:no-underline">تفاصيل المنتج</AccordionTrigger>
+                      <AccordionContent className="px-4 pb-4">
+                        {detailsQ.isLoading && !d ? (
+                          <p className="text-xs text-muted-foreground">جاري تحميل التفاصيل...</p>
+                        ) : !d ? (
+                          <p className="text-xs text-muted-foreground">لا توجد تفاصيل إضافية.</p>
+                        ) : (
+                          <div className="space-y-3 text-sm">
+                            {d.category?.name && (
+                              <div><span className="text-muted-foreground text-xs">التصنيف: </span><span className="font-bold">{d.category.icon ? `${d.category.icon} ` : ""}{d.category.name}</span></div>
+                            )}
+                            {d.short_description && <p className="text-muted-foreground leading-relaxed">{d.short_description}</p>}
+                            {d.description && (
+                              <div>
+                                <div className="font-bold text-xs mb-1">الوصف</div>
+                                <p className="text-muted-foreground leading-relaxed whitespace-pre-line">{d.description}</p>
+                              </div>
+                            )}
+                            {(d.warranty_text?.trim() || d.warranty_days > 0) && (
+                              <div>
+                                <div className="font-bold text-xs mb-1">الضمان</div>
+                                <p className="text-muted-foreground">{d.warranty_text?.trim() || `ضمان ${d.warranty_days} يوم`}</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+                  </div>
                 );
               })}
             </div>
