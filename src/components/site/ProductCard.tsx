@@ -76,27 +76,16 @@ export function ProductCard({ p }: { p: any }) {
 
 
         <div className="flex items-center justify-between gap-2 min-w-0" dir="ltr">
-          <div className="flex items-center gap-2 md:gap-1.5 shrink-0">
-            <button
-              type="button"
-              onClick={onFav}
-              aria-label={fav ? `إزالة ${p.name} من المفضلة` : `أضف ${p.name} إلى المفضلة`}
-              className={fav ? "text-primary" : "text-muted-foreground hover:text-primary transition-colors duration-150"}
-            >
-              <Heart className="size-4 md:size-4" fill={fav ? "currentColor" : "none"} />
-            </button>
-            <button
-              type="button"
-              onClick={onAdd}
-              aria-label={`أضف ${p.name} إلى السلة`}
-              className="inline-flex items-center gap-1 bg-black text-white rounded-md px-2 py-1 md:px-2 md:py-1 text-xs md:text-xs font-medium hover:bg-black/80 transition-colors shrink-0"
-            >
-              <ShoppingCart className="size-3.5 md:size-3.5 text-blue-400" />
-              <span>اطلب الآن</span>
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={onFav}
+            aria-label={fav ? `إزالة ${p.name} من المفضلة` : `أضف ${p.name} إلى المفضلة`}
+            className={fav ? "text-primary shrink-0" : "text-muted-foreground hover:text-primary transition-colors duration-150 shrink-0"}
+          >
+            <Heart className="size-4 md:size-4" fill={fav ? "currentColor" : "none"} />
+          </button>
 
-          <div className="flex items-center justify-end gap-1.5 min-w-0 shrink-0 leading-tight">
+          <div className="flex items-center gap-1.5 min-w-0 shrink-0 leading-tight">
             {hasDiscount && (
               <span className="text-[10px] md:text-xs text-muted-foreground line-through">
                 {formatPrice(original, currency)}
@@ -106,6 +95,16 @@ export function ProductCard({ p }: { p: any }) {
               {formatPrice(localized, currency)}
             </span>
           </div>
+
+          <button
+            type="button"
+            onClick={onAdd}
+            aria-label={`أضف ${p.name} إلى السلة`}
+            className="inline-flex items-center gap-1 bg-black text-white rounded-md px-2 py-1 md:px-2 md:py-1 text-xs md:text-xs font-medium hover:bg-black/80 transition-colors shrink-0"
+          >
+            <ShoppingCart className="size-3.5 md:size-3.5 text-blue-400" />
+            <span>اطلب الآن</span>
+          </button>
         </div>
       </div>
     </Link>
