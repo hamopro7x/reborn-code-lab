@@ -8,6 +8,8 @@ import { WhatsAppFab } from "@/components/site/WhatsAppFab";
 import { Countdown } from "@/components/site/Countdown";
 
 import { ProductRail } from "@/components/site/ProductRail";
+import { HeroCarousel } from "@/components/site/HeroCarousel";
+import { normalizeBanner } from "@/lib/hero-banners";
 import { TopupCard } from "@/components/site/TopupCard";
 import { useEffect, useMemo } from "react";
 import { useCurrency } from "@/lib/currency-context";
