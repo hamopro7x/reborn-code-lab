@@ -73,7 +73,7 @@ function Shop() {
             لا توجد منتجات مطابقة.
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-[repeat(2,auto)] md:grid-cols-[repeat(3,auto)] lg:grid-cols-[repeat(4,auto)] gap-1 justify-center">
             {filtered.map((p: any) => <ProductCard key={p.id} p={p} />)}
           </div>
         )}
