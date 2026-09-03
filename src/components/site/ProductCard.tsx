@@ -30,8 +30,22 @@ export function ProductCard({ p }: { p: any }) {
       basePriceEgp: Number(p.base_price_egp),
       discountPercent: Number(p.discount_percent ?? 0),
       warrantyDays: Number(p.warranty_days ?? 0),
-    });
+    try {
+      add({
+        productId: p.id,
+        slug: p.slug,
+        name: p.name,
+        image: p.main_image,
+        basePriceEgp: Number(p.base_price_egp),
+        discountPercent: Number(p.discount_percent ?? 0),
+        warrantyDays: Number(p.warranty_days ?? 0),
+      });
+    } catch {
+      toast.error("تعذر إضافة المنتج إلى السلة");
+      return;
+    }
     toast.success("تمت الإضافة إلى السلة");
+    navigate({ to: "/cart" });
   };
 
   const onFav = (e: React.MouseEvent) => {
