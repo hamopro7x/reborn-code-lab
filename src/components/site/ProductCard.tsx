@@ -43,7 +43,7 @@ export function ProductCard({ p }: { p: any }) {
     <Link
       to="/product/$slug"
       params={{ slug: p.slug }}
-      className="group rounded-xl border border-border bg-card text-card-foreground overflow-hidden flex flex-col transition-colors duration-150 hover:border-primary md:w-[6cm] md:h-[7cm]"
+      className="group rounded-xl border border-border bg-card text-card-foreground overflow-hidden flex flex-col transition-colors duration-150 hover:border-primary md:w-[7cm] md:h-[7cm]"
     >
       <div className="relative aspect-[4/3] md:aspect-auto md:flex-1 md:min-h-0 bg-muted overflow-hidden">
         {p.main_image ? (
@@ -63,15 +63,15 @@ export function ProductCard({ p }: { p: any }) {
       </div>
 
       <div className="px-3 py-2.5 md:px-2 md:py-3 flex flex-col gap-0.5 md:gap-1 min-w-0 border-t border-border md:shrink-0">
-        <h3 className="text-xs md:text-xs md:leading-tight font-bold line-clamp-1 min-w-0">{p.name}</h3>
+        <h3 className="text-xs md:text-sm md:leading-tight font-bold line-clamp-1 min-w-0">{p.name}</h3>
 
         <div className="flex items-end justify-between gap-2 md:gap-1 min-w-0">
           <div className="flex items-baseline gap-1.5 md:gap-1 min-w-0">
-            <span className="text-sm md:text-[11px] font-black text-card-foreground truncate">
+            <span className="text-sm md:text-xs font-black text-card-foreground truncate">
               {formatPrice(localized, currency)}
             </span>
             {hasDiscount && (
-              <span className="text-[10px] md:text-[9px] text-muted-foreground line-through truncate">
+              <span className="text-[10px] md:text-[10px] text-muted-foreground line-through truncate">
                 {formatPrice(original, currency)}
               </span>
             )}
@@ -83,7 +83,7 @@ export function ProductCard({ p }: { p: any }) {
               aria-label={`أضف ${p.name} إلى السلة`}
               className="text-muted-foreground hover:text-primary transition-colors duration-150"
             >
-              <ShoppingCart className="size-3.5 md:size-2.5" />
+              <ShoppingCart className="size-3.5 md:size-3" />
             </button>
             <button
               type="button"
@@ -91,7 +91,7 @@ export function ProductCard({ p }: { p: any }) {
               aria-label={fav ? `إزالة ${p.name} من المفضلة` : `أضف ${p.name} إلى المفضلة`}
               className={fav ? "text-primary" : "text-muted-foreground hover:text-primary transition-colors duration-150"}
             >
-              <Heart className="size-3.5 md:size-2.5" fill={fav ? "currentColor" : "none"} />
+              <Heart className="size-3.5 md:size-3" fill={fav ? "currentColor" : "none"} />
             </button>
           </div>
         </div>
