@@ -136,6 +136,12 @@ function Home() {
         </nav>
 
         <div className="min-w-0 space-y-8">
+          {bannersQ.isLoading ? (
+            <div className="h-[150px] md:h-[230px] rounded-xl border border-border bg-card animate-pulse" />
+          ) : (
+            <HeroCarousel banners={banners} />
+          )}
+
 
           {(timerQ.isLoading || timerQ.data) && (
             <div className="flex justify-center">
