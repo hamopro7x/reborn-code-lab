@@ -43,7 +43,7 @@ export function ProductCard({ p }: { p: any }) {
     <Link
       to="/product/$slug"
       params={{ slug: p.slug }}
-      className="group rounded-xl border border-border bg-card text-card-foreground overflow-hidden flex flex-col transition-colors duration-150 hover:border-primary md:w-[7cm] md:h-[7cm]"
+      className="group rounded-xl border border-border bg-card text-card-foreground overflow-hidden flex flex-col transition-colors duration-150 hover:border-primary md:w-[6cm] md:h-[7cm]"
     >
       <div className="relative aspect-[4/3] md:aspect-auto md:flex-1 md:min-h-0 bg-muted overflow-hidden">
         {p.main_image ? (
