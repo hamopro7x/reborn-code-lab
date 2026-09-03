@@ -83,7 +83,7 @@ export function ProductCard({ p }: { p: any }) {
               aria-label={`أضف ${p.name} إلى السلة`}
               className="text-muted-foreground hover:text-primary transition-colors duration-150"
             >
-              <ShoppingCart className="size-3.5 md:size-2.5" />
+              <ShoppingCart className="size-3.5 md:size-3" />
             </button>
             <button
               type="button"
@@ -91,7 +91,7 @@ export function ProductCard({ p }: { p: any }) {
               aria-label={fav ? `إزالة ${p.name} من المفضلة` : `أضف ${p.name} إلى المفضلة`}
               className={fav ? "text-primary" : "text-muted-foreground hover:text-primary transition-colors duration-150"}
             >
-              <Heart className="size-3.5 md:size-2.5" fill={fav ? "currentColor" : "none"} />
+              <Heart className="size-3.5 md:size-3" fill={fav ? "currentColor" : "none"} />
             </button>
           </div>
         </div>
