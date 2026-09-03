@@ -43,7 +43,7 @@ export function ProductCard({ p }: { p: any }) {
     <Link
       to="/product/$slug"
       params={{ slug: p.slug }}
-      className="group rounded-xl border border-border bg-card text-card-foreground overflow-hidden flex flex-col transition-colors duration-150 hover:border-primary md:w-[2.5cm] md:h-[3cm]"
+      className="group rounded-xl border border-border bg-card text-card-foreground overflow-hidden flex flex-col transition-colors duration-150 hover:border-primary md:w-[6cm] md:h-[7cm]"
     >
       <div className="relative aspect-[4/3] md:aspect-auto md:flex-1 md:min-h-0 bg-muted overflow-hidden">
         {p.main_image ? (
@@ -62,38 +62,38 @@ export function ProductCard({ p }: { p: any }) {
         )}
       </div>
 
-      <div className="px-2 py-2 md:px-1.5 md:py-2 flex flex-col gap-1 md:gap-1.5 border-t border-border shrink-0 md:min-h-[1.3cm] md:justify-center">
-        <h3 className="text-xs md:text-[10px] font-bold line-clamp-1 min-w-0 leading-tight">
+      <div className="px-3 py-2.5 md:px-2.5 md:py-3 flex flex-col gap-1.5 md:gap-2 border-t border-border shrink-0 md:min-h-[2.4cm] md:justify-center">
+        <h3 className="text-xs md:text-sm font-bold line-clamp-1 min-w-0 leading-tight">
           {p.name}
         </h3>
 
-        <div className="flex items-center justify-between gap-1 min-w-0">
-          <div className="flex items-center gap-1.5 md:gap-1 shrink-0">
+        <div className="flex items-center justify-between gap-2 min-w-0">
+          <div className="flex items-center gap-2 md:gap-1.5 shrink-0">
             <button
               type="button"
               onClick={onFav}
               aria-label={fav ? `إزالة ${p.name} من المفضلة` : `أضف ${p.name} إلى المفضلة`}
               className={fav ? "text-primary" : "text-muted-foreground hover:text-primary transition-colors duration-150"}
             >
-              <Heart className="size-4 md:size-3" fill={fav ? "currentColor" : "none"} />
+              <Heart className="size-4 md:size-4" fill={fav ? "currentColor" : "none"} />
             </button>
             <button
               type="button"
               onClick={onAdd}
               aria-label={`أضف ${p.name} إلى السلة`}
-              className="inline-flex items-center gap-0.5 bg-black text-white rounded-md px-1.5 py-0.5 md:px-1 md:py-0.5 text-[10px] md:text-[8px] font-medium hover:bg-black/80 transition-colors shrink-0"
+              className="inline-flex items-center gap-1 bg-black text-white rounded-md px-2 py-1 md:px-2 md:py-1 text-xs md:text-xs font-medium hover:bg-black/80 transition-colors shrink-0"
             >
-              <ShoppingCart className="size-3.5 md:size-2.5 text-blue-400" />
+              <ShoppingCart className="size-3.5 md:size-3.5 text-blue-400" />
               <span>اطلب الآن</span>
             </button>
           </div>
 
-          <div className="flex flex-col items-end min-w-0 shrink-0 leading-none">
-            <span className="text-sm md:text-[10px] font-black text-card-foreground">
+          <div className="flex flex-col items-end min-w-0 shrink-0 leading-tight">
+            <span className="text-sm md:text-base font-black text-card-foreground">
               {formatPrice(localized, currency)}
             </span>
             {hasDiscount && (
-              <span className="text-[10px] md:text-[7px] text-muted-foreground line-through">
+              <span className="text-[10px] md:text-xs text-muted-foreground line-through">
                 {formatPrice(original, currency)}
               </span>
             )}
