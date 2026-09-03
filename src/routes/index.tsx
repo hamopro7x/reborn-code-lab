@@ -96,6 +96,14 @@ function Home() {
 
   const categories = categoriesQ.data ?? [];
 
+  const bannersQ = useQuery({
+    queryKey: ["hero-banners"],
+    queryFn: async () =>
+      (await supabase.from("hero_banners").select("*").eq("active", true).order("sort_order")).data ?? [],
+    staleTime: 2 * 60_000,
+  });
+  const banners = useMemo(() => (bannersQ.data ?? []).map((r: any) => normalizeBanner(r)), [bannersQ.data]);
+
   // بطاقات الشحن = منتجات الأقسام التي تمثل بطاقات/شحن في قاعدة البيانات نفسها.
   const topups = useMemo(() => {
     const all = latestQ.data ?? [];
