@@ -115,9 +115,8 @@ function CartPage() {
                             )}
                           </div>
                         )}
-                      </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
+                    </div>
+                  </div>
                   </div>
                 );
               })}
