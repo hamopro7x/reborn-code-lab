@@ -60,19 +60,9 @@ export function ProductCard({ p }: { p: any }) {
             {p.name}
           </div>
         )}
-        {p.category?.name && (
-          <span className="absolute top-1.5 right-1.5 md:top-0.5 md:right-0.5 rounded-md bg-panel px-1.5 py-0.5 md:px-1 md:py-0 text-[10px] md:text-[7px] font-bold text-panel-foreground max-w-[70%] truncate">
-            {p.category.name}
-          </span>
-        )}
-        {hasDiscount && (
-          <span className="absolute bottom-1.5 left-1.5 md:bottom-0.5 md:left-0.5 rounded-md bg-discount px-1.5 py-0.5 md:px-1 md:py-0 text-[10px] md:text-[7px] font-bold text-discount-foreground">
-            -{p.discount_percent}%
-          </span>
-        )}
       </div>
 
-      <div className="px-3 py-2.5 md:px-1.5 md:py-1 flex flex-col gap-0.5 md:gap-0 min-w-0 border-t border-border md:shrink-0">
+      <div className="px-3 py-2.5 md:px-2 md:py-3 flex flex-col gap-0.5 md:gap-1 min-w-0 border-t border-border md:shrink-0">
         <h3 className="text-xs md:text-[8px] md:leading-tight font-bold line-clamp-1 min-w-0">{p.name}</h3>
 
         <div className="flex items-end justify-between gap-2 md:gap-1 min-w-0">
