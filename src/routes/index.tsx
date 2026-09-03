@@ -8,6 +8,8 @@ import { WhatsAppFab } from "@/components/site/WhatsAppFab";
 import { Countdown } from "@/components/site/Countdown";
 
 import { ProductRail } from "@/components/site/ProductRail";
+import { HeroCarousel } from "@/components/site/HeroCarousel";
+import { normalizeBanner } from "@/lib/hero-banners";
 import { TopupCard } from "@/components/site/TopupCard";
 import { useEffect, useMemo } from "react";
 import { useCurrency } from "@/lib/currency-context";
@@ -94,6 +96,14 @@ function Home() {
 
   const categories = categoriesQ.data ?? [];
 
+  const bannersQ = useQuery({
+    queryKey: ["hero-banners"],
+    queryFn: async () =>
+      (await supabase.from("hero_banners").select("*").eq("active", true).order("sort_order")).data ?? [],
+    staleTime: 2 * 60_000,
+  });
+  const banners = useMemo(() => (bannersQ.data ?? []).map((r: any) => normalizeBanner(r)), [bannersQ.data]);
+
   // بطاقات الشحن = منتجات الأقسام التي تمثل بطاقات/شحن في قاعدة البيانات نفسها.
   const topups = useMemo(() => {
     const all = latestQ.data ?? [];
@@ -126,6 +136,12 @@ function Home() {
         </nav>
 
         <div className="min-w-0 space-y-8">
+          {bannersQ.isLoading ? (
+            <div className="h-[150px] md:h-[230px] rounded-xl border border-border bg-card animate-pulse" />
+          ) : (
+            <HeroCarousel banners={banners} />
+          )}
+
 
           {(timerQ.isLoading || timerQ.data) && (
             <div className="flex justify-center">
