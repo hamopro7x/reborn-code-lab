@@ -22,14 +22,6 @@ export function ProductCard({ p }: { p: any }) {
   const onAdd = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    add({
-      productId: p.id,
-      slug: p.slug,
-      name: p.name,
-      image: p.main_image,
-      basePriceEgp: Number(p.base_price_egp),
-      discountPercent: Number(p.discount_percent ?? 0),
-      warrantyDays: Number(p.warranty_days ?? 0),
     try {
       add({
         productId: p.id,
