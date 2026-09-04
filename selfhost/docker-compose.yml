@@ -11,6 +11,9 @@ services:
     env_file: .env
     ports:
       - "127.0.0.1:3000:3000"
+    # مناسب لـVPS بـ2 vCPU / 8GB: نترك هامشًا للنظام وللكرون
+    mem_limit: 4g
+    cpus: 1.5
     healthcheck:
       test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3000/api/public/build-version').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
       interval: 30s
@@ -34,6 +37,9 @@ services:
     environment:
       SYNC_URL: "http://app:3000/api/public/hooks/bybit-ledger-sync"
       SYNC_INTERVAL_SECONDS: "${SYNC_INTERVAL_SECONDS:-300}"
+      SYNC_TIMEOUT_SECONDS: "${SYNC_TIMEOUT_SECONDS:-120}"
+    mem_limit: 128m
+    cpus: 0.25
     logging:
       driver: json-file
       options:
@@ -41,5 +47,5 @@ services:
         max-file: "3"
     volumes:
       - ./sync-loop.sh:/sync-loop.sh:ro
-    # يرسل السر الخاص لو موجود، وإلا يرجع للتحقق القديم بالمفتاح العام
+    # السر يُقرأ من env فقط (SYNC_HOOK_SECRET) ولا يوجد fallback لمفتاح عام
     command: sh -c "apk add --no-cache curl >/dev/null && sh /sync-loop.sh"
