@@ -262,7 +262,7 @@ export function HeroBannerView({
   return (
     <div
       ref={rootRef}
-      className="relative min-h-[190px] h-auto md:h-[230px] overflow-hidden"
+      className="relative min-h-[152px] h-auto md:h-[230px] overflow-hidden"
       style={{ backgroundColor: banner.background_color ?? undefined }}
     >
       {/* الخلفية / الوسائط — تغطي كامل مساحة البنر */}
@@ -277,12 +277,8 @@ export function HeroBannerView({
         <>
           <div
             className="absolute inset-0 md:hidden"
-            style={{ backgroundColor: banner.overlay_color, opacity: Math.min(1, banner.overlay_opacity + 0.55) }}
-          />
-          <div
-            className="absolute inset-0 md:hidden"
             style={{
-              background: `linear-gradient(90deg, ${banner.overlay_color}e6 0%, ${banner.overlay_color}99 60%, transparent 100%)`,
+              background: `linear-gradient(90deg, ${banner.overlay_color}f2 0%, ${banner.overlay_color}cc 34%, ${banner.overlay_color}33 58%, transparent 100%)`,
             }}
           />
           <div
@@ -291,6 +287,7 @@ export function HeroBannerView({
           />
         </>
       )}
+
 
       {/* ============= Desktop layout ============= */}
       <div className="hidden md:block relative h-full">
