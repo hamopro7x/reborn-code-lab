@@ -87,35 +87,52 @@ function CartPage() {
                       <button onClick={() => remove(i.productId)} className="text-destructive text-xs mt-2 hover:underline flex items-center gap-1"><Trash2 className="size-3" />حذف</button>
                     </div>
                   </div>
-                  <div className="border-t border-border/60 px-4 py-4">
-                    <div className="text-sm font-bold mb-2">تفاصيل المنتج</div>
-                    <div>
-                        {detailsQ.isLoading && !d ? (
-                          <p className="text-xs text-muted-foreground">جاري تحميل التفاصيل...</p>
-                        ) : !d ? (
-                          <p className="text-xs text-muted-foreground">لا توجد تفاصيل إضافية.</p>
-                        ) : (
-                          <div className="space-y-3 text-sm">
-                            {d.category?.name && (
-                              <div><span className="text-muted-foreground text-xs">التصنيف: </span><span className="font-bold">{d.category.icon ? `${d.category.icon} ` : ""}{d.category.name}</span></div>
-                            )}
-                            {d.short_description && <p className="text-muted-foreground leading-relaxed">{d.short_description}</p>}
-                            {d.description && (
-                              <div>
-                                <div className="font-bold text-xs mb-1">الوصف</div>
-                                <p className="text-muted-foreground leading-relaxed whitespace-pre-line">{d.description}</p>
-                              </div>
-                            )}
-                            {(d.warranty_text?.trim() || d.warranty_days > 0) && (
-                              <div>
-                                <div className="font-bold text-xs mb-1">الضمان</div>
-                                <p className="text-muted-foreground">{d.warranty_text?.trim() || `ضمان ${d.warranty_days} يوم`}</p>
-                              </div>
-                            )}
-                          </div>
+                  <div className="border-t border-border/60 px-5 py-5 md:px-6 md:py-6" dir="rtl">
+                    <h3 className="text-base md:text-lg font-black text-foreground mb-5">تفاصيل المنتج :-</h3>
+                    {detailsQ.isLoading && !d ? (
+                      <p className="text-sm text-muted-foreground">جاري تحميل التفاصيل...</p>
+                    ) : !d ? (
+                      <p className="text-sm text-muted-foreground">لا توجد تفاصيل إضافية.</p>
+                    ) : (
+                      <div className="space-y-6">
+                        {d.category?.name && (
+                          <section>
+                            <div className="flex items-center gap-2 mb-2">
+                              <Tag className="size-4 text-primary shrink-0" />
+                              <h4 className="text-sm md:text-base font-black text-primary">التصنيف</h4>
+                            </div>
+                            <p className="text-sm md:text-[15px] text-foreground/90 leading-relaxed">{d.category.name}</p>
+                          </section>
                         )}
-                    </div>
+
+                        {(d.short_description || d.description) && (
+                          <section>
+                            <div className="flex items-center gap-2 mb-2">
+                              <FileText className="size-4 text-primary shrink-0" />
+                              <h4 className="text-sm md:text-base font-black text-primary">الوصف</h4>
+                            </div>
+                            {d.short_description && (
+                              <p className="text-sm md:text-[15px] text-muted-foreground leading-relaxed whitespace-pre-line break-words mb-2">{d.short_description}</p>
+                            )}
+                            {d.description && (
+                              <p className="text-sm md:text-[15px] text-foreground/90 leading-[2] whitespace-pre-line break-words">{d.description}</p>
+                            )}
+                          </section>
+                        )}
+
+                        {(d.warranty_text?.trim() || d.warranty_days > 0) && (
+                          <section>
+                            <div className="flex items-center gap-2 mb-2">
+                              <ShieldCheck className="size-4 text-primary shrink-0" />
+                              <h4 className="text-sm md:text-base font-black text-primary">الضمان</h4>
+                            </div>
+                            <p className="text-sm md:text-[15px] text-foreground/90 leading-relaxed whitespace-pre-line break-words">{d.warranty_text?.trim() || `ضمان ${d.warranty_days} يوم`}</p>
+                          </section>
+                        )}
+                      </div>
+                    )}
                   </div>
+
                   </div>
                 );
               })}
