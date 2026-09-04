@@ -64,9 +64,9 @@ export function Header() {
             height={36}
             className="size-9 rounded-lg border border-border"
           />
-          <div className="leading-none">
-            <div className="font-bold text-sm">MG Pro</div>
-            <div className="text-[10px] text-muted-foreground mt-0.5">الاشتراكات الرقمية</div>
+          <div className="leading-tight">
+            <div className="font-black text-base">MG Pro</div>
+            <div className="text-xs text-muted-foreground">الاشتراكات الرقمية</div>
           </div>
         </Link>
 
