@@ -202,7 +202,7 @@ export function HeroBannerView({
   const subtitleNode =
     banner.show_subtitle && banner.subtitle ? (
       <p
-        className="text-hero-foreground/70 line-clamp-2 max-w-md"
+        className="text-hero-foreground/70 line-clamp-2 md:line-clamp-3 max-w-md"
         style={{ fontSize: `clamp(${banner.subtitle_size_mobile}px, 2vw, ${banner.subtitle_size}px)` }}
       >
         {banner.subtitle}
@@ -212,7 +212,7 @@ export function HeroBannerView({
   const subtitle2Node =
     banner.show_subtitle2 && banner.subtitle2 ? (
       <p
-        className="text-hero-foreground/70 line-clamp-2 max-w-md"
+        className="text-hero-foreground/70 line-clamp-2 md:line-clamp-3 max-w-md"
         style={{ fontSize: `clamp(${banner.subtitle2_size_mobile}px, 2vw, ${banner.subtitle2_size}px)` }}
       >
         {banner.subtitle2}
