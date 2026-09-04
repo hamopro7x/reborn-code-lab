@@ -858,6 +858,66 @@ function mapCardTxn(t: any): CardTxn {
 const MAX_TXNS = 10_000_000;
 const PRUNE_TO_DELETE = 3_000_000;
 
+/**
+ * مقارنة قيمة واحدة بين الصف المخزَّن والصف الجديد.
+ * الأرقام تُقارن رقميًا (numeric يعود كنص من الـData API) وباقي القيم كنص.
+ */
+function sameStoredValue(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (a == null && b == null) return true;
+  if (a == null || b == null) return false;
+  if (typeof a === "number" || typeof b === "number") return Number(a) === Number(b);
+  return String(a) === String(b);
+}
+
+/** الأعمدة التي تحدّد «هل تغيّر الصف فعلًا؟» لمعاملات الكروت. */
+const CARD_TXN_COMPARE = [
+  "merchant",
+  "amount",
+  "currency",
+  "status",
+  "txn_time",
+  "pan4",
+  "txn_type",
+] as const;
+
+/**
+ * يرجّع الصفوف الجديدة أو المتغيّرة فقط.
+ *
+ * قبل ذلك كان الـupsert يعيد كتابة كل صف في كل دورة مزامنة (ملايين UPDATE
+ * لجدول فيه ~22 ألف صف)، وهو ما كان يستهلك CPU وWAL وautovacuum بلا فائدة.
+ * المقارنة تتم على الأعمدة الظاهرة فقط دون قراءة عمود detail الضخم؛ أي تغيير
+ * حقيقي من المزوّد يصاحبه دائمًا تغيير في أحد هذه الأعمدة.
+ */
+async function changedCardTxns(db: any, payload: any[], accountId?: string): Promise<any[]> {
+  const out: any[] = [];
+  for (let i = 0; i < payload.length; i += 500) {
+    const slice = payload.slice(i, i + 500);
+    let q = db
+      .from("bybit_card_txns")
+      .select("txn_id, merchant, amount, currency, status, txn_time, pan4, txn_type")
+      .in(
+        "txn_id",
+        slice.map((r) => r.txn_id),
+      );
+    q = accountId ? q.eq("account_id", accountId) : q.is("account_id", null);
+    const { data, error } = await q;
+    if (error) {
+      // فشل القراءة لا يمنع الحفظ: نكتب الدفعة كما كانت سابقًا.
+      out.push(...slice);
+      continue;
+    }
+    const existing = new Map((data ?? []).map((r: any) => [String(r.txn_id), r]));
+    for (const row of slice) {
+      const prev = existing.get(String(row.txn_id));
+      if (!prev || CARD_TXN_COMPARE.some((k) => !sameStoredValue((prev as any)[k], row[k]))) {
+        out.push(row);
+      }
+    }
+  }
+  return out;
+}
+
 /** Persist fetched rows and enforce the 10M cap (oldest 3M pruned). */
 async function persistCardTxns(rows: CardTxn[], accountId?: string) {
   if (!rows.length) return;
@@ -875,10 +935,12 @@ async function persistCardTxns(rows: CardTxn[], accountId?: string) {
         txn_type: r.type,
         detail: r.detail,
     }));
-    for (let i = 0; i < payload.length; i += 500) {
+    // نكتب الجديد والمتغيّر فقط بدل إعادة كتابة الأرشيف بالكامل.
+    const pending = await changedCardTxns(supabaseAdmin as any, payload, accountId);
+    for (let i = 0; i < pending.length; i += 500) {
       const { error } = await (supabaseAdmin as any)
         .from("bybit_card_txns")
-        .upsert(payload.slice(i, i + 500), { onConflict: "account_id,txn_id" });
+        .upsert(pending.slice(i, i + 500), { onConflict: "account_id,txn_id" });
       if (error) console.error("bybit_card_txns upsert failed:", error.message);
     }
     await (supabaseAdmin as any).rpc("prune_bybit_card_txns", {
@@ -890,6 +952,7 @@ async function persistCardTxns(rows: CardTxn[], accountId?: string) {
   }
 
 }
+
 
 /**
  * Full archive read, server-side only (per-card spend aggregation).
@@ -1608,18 +1671,64 @@ type LedgerInsert = {
 
 const iso = (ms: number) => new Date(ms > 0 ? ms : Date.now()).toISOString();
 
+/** الأعمدة التي تحدّد «هل تغيّر صف السجل فعلًا؟». */
+const LEDGER_COMPARE = [
+  "direction",
+  "title",
+  "amount",
+  "currency",
+  "fee",
+  "status",
+  "occurred_at",
+] as const;
+
+/** يرجّع صفوف السجل الجديدة أو المتغيّرة فقط (نفس منطق معاملات الكروت). */
+async function changedLedgerRows(db: any, rows: LedgerInsert[]): Promise<LedgerInsert[]> {
+  const out: LedgerInsert[] = [];
+  const key = (r: { account_id: string | null; kind: string; ref_id: string }) =>
+    `${r.account_id ?? ""}|${r.kind}|${r.ref_id}`;
+  for (let i = 0; i < rows.length; i += 500) {
+    const slice = rows.slice(i, i + 500);
+    const { data, error } = await db
+      .from("bybit_ledger")
+      .select("account_id, kind, ref_id, direction, title, amount, currency, fee, status, occurred_at")
+      .in(
+        "ref_id",
+        slice.map((r) => r.ref_id),
+      );
+    if (error) {
+      out.push(...slice);
+      continue;
+    }
+    const existing = new Map((data ?? []).map((r: any) => [key(r), r]));
+    for (const row of slice) {
+      const prev = existing.get(key(row));
+      if (
+        !prev ||
+        LEDGER_COMPARE.some((k) => !sameStoredValue((prev as any)[k], (row as any)[k]))
+      ) {
+        out.push(row);
+      }
+    }
+  }
+  return out;
+}
+
 async function upsertLedger(rows: LedgerInsert[]) {
   const clean = rows.filter((r) => r.ref_id);
   if (!clean.length) return 0;
   const db = await admin();
   let saved = 0;
-  for (let i = 0; i < clean.length; i += 500) {
+  // نكتب الجديد والمتغيّر فقط: لا إعادة كتابة لكل السجل في كل دورة.
+  const pending = await changedLedgerRows(db, clean);
+  for (let i = 0; i < pending.length; i += 500) {
     const { error } = await db
       .from("bybit_ledger")
-      .upsert(clean.slice(i, i + 500), { onConflict: "account_id,kind,ref_id" });
+      .upsert(pending.slice(i, i + 500), { onConflict: "account_id,kind,ref_id" });
     if (error) console.error("bybit_ledger upsert failed:", error.message);
-    else saved += Math.min(500, clean.length - i);
+    else saved += Math.min(500, pending.length - i);
   }
+
   // Work-sheet layer: link the freshly mirrored movements to the open shift.
   // Never modifies ledger rows; failures here must not break the sync.
   try {
