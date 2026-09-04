@@ -118,7 +118,7 @@ function Home() {
       <Header />
 
       {bannersQ.isLoading ? (
-        <div className="min-h-[190px] h-auto md:h-[230px] bg-card animate-pulse" />
+        <div className="min-h-[152px] h-auto md:h-[230px] bg-card animate-pulse" />
       ) : (
         <HeroCarousel banners={banners} />
       )}
