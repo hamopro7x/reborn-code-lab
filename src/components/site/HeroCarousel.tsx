@@ -278,7 +278,7 @@ export function HeroBannerView({
           <div
             className="absolute inset-0 md:hidden"
             style={{
-              background: `linear-gradient(90deg, ${banner.overlay_color}f2 0%, ${banner.overlay_color}cc 30%, ${banner.overlay_color}26 52%, transparent 70%)`,
+              background: `linear-gradient(90deg, ${banner.overlay_color}f2 0%, ${banner.overlay_color}e6 38%, ${banner.overlay_color}8c 52%, transparent 68%)`,
             }}
           />
           <div
@@ -371,7 +371,7 @@ export function HeroBannerView({
             {badges.slice(0, 3).map((b) => (
               <div
                 key={b.id}
-                className="rounded-md border border-border/60 bg-card px-1.5 py-1 w-[62px] text-center"
+                className="rounded-md border border-border/60 bg-card px-1.5 py-1 w-[68px] text-center"
               >
                 {b.title && (
                   <span className="block text-[7px] leading-tight text-muted-foreground truncate">{b.title}</span>
