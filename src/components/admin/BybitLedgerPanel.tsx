@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { ChevronDown } from "lucide-react";
 import { getBybitCardBrands, getBybitLedger, getBybitSpendTotals } from "@/lib/bybit.functions";
 import { formatDateTime } from "@/lib/format";
+import { useLedgerAutoSync } from "@/lib/use-ledger-sync";
 import usdtOfficial from "@/assets/usdt-official.png.asset.json";
 
 /** Same stat tile as the source visa account cards. */
@@ -290,6 +291,9 @@ export function BybitLedgerPanel() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [page, setPage] = useUiState<number>("bybit-ledger", "page", 1);
   const pageSize = 50;
+
+  // اسحب معاملات Bybit الجديدة إلى السجل المركزي طالما الشاشة مفتوحة.
+  useLedgerAutoSync(true);
 
   const q = useQuery({
     queryKey: ["bybit-ledger", group, status, page],
