@@ -211,8 +211,8 @@ export function HeroBannerView({
   const titleNode =
     banner.show_title && banner.title ? (
       <h1
-        className="font-black leading-tight line-clamp-2 md:line-clamp-3"
-        style={{ fontSize: `clamp(${banner.title_size_mobile}px, 4vw, ${banner.title_size}px)` }}
+        className="font-black leading-tight line-clamp-2 md:line-clamp-3 text-white drop-shadow-sm"
+        style={{ fontSize: `clamp(${banner.title_size_mobile}px, 4vw, ${banner.title_size}px)`, textShadow: "0 1px 4px rgba(0,0,0,0.6)" }}
       >
         {banner.title}
       </h1>
