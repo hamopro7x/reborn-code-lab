@@ -1,68 +1,76 @@
-# نقل reborn-code-lab إلى VPS (Ubuntu 26.04 + Docker) — الخطوات التالية فقط
+# نقل reborn-code-lab بالكامل إلى VPS (Ubuntu 26.04 + Docker, 2 vCPU / 8GB / 100GB)
 
-الهدف: أخذ نسخة الكود الحالية من Lovable وتشغيلها على الـVPS، وLovable للتطوير فقط.
+الهدف: الـVPS بيئة التشغيل الأساسية، وLovable للتطوير فقط. لا حذف ولا تعطيل لأي شيء سحابي في هذه المرحلة، ولا migration خطيرة قبل موافقتك.
 
-## 1) حالة ملفات selfhost (تم التحقق منها الآن)
+## 1) نتيجة الفحص الفعلي للاعتماديات (تم التحقق الآن)
 
-موجودة وكافية، ولن يُعاد كتابتها:
+| المكوّن | الحالة الحقيقية في الكود | قابلية النقل |
+| --- | --- | --- |
+| التطبيق (TanStack Start SSR) | `selfhost/Dockerfile` يبني بـ`NITRO_PRESET=node-server` | 100% |
+| Postgres + 77 migration | `supabase/migrations` (77 ملف) + `selfhost/migrate-db.sh` جاهز | 100% |
+| Auth | `src/routes/auth.tsx` يستخدم **email/password فقط** عبر `supabase.auth` | 100% |
+| Cloud Auth broker | `src/integrations/lovable/index.ts` موجود لكن **غير مستخدم في أي صفحة** | يُترك كما هو (ملف مولّد) |
+| Storage | 6 buckets، `selfhost/migrate-storage.mjs` جاهز | 100% |
+| Realtime | `src/lib/realtime/global-realtime.tsx` يستخدم `postgres_changes` | 100% (Supabase self-hosted فيه realtime) |
+| Cron (Bybit) | جوب سحابي كل دقيقة + بديل جاهز: خدمة `bybit-cron` في compose | 100% |
+| AI (فحص الوجه) | `src/lib/work.server.ts` صار يدعم أي مزود OpenAI-compatible عبر `VISION_API_KEY/URL/MODEL` مع fallback لـ`LOVABLE_API_KEY` | 100% بمزود خارجي |
+| TURN/ICE | `src/routes/api/public/ice-servers.ts` يدعم Cloudflare TURN **أو** `TURN_URLS/USERNAME/CREDENTIAL` | 100% (coturn أو Cloudflare) |
+| MCP (`@lovable.dev/mcp-js`) | routes `/mcp` و`.well-known` مولّدة | تعمل على السيرفر، لكنها ميزة Lovable-specific |
 
-- `selfhost/Dockerfile` — بناء بـbun ثم تشغيل `node .output/server/index.mjs` بـ`NITRO_PRESET=node-server`.
-- `selfhost/docker-compose.yml` — خدمة التطبيق على `127.0.0.1:3000` + healthcheck + خدمة كرون Bybit.
-- `selfhost/sync-loop.sh` و`selfhost/bybit-sync.sh` — مزامنة Bybit من سيرفرك بدل جوب السحابة.
-- `selfhost/nginx.conf` — reverse proxy لـmag-pro1.com.
-- `selfhost/.env.example` — كل المتغيرات المطلوبة (Supabase، Bybit، RedotPay، TURN، AI).
-- `selfhost/migrate-storage.mjs` — نقل ملفات الـStorage عند الحاجة.
-- `package.json` فيه `build:node`.
+**لا يمكن نقله 100% (والبديل):**
+- **Lovable AI Gateway** — لا يعمل خارج Lovable. البديل: مفتاح OpenAI/Gemini في `VISION_API_KEY` (مدعوم بالكود فعلًا).
+- **إشعارات بريد Auth (تأكيد/استرجاع كلمة السر)** — Supabase self-hosted يحتاج SMTP خارجي (Resend/Brevo/SES). بدونه تسجيل الدخول بكلمة سر يعمل، لكن استرجاع كلمة السر لا.
+- **كلمات مرور المستخدمين**: تُنقل كما هي *فقط* إذا استخرجنا `auth.users` بالـ`encrypted_password` من نسخة الـexport. لو لم يسمح الـexport بذلك، البديل: إنشاء المستخدمين بنفس الـUUID + إجبار reset (يحتاج SMTP)، أو تعيين كلمات مرور مؤقتة إداريًا.
+- **بناء Docker على 8GB**: بناء Vite قد يستهلك ذاكرة كبيرة. البديل الآمن: بناء الصورة على جهازك/CI ودفعها، أو `NODE_OPTIONS=--max-old-space-size=6144` + swap 4GB.
 
-النقص الوحيد المكتشف: لا يوجد `.dockerignore` في جذر المشروع، فسياق البناء يشمل `node_modules`/`.output` لو كانت موجودة على السيرفر ويبطئ البناء أو يفسد التثبيت.
+## 2) قرار البنية الموصى به لمواردك
 
-## 2) الطريقة الصحيحة لأخذ نسخة المشروع من Lovable
+**2 vCPU / 8GB لا يكفي بأمان لـSupabase self-hosted كامل** (Postgres + Auth + Storage + Realtime + Kong + التطبيق) مع حجم `bybit_card_txns` الحالي.
 
-الأفضل والأقل استهلاكًا: **GitHub**.
+مسارين، اختر واحدًا:
 
-1. من Lovable: GitHub → Connect / Push to GitHub (repo خاص). كل تعديل تعمله في Lovable يُدفع تلقائيًا.
-2. على الـVPS: `git clone` ثم `git pull` + إعادة بناء عند كل تحديث. لا credits تُستهلك في العملية.
+- **أ) موصى به:** التطبيق + كرون + nginx على الـVPS، وقاعدة البيانات على **مشروع Supabase سحابي خاص بك** (خارج Lovable). استقلال كامل عن Lovable، صفر credits، وصيانة منخفضة.
+- **ب) استقلال كامل:** Supabase self-hosted بالكامل على نفس الـVPS. ممكن لكن يحتاج ضبط ذاكرة صارم (Postgres shared_buffers 2GB، تعطيل خدمات غير مستخدمة مثل Vector/Analytics/Functions) وswap، والأداء أضعف.
 
-بديل بدون GitHub: تنزيل المشروع كـZIP من Lovable ورفعه بـ`scp`، لكن كل تحديث لاحق يحتاج إعادة تنزيل ورفع يدوي — لا أنصح به.
+باقي الخطة يعمل مع المسارين؛ الفرق فقط في مصدر `SUPABASE_URL`/المفاتيح.
 
-ملاحظة: ملف `.env` الحالي في Lovable يحتوي فقط مفاتيح Supabase العامة؛ على السيرفر لا تستخدمه، استخدم `selfhost/.env` وحده.
+## 3) الملفات المطلوب إنشاؤها/تعديلها (بعد موافقتك)
 
-## 3) الخطوات الدقيقة على الـVPS
+جديد:
+1. `selfhost/supabase/docker-compose.yml` + `selfhost/supabase/.env.example` — فقط لو اخترت المسار (ب): Postgres + auth (gotrue) + storage + realtime + rest + kong، مضبوطة على 8GB.
+2. `selfhost/export-db.sh` — تصدير schema+data من القاعدة الحالية بـ`pg_dump` (بما فيه `auth.users` عند توفر رابط اتصال مباشر)، مع `--no-owner`.
+3. `selfhost/import-db.sh` — استيراد آمن للقاعدة الجديدة، يشغّل الـmigrations أولًا ثم البيانات `--data-only`، ويتحقق من عدد الصفوف لكل جدول قبل/بعد.
+4. `selfhost/verify-migration.sh` — فحص ما بعد النقل: عدد الجداول، RLS مفعّلة، عدد policies/functions/triggers/indexes/extensions، عدد المستخدمين، عدد ملفات كل bucket.
+5. `selfhost/backup.sh` + `selfhost/restore.sh` — نسخ احتياطي يومي (`pg_dump` مضغوط + مزامنة Storage) مع الاحتفاظ 7/30 يومًا، يعمل عبر خدمة `backup` في compose أو cron.
+6. `selfhost/coturn/turnserver.conf` + خدمة coturn اختيارية في compose — لمشاركة الشاشة بدون Cloudflare.
+7. `selfhost/CHECKLIST.md` — قائمة تنفيذ مرقّمة من الصفر للتشغيل، مع أوامر التحقق.
 
-```bash
-git clone <repo-url> /opt/mag-pro1
-cd /opt/mag-pro1/selfhost
-cp .env.example .env      # املأ القيم
-docker compose up -d --build
-curl -s localhost:3000/api/public/build-version
-```
+تعديل طفيف (بدون UI ولا business logic):
+8. `selfhost/docker-compose.yml` — إضافة حدود `mem_limit`/`cpus` مناسبة لـ8GB، وخدمة backup، وربط coturn اختياريًا.
+9. `selfhost/.env.example` — إضافة متغيرات SMTP وbackup وcoturn.
+10. `selfhost/README.md` — تحديث مسار (أ)/(ب) وSMTP والنسخ الاحتياطي.
+11. `roadmap.md` — تحديث حالة المهام.
 
-ثم الدومين:
+**بلا تعديل:** أي مكوّن UI، أي `*.functions.ts` أو business logic، أي جدول أو بيانات إنتاجية. لا يوجد أي migration في هذه الخطة على القاعدة الحالية.
 
-```bash
-cp /opt/mag-pro1/selfhost/nginx.conf /etc/nginx/sites-available/mag-pro1.conf
-ln -s /etc/nginx/sites-available/mag-pro1.conf /etc/nginx/sites-enabled/
-nginx -t && systemctl reload nginx
-certbot --nginx -d mag-pro1.com -d www.mag-pro1.com
-```
+## 4) ترتيب التنفيذ (مع نقاط توقّف)
 
-الحد الأدنى لتشغيل الموقع من `selfhost/.env`: `VITE_SUPABASE_URL`، `VITE_SUPABASE_PUBLISHABLE_KEY`، `VITE_SUPABASE_PROJECT_ID`، و`SUPABASE_URL` + `SUPABASE_PUBLISHABLE_KEY` + `SUPABASE_SERVICE_ROLE_KEY`. الباقي (Bybit، TURN، AI، RedotPay) اختياري وكل ميزة تتعطل بأمان بدون مفتاحها.
+1. أُنشئ الملفات أعلاه (لا تأثير على الإنتاج).
+2. أنت: تصدير نسخة من Cloud → Advanced → Export data.
+3. أنت على الـVPS: تجهيز القاعدة الجديدة ثم `migrate-db.sh` ثم `import-db.sh` (على قاعدة **جديدة فارغة** فقط).
+4. `migrate-storage.mjs` بـ`DRY_RUN=1` ثم فعليًا، وإعادة تطبيق policies الـbuckets (تأتي مع الـmigrations).
+5. `docker compose up -d --build` + `verify-migration.sh`.
+6. اختبار كامل: دخول موظف/أدمن، منتجات، سلة، طلب، Bybit sync، مشاركة شاشة، فحص وجه.
+7. nginx + certbot + تحويل DNS.
+8. **فقط بعد نجاح كل ما سبق**: تعطيل جوب Bybit السحابي وإلغاء النشر من Lovable.
 
-## 4) قرار مطلوب منك قبل مرحلة قاعدة البيانات
+## 5) أسرار تُضاف في `selfhost/.env` على السيرفر فقط (لا في Git)
 
-هذه الخطوة تشغّل **التطبيق** على سيرفرك؛ قاعدة البيانات والـAuth تبقى على النسخة الحالية حتى تقرر:
+`SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `VITE_SUPABASE_*`, `BYBIT_API_KEY/SECRET`, `SYNC_HOOK_SECRET`, `VISION_API_KEY`, `TURN_*` أو `CLOUDFLARE_TURN_*`, `SMTP_*`, `BACKUP_*`.
 
-- **أ) إبقاء الـDB كما هي مؤقتًا** — أسرع طريق، الموقع يعمل من سيرفرك فورًا، لكن استهلاك الـDB يستمر.
-- **ب) مشروع Supabase سحابي خاص بك** — نقل 77 migration + البيانات + Storage + المستخدمين بنفس الـUUIDs.
-- **ج) Supabase self-hosted على نفس الـVPS** — أقصى استقلال وأعلى صيانة.
+## 6) قرار مطلوب منك قبل التنفيذ
 
-## 5) التغيير الوحيد المطلوب في الكود بهذه الخطوة
-
-إضافة `.dockerignore` في الجذر يستثني: `node_modules`، `.output`، `.git`، `.wrangler`، `.nitro`، `agent/node_modules`، `agent/release`، `*.log`، `.env`.
-لا تعديل على أي واجهة أو منطق عمل أو بيانات.
-
-## 6) لتقليل الـcredits بعد نجاح التشغيل من سيرفرك
-
-1. تعطيل جوب `bybit-ledger-auto-sync` من Cloud → Jobs (وإلا تعمل المزامنة مرتين).
-2. تحويل DNS للدومين إلى IP الـVPS وإزالته من إعدادات Lovable.
-3. إلغاء نشر مشروع Lovable حتى لا يستقبل زيارات، واستخدام Lovable للتطوير فقط.
+1. المسار (أ) Supabase سحابي خاص بك أم (ب) self-hosted على نفس الـVPS؟
+2. مزود AI لفحص الوجه: OpenAI أم Google Gemini؟
+3. TURN: coturn على نفس الـVPS أم Cloudflare TURN؟
+4. SMTP: تستخدم مزودًا (Resend مثلًا) أم نكتفي بالدخول بكلمة السر بدون استرجاع؟
