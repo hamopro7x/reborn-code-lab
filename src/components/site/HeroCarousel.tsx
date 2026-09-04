@@ -335,21 +335,21 @@ export function HeroBannerView({
       {/* ============= Mobile layout — مطابق لتصميم كانفا ============= */}
       <div className="md:hidden relative z-10 min-h-[152px]">
         {/* النص والأزرار على يسار البانر */}
-        <div className="absolute inset-y-0 left-0 w-[46%] flex flex-col justify-center gap-1 px-2.5 text-right items-end">
+        <div className="absolute inset-y-0 left-0 w-[46%] flex flex-col justify-center gap-1 px-2.5 text-center items-center">
           {banner.show_title && banner.title && (
-            <h1 className="font-black leading-tight line-clamp-2 text-[15px] w-full">{banner.title}</h1>
+            <h1 className="font-black leading-tight whitespace-nowrap text-[12px] w-full">{banner.title}</h1>
           )}
           {banner.show_subtitle && banner.subtitle && (
-            <p className="text-teal leading-snug line-clamp-2 text-[10px] w-full">{banner.subtitle}</p>
+            <p className="text-teal leading-snug line-clamp-2 text-[9px] w-full text-center">{banner.subtitle}</p>
           )}
           {banner.show_subtitle2 && banner.subtitle2 && (
-            <p className="text-teal leading-snug line-clamp-2 text-[10px] w-full">{banner.subtitle2}</p>
+            <p className="text-teal leading-snug line-clamp-2 text-[9px] w-full text-center">{banner.subtitle2}</p>
           )}
 
           {buttons.length > 0 && (
-            <div className="flex flex-wrap justify-end gap-1.5 mt-1 w-full">
+            <div className="flex flex-nowrap justify-center gap-1.5 mt-1 w-full">
               {buttons.map((b) => (
-                <HeroButtonItem key={b.id} banner={banner} b={b} size={28} />
+                <HeroButtonItem key={b.id} banner={banner} b={b} size={22} compact />
               ))}
             </div>
           )}
