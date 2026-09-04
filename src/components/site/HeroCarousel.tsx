@@ -321,19 +321,20 @@ export function HeroBannerView({
       {/* ============= Mobile layout — مطابق لتصميم كانفا ============= */}
       <div className="md:hidden relative z-10 min-h-[152px]">
         {/* النص والأزرار على يسار البانر */}
-        <div className="absolute inset-y-0 left-0 w-[52%] flex flex-col justify-center gap-1 px-3 text-center items-center">
+        <div className="absolute inset-y-0 left-0 w-[44%] flex flex-col justify-center gap-1 px-3 text-right items-end">
           {banner.show_title && banner.title && (
-            <h1 className="font-black leading-tight line-clamp-2 text-[15px]">{banner.title}</h1>
+            <h1 className="font-black leading-tight line-clamp-2 text-[14px] w-full">{banner.title}</h1>
           )}
           {banner.show_subtitle && banner.subtitle && (
-            <p className="text-teal leading-snug line-clamp-2 text-[9px]">{banner.subtitle}</p>
+            <p className="text-teal leading-snug line-clamp-2 text-[8px] w-full">{banner.subtitle}</p>
           )}
           {banner.show_subtitle2 && banner.subtitle2 && (
-            <p className="text-teal leading-snug line-clamp-2 text-[9px]">{banner.subtitle2}</p>
+            <p className="text-teal leading-snug line-clamp-2 text-[8px] w-full">{banner.subtitle2}</p>
           )}
 
           {buttons.length > 0 && (
-            <div className="flex flex-row-reverse items-center justify-center gap-1.5 mt-1">
+            <div className="flex flex-row-reverse items-center justify-end gap-1.5 mt-1.5 w-full">
+
               {buttons.map((b) => {
                 const Icon = heroIcon(b.icon);
                 const cls =
