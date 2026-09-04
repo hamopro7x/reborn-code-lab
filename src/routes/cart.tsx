@@ -87,51 +87,67 @@ function CartPage() {
                       <button onClick={() => remove(i.productId)} className="text-destructive text-xs mt-2 hover:underline flex items-center gap-1"><Trash2 className="size-3" />حذف</button>
                     </div>
                   </div>
-                  <div className="border-t border-border/60 px-5 py-5 md:px-6 md:py-6" dir="rtl">
-                    <h3 className="text-base md:text-lg font-black text-foreground mb-5">تفاصيل المنتج :-</h3>
+                  <div
+                    className="border-t-2 px-5 py-6 md:px-8 md:py-7 bg-[var(--details-bg)]"
+                    style={{ borderTopColor: "var(--details-divider)" }}
+                    dir="rtl"
+                  >
+                    <h3 className="text-base md:text-lg font-black text-[var(--details-text)] mb-6">تفاصيل المنتج :-</h3>
                     {detailsQ.isLoading && !d ? (
                       <p className="text-sm text-muted-foreground">جاري تحميل التفاصيل...</p>
                     ) : !d ? (
                       <p className="text-sm text-muted-foreground">لا توجد تفاصيل إضافية.</p>
                     ) : (
-                      <div className="space-y-6">
+                      <div className="space-y-7">
                         {d.category?.name && (
                           <section>
-                            <div className="flex items-center gap-2 mb-2">
-                              <Tag className="size-4 text-primary shrink-0" />
-                              <h4 className="text-sm md:text-base font-black text-primary">التصنيف</h4>
+                            <div className="flex items-center justify-end gap-2 mb-3">
+                              <h4 className="text-base md:text-lg font-black text-[var(--details-heading)]">التصنيف</h4>
+                              <Tag className="size-5 text-[var(--details-text)] shrink-0" />
                             </div>
-                            <p className="text-sm md:text-[15px] text-foreground/90 leading-relaxed">{d.category.name}</p>
+                            <p className="text-sm md:text-[15px] text-[var(--details-text)] text-right leading-[2]">{d.category.name}</p>
                           </section>
                         )}
 
                         {(d.short_description || d.description) && (
                           <section>
-                            <div className="flex items-center gap-2 mb-2">
-                              <FileText className="size-4 text-primary shrink-0" />
-                              <h4 className="text-sm md:text-base font-black text-primary">الوصف</h4>
+                            <div className="flex items-center justify-end gap-2 mb-3">
+                              <h4 className="text-base md:text-lg font-black text-[var(--details-heading)]">المميزات</h4>
+                              <FileText className="size-5 text-[var(--details-text)] shrink-0" />
                             </div>
                             {d.short_description && (
-                              <p className="text-sm md:text-[15px] text-muted-foreground leading-relaxed whitespace-pre-line break-words mb-2">{d.short_description}</p>
+                              <p className="text-sm md:text-[15px] text-[var(--details-text)]/70 text-right leading-[2] whitespace-pre-line break-words mb-2">{d.short_description}</p>
                             )}
                             {d.description && (
-                              <p className="text-sm md:text-[15px] text-foreground/90 leading-[2] whitespace-pre-line break-words">{d.description}</p>
+                              <ul className="space-y-1.5 pr-1">
+                                {String(d.description)
+                                  .split("\n")
+                                  .map((line: string) => line.trim())
+                                  .filter((line: string) => line.length > 0)
+                                  .map((line: string, idx: number) => (
+                                    <li key={idx} className="flex items-start justify-end gap-2 text-sm md:text-[15px] text-[var(--details-text)] leading-[2]">
+                                      <span className="text-right break-words">{line.replace(/^[-•*]\s*/, "")}</span>
+                                      <span className="mt-[0.9em] size-1.5 rounded-full bg-[var(--details-text)] shrink-0" />
+                                    </li>
+                                  ))}
+                              </ul>
                             )}
                           </section>
                         )}
 
                         {(d.warranty_text?.trim() || d.warranty_days > 0) && (
                           <section>
-                            <div className="flex items-center gap-2 mb-2">
-                              <ShieldCheck className="size-4 text-primary shrink-0" />
-                              <h4 className="text-sm md:text-base font-black text-primary">الضمان</h4>
+                            <div className="flex items-center justify-end gap-2 mb-3">
+                              <h4 className="text-base md:text-lg font-black text-[var(--details-heading)]">الضمان</h4>
+                              <ShieldCheck className="size-5 text-[var(--details-text)] shrink-0" />
                             </div>
-                            <p className="text-sm md:text-[15px] text-foreground/90 leading-relaxed whitespace-pre-line break-words">{d.warranty_text?.trim() || `ضمان ${d.warranty_days} يوم`}</p>
+                            <p className="text-sm md:text-[15px] text-[var(--details-text)] text-right leading-[2] whitespace-pre-line break-words">{d.warranty_text?.trim() || `ضمان ${d.warranty_days} يوم`}</p>
                           </section>
                         )}
                       </div>
                     )}
                   </div>
+
 
                   </div>
                 );

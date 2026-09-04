@@ -94,6 +94,12 @@
   --panel-foreground: #f2f5fa;
   --nav-pill: #505962;
   --nav-pill-foreground: #f2f5fa;
+  /* Product details panel (cart) */
+  --details-bg: #13172e;
+  --details-heading: #d11118;
+  --details-text: #eef1f8;
+  --details-divider: #b0245a;
+  --details-border: #232a4a;
   --chart-1: #5b53f0;
   --chart-2: #2f7ef7;
   --chart-3: #e1b23a;
