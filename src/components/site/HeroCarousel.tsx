@@ -302,29 +302,29 @@ export function HeroBannerView({
 
       {/* ============= Mobile stacked layout (ignores free positions to prevent overlap) ============= */}
       <div className="md:hidden relative z-10 flex flex-col justify-center min-h-[190px] px-4 py-5 gap-2">
-        {titleNode && (
-          <div
+        {banner.show_title && banner.title && (
+          <h1
             className="font-black leading-tight line-clamp-2"
             style={{ fontSize: `clamp(16px, 5vw, 24px)` }}
           >
             {banner.title}
-          </div>
+          </h1>
         )}
-        {subtitleNode && (
-          <div
+        {banner.show_subtitle && banner.subtitle && (
+          <p
             className="text-hero-foreground/80 line-clamp-2"
             style={{ fontSize: `clamp(12px, 3.5vw, 15px)` }}
           >
             {banner.subtitle}
-          </div>
+          </p>
         )}
-        {subtitle2Node && (
-          <div
+        {banner.show_subtitle2 && banner.subtitle2 && (
+          <p
             className="text-hero-foreground/80 line-clamp-2"
             style={{ fontSize: `clamp(12px, 3.5vw, 15px)` }}
           >
             {banner.subtitle2}
-          </div>
+          </p>
         )}
 
         {buttons.length > 0 && (
