@@ -189,41 +189,32 @@ export function HeroBannerView({
   /** العناصر التي لها موضع حر تُرسم مباشرة داخل الحاوية بدل التخطيط الطبيعي. */
   const freeKeys = new Set(Object.keys(pos));
 
-  const titleEl =
+  const titleNode =
     banner.show_title && banner.title ? (
-      <Layer k="title">
-        <h1
-          className="font-black leading-tight line-clamp-2 md:line-clamp-3"
-          style={{ fontSize: `clamp(${banner.title_size_mobile}px, 3.5vw, ${banner.title_size}px)` }}
-        >
-          {banner.title}
-        </h1>
-      </Layer>
+      <h1 className="font-black leading-tight line-clamp-2 md:line-clamp-3">{banner.title}</h1>
     ) : null;
 
-  const subtitleEl =
+  const subtitleNode =
     banner.show_subtitle && banner.subtitle ? (
-      <Layer k="subtitle" style={freeKeys.has("subtitle") ? undefined : { marginTop: banner.gap_title_subtitle }}>
-        <p
-          className="text-hero-foreground/70 line-clamp-3 max-w-md"
-          style={{ fontSize: `clamp(${banner.subtitle_size_mobile}px, 2vw, ${banner.subtitle_size}px)` }}
-        >
-          {banner.subtitle}
-        </p>
-      </Layer>
+      <p className="text-hero-foreground/70 line-clamp-2 max-w-md">{banner.subtitle}</p>
     ) : null;
 
-  const subtitle2El =
+  const subtitle2Node =
     banner.show_subtitle2 && banner.subtitle2 ? (
-      <Layer k="subtitle2" style={freeKeys.has("subtitle2") ? undefined : { marginTop: banner.gap_title_subtitle }}>
-        <p
-          className="text-hero-foreground/70 line-clamp-3 max-w-md"
-          style={{ fontSize: `clamp(${banner.subtitle2_size_mobile}px, 2vw, ${banner.subtitle2_size}px)` }}
-        >
-          {banner.subtitle2}
-        </p>
-      </Layer>
+      <p className="text-hero-foreground/70 line-clamp-2 max-w-md">{banner.subtitle2}</p>
     ) : null;
+
+  const titleEl = titleNode ? <Layer k="title">{titleNode}</Layer> : null;
+  const subtitleEl = subtitleNode ? (
+    <Layer k="subtitle" style={freeKeys.has("subtitle") ? undefined : { marginTop: banner.gap_title_subtitle }}>
+      {subtitleNode}
+    </Layer>
+  ) : null;
+  const subtitle2El = subtitle2Node ? (
+    <Layer k="subtitle2" style={freeKeys.has("subtitle2") ? undefined : { marginTop: banner.gap_title_subtitle }}>
+      {subtitle2Node}
+    </Layer>
+  ) : null;
 
   const buttonEls = buttons.map((b) => (
     <Layer key={b.id} k={`btn:${b.id}`}>
@@ -280,29 +271,75 @@ export function HeroBannerView({
         </>
       )}
 
-      {/* العناصر ذات المواضع الحرة */}
-      {freeKeys.has("title") && titleEl}
-      {freeKeys.has("subtitle") && subtitleEl}
-      {freeKeys.has("subtitle2") && subtitle2El}
-      {buttonEls.filter((_, i) => freeKeys.has(`btn:${buttons[i]!.id}`))}
-      {badgeEls.filter((_, i) => freeKeys.has(`bdg:${badges[i]!.id}`))}
+      {/* ============= Desktop layout ============= */}
+      <div className="hidden md:block relative h-full">
+        {/* العناصر ذات المواضع الحرة */}
+        {freeKeys.has("title") && titleEl}
+        {freeKeys.has("subtitle") && subtitleEl}
+        {freeKeys.has("subtitle2") && subtitle2El}
+        {buttonEls.filter((_, i) => freeKeys.has(`btn:${buttons[i]!.id}`))}
+        {badgeEls.filter((_, i) => freeKeys.has(`bdg:${badges[i]!.id}`))}
 
-      {/* التخطيط الطبيعي لبقية العناصر */}
-      <div className="relative md:h-full grid md:grid-cols-[auto_minmax(0,1fr)]">
-        <div
-          className={`relative md:order-2 p-4 md:p-10 flex flex-col min-w-0 overflow-hidden max-md:items-start max-md:justify-start ${justifyClass[banner.content_position_y]} ${alignClass[banner.content_position_x]}`}
-        >
-          {!freeKeys.has("title") && titleEl}
-          {!freeKeys.has("subtitle") && subtitleEl}
-          {!freeKeys.has("subtitle2") && subtitle2El}
-          {!sideButtons && buttonRow}
-          {sideButtons && <div className="md:hidden w-full">{buttonRow}</div>}
+        {/* التخطيط الطبيعي لبقية العناصر */}
+        <div className="relative h-full grid grid-cols-[auto_minmax(0,1fr)]">
+          <div
+            className={`relative order-2 p-10 flex flex-col min-w-0 overflow-hidden ${justifyClass[banner.content_position_y]} ${alignClass[banner.content_position_x]}`}
+          >
+            {!freeKeys.has("title") && titleEl}
+            {!freeKeys.has("subtitle") && subtitleEl}
+            {!freeKeys.has("subtitle2") && subtitle2El}
+            {!sideButtons && buttonRow}
+          </div>
+
+          {(badgesColumn || sideButtons) && (
+            <div className="order-1 flex flex-col justify-center gap-3 p-6 min-w-0">
+              {badgesColumn}
+              {sideButtons && buttonRow}
+            </div>
+          )}
         </div>
+      </div>
 
-        {(badgesColumn || sideButtons) && (
-          <div className="hidden md:flex md:order-1 flex-col justify-center gap-3 p-6 min-w-0">
-            {badgesColumn}
-            {sideButtons && buttonRow}
+      {/* ============= Mobile stacked layout (ignores free positions to prevent overlap) ============= */}
+      <div className="md:hidden relative z-10 flex flex-col justify-center min-h-[190px] px-4 py-5 gap-2">
+        {titleNode && (
+          <div
+            className="font-black leading-tight line-clamp-2"
+            style={{ fontSize: `clamp(16px, 5vw, 24px)` }}
+          >
+            {banner.title}
+          </div>
+        )}
+        {subtitleNode && (
+          <div
+            className="text-hero-foreground/80 line-clamp-2"
+            style={{ fontSize: `clamp(12px, 3.5vw, 15px)` }}
+          >
+            {banner.subtitle}
+          </div>
+        )}
+        {subtitle2Node && (
+          <div
+            className="text-hero-foreground/80 line-clamp-2"
+            style={{ fontSize: `clamp(12px, 3.5vw, 15px)` }}
+          >
+            {banner.subtitle2}
+          </div>
+        )}
+
+        {buttons.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 mt-1">
+            {buttons.map((b) => (
+              <HeroButtonItem key={b.id} banner={banner} b={b} />
+            ))}
+          </div>
+        )}
+
+        {badges.length > 0 && (
+          <div className="flex flex-col gap-2 mt-1">
+            {badges.map((b) => (
+              <BadgeCard key={b.id} b={b} />
+            ))}
           </div>
         )}
       </div>
