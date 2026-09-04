@@ -7,6 +7,11 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 import { mcpPlugin } from "@lovable.dev/mcp-js/stacks/tanstack/vite";
 
+// على ويندوز يفشل تحقق المسارات داخل mcpPlugin بسبب اختلاف الفواصل (\ مقابل /).
+// ملفات مسارات MCP مولّدة بالفعل ومحفوظة في src/routes، لذلك يمكن تخطي الإضافة محليًا فقط.
+const disableMcpPlugin =
+  process.platform === "win32" || process.env["DISABLE_MCP_PLUGIN"] === "1";
+
 export default defineConfig({
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
@@ -14,9 +19,10 @@ export default defineConfig({
     server: { entry: "server" },
   },
   vite: {
-    plugins: [mcpPlugin()],
+    plugins: disableMcpPlugin ? [] : [mcpPlugin()],
     // معرّف نسخة يتغيّر مع كل بناء/نشر، يستخدمه الموقع لعمل تحديث تلقائي
     define: { __APP_BUILD_ID__: JSON.stringify(Date.now().toString(36)) },
   },
+
 
 });
