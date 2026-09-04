@@ -102,23 +102,23 @@ function CartPage() {
 
                         {(d.short_description || d.description) && (
                           <section>
-                            <div className="flex items-center justify-end gap-2 mb-3">
-                              <h4 className="text-base md:text-lg font-black text-[var(--details-heading)]">المميزات</h4>
+                            <div className="flex items-center justify-start gap-2 mb-3">
                               <FileText className="size-5 text-[var(--details-text)] shrink-0" />
+                              <h4 className="text-base md:text-lg font-black text-[var(--details-heading)]">المميزات</h4>
                             </div>
                             {d.short_description && (
                               <p className="text-sm md:text-[15px] text-[var(--details-text)]/70 text-right leading-[2] whitespace-pre-line break-words mb-2">{d.short_description}</p>
                             )}
                             {d.description && (
-                              <ul className="space-y-1.5 pr-1">
+                              <ul className="space-y-1.5">
                                 {String(d.description)
                                   .split("\n")
                                   .map((line: string) => line.trim())
                                   .filter((line: string) => line.length > 0)
                                   .map((line: string, idx: number) => (
-                                    <li key={idx} className="flex items-start justify-end gap-2 text-sm md:text-[15px] text-[var(--details-text)] leading-[2]">
-                                      <span className="text-right break-words">{line.replace(/^[-•*]\s*/, "")}</span>
+                                    <li key={idx} className="flex items-start justify-start gap-2 text-sm md:text-[15px] text-[var(--details-text)] leading-[2]">
                                       <span className="mt-[0.9em] size-1.5 rounded-full bg-[var(--details-text)] shrink-0" />
+                                      <span className="text-right break-words">{line.replace(/^[-•*]\s*/, "")}</span>
                                     </li>
                                   ))}
                               </ul>
@@ -128,9 +128,9 @@ function CartPage() {
 
                         {(d.warranty_text?.trim() || d.warranty_days > 0) && (
                           <section>
-                            <div className="flex items-center justify-end gap-2 mb-3">
-                              <h4 className="text-base md:text-lg font-black text-[var(--details-heading)]">الضمان</h4>
+                            <div className="flex items-center justify-start gap-2 mb-3">
                               <ShieldCheck className="size-5 text-[var(--details-text)] shrink-0" />
+                              <h4 className="text-base md:text-lg font-black text-[var(--details-heading)]">الضمان</h4>
                             </div>
                             <p className="text-sm md:text-[15px] text-[var(--details-text)] text-right leading-[2] whitespace-pre-line break-words">{d.warranty_text?.trim() || `ضمان ${d.warranty_days} يوم`}</p>
                           </section>
