@@ -676,15 +676,33 @@ export async function enrollMyFace(userId: string, frames: string[]) {
   return { ok: true as const };
 }
 
+/**
+ * Vision provider config. Works with any OpenAI-compatible chat/completions API,
+ * so the same code runs on Lovable AI or on a self-hosted server with your own
+ * provider key (`VISION_API_KEY` + `VISION_API_URL` + `VISION_MODEL`).
+ */
+function visionConfig() {
+  const key = process.env["VISION_API_KEY"] ?? process.env["LOVABLE_API_KEY"] ?? "";
+  const url =
+    process.env["VISION_API_URL"] ??
+    (process.env["VISION_API_KEY"]
+      ? "https://api.openai.com/v1/chat/completions"
+      : "https://ai.gateway.lovable.dev/v1/chat/completions");
+  const model =
+    process.env["VISION_MODEL"] ??
+    (process.env["VISION_API_KEY"] ? "gpt-4o-mini" : "google/gemini-2.5-flash");
+  return { key, url, model };
+}
+
 /** AI check that the frame really contains one clear, unobstructed live face. */
 async function faceQualityCheck(dataUrl: string): Promise<{ ok: boolean; reason?: string }> {
-  const key = process.env["LOVABLE_API_KEY"];
+  const { key, url, model } = visionConfig();
   if (!key) return { ok: false, reason: "خدمة التحقق غير متاحة" };
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const res = await fetch(url, {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
+      model,
       messages: [
         {
           role: "system",
@@ -774,14 +792,14 @@ async function compareOnePair(
   refUrl: string,
   liveUrl: string,
 ): Promise<{ decided: boolean; same: boolean; confidence: number }> {
-  const key = process.env["LOVABLE_API_KEY"];
+  const { key, url, model } = visionConfig();
   if (!key) return { decided: false, same: false, confidence: 0 };
   try {
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const res = await fetch(url, {
       method: "POST",
       headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model,
         messages: [
           {
             role: "system",
@@ -864,13 +882,13 @@ export async function consumeFaceChallenge(
 }
 
 async function askVision(system: string, text: string, images: string[]) {
-  const key = process.env["LOVABLE_API_KEY"];
+  const { key, url, model } = visionConfig();
   if (!key) return null;
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const res = await fetch(url, {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
+      model,
       messages: [
         { role: "system", content: system },
         {

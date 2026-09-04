@@ -16,8 +16,24 @@
    pg_restore --data-only --no-owner -d "$NEW_DB_URL" backup.dump
    # أو: psql "$NEW_DB_URL" -f data.sql
    ```
-4. أعد إنشاء bucket التخزين `product-images` في المشروع الجديد وانقل الصور إليه.
-5. أضف نفس الأسرار (مفاتيح Bybit … إلخ) في إعدادات المشروع الجديد أو في `selfhost/.env`.
+4. انقل ملفات التخزين بالسكربت الجاهز (لا يحذف شيئًا من القديم):
+   ```bash
+   # جرّب أولًا بدون كتابة
+   DRY_RUN=1 OLD_SUPABASE_URL=... OLD_SERVICE_ROLE_KEY=... \
+   NEW_SUPABASE_URL=... NEW_SERVICE_ROLE_KEY=... \
+   node selfhost/migrate-storage.mjs
+
+   # ثم النقل الفعلي
+   OLD_SUPABASE_URL=... OLD_SERVICE_ROLE_KEY=... \
+   NEW_SUPABASE_URL=... NEW_SERVICE_ROLE_KEY=... \
+   node selfhost/migrate-storage.mjs
+   ```
+   يشمل: `product-images`, `course-videos`, `employee-faces`, `payment-screenshots`, `site-assets`, `avatars`.
+   تحقق من تساوي عدد الملفات قبل حذف أي شيء من القديم.
+5. **نقل المستخدمين:** حافظ على نفس الـUUIDs لأن `profiles` و`user_roles` و`agent_devices` و`work_shifts` مرتبطة بها.
+   إما نقل `auth.users` مع الـpassword hashes كما هي، أو إعادة إنشاء المستخدمين بنفس الـid وإجبارهم على إعادة تعيين كلمة المرور.
+6. أضف نفس الأسرار (مفاتيح Bybit … إلخ) في `selfhost/.env`.
+
 
 ## 2) بناء وتشغيل التطبيق على السيرفر
 
@@ -53,8 +69,25 @@ certbot --nginx -d mag-pro1.com -d www.mag-pro1.com
   */5 * * * * APP_URL=http://127.0.0.1:3000 /opt/mag-pro1/selfhost/bybit-sync.sh >> /var/log/bybit-sync.log 2>&1
   ```
 
+**حماية endpoint المزامنة:** ضع `SYNC_HOOK_SECRET` في `.env` (مثال: `openssl rand -hex 32`).
+عندها يقبل الـendpoint هيدر `x-sync-secret` فقط بدل المفتاح العام. لو تركته فارغًا يظل التحقق القديم
+بالمفتاح العام شغالًا (لا ينكسر شيء) لكنه غير مناسب لسيرفر مكشوف.
+
 **مهم:** بعد تشغيل الكرون على سيرفرك، أوقف المهمة القديمة داخل Lovable من
 More → Cloud → Jobs → `bybit-ledger-auto-sync` → Disable، وإلا ستعمل المزامنة مرتين وتستهلك رصيد تشغيل.
+
+## 4.1) الذكاء الاصطناعي (فحص ومقارنة الوجه)
+
+الكود يستخدم أي مزود متوافق مع OpenAI. على سيرفرك ضع في `.env`:
+
+```
+VISION_API_KEY=sk-...
+VISION_API_URL=https://api.openai.com/v1/chat/completions
+VISION_MODEL=gpt-4o-mini
+```
+
+لو تُركت `VISION_API_KEY` فارغة، تبقى ميزة فحص الوجه معطلة بأمان وبقية الموقع يعمل طبيعيًا.
+
 
 ## 5) إيقاف استهلاك السحابة نهائيًا
 
