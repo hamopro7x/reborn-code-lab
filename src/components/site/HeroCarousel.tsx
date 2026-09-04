@@ -321,9 +321,9 @@ export function HeroBannerView({
       {/* ============= Mobile layout — مطابق لتصميم كانفا ============= */}
       <div className="md:hidden relative z-10 min-h-[152px]">
         {/* النص والأزرار على يسار البانر */}
-        <div className="absolute inset-y-0 left-0 w-[44%] flex flex-col justify-center gap-1 px-3 text-right items-end">
+        <div className="absolute inset-y-0 left-0 w-[46%] flex flex-col justify-center gap-1 px-2.5 text-right items-end">
           {banner.show_title && banner.title && (
-            <h1 className="font-black leading-tight line-clamp-2 text-[14px] w-full">{banner.title}</h1>
+            <h1 className="font-black leading-tight line-clamp-2 text-[13px] w-full">{banner.title}</h1>
           )}
           {banner.show_subtitle && banner.subtitle && (
             <p className="text-teal leading-snug line-clamp-2 text-[8px] w-full">{banner.subtitle}</p>
@@ -371,7 +371,7 @@ export function HeroBannerView({
             {badges.slice(0, 3).map((b) => (
               <div
                 key={b.id}
-                className="rounded-md border border-border/60 bg-card/90 px-1.5 py-1 w-[62px] text-center"
+                className="rounded-md border border-border/60 bg-card px-1.5 py-1 w-[62px] text-center"
               >
                 {b.title && (
                   <span className="block text-[7px] leading-tight text-muted-foreground truncate">{b.title}</span>
