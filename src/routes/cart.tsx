@@ -8,7 +8,7 @@ import { useCart } from "@/lib/cart";
 import { useCurrency } from "@/lib/currency-context";
 import { convertFromEgp, formatPrice, computeDiscountedPrice } from "@/lib/format";
 import { Button } from "@/components/ui/button";
-import { Trash2, Plus, Minus, ShoppingBag } from "lucide-react";
+import { Trash2, Plus, Minus, ShoppingBag, Tag, FileText, ShieldCheck } from "lucide-react";
 
 export const Route = createFileRoute("/cart")({
   component: CartPage,
