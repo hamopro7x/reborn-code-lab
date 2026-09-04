@@ -37,7 +37,7 @@ export const Route = createFileRoute("/api/public/hooks/bybit-ledger-sync")({
         const now = new Date();
         const lease = new Date(now.getTime() + 4 * 60_000).toISOString();
 
-        const { data: locked } = await supabaseAdmin
+        const { data: locked, error: lockError } = await supabaseAdmin
           .from("bybit_sync_state")
           .update({ lease_until: lease })
           .eq("id", "ledger")
@@ -46,6 +46,12 @@ export const Route = createFileRoute("/api/public/hooks/bybit-ledger-sync")({
           .select("id")
           .maybeSingle();
 
+        // A failing lease write means bad/missing service credentials, not a
+        // concurrent run. Reporting it separately makes self-hosted setups
+        // debuggable instead of looping on "busy_or_paused" forever.
+        if (lockError) {
+          return json({ skipped: true, reason: "lock_failed", error: lockError.message }, 500);
+        }
         if (!locked) return json({ skipped: true, reason: "busy_or_paused" });
 
         const mod = await import("@/lib/bybit.server");
