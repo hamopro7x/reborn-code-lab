@@ -66,7 +66,7 @@ export function Header() {
           />
           <div className="leading-none">
             <div className="font-bold text-sm">MG Pro</div>
-            <div className="hidden sm:block text-[10px] text-muted-foreground mt-1">الاشتراكات الرقمية</div>
+            <div className="text-[10px] text-muted-foreground mt-0.5">الاشتراكات الرقمية</div>
           </div>
         </Link>
 
