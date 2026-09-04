@@ -370,7 +370,7 @@ export function HeroBannerView({
             {badges.slice(0, 3).map((b) => (
               <div
                 key={b.id}
-                className="rounded-md border border-border/60 bg-card/85 px-2 py-1 w-[76px] text-center"
+                className="rounded-md border border-border/60 bg-card/95 px-2 py-1 w-[84px] text-center"
               >
                 {b.title && (
                   <span className="block text-[8px] leading-tight text-muted-foreground truncate">{b.title}</span>
