@@ -69,24 +69,26 @@ function CartPage() {
                 const d = detailsQ.data?.[i.productId];
                 return (
                   <div key={i.productId} className="card-surface rounded-2xl overflow-hidden">
-                  <div className="p-4 flex items-center gap-4">
-                    <div className="size-16 rounded-xl bg-primary/10 flex items-center justify-center overflow-hidden shrink-0">
-                      {i.image ? <img src={i.image} alt={i.name} className="w-full h-full object-cover" /> : <span className="text-2xl">🎁</span>}
+                  <div className="p-4 flex items-start gap-4" dir="rtl">
+                    <div className="size-20 rounded-xl bg-primary/10 flex items-center justify-center overflow-hidden shrink-0 order-1">
+                      {i.image ? <img src={i.image} alt={i.name} className="w-full h-full object-cover" /> : null}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-bold text-sm truncate">{i.name}</div>
-                      <div className="text-xs text-muted-foreground">ضمان {i.warrantyDays} يوم</div>
-                      <div className="flex items-center gap-2 mt-2">
-                        <button onClick={() => updateQty(i.productId, i.quantity - 1)} aria-label="تقليل الكمية" className="size-7 rounded-lg card-surface hover:bg-primary/10 flex items-center justify-center"><Minus className="size-3" /></button>
-                        <span className="w-6 text-center text-sm font-bold">{i.quantity}</span>
-                        <button onClick={() => updateQty(i.productId, i.quantity + 1)} aria-label="زيادة الكمية" className="size-7 rounded-lg card-surface hover:bg-primary/10 flex items-center justify-center"><Plus className="size-3" /></button>
+                    <div className="flex-1 min-w-0 order-2 text-right">
+                      <div className="font-bold text-sm md:text-base truncate">{i.name}</div>
+                      <div className="flex items-center justify-start gap-2 mt-4">
+                        <span className="text-xs md:text-sm text-muted-foreground">عدد الحسابات</span>
+                        <span className="text-sm">=</span>
+                        <button onClick={() => updateQty(i.productId, i.quantity + 1)} aria-label="زيادة الكمية" className="size-7 rounded-full card-surface hover:bg-primary/10 flex items-center justify-center"><Plus className="size-3" /></button>
+                        <span className="w-6 text-center text-base font-black">{i.quantity}</span>
+                        <button onClick={() => updateQty(i.productId, i.quantity - 1)} aria-label="تقليل الكمية" className="size-7 rounded-full card-surface hover:bg-primary/10 flex items-center justify-center"><Minus className="size-3" /></button>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="font-bold text-gradient">{formatPrice(localized, currency)}</div>
-                      <button onClick={() => remove(i.productId)} className="text-destructive text-xs mt-2 hover:underline flex items-center gap-1"><Trash2 className="size-3" />حذف</button>
-                    </div>
+                    <button onClick={() => remove(i.productId)} className="order-3 shrink-0 flex items-center gap-2 text-xs md:text-sm text-foreground/80 hover:text-destructive">
+                      <span>حذف المنتج</span>
+                      <Trash2 className="size-5 text-destructive" />
+                    </button>
                   </div>
+
                   <div
                     className="border-t-2 px-5 py-6 md:px-8 md:py-7 bg-[var(--details-bg)]"
                     style={{ borderTopColor: "var(--details-divider)" }}
