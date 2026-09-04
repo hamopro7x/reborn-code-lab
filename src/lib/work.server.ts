@@ -882,13 +882,13 @@ export async function consumeFaceChallenge(
 }
 
 async function askVision(system: string, text: string, images: string[]) {
-  const key = process.env["LOVABLE_API_KEY"];
+  const { key, url, model } = visionConfig();
   if (!key) return null;
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const res = await fetch(url, {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
+      model,
       messages: [
         { role: "system", content: system },
         {
