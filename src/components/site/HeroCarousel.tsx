@@ -191,17 +191,32 @@ export function HeroBannerView({
 
   const titleNode =
     banner.show_title && banner.title ? (
-      <h1 className="font-black leading-tight line-clamp-2 md:line-clamp-3">{banner.title}</h1>
+      <h1
+        className="font-black leading-tight line-clamp-2 md:line-clamp-3"
+        style={{ fontSize: `clamp(${banner.title_size_mobile}px, 4vw, ${banner.title_size}px)` }}
+      >
+        {banner.title}
+      </h1>
     ) : null;
 
   const subtitleNode =
     banner.show_subtitle && banner.subtitle ? (
-      <p className="text-hero-foreground/70 line-clamp-2 max-w-md">{banner.subtitle}</p>
+      <p
+        className="text-hero-foreground/70 line-clamp-2 max-w-md"
+        style={{ fontSize: `clamp(${banner.subtitle_size_mobile}px, 2vw, ${banner.subtitle_size}px)` }}
+      >
+        {banner.subtitle}
+      </p>
     ) : null;
 
   const subtitle2Node =
     banner.show_subtitle2 && banner.subtitle2 ? (
-      <p className="text-hero-foreground/70 line-clamp-2 max-w-md">{banner.subtitle2}</p>
+      <p
+        className="text-hero-foreground/70 line-clamp-2 max-w-md"
+        style={{ fontSize: `clamp(${banner.subtitle2_size_mobile}px, 2vw, ${banner.subtitle2_size}px)` }}
+      >
+        {banner.subtitle2}
+      </p>
     ) : null;
 
   const titleEl = titleNode ? <Layer k="title">{titleNode}</Layer> : null;
