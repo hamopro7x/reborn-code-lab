@@ -6,3 +6,5 @@
 
 ## Memories
 - [Design rules](mem://design/design-rules) — Full anti-generic-AI design constraints, pre-ship checklist
+- [Mobile keyword signal](mem://preferences/mobile-first-signal) — Message starting with "موبايل" means mobile-only work
+
