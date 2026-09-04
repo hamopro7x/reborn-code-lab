@@ -1579,6 +1579,8 @@ export function EmployeeWorkView({
 
   // تحديث لحظي: أي تغيير حقيقي في المركز الرئيسي يحدّث الـqueries المتأثرة فقط.
   useWorkRealtime({ enabled: !blank, shiftId: viewShiftId ?? null, viewUserId: viewUserId ?? null });
+  // اسحب المعاملات الجديدة من Bybit للشفت المفتوح بدون انتظار مزامنة يدوية.
+  useLedgerAutoSync(!blank && !shiftMode);
 
   const st = useQuery({
     queryKey: viewing ? ["emp-work-state", viewUserId] : ["my-work-state"],
