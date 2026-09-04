@@ -1671,18 +1671,64 @@ type LedgerInsert = {
 
 const iso = (ms: number) => new Date(ms > 0 ? ms : Date.now()).toISOString();
 
+/** الأعمدة التي تحدّد «هل تغيّر صف السجل فعلًا؟». */
+const LEDGER_COMPARE = [
+  "direction",
+  "title",
+  "amount",
+  "currency",
+  "fee",
+  "status",
+  "occurred_at",
+] as const;
+
+/** يرجّع صفوف السجل الجديدة أو المتغيّرة فقط (نفس منطق معاملات الكروت). */
+async function changedLedgerRows(db: any, rows: LedgerInsert[]): Promise<LedgerInsert[]> {
+  const out: LedgerInsert[] = [];
+  const key = (r: { account_id: string | null; kind: string; ref_id: string }) =>
+    `${r.account_id ?? ""}|${r.kind}|${r.ref_id}`;
+  for (let i = 0; i < rows.length; i += 500) {
+    const slice = rows.slice(i, i + 500);
+    const { data, error } = await db
+      .from("bybit_ledger")
+      .select("account_id, kind, ref_id, direction, title, amount, currency, fee, status, occurred_at")
+      .in(
+        "ref_id",
+        slice.map((r) => r.ref_id),
+      );
+    if (error) {
+      out.push(...slice);
+      continue;
+    }
+    const existing = new Map((data ?? []).map((r: any) => [key(r), r]));
+    for (const row of slice) {
+      const prev = existing.get(key(row));
+      if (
+        !prev ||
+        LEDGER_COMPARE.some((k) => !sameStoredValue((prev as any)[k], (row as any)[k]))
+      ) {
+        out.push(row);
+      }
+    }
+  }
+  return out;
+}
+
 async function upsertLedger(rows: LedgerInsert[]) {
   const clean = rows.filter((r) => r.ref_id);
   if (!clean.length) return 0;
   const db = await admin();
   let saved = 0;
-  for (let i = 0; i < clean.length; i += 500) {
+  // نكتب الجديد والمتغيّر فقط: لا إعادة كتابة لكل السجل في كل دورة.
+  const pending = await changedLedgerRows(db, clean);
+  for (let i = 0; i < pending.length; i += 500) {
     const { error } = await db
       .from("bybit_ledger")
-      .upsert(clean.slice(i, i + 500), { onConflict: "account_id,kind,ref_id" });
+      .upsert(pending.slice(i, i + 500), { onConflict: "account_id,kind,ref_id" });
     if (error) console.error("bybit_ledger upsert failed:", error.message);
-    else saved += Math.min(500, clean.length - i);
+    else saved += Math.min(500, pending.length - i);
   }
+
   // Work-sheet layer: link the freshly mirrored movements to the open shift.
   // Never modifies ledger rows; failures here must not break the sync.
   try {
