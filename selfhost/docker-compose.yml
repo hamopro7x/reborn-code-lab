@@ -1,0 +1,29 @@
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: selfhost/Dockerfile
+      args:
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
+        VITE_SUPABASE_PUBLISHABLE_KEY: ${VITE_SUPABASE_PUBLISHABLE_KEY}
+        VITE_SUPABASE_PROJECT_ID: ${VITE_SUPABASE_PROJECT_ID}
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "127.0.0.1:3000:3000"
+
+  # كرون على سيرفرك يستدعي مزامنة Bybit بدل pg_cron داخل السحابة
+  bybit-cron:
+    image: alpine:3.20
+    restart: unless-stopped
+    depends_on: [app]
+    env_file: .env
+    environment:
+      SYNC_URL: "http://app:3000/api/public/hooks/bybit-ledger-sync"
+      SYNC_INTERVAL_SECONDS: "${SYNC_INTERVAL_SECONDS:-300}"
+    command: >
+      sh -c "apk add --no-cache curl >/dev/null &&
+      while true; do
+        curl -s -X POST -H 'Content-Type: application/json' -H \"apikey: $$VITE_SUPABASE_PUBLISHABLE_KEY\" -d '{}' \"$$SYNC_URL\" || echo 'sync failed';
+        sleep $$SYNC_INTERVAL_SECONDS;
+      done"
