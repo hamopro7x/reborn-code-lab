@@ -124,23 +124,6 @@ function Home() {
       )}
 
       <main className="flex-1 container mx-auto px-4 py-6">
-        {/* Mobile / tablet categories strip */}
-        <nav aria-label="الأقسام" className="lg:hidden -mx-4 px-4 mb-4 overflow-x-auto scrollbar-hide">
-          <ul className="flex items-center gap-1.5 w-max">
-            {categories.map((c: any) => (
-              <li key={c.id}>
-                <Link
-                  to="/category/$slug"
-                  params={{ slug: c.slug }}
-                  className="block whitespace-nowrap rounded-lg bg-panel text-panel-foreground px-2.5 py-1.5 text-xs font-bold hover:bg-card hover:text-card-foreground transition-colors duration-150"
-                >
-                  {c.name}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-
         <div className="min-w-0 space-y-8">
           {(timerQ.isLoading || timerQ.data) && (
             <div className="flex justify-center">
