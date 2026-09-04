@@ -8,7 +8,7 @@ import { useCart } from "@/lib/cart";
 import { useCurrency } from "@/lib/currency-context";
 import { convertFromEgp, formatPrice, computeDiscountedPrice } from "@/lib/format";
 import { Button } from "@/components/ui/button";
-import { Trash2, Plus, Minus, ShoppingBag, Tag, FileText, ShieldCheck } from "lucide-react";
+import { Trash2, Plus, Minus, ShoppingBag, FileText, ShieldCheck } from "lucide-react";
 
 export const Route = createFileRoute("/cart")({
   component: CartPage,
@@ -99,15 +99,6 @@ function CartPage() {
                       <p className="text-sm text-muted-foreground">لا توجد تفاصيل إضافية.</p>
                     ) : (
                       <div className="space-y-7">
-                        {d.category?.name && (
-                          <section>
-                            <div className="flex items-center justify-end gap-2 mb-3">
-                              <h4 className="text-base md:text-lg font-black text-[var(--details-heading)]">التصنيف</h4>
-                              <Tag className="size-5 text-[var(--details-text)] shrink-0" />
-                            </div>
-                            <p className="text-sm md:text-[15px] text-[var(--details-text)] text-right leading-[2]">{d.category.name}</p>
-                          </section>
-                        )}
 
                         {(d.short_description || d.description) && (
                           <section>
