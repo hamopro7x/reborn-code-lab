@@ -1211,6 +1211,7 @@ export type Database = {
           id: string
           main_image: string | null
           name: string
+          refund_text: string | null
           short_description: string | null
           slug: string
           sort_order: number
@@ -1232,6 +1233,7 @@ export type Database = {
           id?: string
           main_image?: string | null
           name: string
+          refund_text?: string | null
           short_description?: string | null
           slug: string
           sort_order?: number
@@ -1253,6 +1255,7 @@ export type Database = {
           id?: string
           main_image?: string | null
           name?: string
+          refund_text?: string | null
           short_description?: string | null
           slug?: string
           sort_order?: number
