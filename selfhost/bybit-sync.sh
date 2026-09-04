@@ -5,11 +5,18 @@
 set -euo pipefail
 
 APP_URL="${APP_URL:-http://127.0.0.1:3000}"
+HOOK_SECRET="${SYNC_HOOK_SECRET:-}"
 API_KEY="${VITE_SUPABASE_PUBLISHABLE_KEY:-}"
+
+if [ -n "$HOOK_SECRET" ]; then
+  AUTH_HEADER="x-sync-secret: $HOOK_SECRET"
+else
+  AUTH_HEADER="apikey: $API_KEY"
+fi
 
 curl -sS -X POST \
   -H "Content-Type: application/json" \
-  ${API_KEY:+-H "apikey: $API_KEY"} \
+  -H "$AUTH_HEADER" \
   -d '{}' \
   "$APP_URL/api/public/hooks/bybit-ledger-sync"
 
