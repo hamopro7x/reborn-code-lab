@@ -343,7 +343,7 @@ export function HeroBannerView({
         <div className="absolute inset-y-0 left-0 w-[46%] flex flex-col justify-center gap-1 px-2.5 text-center items-center">
           {banner.show_title && banner.title && (
             <h1
-              className="font-black leading-tight whitespace-nowrap text-[14px] w-full text-white drop-shadow-sm"
+              className="font-black leading-tight whitespace-nowrap text-[15px] w-full text-white drop-shadow-sm"
               style={{ textShadow: "0 1px 4px rgba(0,0,0,0.6)" }}
             >
               {banner.title}
