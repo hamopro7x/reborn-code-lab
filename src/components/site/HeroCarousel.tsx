@@ -365,25 +365,6 @@ export function HeroBannerView({
           )}
         </div>
 
-        {/* الشارات على يمين البانر */}
-        {badges.length > 0 && (
-          <div className="absolute inset-y-0 right-0 flex flex-col justify-center gap-1.5 pe-2 py-3">
-            {badges.slice(0, 3).map((b) => (
-              <div
-                key={b.id}
-                className="rounded-md border border-border/60 bg-card px-1.5 py-1 w-[68px] text-center"
-              >
-                {b.title && (
-                  <span className="block text-[7px] leading-tight text-muted-foreground truncate">{b.title}</span>
-                )}
-                {b.value && (
-                  <span className="block text-[9px] leading-tight font-bold text-lime truncate">{b.value}</span>
-                )}
-              </div>
-            ))}
-
-          </div>
-        )}
       </div>
 
     </div>
