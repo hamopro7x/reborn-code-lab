@@ -83,6 +83,7 @@ import { getBybitCardBrands } from "@/lib/bybit.functions";
 import { useFaceClaim } from "@/components/admin/FaceGate";
 import { BrandBadge, LedgerRowDetails, statusBadge } from "@/components/admin/BybitLedgerPanel";
 import { useWorkRealtime } from "@/lib/use-work-realtime";
+import { useLedgerAutoSync } from "@/lib/use-ledger-sync";
 import { useUiState } from "@/lib/ui-state";
 
 type ManualKind = "wrong" | "employee" | "receive" | "transfer";
