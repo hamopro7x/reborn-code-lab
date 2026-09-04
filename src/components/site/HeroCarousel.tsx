@@ -278,7 +278,7 @@ export function HeroBannerView({
           <div
             className="absolute inset-0 md:hidden"
             style={{
-              background: `linear-gradient(90deg, ${banner.overlay_color}f2 0%, ${banner.overlay_color}cc 34%, ${banner.overlay_color}33 58%, transparent 100%)`,
+              background: `linear-gradient(90deg, ${banner.overlay_color}f2 0%, ${banner.overlay_color}cc 34%, ${banner.overlay_color}33 58%, ${banner.overlay_color}bf 82%, ${banner.overlay_color}e6 100%)`,
             }}
           />
           <div
