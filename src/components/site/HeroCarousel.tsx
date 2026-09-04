@@ -342,7 +342,12 @@ export function HeroBannerView({
         {/* النص والأزرار على يسار البانر */}
         <div className="absolute inset-y-0 left-0 w-[46%] flex flex-col justify-center gap-1 px-2.5 text-center items-center">
           {banner.show_title && banner.title && (
-            <h1 className="font-black leading-tight whitespace-nowrap text-[12px] w-full">{banner.title}</h1>
+            <h1
+              className="font-black leading-tight whitespace-nowrap text-[12px] w-full text-white drop-shadow-sm"
+              style={{ textShadow: "0 1px 4px rgba(0,0,0,0.6)" }}
+            >
+              {banner.title}
+            </h1>
           )}
           {banner.show_subtitle && banner.subtitle && (
             <p className="text-teal leading-snug line-clamp-2 text-[9px] w-full text-center">{banner.subtitle}</p>
@@ -353,9 +358,22 @@ export function HeroBannerView({
 
           {buttons.length > 0 && (
             <div className="flex flex-nowrap justify-center gap-1.5 mt-1 w-full">
-              {buttons.map((b) => (
-                <HeroButtonItem key={b.id} banner={banner} b={b} size={22} compact />
-              ))}
+              {(() => {
+                const shoppingIdx = buttons.findIndex((b) => /تسوق|shop/i.test(b.label));
+                const otherIdx = buttons.findIndex((_, i) => i !== shoppingIdx);
+                const otherVariant = otherIdx >= 0 ? buttons[otherIdx]!.variant : "teal";
+                const shoppingVariant = otherVariant === "teal" ? "outline-white" : "teal";
+                return buttons.map((b, i) => (
+                  <HeroButtonItem
+                    key={b.id}
+                    banner={banner}
+                    b={b}
+                    size={22}
+                    compact
+                    variant={i === shoppingIdx ? shoppingVariant : undefined}
+                  />
+                ));
+              })()}
             </div>
           )}
         </div>
