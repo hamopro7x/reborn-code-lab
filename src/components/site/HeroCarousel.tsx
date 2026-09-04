@@ -277,7 +277,7 @@ export function HeroBannerView({
         <>
           <div
             className="absolute inset-0 md:hidden"
-            style={{ backgroundColor: banner.overlay_color, opacity: Math.min(1, banner.overlay_opacity + 0.4) }}
+            style={{ backgroundColor: banner.overlay_color, opacity: Math.min(1, banner.overlay_opacity + 0.55) }}
           />
           <div
             className="absolute inset-0 hidden md:block"
