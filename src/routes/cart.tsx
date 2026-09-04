@@ -6,7 +6,7 @@ import { Footer } from "@/components/site/Footer";
 import { WhatsAppFab } from "@/components/site/WhatsAppFab";
 import { useCart } from "@/lib/cart";
 import { useCurrency } from "@/lib/currency-context";
-import { convertFromEgp, formatPrice, computeDiscountedPrice } from "@/lib/format";
+import { convertFromEgp, formatPrice } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Trash2, Plus, Minus, ShoppingBag, FileText, ShieldCheck } from "lucide-react";
 
