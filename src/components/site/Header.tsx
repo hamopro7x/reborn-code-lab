@@ -37,6 +37,7 @@ export function Header() {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [q, setQ] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
 
   // نفس مصدر الأقسام المستخدم في باقي الموقع.
   const categoriesQ = useQuery({
@@ -91,6 +92,19 @@ export function Header() {
         </div>
 
         <div className="flex items-center gap-1.5">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="md:hidden"
+            aria-label="بحث"
+            aria-expanded={searchOpen}
+            onClick={() => setSearchOpen((v) => !v)}
+          >
+            <Search className="size-5" />
+          </Button>
+
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="gap-1.5" aria-label="اختر العملة">
@@ -151,20 +165,23 @@ export function Header() {
         </div>
       </div>
 
-      {/* بحث الموبايل */}
-      <form onSubmit={submitSearch} role="search" className="md:hidden container mx-auto px-4 pb-3">
-        <label htmlFor="site-search-mobile" className="sr-only">ابحث عن منتج</label>
-        <div className="relative">
-          <Search className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-          <Input
-            id="site-search-mobile"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="ابحث عن اشتراكك أو لعبتك"
-            className="h-10 pr-9 text-sm bg-card"
-          />
-        </div>
-      </form>
+      {/* بحث الموبايل — يظهر عند الضغط على أيقونة البحث */}
+      {searchOpen && (
+        <form onSubmit={submitSearch} role="search" className="md:hidden container mx-auto px-4 pb-3">
+          <label htmlFor="site-search-mobile" className="sr-only">ابحث عن منتج</label>
+          <div className="relative">
+            <Search className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            <Input
+              id="site-search-mobile"
+              autoFocus
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="ابحث عن اشتراكك أو لعبتك"
+              className="h-10 pr-9 text-sm bg-card"
+            />
+          </div>
+        </form>
+      )}
     </header>
   );
 }
