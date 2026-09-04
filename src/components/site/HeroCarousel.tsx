@@ -25,19 +25,24 @@ function HeroButtonItem({
   b,
   size,
   compact,
+  variant,
 }: {
   banner: HeroBanner;
   b: HeroButton;
   size?: number;
   compact?: boolean;
+  variant?: HeroButton["variant"] | "outline-white";
 }) {
   const Icon = heroIcon(b.icon);
+  const v = variant ?? b.variant;
   const cls =
-    b.variant === "teal"
+    v === "teal"
       ? "bg-teal text-teal-foreground hover:bg-teal/90"
-      : b.variant === "outline"
-        ? "bg-transparent border border-border text-foreground hover:bg-muted"
-        : "";
+      : v === "outline-white"
+        ? "bg-transparent border border-white text-white hover:bg-white/10"
+        : v === "outline"
+          ? "bg-transparent border border-border text-foreground hover:bg-muted"
+          : "";
   const buttonSize = size ?? banner.button_size;
   const px = compact ? "px-2.5" : "px-6";
   const gap = compact ? "gap-1" : "gap-2";
@@ -48,7 +53,7 @@ function HeroButtonItem({
       style={{ height: buttonSize, fontSize: Math.max(compact ? 10 : 13, Math.round(buttonSize * 0.34)) }}
     >
       {b.label}
-      {Icon && <Icon className={iconSize} style={{ color: "#87939f" }} />}
+      {Icon && <Icon className={iconSize} style={{ color: v === "outline-white" ? "#ffffff" : "#87939f" }} />}
     </Button>
   );
   return isInternalUrl(b.url) ? (
