@@ -262,7 +262,7 @@ export function HeroBannerView({
   return (
     <div
       ref={rootRef}
-      className="relative min-h-[190px] h-auto md:h-[230px] overflow-hidden"
+      className="relative min-h-[152px] h-auto md:h-[230px] overflow-hidden"
       style={{ backgroundColor: banner.background_color ?? undefined }}
     >
       {/* الخلفية / الوسائط — تغطي كامل مساحة البنر */}
@@ -277,12 +277,8 @@ export function HeroBannerView({
         <>
           <div
             className="absolute inset-0 md:hidden"
-            style={{ backgroundColor: banner.overlay_color, opacity: Math.min(1, banner.overlay_opacity + 0.55) }}
-          />
-          <div
-            className="absolute inset-0 md:hidden"
             style={{
-              background: `linear-gradient(90deg, ${banner.overlay_color}e6 0%, ${banner.overlay_color}99 60%, transparent 100%)`,
+              background: `linear-gradient(90deg, ${banner.overlay_color}f2 0%, ${banner.overlay_color}cc 34%, ${banner.overlay_color}33 58%, ${banner.overlay_color}bf 82%, ${banner.overlay_color}e6 100%)`,
             }}
           />
           <div
@@ -291,6 +287,7 @@ export function HeroBannerView({
           />
         </>
       )}
+
 
       {/* ============= Desktop layout ============= */}
       <div className="hidden md:block relative h-full">
@@ -321,68 +318,72 @@ export function HeroBannerView({
         </div>
       </div>
 
-      {/* ============= Mobile stacked layout (ignores free positions to prevent overlap) ============= */}
-      <div className="md:hidden relative z-10 flex flex-col justify-center min-h-[190px] px-4 py-5 gap-2 w-full max-w-[62%] items-start text-start">
-        {banner.show_title && banner.title && (
-          <h1
-            className="font-black leading-tight line-clamp-2"
-            style={{ fontSize: `clamp(15px, 4.5vw, 22px)` }}
-          >
-            {banner.title}
-          </h1>
-        )}
-        {banner.show_subtitle && banner.subtitle && (
-          <p
-            className="text-hero-foreground/90 line-clamp-2"
-            style={{ fontSize: `clamp(11px, 3.2vw, 14px)` }}
-          >
-            {banner.subtitle}
-          </p>
-        )}
-        {banner.show_subtitle2 && banner.subtitle2 && (
-          <p
-            className="text-hero-foreground/90 line-clamp-2"
-            style={{ fontSize: `clamp(11px, 3.2vw, 14px)` }}
-          >
-            {banner.subtitle2}
-          </p>
-        )}
+      {/* ============= Mobile layout — مطابق لتصميم كانفا ============= */}
+      <div className="md:hidden relative z-10 min-h-[152px]">
+        {/* النص والأزرار على يسار البانر */}
+        <div className="absolute inset-y-0 left-0 w-[52%] flex flex-col justify-center gap-1 px-3 text-center items-center">
+          {banner.show_title && banner.title && (
+            <h1 className="font-black leading-tight line-clamp-2 text-[15px]">{banner.title}</h1>
+          )}
+          {banner.show_subtitle && banner.subtitle && (
+            <p className="text-teal leading-snug line-clamp-2 text-[9px]">{banner.subtitle}</p>
+          )}
+          {banner.show_subtitle2 && banner.subtitle2 && (
+            <p className="text-teal leading-snug line-clamp-2 text-[9px]">{banner.subtitle2}</p>
+          )}
 
-        {buttons.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2 mt-1">
-            {buttons.map((b) => (
-              <HeroButtonItem key={b.id} banner={banner} b={b} />
+          {buttons.length > 0 && (
+            <div className="flex flex-row-reverse items-center justify-center gap-1.5 mt-1">
+              {buttons.map((b) => {
+                const Icon = heroIcon(b.icon);
+                const cls =
+                  b.variant === "teal"
+                    ? "bg-teal text-teal-foreground"
+                    : b.variant === "outline"
+                      ? "bg-transparent border border-border text-foreground"
+                      : "bg-primary text-primary-foreground";
+                const inner = (
+                  <span
+                    className={`inline-flex h-6 items-center gap-1 rounded-md px-2 text-[9px] font-bold whitespace-nowrap ${cls}`}
+                  >
+                    {b.label}
+                    {Icon && <Icon className="size-2.5" style={{ color: "#87939f" }} />}
+                  </span>
+                );
+                return isInternalUrl(b.url) ? (
+                  <Link key={b.id} to={b.url as any}>
+                    {inner}
+                  </Link>
+                ) : (
+                  <a key={b.id} href={b.url} target="_blank" rel="noreferrer noopener">
+                    {inner}
+                  </a>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* الشارات على يمين البانر */}
+        {badges.length > 0 && (
+          <div className="absolute inset-y-0 right-0 flex flex-col justify-center gap-1.5 pe-2.5 py-3">
+            {badges.slice(0, 3).map((b) => (
+              <div
+                key={b.id}
+                className="rounded-md border border-border/60 bg-card/95 px-2 py-1 w-[84px] text-center"
+              >
+                {b.title && (
+                  <span className="block text-[8px] leading-tight text-muted-foreground truncate">{b.title}</span>
+                )}
+                {b.value && (
+                  <span className="block text-[10px] leading-tight font-bold text-lime truncate">{b.value}</span>
+                )}
+              </div>
             ))}
           </div>
         )}
-
-        {badges.length > 0 && (
-          <div className="flex flex-col gap-2 mt-1">
-            {badges.map((b) => {
-              const Icon = heroIcon(b.icon);
-              return (
-                <div
-                  key={b.id}
-                  className="flex items-center gap-2 rounded-lg border border-border/60 bg-card/90 px-2 py-1.5 w-fit"
-                >
-                  {Icon && (
-                    <span
-                      className="flex size-7 shrink-0 items-center justify-center rounded-md text-white"
-                      style={{ backgroundColor: b.color }}
-                    >
-                      <Icon className="size-3.5" />
-                    </span>
-                  )}
-                  <span className="flex flex-col min-w-0">
-                    {b.title && <span className="text-[10px] text-muted-foreground truncate">{b.title}</span>}
-                    {b.value && <span className="text-xs font-bold text-foreground truncate">{b.value}</span>}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        )}
       </div>
+
     </div>
   );
 }
