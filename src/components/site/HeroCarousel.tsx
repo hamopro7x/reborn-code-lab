@@ -189,41 +189,47 @@ export function HeroBannerView({
   /** العناصر التي لها موضع حر تُرسم مباشرة داخل الحاوية بدل التخطيط الطبيعي. */
   const freeKeys = new Set(Object.keys(pos));
 
-  const titleEl =
+  const titleNode =
     banner.show_title && banner.title ? (
-      <Layer k="title">
-        <h1
-          className="font-black leading-tight line-clamp-3"
-          style={{ fontSize: `clamp(${banner.title_size_mobile}px, 4vw, ${banner.title_size}px)` }}
-        >
-          {banner.title}
-        </h1>
-      </Layer>
+      <h1
+        className="font-black leading-tight line-clamp-2 md:line-clamp-3"
+        style={{ fontSize: `clamp(${banner.title_size_mobile}px, 4vw, ${banner.title_size}px)` }}
+      >
+        {banner.title}
+      </h1>
     ) : null;
 
-  const subtitleEl =
+  const subtitleNode =
     banner.show_subtitle && banner.subtitle ? (
-      <Layer k="subtitle" style={freeKeys.has("subtitle") ? undefined : { marginTop: banner.gap_title_subtitle }}>
-        <p
-          className="text-hero-foreground/70 line-clamp-3 max-w-md"
-          style={{ fontSize: `clamp(${banner.subtitle_size_mobile}px, 2vw, ${banner.subtitle_size}px)` }}
-        >
-          {banner.subtitle}
-        </p>
-      </Layer>
+      <p
+        className="text-hero-foreground/70 line-clamp-2 max-w-md"
+        style={{ fontSize: `clamp(${banner.subtitle_size_mobile}px, 2vw, ${banner.subtitle_size}px)` }}
+      >
+        {banner.subtitle}
+      </p>
     ) : null;
 
-  const subtitle2El =
+  const subtitle2Node =
     banner.show_subtitle2 && banner.subtitle2 ? (
-      <Layer k="subtitle2" style={freeKeys.has("subtitle2") ? undefined : { marginTop: banner.gap_title_subtitle }}>
-        <p
-          className="text-hero-foreground/70 line-clamp-3 max-w-md"
-          style={{ fontSize: `clamp(${banner.subtitle2_size_mobile}px, 2vw, ${banner.subtitle2_size}px)` }}
-        >
-          {banner.subtitle2}
-        </p>
-      </Layer>
+      <p
+        className="text-hero-foreground/70 line-clamp-2 max-w-md"
+        style={{ fontSize: `clamp(${banner.subtitle2_size_mobile}px, 2vw, ${banner.subtitle2_size}px)` }}
+      >
+        {banner.subtitle2}
+      </p>
     ) : null;
+
+  const titleEl = titleNode ? <Layer k="title">{titleNode}</Layer> : null;
+  const subtitleEl = subtitleNode ? (
+    <Layer k="subtitle" style={freeKeys.has("subtitle") ? undefined : { marginTop: banner.gap_title_subtitle }}>
+      {subtitleNode}
+    </Layer>
+  ) : null;
+  const subtitle2El = subtitle2Node ? (
+    <Layer k="subtitle2" style={freeKeys.has("subtitle2") ? undefined : { marginTop: banner.gap_title_subtitle }}>
+      {subtitle2Node}
+    </Layer>
+  ) : null;
 
   const buttonEls = buttons.map((b) => (
     <Layer key={b.id} k={`btn:${b.id}`}>
@@ -256,7 +262,7 @@ export function HeroBannerView({
   return (
     <div
       ref={rootRef}
-      className="relative h-[150px] md:h-[230px] overflow-hidden"
+      className="relative min-h-[190px] h-auto md:h-[230px] overflow-hidden"
       style={{ backgroundColor: banner.background_color ?? undefined }}
     >
       {/* الخلفية / الوسائط — تغطي كامل مساحة البنر */}
@@ -271,7 +277,13 @@ export function HeroBannerView({
         <>
           <div
             className="absolute inset-0 md:hidden"
-            style={{ backgroundColor: banner.overlay_color, opacity: Math.min(1, banner.overlay_opacity + 0.4) }}
+            style={{ backgroundColor: banner.overlay_color, opacity: Math.min(1, banner.overlay_opacity + 0.55) }}
+          />
+          <div
+            className="absolute inset-0 md:hidden"
+            style={{
+              background: `linear-gradient(90deg, ${banner.overlay_color}e6 0%, ${banner.overlay_color}99 60%, transparent 100%)`,
+            }}
           />
           <div
             className="absolute inset-0 hidden md:block"
@@ -280,29 +292,94 @@ export function HeroBannerView({
         </>
       )}
 
-      {/* العناصر ذات المواضع الحرة */}
-      {freeKeys.has("title") && titleEl}
-      {freeKeys.has("subtitle") && subtitleEl}
-      {freeKeys.has("subtitle2") && subtitle2El}
-      {buttonEls.filter((_, i) => freeKeys.has(`btn:${buttons[i]!.id}`))}
-      {badgeEls.filter((_, i) => freeKeys.has(`bdg:${badges[i]!.id}`))}
+      {/* ============= Desktop layout ============= */}
+      <div className="hidden md:block relative h-full">
+        {/* العناصر ذات المواضع الحرة */}
+        {freeKeys.has("title") && titleEl}
+        {freeKeys.has("subtitle") && subtitleEl}
+        {freeKeys.has("subtitle2") && subtitle2El}
+        {buttonEls.filter((_, i) => freeKeys.has(`btn:${buttons[i]!.id}`))}
+        {badgeEls.filter((_, i) => freeKeys.has(`bdg:${badges[i]!.id}`))}
 
-      {/* التخطيط الطبيعي لبقية العناصر */}
-      <div className="relative h-full grid md:grid-cols-[auto_minmax(0,1fr)]">
-        <div
-          className={`relative md:order-2 p-6 md:p-10 flex flex-col min-w-0 overflow-hidden ${justifyClass[banner.content_position_y]} ${alignClass[banner.content_position_x]}`}
-        >
-          {!freeKeys.has("title") && titleEl}
-          {!freeKeys.has("subtitle") && subtitleEl}
-          {!freeKeys.has("subtitle2") && subtitle2El}
-          {!sideButtons && buttonRow}
-          {sideButtons && <div className="md:hidden w-full">{buttonRow}</div>}
+        {/* التخطيط الطبيعي لبقية العناصر */}
+        <div className="relative h-full grid grid-cols-[auto_minmax(0,1fr)]">
+          <div
+            className={`relative order-2 p-10 flex flex-col min-w-0 overflow-hidden ${justifyClass[banner.content_position_y]} ${alignClass[banner.content_position_x]}`}
+          >
+            {!freeKeys.has("title") && titleEl}
+            {!freeKeys.has("subtitle") && subtitleEl}
+            {!freeKeys.has("subtitle2") && subtitle2El}
+            {!sideButtons && buttonRow}
+          </div>
+
+          {(badgesColumn || sideButtons) && (
+            <div className="order-1 flex flex-col justify-center gap-3 p-6 min-w-0">
+              {badgesColumn}
+              {sideButtons && buttonRow}
+            </div>
+          )}
         </div>
+      </div>
 
-        {(badgesColumn || sideButtons) && (
-          <div className="hidden md:flex md:order-1 flex-col justify-center gap-3 p-6 min-w-0">
-            {badgesColumn}
-            {sideButtons && buttonRow}
+      {/* ============= Mobile stacked layout (ignores free positions to prevent overlap) ============= */}
+      <div className="md:hidden relative z-10 flex flex-col justify-center min-h-[190px] px-4 py-5 gap-2 w-full max-w-[62%] items-start text-start">
+        {banner.show_title && banner.title && (
+          <h1
+            className="font-black leading-tight line-clamp-2"
+            style={{ fontSize: `clamp(15px, 4.5vw, 22px)` }}
+          >
+            {banner.title}
+          </h1>
+        )}
+        {banner.show_subtitle && banner.subtitle && (
+          <p
+            className="text-hero-foreground/90 line-clamp-2"
+            style={{ fontSize: `clamp(11px, 3.2vw, 14px)` }}
+          >
+            {banner.subtitle}
+          </p>
+        )}
+        {banner.show_subtitle2 && banner.subtitle2 && (
+          <p
+            className="text-hero-foreground/90 line-clamp-2"
+            style={{ fontSize: `clamp(11px, 3.2vw, 14px)` }}
+          >
+            {banner.subtitle2}
+          </p>
+        )}
+
+        {buttons.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 mt-1">
+            {buttons.map((b) => (
+              <HeroButtonItem key={b.id} banner={banner} b={b} />
+            ))}
+          </div>
+        )}
+
+        {badges.length > 0 && (
+          <div className="flex flex-col gap-2 mt-1">
+            {badges.map((b) => {
+              const Icon = heroIcon(b.icon);
+              return (
+                <div
+                  key={b.id}
+                  className="flex items-center gap-2 rounded-lg border border-border/60 bg-card/90 px-2 py-1.5 w-fit"
+                >
+                  {Icon && (
+                    <span
+                      className="flex size-7 shrink-0 items-center justify-center rounded-md text-white"
+                      style={{ backgroundColor: b.color }}
+                    >
+                      <Icon className="size-3.5" />
+                    </span>
+                  )}
+                  <span className="flex flex-col min-w-0">
+                    {b.title && <span className="text-[10px] text-muted-foreground truncate">{b.title}</span>}
+                    {b.value && <span className="text-xs font-bold text-foreground truncate">{b.value}</span>}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
