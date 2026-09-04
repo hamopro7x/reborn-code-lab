@@ -292,6 +292,9 @@ export function BybitLedgerPanel() {
   const [page, setPage] = useUiState<number>("bybit-ledger", "page", 1);
   const pageSize = 50;
 
+  // اسحب معاملات Bybit الجديدة إلى السجل المركزي طالما الشاشة مفتوحة.
+  useLedgerAutoSync(true);
+
   const q = useQuery({
     queryKey: ["bybit-ledger", group, status, page],
     queryFn: () => listFn({ data: { group, status, page, pageSize } }),
