@@ -332,37 +332,6 @@ export function HeroBannerView({
             <p className="text-teal leading-snug line-clamp-2 text-[10px] w-full">{banner.subtitle2}</p>
           )}
 
-          {buttons.length > 0 && (
-            <div className="flex flex-row-reverse items-center justify-end gap-1.5 mt-1.5 w-full">
-
-              {buttons.map((b) => {
-                const Icon = heroIcon(b.icon);
-                const cls =
-                  b.variant === "teal"
-                    ? "bg-teal text-teal-foreground"
-                    : b.variant === "outline"
-                      ? "bg-transparent border border-border text-foreground"
-                      : "bg-primary text-primary-foreground";
-                const inner = (
-                  <span
-                    className={`inline-flex h-7 items-center gap-1 rounded-md px-2 text-[10px] font-bold whitespace-nowrap ${cls}`}
-                  >
-                    {b.label}
-                    {Icon && <Icon className="size-3" style={{ color: "#87939f" }} />}
-                  </span>
-                );
-                return isInternalUrl(b.url) ? (
-                  <Link key={b.id} to={b.url as any}>
-                    {inner}
-                  </Link>
-                ) : (
-                  <a key={b.id} href={b.url} target="_blank" rel="noreferrer noopener">
-                    {inner}
-                  </a>
-                );
-              })}
-            </div>
-          )}
         </div>
 
       </div>
