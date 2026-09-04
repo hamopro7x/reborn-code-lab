@@ -25,19 +25,24 @@ function HeroButtonItem({
   b,
   size,
   compact,
+  variant,
 }: {
   banner: HeroBanner;
   b: HeroButton;
   size?: number;
   compact?: boolean;
+  variant?: HeroButton["variant"] | "outline-white";
 }) {
   const Icon = heroIcon(b.icon);
+  const v = variant ?? b.variant;
   const cls =
-    b.variant === "teal"
+    v === "teal"
       ? "bg-teal text-teal-foreground hover:bg-teal/90"
-      : b.variant === "outline"
-        ? "bg-transparent border border-border text-foreground hover:bg-muted"
-        : "";
+      : v === "outline-white"
+        ? "bg-transparent border border-white text-white hover:bg-white/10"
+        : v === "outline"
+          ? "bg-transparent border border-border text-foreground hover:bg-muted"
+          : "";
   const buttonSize = size ?? banner.button_size;
   const px = compact ? "px-2.5" : "px-6";
   const gap = compact ? "gap-1" : "gap-2";
@@ -48,7 +53,7 @@ function HeroButtonItem({
       style={{ height: buttonSize, fontSize: Math.max(compact ? 10 : 13, Math.round(buttonSize * 0.34)) }}
     >
       {b.label}
-      {Icon && <Icon className={iconSize} style={{ color: "#87939f" }} />}
+      {Icon && <Icon className={iconSize} style={{ color: v === "outline-white" ? "#ffffff" : "#87939f" }} />}
     </Button>
   );
   return isInternalUrl(b.url) ? (
@@ -206,8 +211,8 @@ export function HeroBannerView({
   const titleNode =
     banner.show_title && banner.title ? (
       <h1
-        className="font-black leading-tight line-clamp-2 md:line-clamp-3"
-        style={{ fontSize: `clamp(${banner.title_size_mobile}px, 4vw, ${banner.title_size}px)` }}
+        className="font-black leading-tight line-clamp-2 md:line-clamp-3 text-white drop-shadow-sm"
+        style={{ fontSize: `clamp(${banner.title_size_mobile}px, 4vw, ${banner.title_size}px)`, textShadow: "0 1px 4px rgba(0,0,0,0.6)" }}
       >
         {banner.title}
       </h1>
@@ -337,7 +342,12 @@ export function HeroBannerView({
         {/* النص والأزرار على يسار البانر */}
         <div className="absolute inset-y-0 left-0 w-[46%] flex flex-col justify-center gap-1 px-2.5 text-center items-center">
           {banner.show_title && banner.title && (
-            <h1 className="font-black leading-tight whitespace-nowrap text-[12px] w-full">{banner.title}</h1>
+            <h1
+              className="font-black leading-tight whitespace-nowrap text-[12px] w-full text-white drop-shadow-sm"
+              style={{ textShadow: "0 1px 4px rgba(0,0,0,0.6)" }}
+            >
+              {banner.title}
+            </h1>
           )}
           {banner.show_subtitle && banner.subtitle && (
             <p className="text-teal leading-snug line-clamp-2 text-[9px] w-full text-center">{banner.subtitle}</p>
@@ -348,9 +358,22 @@ export function HeroBannerView({
 
           {buttons.length > 0 && (
             <div className="flex flex-nowrap justify-center gap-1.5 mt-1 w-full">
-              {buttons.map((b) => (
-                <HeroButtonItem key={b.id} banner={banner} b={b} size={22} compact />
-              ))}
+              {(() => {
+                const shoppingIdx = buttons.findIndex((b) => /تسوق|shop/i.test(b.label));
+                const otherIdx = buttons.findIndex((_, i) => i !== shoppingIdx);
+                const otherVariant = otherIdx >= 0 ? buttons[otherIdx]!.variant : "teal";
+                const shoppingVariant = otherVariant === "teal" ? "outline-white" : "teal";
+                return buttons.map((b, i) => (
+                  <HeroButtonItem
+                    key={b.id}
+                    banner={banner}
+                    b={b}
+                    size={22}
+                    compact
+                    variant={i === shoppingIdx ? shoppingVariant : undefined}
+                  />
+                ));
+              })()}
             </div>
           )}
         </div>
