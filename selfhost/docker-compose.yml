@@ -11,19 +11,47 @@ services:
     env_file: .env
     ports:
       - "127.0.0.1:3000:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3000/api/public/build-version').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
 
   # كرون على سيرفرك يستدعي مزامنة Bybit بدل pg_cron داخل السحابة
   bybit-cron:
     image: alpine:3.20
     restart: unless-stopped
-    depends_on: [app]
+    depends_on:
+      app:
+        condition: service_healthy
     env_file: .env
     environment:
       SYNC_URL: "http://app:3000/api/public/hooks/bybit-ledger-sync"
       SYNC_INTERVAL_SECONDS: "${SYNC_INTERVAL_SECONDS:-300}"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    # يرسل السر الخاص لو موجود، وإلا يرجع للتحقق القديم بالمفتاح العام
     command: >
       sh -c "apk add --no-cache curl >/dev/null &&
+      if [ -z \"$$SYNC_HOOK_SECRET\" ] && [ -z \"$$VITE_SUPABASE_PUBLISHABLE_KEY\" ]; then
+        echo 'FATAL: set SYNC_HOOK_SECRET (or VITE_SUPABASE_PUBLISHABLE_KEY) in .env'; exit 1;
+      fi;
       while true; do
-        curl -s -X POST -H 'Content-Type: application/json' -H \"apikey: $$VITE_SUPABASE_PUBLISHABLE_KEY\" -d '{}' \"$$SYNC_URL\" || echo 'sync failed';
+        code=$$(curl -s -o /tmp/out -w '%{http_code}' -X POST -H 'Content-Type: application/json' \
+          $${SYNC_HOOK_SECRET:+-H \"x-sync-secret: $$SYNC_HOOK_SECRET\"} \
+          $${SYNC_HOOK_SECRET:-x} >/dev/null 2>&1; \
+          curl -s -o /tmp/out -w '%{http_code}' -X POST -H 'Content-Type: application/json' \
+          $${SYNC_HOOK_SECRET:+-H \"x-sync-secret: $$SYNC_HOOK_SECRET\"} \
+          $${SYNC_HOOK_SECRET:--H} $${SYNC_HOOK_SECRET:+-d} '{}' \"$$SYNC_URL\");
+        echo \"[$$(date -u +%FT%TZ)] sync http=$$code $$(cat /tmp/out)\";
         sleep $$SYNC_INTERVAL_SECONDS;
       done"
