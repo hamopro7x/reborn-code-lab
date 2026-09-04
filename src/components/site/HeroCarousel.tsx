@@ -341,6 +341,13 @@ export function HeroBannerView({
             <p className="text-teal leading-snug line-clamp-2 text-[10px] w-full">{banner.subtitle2}</p>
           )}
 
+          {buttons.length > 0 && (
+            <div className="flex flex-wrap justify-end gap-1.5 mt-1 w-full">
+              {buttons.map((b) => (
+                <HeroButtonItem key={b.id} banner={banner} b={b} size={28} />
+              ))}
+            </div>
+          )}
         </div>
 
       </div>
