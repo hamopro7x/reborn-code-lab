@@ -16,10 +16,21 @@ export const Route = createFileRoute("/api/public/hooks/bybit-ledger-sync")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const key = request.headers.get("apikey") ?? "";
-        const expected = process.env["SUPABASE_ANON_KEY"] ?? process.env["SUPABASE_PUBLISHABLE_KEY"] ?? "";
-        if (!expected || key !== expected) {
-          return json({ error: "unauthorized" }, 401);
+        // Preferred on a self-hosted server: a private shared secret in
+        // `x-sync-secret`. When SYNC_HOOK_SECRET is unset we keep the previous
+        // publishable-key check so the existing scheduler keeps working.
+        const hookSecret = process.env["SYNC_HOOK_SECRET"] ?? "";
+        if (hookSecret) {
+          if (request.headers.get("x-sync-secret") !== hookSecret) {
+            return json({ error: "unauthorized" }, 401);
+          }
+        } else {
+          const key = request.headers.get("apikey") ?? "";
+          const expected =
+            process.env["SUPABASE_ANON_KEY"] ?? process.env["SUPABASE_PUBLISHABLE_KEY"] ?? "";
+          if (!expected || key !== expected) {
+            return json({ error: "unauthorized" }, 401);
+          }
         }
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
