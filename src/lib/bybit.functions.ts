@@ -123,10 +123,22 @@ export const syncBybitCardTxns = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAccess(context.supabase, context.userId);
     const mod = await import("./bybit.server");
-    return mod.readOp(data.accountId, () => mod.syncCardTxns(data.accountId), {
+    const res = await mod.readOp(data.accountId, () => mod.syncCardTxns(data.accountId), {
       added: 0,
       backfillDone: false,
     });
+    // Mirror the freshly archived card movements into the central ledger (and,
+    // through it, into the open shift). Without this the card page fills up
+    // while «جميع معاملات الفيزا» and the employee sheet stay behind whenever
+    // the background sync hook is not running.
+    if (data.accountId) {
+      try {
+        await mod.syncAccountLedger(data.accountId);
+      } catch (e) {
+        console.error("ledger mirror after card sync failed:", (e as Error)?.message);
+      }
+    }
+    return res;
   });
 
 export const getBybitOnChain = createServerFn({ method: "POST" })
@@ -148,12 +160,22 @@ export const syncAllBybitCardTxns = createServerFn({ method: "POST" })
     const mod = await import("./bybit.server");
     const errs = await import("./bybit-errors");
     try {
-      return { ok: true as const, ...(await mod.syncAllCardTxns()) };
+      const ingest = await mod.syncAllCardTxns();
+      // Same reason as above: keep the central ledger + shift in step with the
+      // card archive on every manual/auto sync.
+      let saved = 0;
+      try {
+        saved = (await mod.syncAllLedger()).saved;
+      } catch (e) {
+        console.error("ledger mirror after full card sync failed:", (e as Error)?.message);
+      }
+      return { ok: true as const, ...ingest, saved };
     } catch (e) {
       const { code, message } = errs.normalizeBybitError(e);
-      return { ok: false as const, added: 0, accounts: 0, error: message, errorCode: code };
+      return { ok: false as const, added: 0, accounts: 0, saved: 0, error: message, errorCode: code };
     }
   });
+
 
 export const getBybitInternal = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
