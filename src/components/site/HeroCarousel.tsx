@@ -278,7 +278,7 @@ export function HeroBannerView({
           <div
             className="absolute inset-0 md:hidden"
             style={{
-              background: `linear-gradient(90deg, ${banner.overlay_color}f2 0%, ${banner.overlay_color}cc 34%, ${banner.overlay_color}33 58%, ${banner.overlay_color}bf 82%, ${banner.overlay_color}e6 100%)`,
+              background: `linear-gradient(90deg, ${banner.overlay_color}f2 0%, ${banner.overlay_color}e6 38%, ${banner.overlay_color}8c 52%, transparent 68%)`,
             }}
           />
           <div
@@ -321,19 +321,20 @@ export function HeroBannerView({
       {/* ============= Mobile layout — مطابق لتصميم كانفا ============= */}
       <div className="md:hidden relative z-10 min-h-[152px]">
         {/* النص والأزرار على يسار البانر */}
-        <div className="absolute inset-y-0 left-0 w-[52%] flex flex-col justify-center gap-1 px-3 text-center items-center">
+        <div className="absolute inset-y-0 left-0 w-[46%] flex flex-col justify-center gap-1 px-2.5 text-right items-end">
           {banner.show_title && banner.title && (
-            <h1 className="font-black leading-tight line-clamp-2 text-[15px]">{banner.title}</h1>
+            <h1 className="font-black leading-tight line-clamp-2 text-[13px] w-full">{banner.title}</h1>
           )}
           {banner.show_subtitle && banner.subtitle && (
-            <p className="text-teal leading-snug line-clamp-2 text-[9px]">{banner.subtitle}</p>
+            <p className="text-teal leading-snug line-clamp-2 text-[8px] w-full">{banner.subtitle}</p>
           )}
           {banner.show_subtitle2 && banner.subtitle2 && (
-            <p className="text-teal leading-snug line-clamp-2 text-[9px]">{banner.subtitle2}</p>
+            <p className="text-teal leading-snug line-clamp-2 text-[8px] w-full">{banner.subtitle2}</p>
           )}
 
           {buttons.length > 0 && (
-            <div className="flex flex-row-reverse items-center justify-center gap-1.5 mt-1">
+            <div className="flex flex-row-reverse items-center justify-end gap-1.5 mt-1.5 w-full">
+
               {buttons.map((b) => {
                 const Icon = heroIcon(b.icon);
                 const cls =
@@ -366,20 +367,21 @@ export function HeroBannerView({
 
         {/* الشارات على يمين البانر */}
         {badges.length > 0 && (
-          <div className="absolute inset-y-0 right-0 flex flex-col justify-center gap-1.5 pe-2.5 py-3">
+          <div className="absolute inset-y-0 right-0 flex flex-col justify-center gap-1.5 pe-2 py-3">
             {badges.slice(0, 3).map((b) => (
               <div
                 key={b.id}
-                className="rounded-md border border-border/60 bg-card/95 px-2 py-1 w-[84px] text-center"
+                className="rounded-md border border-border/60 bg-card px-1.5 py-1 w-[68px] text-center"
               >
                 {b.title && (
-                  <span className="block text-[8px] leading-tight text-muted-foreground truncate">{b.title}</span>
+                  <span className="block text-[7px] leading-tight text-muted-foreground truncate">{b.title}</span>
                 )}
                 {b.value && (
-                  <span className="block text-[10px] leading-tight font-bold text-lime truncate">{b.value}</span>
+                  <span className="block text-[9px] leading-tight font-bold text-lime truncate">{b.value}</span>
                 )}
               </div>
             ))}
+
           </div>
         )}
       </div>
