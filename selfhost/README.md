@@ -69,8 +69,25 @@ certbot --nginx -d mag-pro1.com -d www.mag-pro1.com
   */5 * * * * APP_URL=http://127.0.0.1:3000 /opt/mag-pro1/selfhost/bybit-sync.sh >> /var/log/bybit-sync.log 2>&1
   ```
 
+**حماية endpoint المزامنة:** ضع `SYNC_HOOK_SECRET` في `.env` (مثال: `openssl rand -hex 32`).
+عندها يقبل الـendpoint هيدر `x-sync-secret` فقط بدل المفتاح العام. لو تركته فارغًا يظل التحقق القديم
+بالمفتاح العام شغالًا (لا ينكسر شيء) لكنه غير مناسب لسيرفر مكشوف.
+
 **مهم:** بعد تشغيل الكرون على سيرفرك، أوقف المهمة القديمة داخل Lovable من
 More → Cloud → Jobs → `bybit-ledger-auto-sync` → Disable، وإلا ستعمل المزامنة مرتين وتستهلك رصيد تشغيل.
+
+## 4.1) الذكاء الاصطناعي (فحص ومقارنة الوجه)
+
+الكود يستخدم أي مزود متوافق مع OpenAI. على سيرفرك ضع في `.env`:
+
+```
+VISION_API_KEY=sk-...
+VISION_API_URL=https://api.openai.com/v1/chat/completions
+VISION_MODEL=gpt-4o-mini
+```
+
+لو تُركت `VISION_API_KEY` فارغة، تبقى ميزة فحص الوجه معطلة بأمان وبقية الموقع يعمل طبيعيًا.
+
 
 ## 5) إيقاف استهلاك السحابة نهائيًا
 
