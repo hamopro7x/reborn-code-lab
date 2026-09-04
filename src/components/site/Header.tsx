@@ -37,6 +37,7 @@ export function Header() {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [q, setQ] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
 
   // نفس مصدر الأقسام المستخدم في باقي الموقع.
   const categoriesQ = useQuery({
