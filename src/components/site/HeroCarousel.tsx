@@ -323,13 +323,13 @@ export function HeroBannerView({
         {/* النص والأزرار على يسار البانر */}
         <div className="absolute inset-y-0 left-0 w-[46%] flex flex-col justify-center gap-1 px-2.5 text-right items-end">
           {banner.show_title && banner.title && (
-            <h1 className="font-black leading-tight line-clamp-2 text-[13px] w-full">{banner.title}</h1>
+            <h1 className="font-black leading-tight line-clamp-2 text-[15px] w-full">{banner.title}</h1>
           )}
           {banner.show_subtitle && banner.subtitle && (
-            <p className="text-teal leading-snug line-clamp-2 text-[8px] w-full">{banner.subtitle}</p>
+            <p className="text-teal leading-snug line-clamp-2 text-[10px] w-full">{banner.subtitle}</p>
           )}
           {banner.show_subtitle2 && banner.subtitle2 && (
-            <p className="text-teal leading-snug line-clamp-2 text-[8px] w-full">{banner.subtitle2}</p>
+            <p className="text-teal leading-snug line-clamp-2 text-[10px] w-full">{banner.subtitle2}</p>
           )}
 
           {buttons.length > 0 && (
@@ -345,10 +345,10 @@ export function HeroBannerView({
                       : "bg-primary text-primary-foreground";
                 const inner = (
                   <span
-                    className={`inline-flex h-6 items-center gap-1 rounded-md px-2 text-[9px] font-bold whitespace-nowrap ${cls}`}
+                    className={`inline-flex h-7 items-center gap-1 rounded-md px-2 text-[10px] font-bold whitespace-nowrap ${cls}`}
                   >
                     {b.label}
-                    {Icon && <Icon className="size-2.5" style={{ color: "#87939f" }} />}
+                    {Icon && <Icon className="size-3" style={{ color: "#87939f" }} />}
                   </span>
                 );
                 return isInternalUrl(b.url) ? (
