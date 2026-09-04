@@ -1111,7 +1111,7 @@ function ProductsTab() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
 
-  function newProduct() { setEditing({ name: "", slug: "", description: "", short_description: "", base_price_egp: 0, discount_percent: 0, warranty_days: 30, warranty_text: "", category_id: catsQ.data?.[0]?.id, active: true, featured: false, sort_order: 0 }); setOpen(true); }
+  function newProduct() { setEditing({ name: "", slug: "", description: "", short_description: "", base_price_egp: 0, discount_percent: 0, warranty_days: 30, warranty_text: "", refund_text: "", category_id: catsQ.data?.[0]?.id, active: true, featured: false, sort_order: 0 }); setOpen(true); }
   function edit(p: any) { setEditing({ ...p }); setOpen(true); }
   async function del(id: string) {
     if (!confirm("حذف المنتج؟")) return;
@@ -1191,6 +1191,9 @@ function ProductsTab() {
                 }} /></div>
                 <div><Label>الضمان</Label><Input value={editing.warranty_text ?? ""} placeholder="مثال: ضمان 30 يوم استبدال" onChange={(e) => setEditing({ ...editing, warranty_text: e.target.value })} /></div>
               </div>
+
+              <div><Label>الاسترداد</Label><Input value={editing.refund_text ?? ""} placeholder="مثال: استرداد خلال 7 أيام" onChange={(e) => setEditing({ ...editing, refund_text: e.target.value })} /></div>
+
 
               <div><Label>نهاية الخصم</Label><Input type="datetime-local" value={editing.discount_ends_at?.slice(0,16) ?? ""} onChange={(e) => setEditing({ ...editing, discount_ends_at: e.target.value ? new Date(e.target.value).toISOString() : null })} /></div>
               <div><Label>القسم</Label>

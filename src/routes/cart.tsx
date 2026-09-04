@@ -40,7 +40,7 @@ function CartPage() {
     queryFn: async () => {
       const { data } = await supabase
         .from("products")
-        .select("id, description, short_description, warranty_days, warranty_text, category:categories(name,icon)")
+        .select("id, description, short_description, warranty_days, warranty_text, refund_text, category:categories(name,icon)")
         .in("id", ids);
       const map: Record<string, any> = {};
       (data ?? []).forEach((p: any) => { map[p.id] = p; });
@@ -134,6 +134,16 @@ function CartPage() {
                               <h4 className="text-base md:text-lg font-black text-[var(--details-heading)]">الضمان</h4>
                             </div>
                             <p className="text-sm md:text-[15px] text-[var(--details-text)] text-right leading-[2] whitespace-pre-line break-words">{d.warranty_text?.trim() || `ضمان ${d.warranty_days} يوم`}</p>
+                          </section>
+                        )}
+
+                        {d.refund_text?.trim() && (
+                          <section>
+                            <div className="flex items-center justify-start gap-2 mb-3">
+                              <ShieldCheck className="size-5 text-[var(--details-text)] shrink-0" />
+                              <h4 className="text-base md:text-lg font-black text-[var(--details-heading)]">الاسترداد</h4>
+                            </div>
+                            <p className="text-sm md:text-[15px] text-[var(--details-text)] text-right leading-[2] whitespace-pre-line break-words">{d.refund_text}</p>
                           </section>
                         )}
                       </div>
