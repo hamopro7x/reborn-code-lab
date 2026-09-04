@@ -1192,6 +1192,9 @@ function ProductsTab() {
                 <div><Label>الضمان</Label><Input value={editing.warranty_text ?? ""} placeholder="مثال: ضمان 30 يوم استبدال" onChange={(e) => setEditing({ ...editing, warranty_text: e.target.value })} /></div>
               </div>
 
+              <div><Label>الاسترداد</Label><Input value={editing.refund_text ?? ""} placeholder="مثال: استرداد خلال 7 أيام" onChange={(e) => setEditing({ ...editing, refund_text: e.target.value })} /></div>
+
+
               <div><Label>نهاية الخصم</Label><Input type="datetime-local" value={editing.discount_ends_at?.slice(0,16) ?? ""} onChange={(e) => setEditing({ ...editing, discount_ends_at: e.target.value ? new Date(e.target.value).toISOString() : null })} /></div>
               <div><Label>القسم</Label>
                 <select value={editing.category_id ?? ""} onChange={(e) => setEditing({ ...editing, category_id: e.target.value })} className="w-full h-10 rounded-md border border-input bg-input px-3 text-sm">
