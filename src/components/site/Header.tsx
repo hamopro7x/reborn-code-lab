@@ -165,20 +165,23 @@ export function Header() {
         </div>
       </div>
 
-      {/* بحث الموبايل */}
-      <form onSubmit={submitSearch} role="search" className="md:hidden container mx-auto px-4 pb-3">
-        <label htmlFor="site-search-mobile" className="sr-only">ابحث عن منتج</label>
-        <div className="relative">
-          <Search className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-          <Input
-            id="site-search-mobile"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="ابحث عن اشتراكك أو لعبتك"
-            className="h-10 pr-9 text-sm bg-card"
-          />
-        </div>
-      </form>
+      {/* بحث الموبايل — يظهر عند الضغط على أيقونة البحث */}
+      {searchOpen && (
+        <form onSubmit={submitSearch} role="search" className="md:hidden container mx-auto px-4 pb-3">
+          <label htmlFor="site-search-mobile" className="sr-only">ابحث عن منتج</label>
+          <div className="relative">
+            <Search className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            <Input
+              id="site-search-mobile"
+              autoFocus
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="ابحث عن اشتراكك أو لعبتك"
+              className="h-10 pr-9 text-sm bg-card"
+            />
+          </div>
+        </form>
+      )}
     </header>
   );
 }
