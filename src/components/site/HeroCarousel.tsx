@@ -280,6 +280,12 @@ export function HeroBannerView({
             style={{ backgroundColor: banner.overlay_color, opacity: Math.min(1, banner.overlay_opacity + 0.55) }}
           />
           <div
+            className="absolute inset-0 md:hidden"
+            style={{
+              background: `linear-gradient(90deg, ${banner.overlay_color}e6 0%, ${banner.overlay_color}99 60%, transparent 100%)`,
+            }}
+          />
+          <div
             className="absolute inset-0 hidden md:block"
             style={{ backgroundColor: banner.overlay_color, opacity: banner.overlay_opacity }}
           />
