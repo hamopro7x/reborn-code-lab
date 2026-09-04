@@ -20,7 +20,15 @@ const alignClass = {
 
 const justifyClass = { start: "justify-start", center: "justify-center", end: "justify-end" } as const;
 
-function HeroButtonItem({ banner, b }: { banner: HeroBanner; b: HeroButton }) {
+function HeroButtonItem({
+  banner,
+  b,
+  size,
+}: {
+  banner: HeroBanner;
+  b: HeroButton;
+  size?: number;
+}) {
   const Icon = heroIcon(b.icon);
   const cls =
     b.variant === "teal"
@@ -28,10 +36,11 @@ function HeroButtonItem({ banner, b }: { banner: HeroBanner; b: HeroButton }) {
       : b.variant === "outline"
         ? "bg-transparent border border-border text-foreground hover:bg-muted"
         : "";
+  const buttonSize = size ?? banner.button_size;
   const inner = (
     <Button
       className={`px-6 rounded-full font-bold gap-2 ${cls}`}
-      style={{ height: banner.button_size, fontSize: Math.max(13, Math.round(banner.button_size * 0.34)) }}
+      style={{ height: buttonSize, fontSize: Math.max(13, Math.round(buttonSize * 0.34)) }}
     >
       {b.label}
       {Icon && <Icon className="size-4" style={{ color: "#87939f" }} />}
