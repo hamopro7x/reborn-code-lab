@@ -91,6 +91,19 @@ export function Header() {
         </div>
 
         <div className="flex items-center gap-1.5">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="md:hidden"
+            aria-label="بحث"
+            aria-expanded={searchOpen}
+            onClick={() => setSearchOpen((v) => !v)}
+          >
+            <Search className="size-5" />
+          </Button>
+
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="gap-1.5" aria-label="اختر العملة">
