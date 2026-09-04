@@ -316,27 +316,27 @@ export function HeroBannerView({
       </div>
 
       {/* ============= Mobile stacked layout (ignores free positions to prevent overlap) ============= */}
-      <div className="md:hidden relative z-10 flex flex-col justify-center min-h-[190px] px-4 py-5 gap-2">
+      <div className="md:hidden relative z-10 flex flex-col justify-center min-h-[190px] px-4 py-5 gap-2 w-full max-w-[62%] items-start text-start">
         {banner.show_title && banner.title && (
           <h1
             className="font-black leading-tight line-clamp-2"
-            style={{ fontSize: `clamp(16px, 5vw, 24px)` }}
+            style={{ fontSize: `clamp(15px, 4.5vw, 22px)` }}
           >
             {banner.title}
           </h1>
         )}
         {banner.show_subtitle && banner.subtitle && (
           <p
-            className="text-hero-foreground/80 line-clamp-2"
-            style={{ fontSize: `clamp(12px, 3.5vw, 15px)` }}
+            className="text-hero-foreground/90 line-clamp-2"
+            style={{ fontSize: `clamp(11px, 3.2vw, 14px)` }}
           >
             {banner.subtitle}
           </p>
         )}
         {banner.show_subtitle2 && banner.subtitle2 && (
           <p
-            className="text-hero-foreground/80 line-clamp-2"
-            style={{ fontSize: `clamp(12px, 3.5vw, 15px)` }}
+            className="text-hero-foreground/90 line-clamp-2"
+            style={{ fontSize: `clamp(11px, 3.2vw, 14px)` }}
           >
             {banner.subtitle2}
           </p>
@@ -352,9 +352,28 @@ export function HeroBannerView({
 
         {badges.length > 0 && (
           <div className="flex flex-col gap-2 mt-1">
-            {badges.map((b) => (
-              <BadgeCard key={b.id} b={b} />
-            ))}
+            {badges.map((b) => {
+              const Icon = heroIcon(b.icon);
+              return (
+                <div
+                  key={b.id}
+                  className="flex items-center gap-2 rounded-lg border border-border/60 bg-card/90 px-2 py-1.5 w-fit"
+                >
+                  {Icon && (
+                    <span
+                      className="flex size-7 shrink-0 items-center justify-center rounded-md text-white"
+                      style={{ backgroundColor: b.color }}
+                    >
+                      <Icon className="size-3.5" />
+                    </span>
+                  )}
+                  <span className="flex flex-col min-w-0">
+                    {b.title && <span className="text-[10px] text-muted-foreground truncate">{b.title}</span>}
+                    {b.value && <span className="text-xs font-bold text-foreground truncate">{b.value}</span>}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
