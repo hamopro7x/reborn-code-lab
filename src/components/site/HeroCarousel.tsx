@@ -256,7 +256,7 @@ export function HeroBannerView({
   return (
     <div
       ref={rootRef}
-      className="relative h-[150px] md:h-[230px] overflow-hidden"
+      className="relative min-h-[190px] h-auto md:h-[230px] overflow-hidden"
       style={{ backgroundColor: banner.background_color ?? undefined }}
     >
       {/* الخلفية / الوسائط — تغطي كامل مساحة البنر */}
@@ -288,9 +288,9 @@ export function HeroBannerView({
       {badgeEls.filter((_, i) => freeKeys.has(`bdg:${badges[i]!.id}`))}
 
       {/* التخطيط الطبيعي لبقية العناصر */}
-      <div className="relative h-full grid md:grid-cols-[auto_minmax(0,1fr)]">
+      <div className="relative md:h-full grid md:grid-cols-[auto_minmax(0,1fr)]">
         <div
-          className={`relative md:order-2 p-6 md:p-10 flex flex-col min-w-0 overflow-hidden ${justifyClass[banner.content_position_y]} ${alignClass[banner.content_position_x]}`}
+          className={`relative md:order-2 p-4 md:p-10 flex flex-col min-w-0 overflow-hidden max-md:items-start max-md:justify-start ${justifyClass[banner.content_position_y]} ${alignClass[banner.content_position_x]}`}
         >
           {!freeKeys.has("title") && titleEl}
           {!freeKeys.has("subtitle") && subtitleEl}
