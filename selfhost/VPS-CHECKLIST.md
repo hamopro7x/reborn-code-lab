@@ -14,24 +14,14 @@ git clone <رابط المستودع> .
 ```
 
 ## 2) تجهيز القاعدة الجديدة
-
-أولًا: بناء الهيكل الكامل (77 ملف: جداول، صلاحيات، سياسات، دوال، triggers)
 ```bash
-NEW_DB_URL="postgresql://postgres:PASS@HOST:5432/postgres" ./selfhost/migrate-db.sh
-# للمعاينة فقط: DRY_RUN=1 NEW_DB_URL="..." ./selfhost/migrate-db.sh
-```
-
-ثانيًا: البيانات. نزّل ملفات التصدير (ميزة «تصدير البيانات» في لوحة الباك إند) وضعها في مجلد `cloud-export/` ثم:
-```bash
-NEW_DB_URL="postgresql://..." CSV_DIR=./cloud-export ./selfhost/import-csv.sh
-```
-لو كان معك رابط القاعدة القديمة كاملًا فالبديل الأسرع:
-```bash
+# تصدير من الحالية (قراءة فقط)
 OLD_DB_URL="postgresql://..." ./selfhost/export-cloud.sh
+
+# استيراد إلى الجديدة
 NEW_DB_URL="postgresql://..." ./selfhost/import-new.sh
 ```
-
-
+بدون تصدير: `NEW_DB_URL="..." ./selfhost/migrate-db.sh` لتطبيق الـ77 ملف هيكل فقط.
 
 ## 3) نقل الملفات (الصور/المرفقات)
 ```bash
