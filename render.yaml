@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: reborn-code-lab
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build:node
+    startCommand: node .output/server/index.mjs
+    healthCheckPath: /
+    autoDeploy: true
