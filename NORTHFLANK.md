@@ -72,3 +72,15 @@
 - تسجيل الدخول يعمل.
 - لوحة الإدارة تظهر البيانات.
 - `/api/public/build-version` يعيد رقم نسخة.
+
+## 6) لماذا كان الـ runtime يفشل بـ MODULE_NOT_FOUND
+
+Northflank Buildpack (Paketo) لا يشغّل سكربت `build` تلقائيًا، فينتهي البناء
+"بنجاح" بدون توليد `.output/server/index.mjs`، ثم يسقط `npm start`.
+
+الحل الموجود الآن في المشروع:
+
+- `project.toml` بجذر المستودع يحتوي `BP_NODE_RUN_SCRIPTS=build` (+ إتاحة
+  devDependencies و `NITRO_PRESET=node-server`) فيُنفَّذ البناء داخل الـ Buildpack.
+- `npm start` صار يشغّل `scripts/start.mjs` الذي يبحث عن مخرجات السيرفر
+  في `.output/server` أو `dist/server` ويطبع رسالة واضحة لو البناء لم يحدث.
