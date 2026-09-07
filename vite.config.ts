@@ -25,6 +25,11 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  nitro: {
+    // يُستخدم node-server عند البناء على السيرفر الخاص؛
+    // Lovable Cloud تتجاهل هذا الإعداد وتستخدم cloudflare-module تلقائيًا.
+    preset: process.env["NITRO_PRESET"] || "cloudflare-module",
+  },
   vite: {
     plugins,
     // معرّف نسخة يتغيّر مع كل بناء/نشر، يستخدمه الموقع لعمل تحديث تلقائي
