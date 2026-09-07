@@ -4,20 +4,20 @@ schema-version = "0.2"
 # Paketo/Buildpack (Northflank Buildpack) لا ينفّذ سكربت البناء تلقائيًا.
 # BP_NODE_RUN_SCRIPTS يجبره على تشغيل `npm run build` أثناء البناء،
 # وبالتالي يتولّد .output/server/index.mjs الذي يشغّله `npm start`.
-[[io.buildpacks.build.env]]
+[[build.env]]
 name = "BP_NODE_RUN_SCRIPTS"
 value = "build"
 
 # نحتاج devDependencies (vite / nitro) في مرحلة البناء.
-[[io.buildpacks.build.env]]
+[[build.env]]
 name = "NPM_CONFIG_PRODUCTION"
 value = "false"
 
-[[io.buildpacks.build.env]]
+[[build.env]]
 name = "NODE_ENV"
 value = "development"
 
 # preset الخاص بـ Nitro لإخراج سيرفر Node وليس Cloudflare.
-[[io.buildpacks.build.env]]
+[[build.env]]
 name = "NITRO_PRESET"
 value = "node-server"
