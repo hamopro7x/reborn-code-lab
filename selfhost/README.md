@@ -47,9 +47,13 @@ docker compose up -d --build
 
 ```bash
 bun install
-NITRO_PRESET=node-server bun run build
-node .output/server/index.mjs      # مع pm2: pm2 start .output/server/index.mjs --name mag-pro1
+bun run build:node                    # يعادل: NITRO_PRESET=node-server vite build
+node .output/server/index.mjs        # مع pm2: pm2 start .output/server/index.mjs --name mag-pro1
 ```
+
+> ملاحظة: البناء الحقيقي بهدف `node-server` لا يمكن اختباره داخل بيئة Lovable sandbox؛
+> لأن حزمة `vite-tanstack-config` تفرض `cloudflare-module` داخل الـsandbox.
+> على السيرفر الخاص (Docker أو VPS) سيعمل `node-server` فعليًا ويُنتج `.output/server/index.mjs`.
 
 ## 3) الدومين و SSL
 
