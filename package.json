@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "vite dev",
     "build": "npm run build:node",
-    "start": "node .output/server/index.mjs",
+    "start": "node scripts/start.mjs",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
