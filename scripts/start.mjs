@@ -9,9 +9,8 @@ if (!found) {
   console.error(
     [
       "لم يتم العثور على مخرجات السيرفر (.output/server/index.mjs).",
-      "معنى ذلك أن مرحلة البناء لم تنفّذ `npm run build`.",
-      "على Northflank Buildpack تأكد من متغير البناء BP_NODE_RUN_SCRIPTS=build",
-      "(موجود في project.toml بجذر المشروع) ثم أعد البناء.",
+      "معنى ذلك أن Buildpack لم يُكمل سكربت `postinstall` الذي يبني سيرفر Nitro.",
+      "راجع سجل البناء بحثًا عن فشل `npm run build:node` ثم أعد البناء.",
     ].join("\n"),
   );
   process.exit(1);
