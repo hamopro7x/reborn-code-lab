@@ -1760,7 +1760,29 @@ export async function syncAccountLedger(accountId: string): Promise<number> {
     .order("occurred_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  const sinceMs = wm?.occurred_at ? new Date(wm.occurred_at).getTime() - 48 * 3600_000 : 0;
+  let sinceMs = wm?.occurred_at ? new Date(wm.occurred_at).getTime() - 48 * 3600_000 : 0;
+
+  // Self-healing guard: the watermark above only re-reads recent rows, so any
+  // archive row that arrived with an OLDER timestamp (history backfill, late
+  // provider rows) would never be mirrored again. Whenever the archive holds
+  // more rows than the mirrored ledger for this account, fall back to a full
+  // pass so nothing is left behind. This is why transactions kept going
+  // missing from the central ledger and from the employee shift sheet.
+  if (sinceMs > 0) {
+    const [{ count: archiveCount }, { count: ledgerCount }] = await Promise.all([
+      db
+        .from("bybit_card_txns")
+        .select("txn_id", { count: "exact", head: true })
+        .eq("account_id", accountId),
+      db
+        .from("bybit_ledger")
+        .select("ref_id", { count: "exact", head: true })
+        .eq("account_id", accountId)
+        .in("kind", ["card", "refund"]),
+    ]);
+    if ((archiveCount ?? 0) > (ledgerCount ?? 0)) sinceMs = 0;
+  }
+
 
   const CHUNK = 1000;
   const HARD_CAP = 200_000;
