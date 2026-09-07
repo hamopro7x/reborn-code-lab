@@ -3,21 +3,30 @@
 // فلو شغّلناه يظل العمل "Running" بدون استماع => "no healthy upstream".
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
+import { spawnSync } from "node:child_process";
 
 const entry = resolve(process.cwd(), ".output/server/index.mjs");
 
 if (!existsSync(entry)) {
-  const hasCfBuild = existsSync(resolve(process.cwd(), "dist/server/index.mjs"));
-  console.error(
-    [
-      "لم يتم العثور على مخرجات سيرفر Node (.output/server/index.mjs).",
-      hasCfBuild
-        ? "الموجود هو dist/server/index.mjs (مخرج Cloudflare) وهو لا يفتح بورت HTTP."
-        : "معنى ذلك أن Buildpack لم يُكمل سكربت `postinstall`.",
-      "أعد البناء مع التأكد من تنفيذ `npm run build:node` (NITRO_PRESET=node-server).",
-    ].join("\n"),
-  );
-  process.exit(1);
+  console.log("[start] Node server output is missing; building it now...");
+  const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
+  const build = spawnSync(npmCommand, ["run", "build:node"], {
+    cwd: process.cwd(),
+    env: {
+      ...process.env,
+      NODE_ENV: "development",
+      NITRO_PRESET: "node-server",
+      NITRO_OUTPUT_DIR: ".output",
+    },
+    stdio: "inherit",
+  });
+
+  if (build.status !== 0 || !existsSync(entry)) {
+    console.error(
+      "[start] Failed to create .output/server/index.mjs. Ensure devDependencies are installed.",
+    );
+    process.exit(build.status || 1);
+  }
 }
 
 const found = entry;
