@@ -13,12 +13,17 @@
 const P2P_KINDS = ["p2p_buy", "p2p_sell"];
 
 export async function autoAssignLedger(db: any): Promise<number> {
-  const { data: shift } = await db
+  // More than one open shift used to make this query error out (maybeSingle),
+  // which silently stopped every transaction from reaching the shift sheet.
+  const { data: shifts } = await db
     .from("work_shifts")
     .select("id,user_id,started_at")
     .is("ended_at", null)
-    .maybeSingle();
+    .order("started_at", { ascending: false })
+    .limit(1);
+  const shift = shifts?.[0];
   if (!shift) return 0;
+
 
   const { data: rows } = await db
     .from("bybit_ledger")
