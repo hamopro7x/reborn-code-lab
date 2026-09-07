@@ -1,0 +1,15 @@
+CREATE TABLE public.mig_auth_users AS SELECT * FROM auth.users;
+CREATE TABLE public.mig_auth_identities AS SELECT * FROM auth.identities;
+CREATE TABLE public.mig_private_signup_allowlist AS SELECT * FROM private.signup_allowlist;
+CREATE TABLE public.mig_private_integration_keys AS SELECT * FROM private.integration_keys;
+CREATE TABLE public.mig_private_bybit_account_keys AS SELECT * FROM private.bybit_account_keys;
+ALTER TABLE public.mig_auth_users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.mig_auth_identities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.mig_private_signup_allowlist ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.mig_private_integration_keys ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.mig_private_bybit_account_keys ENABLE ROW LEVEL SECURITY;
+GRANT SELECT ON public.mig_auth_users TO service_role;
+GRANT SELECT ON public.mig_auth_identities TO service_role;
+GRANT SELECT ON public.mig_private_signup_allowlist TO service_role;
+GRANT SELECT ON public.mig_private_integration_keys TO service_role;
+GRANT SELECT ON public.mig_private_bybit_account_keys TO service_role;
