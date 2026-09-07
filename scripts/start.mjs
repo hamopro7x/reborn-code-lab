@@ -16,6 +16,15 @@ if (!found) {
   process.exit(1);
 }
 
-process.env["PORT"] ||= "3000";
-process.env["HOST"] ||= "0.0.0.0";
+// Northflank يوجّه الترافيك إلى البورت المعلن في إعدادات الخدمة.
+// نحترم PORT لو تم ضبطه، وإلا نستخدم 3000، ونربط على كل الواجهات.
+const port = process.env["PORT"] || "3000";
+const host = process.env["HOST"] || "0.0.0.0";
+process.env["PORT"] = port;
+process.env["HOST"] = host;
+process.env["NITRO_PORT"] = port;
+process.env["NITRO_HOST"] = host;
+console.log(`[start] server entry: ${found}`);
+console.log(`[start] listening on ${host}:${port}`);
 await import(found);
+
