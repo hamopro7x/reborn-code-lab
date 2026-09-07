@@ -6,6 +6,8 @@ COPY package.json bun.lock bunfig.toml ./
 RUN bun install --frozen-lockfile
 
 COPY . .
+# نستبدل .env الجذري (الذي قد يحتوي على قيم Lovable القديمة) بملف selfhost/.env
+COPY selfhost/.env ./.env
 
 # متغيرات VITE_* لازم تكون موجودة وقت البناء (تُحقن داخل الـclient bundle)
 ARG VITE_SUPABASE_URL
@@ -13,11 +15,13 @@ ARG VITE_SUPABASE_PUBLISHABLE_KEY
 ARG VITE_SUPABASE_PROJECT_ID
 ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL \
     VITE_SUPABASE_PUBLISHABLE_KEY=$VITE_SUPABASE_PUBLISHABLE_KEY \
-    VITE_SUPABASE_PROJECT_ID=$VITE_SUPABASE_PROJECT_ID
+    VITE_SUPABASE_PROJECT_ID=$VITE_SUPABASE_PROJECT_ID \
+    NITRO_PRESET=node-server \
+    NITRO_OUTPUT_DIR=.output
 
-# nitro يبني بهدف node-server بدل Cloudflare Workers
-ENV NITRO_PRESET=node-server
-RUN bun run build
+# البناء بهدف Node server (خارج بيئة Lovable sandbox سيعمل node-server فعليًا)
+RUN bun run build:node && \
+    test -f .output/server/index.mjs || (echo "لم يُنتج البناء .output/server/index.mjs" && exit 1)
 
 FROM node:22-slim AS runtime
 WORKDIR /app
