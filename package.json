@@ -15,7 +15,7 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "build:node": "NITRO_PRESET=node-server NITRO_OUTPUT_DIR=.output vite build"
+    "build:node": "NITRO_PRESET=node-server NITRO_OUTPUT_DIR=.output vite build && node scripts/verify-node-build.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
