@@ -18,7 +18,23 @@ const errorMiddleware = createMiddleware().server(async ({ next }) => {
   }
 });
 
+// Redirect fly.dev subdomain to the custom domain (production only)
+const domainRedirectMiddleware = createMiddleware().server(
+  async ({ request, next }) => {
+    const url = new URL(request.url);
+    const host = request.headers.get("host") ?? url.host;
+    if (host.endsWith(".fly.dev")) {
+      const target = `https://mag-pro1.com${url.pathname}${url.search}${url.hash}`;
+      return new Response(null, {
+        status: 301,
+        headers: { location: target },
+      });
+    }
+    return next();
+  },
+);
+
 export const startInstance = createStart(() => ({
   functionMiddleware: [attachSupabaseAuth],
-  requestMiddleware: [errorMiddleware],
+  requestMiddleware: [domainRedirectMiddleware, errorMiddleware],
 }));
