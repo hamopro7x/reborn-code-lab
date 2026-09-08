@@ -141,6 +141,24 @@ function DeviceGate() {
           <p className="text-sm text-muted-foreground leading-relaxed">
             هذا الجهاز غير مصرّح له بالدخول. أرسل الكود التالي للإدارة للحصول على الإذن.
           </p>
+          {state.error ? (
+            <p className="text-xs font-mono break-words rounded-lg bg-destructive/10 p-2 text-destructive">
+              {state.error}
+            </p>
+          ) : null}
+          <Button
+            size="sm"
+            className="w-full"
+            onClick={() => {
+              void (async () => {
+                const { resetDeviceCache } = await import("@/lib/device-session");
+                resetDeviceCache();
+                window.location.reload();
+              })();
+            }}
+          >
+            تم التفعيل — أعد المحاولة
+          </Button>
           <div>
             <div className="text-[11px] text-muted-foreground mb-1">كود جهازك</div>
             <div className="p-3 rounded-xl bg-muted/50 font-mono text-xs break-all select-all border border-border">
