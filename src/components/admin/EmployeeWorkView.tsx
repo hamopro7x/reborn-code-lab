@@ -1830,7 +1830,7 @@ export function EmployeeWorkView({
             onClick={pinClaim.start}
             className="flex w-[96px] shrink-0 flex-col items-center gap-1 rounded-2xl border border-[oklch(0.55_0.14_250)] bg-card/70 px-2 py-2 text-[11px] font-bold text-foreground/90 transition hover:bg-card disabled:opacity-60"
           >
-            <ScanFace className="size-5 text-foreground/85" />
+            <KeyRound className="size-5 text-foreground/85" />
             <span>استلم الشغل</span>
           </button>
           {pinClaim.node}
