@@ -339,6 +339,15 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
               اختيار الشفت
             </button>
           </ShiftPickerMenu>
+          <EmployeePinMenu
+            userId={selected?.user_id ?? null}
+            open={pinOpen}
+            onOpenChange={setPinOpen}
+          >
+            <button type="button" className={`${CHIP_BASE} ${CHIP_OFF}`}>
+              رمز الموظف
+            </button>
+          </EmployeePinMenu>
         </div>
 
         <div className="relative flex flex-1 p-4 md:p-6">
