@@ -837,8 +837,10 @@ async function compareOnePair(
   refUrl: string,
   liveUrl: string,
   attempt = 0,
+  modelIndex = 0,
 ): Promise<{ decided: boolean; same: boolean; confidence: number; error?: string }> {
-  const { key, url, model } = visionConfig();
+  const { key, url, models } = visionConfig();
+  const model = models[modelIndex] ?? models[0]!;
   if (!key) return { decided: false, same: false, confidence: 0, error: "مفتاح الرؤية مفقود" };
   try {
     const res = await fetch(url, {
