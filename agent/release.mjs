@@ -48,7 +48,8 @@ try {
   run("nix", ["run", "nixpkgs#nsis", "--", nsiPath]);
 }
 
-// 4) رفع الملف لمخزن الموقع
+// 4) رفع الملف لمخزن الموقع. نقسم الملفات الكبيرة لأن بعض خطط التخزين
+// ترفض رفع ملف يتجاوز 50MB، ومسار التنزيل في الموقع يدمج الأجزاء تلقائياً.
 const setupPath = path.join(OUT_DIR, setupName);
 const buf = fs.readFileSync(setupPath);
 const size = buf.byteLength;
@@ -59,18 +60,33 @@ const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!url || !key) throw new Error("مفاتيح المخزن غير متاحة");
 const headers = {
   apikey: key,
+  authorization: `Bearer ${key}`,
   "content-type": "application/octet-stream",
   "x-upsert": "true",
 };
-// المفاتيح الجديدة (sb_secret_...) ليست JWT فلا تُرسل في Authorization
-if (key.split(".").length === 3) headers.authorization = `Bearer ${key}`;
-const res = await fetch(`${url}/storage/v1/object/site-assets/${storagePath}`, {
-  method: "POST",
-  headers,
-  body: buf,
-});
-if (!res.ok) throw new Error(`فشل الرفع [${res.status}]: ${await res.text()}`);
-console.log(`>> تم الرفع: ${storagePath} (${size} bytes)`);
+const upload = async (objectPath, body) => {
+  const res = await fetch(`${url}/storage/v1/object/site-assets/${objectPath}`, {
+    method: "POST",
+    headers,
+    body,
+  });
+  if (!res.ok) throw new Error(`فشل رفع ${objectPath} [${res.status}]: ${await res.text()}`);
+};
+
+const CHUNK_SIZE = 40_000_000;
+const parts = [];
+if (size <= CHUNK_SIZE) {
+  await upload(storagePath, buf);
+  console.log(`>> تم الرفع: ${storagePath} (${size} bytes)`);
+} else {
+  for (let offset = 0, index = 0; offset < size; offset += CHUNK_SIZE, index += 1) {
+    const part = buf.subarray(offset, Math.min(offset + CHUNK_SIZE, size));
+    const partPath = `releases/parts/${version}/part-${String(index).padStart(2, "0")}`;
+    await upload(partPath, part);
+    parts.push({ path: partPath, size: part.byteLength });
+    console.log(`>> تم رفع الجزء ${index + 1}: ${partPath} (${part.byteLength} bytes)`);
+  }
+}
 
 // 5) تحديث ملف الإصدار في الموقع
 const releaseFile = path.join(ROOT, "src/lib/agent-release.ts");
@@ -88,6 +104,7 @@ export const AGENT_RELEASE = {
   storagePath: "${storagePath}",
   size: ${size},
   sha256: "${sha256}",
+  parts: ${JSON.stringify(parts, null, 2)},
 } as const;
 `,
 );

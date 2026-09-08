@@ -1,6 +1,6 @@
 Unicode True
 Name "Mag Pro Connect"
-OutFile "/tmp/agent-release/MagProConnect-Setup-3.1.23.exe"
+OutFile "/tmp/agent-release/MagProConnect-Setup-3.1.24.exe"
 InstallDir "$LOCALAPPDATA\Programs\MagProConnect"
 RequestExecutionLevel user
 SilentInstall silent
@@ -46,5 +46,7 @@ Section "Install"
   CreateShortcut "$SMPROGRAMS\Mag Pro Connect\Mag Pro Connect.lnk" "$INSTDIR\Mag Pro Connect.exe"
   CreateShortcut "$DESKTOP\Mag Pro Connect.lnk" "$INSTDIR\Mag Pro Connect.exe"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "MagProConnect" '"$INSTDIR\Mag Pro Connect.exe" --hidden'
-  Exec '"$INSTDIR\Mag Pro Connect.exe" --hidden'
+  ; أول تشغيل بعد التثبيت يجب أن يكون ظاهرًا حتى يسجل الموظف جهازه.
+  ; التشغيل المخفي مخصص فقط لبدء ويندوز في المرات التالية.
+  Exec '"$INSTDIR\Mag Pro Connect.exe"'
 SectionEnd
