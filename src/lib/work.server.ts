@@ -761,6 +761,11 @@ export async function verifyFace(
   const frames = (Array.isArray(liveFrames) ? liveFrames : [liveFrames]).slice(0, 3);
   if (!frames.length) return { ok: false, reason: "لم يتم التقاط أي صورة" };
 
+  // Self-hosted deployments must carry a vision key; without it the comparison
+  // can never decide and the employee would only see a generic "failed" message.
+  if (!visionConfig().key)
+    return { ok: false, reason: "خدمة التعرف على الوجه غير مهيّأة على السيرفر — أبلغ الإدارة" };
+
   const db = await admin();
   const { data: enroll } = await db
     .from("employee_face_enroll")
