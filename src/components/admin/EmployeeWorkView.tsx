@@ -1594,7 +1594,8 @@ export function EmployeeWorkView({
     // resolve the relevant shift themselves, so waiting for `st` created an
     // avoidable request waterfall for admins and employees.
     enabled: !blank,
-    refetchInterval: 20_000,
+    refetchInterval: 1_000,
+    refetchIntervalInBackground: false,
   });
   // The rows response includes the shift state, avoiding a second authenticated
   // request before the table can render.
@@ -1616,7 +1617,8 @@ export function EmployeeWorkView({
           : myP2PFn({ data: undefined as any }),
     // الأدمن: لا تُحمّل بيانات P2P إلا بعد اختيار شفت محدد.
     enabled: !blank && (!viewUserId || shiftMode),
-    refetchInterval: 30_000,
+    refetchInterval: 1_000,
+    refetchIntervalInBackground: false,
   });
 
   // طلبات P2P الجديدة (غير مرتبطة بأي شفت) — تظهر لكل الموظفين حتى يربطوها.
@@ -1625,7 +1627,8 @@ export function EmployeeWorkView({
     queryKey: ["work-p2p-open"],
     queryFn: () => openP2PFn({ data: undefined as any }),
     enabled: !blank && !viewUserId && !shiftMode,
-    refetchInterval: 30_000,
+    refetchInterval: 1_000,
+    refetchIntervalInBackground: false,
   });
 
   const p2pRowsView = useMemo(() => {
@@ -1645,7 +1648,8 @@ export function EmployeeWorkView({
         ? shiftTransfersFn({ data: { shiftId: viewShiftId!, scope: "external" as const } })
         : transfersFn({ data: { scope: "external" as const } }),
     enabled: tab === "ext" && !blank,
-    refetchInterval: 30_000,
+    refetchInterval: 1_000,
+    refetchIntervalInBackground: false,
   });
   const intQ = useQuery({
     queryKey: shiftMode ? ["shift-transfers", viewShiftId, "internal"] : ["work-transfers", "internal"],
@@ -1654,7 +1658,8 @@ export function EmployeeWorkView({
         ? shiftTransfersFn({ data: { shiftId: viewShiftId!, scope: "internal" as const } })
         : transfersFn({ data: { scope: "internal" as const } }),
     enabled: tab === "int" && !blank,
-    refetchInterval: 30_000,
+    refetchInterval: 1_000,
+    refetchIntervalInBackground: false,
   });
 
 
@@ -1715,7 +1720,8 @@ export function EmployeeWorkView({
           ? manualEmpFn({ data: { userId: viewUserId } })
           : manualCardFn({ data: undefined as any }),
     enabled: !blank && tab === "all",
-    refetchInterval: 30_000,
+    refetchInterval: 1_000,
+    refetchIntervalInBackground: false,
   });
   const manualRows: any[] = blank || tab !== "all" ? [] : ((manualCardQ.data as any)?.rows ?? []);
 
