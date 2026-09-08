@@ -694,10 +694,21 @@ function visionConfig() {
       : own
         ? "https://api.openai.com/v1/chat/completions"
         : "https://ai.gateway.lovable.dev/v1/chat/completions");
-  const model =
-    process.env["VISION_MODEL"] ??
-    (isGemini ? "gemini-2.5-flash" : own ? "gpt-4o-mini" : "google/gemini-2.5-flash");
-  return { key, url, model };
+  /**
+   * Several models, tried in order. A retired model (404) or an exhausted
+   * per-model free quota (429) then falls back to the next one instead of
+   * failing the whole handover — the exact failure seen in production, where
+   * `gemini-2.5-flash` answered 429 while `gemini-flash-latest` worked.
+   */
+  const forced = process.env["VISION_MODEL"];
+  const models = forced
+    ? [forced]
+    : isGemini
+      ? ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.5-flash-lite"]
+      : own
+        ? ["gpt-4o-mini"]
+        : ["google/gemini-2.5-flash", "google/gemini-3.8-flash"];
+  return { key, url, model: models[0]!, models };
 }
 
 /** AI check that the frame really contains one clear, unobstructed live face. */
@@ -826,8 +837,10 @@ async function compareOnePair(
   refUrl: string,
   liveUrl: string,
   attempt = 0,
+  modelIndex = 0,
 ): Promise<{ decided: boolean; same: boolean; confidence: number; error?: string }> {
-  const { key, url, model } = visionConfig();
+  const { key, url, models } = visionConfig();
+  const model = models[modelIndex] ?? models[0]!;
   if (!key) return { decided: false, same: false, confidence: 0, error: "مفتاح الرؤية مفقود" };
   try {
     const res = await fetch(url, {
@@ -855,6 +868,20 @@ async function compareOnePair(
     if (!res.ok) {
       const body = (await res.text().catch(() => "")).slice(0, 200);
       /**
+       * A retired model (404) or an exhausted per-model quota (429) is switched
+       * for the next model in the list before giving up.
+       */
+      const nextModel = modelIndex + 1 < models.length;
+      if (
+        nextModel &&
+        (res.status === 404 ||
+          res.status === 429 ||
+          res.status === 400 ||
+          res.status === 503 ||
+          attempt >= 2)
+      )
+        return compareOnePair(refUrl, liveUrl, 0, modelIndex + 1);
+      /**
        * Transient provider failures (rate limit / overloaded server) get up to
        * three retries with growing waits, honouring `Retry-After` when present.
        * This is what turns "الخدمة مشغولة الآن" into a normal successful check.
@@ -865,13 +892,13 @@ async function compareOnePair(
           ? Math.min(hinted * 1000, 6000)
           : 900 * Math.pow(2, attempt);
         await new Promise((r) => setTimeout(r, waitMs));
-        return compareOnePair(refUrl, liveUrl, attempt + 1);
+        return compareOnePair(refUrl, liveUrl, attempt + 1, modelIndex);
       }
       const error =
         res.status === 401 || res.status === 403
           ? "مفتاح الخدمة غير صالح — أبلغ الإدارة"
           : res.status === 429
-            ? "خدمة التحقق مشغولة — انتظر دقيقة ثم حاول مرة أخرى"
+            ? "انتهت حصة خدمة التحقق لهذا المفتاح — أبلغ الإدارة"
             : `خطأ ${res.status} من خدمة الرؤية${body ? ` — ${body}` : ""}`;
       return { decided: false, same: false, confidence: 0, error };
     }
@@ -882,7 +909,7 @@ async function compareOnePair(
       // Empty/garbled completions happen under load; one retry usually fixes it.
       if (attempt < 2) {
         await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
-        return compareOnePair(refUrl, liveUrl, attempt + 1);
+        return compareOnePair(refUrl, liveUrl, attempt + 1, modelIndex);
       }
       return { decided: false, same: false, confidence: 0, error: "رد غير مفهوم من خدمة الرؤية" };
     }
@@ -895,7 +922,7 @@ async function compareOnePair(
   } catch (e: any) {
     if (attempt < 3) {
       await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
-      return compareOnePair(refUrl, liveUrl, attempt + 1);
+      return compareOnePair(refUrl, liveUrl, attempt + 1, modelIndex);
     }
     return {
       decided: false,
