@@ -794,7 +794,16 @@ export async function verifyFace(
 
   const results = await Promise.all(frames.map((f) => compareOnePair(refUrl, f)));
   const usable = results.filter((r) => r.decided);
-  if (!usable.length) return { ok: false, reason: "لم يتم التعرف على الوجه، حاول مرة أخرى" };
+  if (!usable.length) {
+    // Surface WHY nothing could be decided (bad key, provider error, quota…)
+    const err = results.find((r) => r.error)?.error;
+    return {
+      ok: false,
+      reason: err
+        ? `تعذّر تنفيذ التعرف على الوجه: ${err}`
+        : "لم يتم التعرف على الوجه، حاول مرة أخرى",
+    };
+  }
 
   const strong = usable.filter((r) => r.same && r.confidence >= 0.75).length;
   const soft = usable.filter((r) => r.same && r.confidence >= 0.6).length;
@@ -810,9 +819,10 @@ export async function verifyFace(
 async function compareOnePair(
   refUrl: string,
   liveUrl: string,
-): Promise<{ decided: boolean; same: boolean; confidence: number }> {
+  attempt = 0,
+): Promise<{ decided: boolean; same: boolean; confidence: number; error?: string }> {
   const { key, url, model } = visionConfig();
-  if (!key) return { decided: false, same: false, confidence: 0 };
+  if (!key) return { decided: false, same: false, confidence: 0, error: "مفتاح الرؤية مفقود" };
   try {
     const res = await fetch(url, {
       method: "POST",
@@ -836,21 +846,46 @@ async function compareOnePair(
         ],
       }),
     });
-    if (!res.ok) return { decided: false, same: false, confidence: 0 };
+    if (!res.ok) {
+      const body = (await res.text().catch(() => "")).slice(0, 200);
+      // Transient provider failures (rate limit / server) deserve one retry.
+      if (attempt === 0 && (res.status === 429 || res.status >= 500)) {
+        await new Promise((r) => setTimeout(r, 1200));
+        return compareOnePair(refUrl, liveUrl, 1);
+      }
+      const error =
+        res.status === 401 || res.status === 403
+          ? "مفتاح الخدمة غير صالح — أبلغ الإدارة"
+          : res.status === 429
+            ? "الخدمة مشغولة الآن، حاول بعد لحظات"
+            : `خطأ ${res.status} من خدمة الرؤية${body ? ` — ${body}` : ""}`;
+      return { decided: false, same: false, confidence: 0, error };
+    }
     const json: any = await res.json();
     const text = String(json?.choices?.[0]?.message?.content ?? "");
     const m = text.match(/\{[\s\S]*\}/);
-    if (!m) return { decided: false, same: false, confidence: 0 };
+    if (!m)
+      return { decided: false, same: false, confidence: 0, error: "رد غير مفهوم من خدمة الرؤية" };
     const parsed = JSON.parse(m[0]);
     return {
       decided: typeof parsed?.same === "boolean",
       same: parsed?.same === true,
       confidence: Number(parsed?.confidence ?? 0),
     };
-  } catch {
-    return { decided: false, same: false, confidence: 0 };
+  } catch (e: any) {
+    if (attempt === 0) {
+      await new Promise((r) => setTimeout(r, 800));
+      return compareOnePair(refUrl, liveUrl, 1);
+    }
+    return {
+      decided: false,
+      same: false,
+      confidence: 0,
+      error: String(e?.message ?? e).slice(0, 160),
+    };
   }
 }
+
 
 /* ------------------- dynamic movement challenge ------------------- */
 
