@@ -14,28 +14,28 @@ fly auth login
 ## 3) إنشاء التطبيق (مرة واحدة)
 
 ```bash
-fly apps create mag-pro1
+fly launch
 ```
 
-إذا كان الاسم مستخدمًا، اختر اسمًا آخر وعدّله في `fly.toml`.
+- إذا كان اسم `mag-pro1` مستخدمًا، اختر اسمًا آخر وعدّله في `fly.toml`.
+- `fly launch` ستكتشف `Dockerfile` وتستخدمه تلقائيًا.
 
 ## 4) إضافة الأسرار (Runtime secrets)
 
+استبدل القيم داخل الأقواس `< >` بالقيم الفعلية من ملف `selfhost/.env`.
 هذه المتغيرات تُقرأ أثناء التشغيل على السيرفر فقط، ولا تُضمن في الصورة:
 
 ```bash
 fly secrets set \
-  SUPABASE_URL="https://kcdsdaytrnzoiharmyxo.supabase.co" \
-  SUPABASE_PUBLISHABLE_KEY="sb_publishable_SnDM9gGnsqswJtD08pq1HA_ffezyBvo" \
-  SUPABASE_ANON_KEY="sb_publishable_SnDM9gGnsqswJtD08pq1HA_ffezyBvo" \
-  SUPABASE_SERVICE_ROLE_KEY="sb_secret_8P2H87-nB-BJRu87kjAkJw_sV10kGUy" \
-  SUPABASE_PROJECT_ID="kcdsdaytrnzoiharmyxo" \
-  BYBIT_API_KEY="" \
-  BYBIT_API_SECRET="" \
+  SUPABASE_URL="<URL من selfhost/.env>" \
+  SUPABASE_PUBLISHABLE_KEY="<المفتاح العام من selfhost/.env>" \
+  SUPABASE_ANON_KEY="<نفس المفتاح العام>" \
+  SUPABASE_SERVICE_ROLE_KEY="<service role key من selfhost/.env>" \
+  SUPABASE_PROJECT_ID="<PROJECT_ID من selfhost/.env>" \
+  BYBIT_API_KEY="<BYBIT_API_KEY من selfhost/.env أو اتركه فارغًا>" \
+  BYBIT_API_SECRET="<BYBIT_API_SECRET من selfhost/.env أو اتركه فارغًا>" \
   SYNC_HOOK_SECRET="$(openssl rand -hex 32)"
 ```
-
-املأ `BYBIT_API_KEY` و `BYBIT_API_SECRET` إذا كنت تستخدم Bybit.
 
 ## 5) النشر
 
@@ -43,9 +43,9 @@ fly secrets set \
 
 ```bash
 fly deploy \
-  --build-arg VITE_SUPABASE_URL="https://kcdsdaytrnzoiharmyxo.supabase.co" \
-  --build-arg VITE_SUPABASE_PUBLISHABLE_KEY="sb_publishable_SnDM9gGnsqswJtD08pq1HA_ffezyBvo" \
-  --build-arg VITE_SUPABASE_PROJECT_ID="kcdsdaytrnzoiharmyxo"
+  --build-arg VITE_SUPABASE_URL="<URL من selfhost/.env>" \
+  --build-arg VITE_SUPABASE_PUBLISHABLE_KEY="<المفتاح العام من selfhost/.env>" \
+  --build-arg VITE_SUPABASE_PROJECT_ID="<PROJECT_ID من selfhost/.env>"
 ```
 
 ## 6) فحص التشغيل
@@ -67,7 +67,7 @@ Fly.io نفسه لا يقدّم cron بسيط. الخيارات:
 
 1. استخدم خدمة cron خارجية (مجانية مثل cron-job.org) تستدعي:
    ```
-   https://mag-pro1.fly.dev/api/public/hooks/bybit-ledger-sync
+   https://<اسم-التطبيق>.fly.dev/api/public/hooks/bybit-ledger-sync
    ```
    مع الهيدر:
    ```
