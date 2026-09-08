@@ -44,10 +44,11 @@ export function ensureDeviceChecked(
         data: { fingerprint, user_agent: navigator.userAgent, hw_signature, legacy_fingerprint },
       });
       deviceOk = !!res?.ok;
-      return { ok: deviceOk, fingerprint };
-    } catch {
+      return { ok: deviceOk, fingerprint, ...(res?.error ? { error: String(res.error) } : {}) };
+    } catch (e) {
       deviceOk = false;
-      return { ok: false, fingerprint };
+      // خطأ سيرفر/شبكة ليس "جهاز غير مصرّح": نُظهر السبب الحقيقي للموظف.
+      return { ok: false, fingerprint, error: (e as Error)?.message || "تعذّر التحقق من الجهاز" };
     }
   })();
   return deviceCheckPromise;
