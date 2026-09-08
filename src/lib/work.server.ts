@@ -902,7 +902,7 @@ async function compareOnePair(
       // Empty/garbled completions happen under load; one retry usually fixes it.
       if (attempt < 2) {
         await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
-        return compareOnePair(refUrl, liveUrl, attempt + 1);
+        return compareOnePair(refUrl, liveUrl, attempt + 1, modelIndex);
       }
       return { decided: false, same: false, confidence: 0, error: "رد غير مفهوم من خدمة الرؤية" };
     }
