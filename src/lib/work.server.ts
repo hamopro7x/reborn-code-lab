@@ -1226,7 +1226,7 @@ export async function myShiftRows(userId: string, page = 1, pageSize = 50) {
       quantityAt: e?.quantityAt ?? null,
     };
   });
-  return { ...res, rows, holding: true as const, serverNow: new Date().toISOString() };
+  return { ...res, rows, ...state, serverNow: new Date().toISOString() };
 }
 
 /* ------------------------- admin view of one employee -------------------------
@@ -1295,7 +1295,15 @@ export async function adminEmployeeWorkState(userId: string) {
 /** Rows of the employee's last CLOSED shift — تُعرض حتى لو عنده شفت شغّال. */
 export async function adminEmployeeShiftRows(userId: string, page = 1, pageSize = 50) {
   const state = await adminEmployeeWorkState(userId);
-  if (!state.holding) return { page: 1, pageSize, total: 0, rows: [] as any[], holding: false as const };
+  if (!state.holding)
+    return {
+      page: 1,
+      pageSize,
+      total: 0,
+      rows: [] as any[],
+      holding: false as const,
+      live: state.live,
+    };
   const res = await workTable({ userId, shiftId: state.shiftId, page, pageSize, successOnly: true });
 
   const entries = await myEntries(res.rows.map((r: any) => r.ledgerId));
@@ -1309,7 +1317,7 @@ export async function adminEmployeeShiftRows(userId: string, page = 1, pageSize 
       quantityAt: e?.quantityAt ?? null,
     };
   });
-  return { ...res, rows, holding: true as const, serverNow: new Date().toISOString() };
+  return { ...res, rows, ...state, serverNow: new Date().toISOString() };
 }
 
 /* ------------------ employee-entered values (جنيه / الكمية) ------------------ */

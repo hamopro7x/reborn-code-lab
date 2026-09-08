@@ -343,7 +343,6 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
         <div className="relative flex flex-1 p-4 md:p-6">
           <div className="min-w-0 flex-1">
             <EmployeeWorkView
-              key={`${selected?.user_id ?? "none"}:${selectedShift?.id ?? "blank"}`}
               isAdmin
               blank={!selectedShift}
               {...(selected ? { viewUserId: selected.user_id } : {})}
