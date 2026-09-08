@@ -1604,7 +1604,10 @@ export function EmployeeWorkView({
         : viewUserId
           ? empTxnsFn({ data: { userId: viewUserId, page: 1 } })
           : txnsFn({ data: { page: 1 } }),
-    enabled: holding && !blank,
+    // Start rows immediately beside the state request. Both row endpoints
+    // resolve the relevant shift themselves, so waiting for `st` created an
+    // avoidable request waterfall for admins and employees.
+    enabled: !blank,
     refetchInterval: 20_000,
   });
 

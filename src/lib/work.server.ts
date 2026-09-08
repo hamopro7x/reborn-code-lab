@@ -221,9 +221,10 @@ export async function workTable(opts: {
   if (error) throw new Error(error.message);
 
   const rows = data ?? [];
-  const names = await namesFor(db, rows.map((r: any) => r.user_id));
-
-  const accounts = await accountNames(db);
+  const [names, accounts] = await Promise.all([
+    namesFor(db, rows.map((r: any) => r.user_id)),
+    accountNames(db),
+  ]);
 
   return {
     page,
@@ -694,20 +695,14 @@ function visionConfig() {
       : own
         ? "https://api.openai.com/v1/chat/completions"
         : "https://ai.gateway.lovable.dev/v1/chat/completions");
-  /**
-   * Several models, tried in order. A retired model (404) or an exhausted
-   * per-model free quota (429) then falls back to the next one instead of
-   * failing the whole handover — the exact failure seen in production, where
-   * `gemini-2.5-flash` answered 429 while `gemini-flash-latest` worked.
-   */
   const forced = process.env["VISION_MODEL"];
   const models = forced
     ? [forced]
     : isGemini
-      ? ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.5-flash-lite"]
+      ? ["gemini-flash-latest"]
       : own
         ? ["gpt-4o-mini"]
-        : ["google/gemini-2.5-flash", "google/gemini-3.8-flash"];
+        : ["openai/gpt-6-astra"];
   return { key, url, model: models[0]!, models };
 }
 
@@ -838,15 +833,14 @@ export async function verifyFace(
 async function compareOnePair(
   refUrl: string,
   liveUrl: string,
-  attempt = 0,
-  modelIndex = 0,
 ): Promise<{ decided: boolean; same: boolean; confidence: number; error?: string }> {
   const { key, url, models } = visionConfig();
-  const model = models[modelIndex] ?? models[0]!;
+  const model = models[0]!;
   if (!key) return { decided: false, same: false, confidence: 0, error: "مفتاح الرؤية مفقود" };
-  // مهلة أقصر: لو المزود بطيء نرد بسرعة بدل تعليق شاشة التحقق.
+  // One bounded request only. Model fallbacks and retries made one verification
+  // wait for several provider timeouts in sequence.
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 9000);
+  const timer = setTimeout(() => ctrl.abort(), 7000);
 
   try {
     const res = await fetch(url, {
@@ -855,8 +849,6 @@ async function compareOnePair(
       headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
       body: JSON.stringify({
         model,
-        // The answer is a tiny JSON object; capping tokens shortens the reply time.
-        max_tokens: 40,
         messages: [
           {
             role: "system",
@@ -876,29 +868,6 @@ async function compareOnePair(
     });
     if (!res.ok) {
       const body = (await res.text().catch(() => "")).slice(0, 200);
-      /**
-       * A retired model (404) or an exhausted per-model quota (429) is switched
-       * for the next model in the list before giving up.
-       */
-      const nextModel = modelIndex + 1 < models.length;
-      if (
-        nextModel &&
-        (res.status === 404 ||
-          res.status === 429 ||
-          res.status === 400 ||
-          res.status === 503 ||
-          attempt >= 2)
-      )
-        return compareOnePair(refUrl, liveUrl, 0, modelIndex + 1);
-      /**
-       * محاولة واحدة سريعة فقط عند انشغال المزود — الانتظار الطويل كان
-       * هو سبب بطء التحقق.
-       */
-      if (attempt < 1 && (res.status === 429 || res.status === 408 || res.status >= 500)) {
-        await new Promise((r) => setTimeout(r, 300));
-        return compareOnePair(refUrl, liveUrl, attempt + 1, modelIndex);
-      }
-
       const error =
         res.status === 401 || res.status === 403
           ? "مفتاح الخدمة غير صالح — أبلغ الإدارة"
@@ -911,11 +880,6 @@ async function compareOnePair(
     const text = String(json?.choices?.[0]?.message?.content ?? "");
     const m = text.match(/\{[\s\S]*\}/);
     if (!m) {
-      // Empty/garbled completions happen under load; one quick retry fixes it.
-      if (attempt < 1) {
-        await new Promise((r) => setTimeout(r, 300));
-        return compareOnePair(refUrl, liveUrl, attempt + 1, modelIndex);
-      }
       return { decided: false, same: false, confidence: 0, error: "رد غير مفهوم من خدمة الرؤية" };
     }
     const parsed = JSON.parse(m[0]);
@@ -925,10 +889,6 @@ async function compareOnePair(
       confidence: Number(parsed?.confidence ?? 0),
     };
   } catch (e: any) {
-    if (attempt < 1) {
-      await new Promise((r) => setTimeout(r, 400));
-      return compareOnePair(refUrl, liveUrl, attempt + 1, modelIndex);
-    }
     const aborted = e?.name === "AbortError";
     return {
       decided: false,
