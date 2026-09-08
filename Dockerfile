@@ -30,6 +30,7 @@ ENV NODE_ENV=production \
     NITRO_HOST=0.0.0.0
 
 COPY --from=build /app/.output ./.output
+COPY --from=build /app/scripts/fly-start.mjs ./scripts/fly-start.mjs
 
 EXPOSE 3000
-CMD ["node", ".output/server/index.mjs"]
+CMD ["node", "scripts/fly-start.mjs"]
