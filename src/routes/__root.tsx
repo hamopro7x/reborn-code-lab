@@ -14,6 +14,14 @@ import { GlobalRealtime } from "@/lib/realtime/global-realtime";
 import { setUiScope } from "@/lib/ui-state";
 import { saveLastLocation } from "@/lib/last-location";
 
+const SUPABASE_ORIGIN = (() => {
+  const url = import.meta.env['VITE_SUPABASE_URL'] as string | undefined;
+  try {
+    return url ? new URL(url).origin : "https://supabase.co";
+  } catch {
+    return "https://supabase.co";
+  }
+})();
 
 
 
