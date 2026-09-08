@@ -107,7 +107,7 @@ export function captureUprightFrame(
     ctx.scale(-1, 1);
   }
   ctx.drawImage(video, sx, sy, sw, sh, 0, 0, outW, outH);
-  return out.toDataURL("image/jpeg", 0.92);
+  return out.toDataURL("image/jpeg", 0.8);
 }
 
 export type FrameQuality = {
