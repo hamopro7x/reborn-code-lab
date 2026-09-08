@@ -894,11 +894,11 @@ async function compareOnePair(
        * three retries with growing waits, honouring `Retry-After` when present.
        * This is what turns "الخدمة مشغولة الآن" into a normal successful check.
        */
-      if (attempt < 3 && (res.status === 429 || res.status === 408 || res.status >= 500)) {
+      if (attempt < 2 && (res.status === 429 || res.status === 408 || res.status >= 500)) {
         const hinted = Number(res.headers.get("retry-after") ?? "");
         const waitMs = Number.isFinite(hinted) && hinted > 0
-          ? Math.min(hinted * 1000, 6000)
-          : 900 * Math.pow(2, attempt);
+          ? Math.min(hinted * 1000, 2000)
+          : 500 * (attempt + 1);
         await new Promise((r) => setTimeout(r, waitMs));
         return compareOnePair(refUrl, liveUrl, attempt + 1, modelIndex);
       }
