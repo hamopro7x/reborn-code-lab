@@ -227,7 +227,7 @@ const claimSchema = z.object({
   faceImages: z.array(frame).min(1).max(3),
   steps: z
     .array(z.object({ dir: z.enum(["right", "left"]), image: frame }))
-    .min(2)
+    .min(1)
     .max(4),
   faceBack: frame.optional(),
 });
