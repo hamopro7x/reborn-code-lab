@@ -573,3 +573,39 @@ export const getEmployeeManualCardTxns = createServerFn({ method: "POST" })
     const mod = await import("./work.server");
     return mod.employeeManualCardTxns(data.userId);
   });
+
+/* --------------------------- employee PIN (admin) --------------------------- */
+
+const adminPin = z.string().regex(/^\d{6}$/, "الرمز يجب أن يكون 6 أرقام");
+
+/** Does this employee have a PIN? (admin view) */
+export const getEmployeePinStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ userId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    return { hasPin: await mod.pinIsSet(data.userId) };
+  });
+
+/** Admin sets or replaces an employee's 6-digit PIN. */
+export const setEmployeePin = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ userId: z.string().uuid(), pin: adminPin }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    return mod.savePin(data.userId, data.pin, context.userId);
+  });
+
+/** Admin clears the PIN so the employee creates a new one on next handover. */
+export const clearEmployeePin = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ userId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    return mod.clearPin(data.userId);
+  });
