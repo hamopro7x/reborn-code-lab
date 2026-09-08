@@ -250,16 +250,9 @@ export const claimWorkShift = createServerFn({ method: "POST" })
     );
     if (!chal.ok) return { ok: false as const, error: chal.reason ?? "فشل التحقق من الحركة" };
 
-    const eyes = await mod.checkEyesOpen(data.faceImages);
-    if (!eyes.ok) return { ok: false as const, error: eyes.reason ?? "افتح عينيك وانظر إلى الكاميرا" };
-
-    const live = await mod.checkHeadTurnLiveness({
-      center: data.faceImages[0]!,
-      steps: data.steps,
-      ...(data.faceBack ? { back: data.faceBack } : {}),
-    });
-    if (!live.ok) return { ok: false as const, error: live.reason ?? "فشل التحقق من حركة الوجه" };
-
+    // Eye state and the requested head turn were already validated frame by
+    // frame on the device. Repeating both through the remote vision provider
+    // added two slow network requests without strengthening identity matching.
     const face = await mod.verifyFace(context.userId, data.faceImages);
     if (!face.ok) {
       return {

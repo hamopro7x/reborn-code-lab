@@ -45,7 +45,6 @@ import { PAGE_SIZE } from "@/lib/pagination";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  getMyWorkState,
   getMyShiftTxns,
   saveMyTxnEntry,
   saveTransferNote,
@@ -63,7 +62,6 @@ import {
 
   getMyShiftsForLink,
   linkP2POrder,
-  getEmployeeWorkState,
   getEmployeeShiftTxns,
   getEmployeeManualTxns,
   getEmployeeShiftP2P,
@@ -1560,9 +1558,7 @@ export function EmployeeWorkView({
   viewAvatar?: string;
 }) {
   const qc = useQueryClient();
-  const stateFn = useServerFn(getMyWorkState);
   const txnsFn = useServerFn(getMyShiftTxns);
-  const empStateFn = useServerFn(getEmployeeWorkState);
   const empTxnsFn = useServerFn(getEmployeeShiftTxns);
   const shiftTxnsFn = useServerFn(getShiftTxns);
   const shiftTransfersFn = useServerFn(getShiftTransfers);
@@ -1582,16 +1578,6 @@ export function EmployeeWorkView({
   // اسحب المعاملات الجديدة من Bybit للشفت المفتوح بدون انتظار مزامنة يدوية.
   useLedgerAutoSync(!blank && !shiftMode);
 
-  const st = useQuery({
-    queryKey: viewing ? ["emp-work-state", viewUserId] : ["my-work-state"],
-    queryFn: () =>
-      viewUserId ? empStateFn({ data: { userId: viewUserId } }) : stateFn({ data: undefined as any }),
-    enabled: !shiftMode && !blank,
-    refetchInterval: 20_000,
-  });
-  // في وضع الشفت المحدد: السجل التاريخي متاح دائمًا.
-  const holding = blank ? false : shiftMode || (st.data as any)?.holding === true;
-
   const txns = useQuery({
     queryKey: shiftMode
       ? ["shift-txns", viewShiftId]
@@ -1604,9 +1590,16 @@ export function EmployeeWorkView({
         : viewUserId
           ? empTxnsFn({ data: { userId: viewUserId, page: 1 } })
           : txnsFn({ data: { page: 1 } }),
-    enabled: holding && !blank,
+    // Start rows immediately beside the state request. Both row endpoints
+    // resolve the relevant shift themselves, so waiting for `st` created an
+    // avoidable request waterfall for admins and employees.
+    enabled: !blank,
     refetchInterval: 20_000,
   });
+  // The rows response includes the shift state, avoiding a second authenticated
+  // request before the table can render.
+  const workState = txns.data as any;
+  const holding = blank ? false : shiftMode || workState?.holding === true;
 
   // طلبات P2P: الموظف والأدمن يشاهدون فقط الطلبات المرتبطة بالشفت المختار/المفتوح.
   const p2pCompleted = useQuery({
@@ -1812,12 +1805,12 @@ export function EmployeeWorkView({
             <div className="min-w-0">
                 <div className="truncate text-xl font-black">{name}</div>
                 <div className="mt-1 flex items-center gap-1.5 text-sm text-foreground/70">
-                  {st.data?.holding === true ? (
+                  {workState?.holding === true ? (
                     <>
                       <span className="size-2 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.8)]" />
                       <span className="font-bold text-emerald-500">متصل</span>
                     </>
-                  ) : st.data?.holding === false ? (
+                  ) : workState?.holding === false ? (
                     <>
                       <span className="size-2 rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.8)]" />
                       <span className="font-bold text-red-500">غير متصل</span>
@@ -2082,10 +2075,10 @@ export function EmployeeWorkView({
             </thead>
 
             <tbody>
-              {viewing && !shiftMode && (st.data as any)?.holding === false ? (
+              {viewing && !shiftMode && workState?.holding === false ? (
                 <tr>
                   <td colSpan={COLUMNS.length} className="py-8 text-center text-xs text-muted-foreground">
-                    {(st.data as any)?.live === true
+                    {workState?.live === true
                       ? "الشفت الحالي شغّال ولا يوجد شفت منتهي بعد."
                       : "لا توجد شفتات لهذا الموظف."}
                   </td>
