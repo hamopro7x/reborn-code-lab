@@ -844,12 +844,18 @@ async function compareOnePair(
   const { key, url, models } = visionConfig();
   const model = models[modelIndex] ?? models[0]!;
   if (!key) return { decided: false, same: false, confidence: 0, error: "مفتاح الرؤية مفقود" };
+  // A stuck provider request must never hang the handover screen.
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 15000);
   try {
     const res = await fetch(url, {
       method: "POST",
+      signal: ctrl.signal,
       headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
       body: JSON.stringify({
         model,
+        // The answer is a tiny JSON object; capping tokens shortens the reply time.
+        max_tokens: 40,
         messages: [
           {
             role: "system",
