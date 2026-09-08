@@ -17,7 +17,7 @@ import { useServerFn } from "@tanstack/react-start";
 import {
   Loader2,
   User,
-  ScanFace,
+  KeyRound,
   Clock,
   ListOrdered,
   AlertTriangle,
@@ -78,7 +78,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { getBybitCardBrands } from "@/lib/bybit.functions";
-import { useFaceClaim } from "@/components/admin/FaceGate";
+import { usePinClaim } from "@/components/admin/PinGate";
 import { BrandBadge, LedgerRowDetails, statusBadge } from "@/components/admin/BybitLedgerPanel";
 import { useWorkRealtime } from "@/lib/use-work-realtime";
 import { useLedgerAutoSync } from "@/lib/use-ledger-sync";
@@ -1762,7 +1762,7 @@ export function EmployeeWorkView({
 
 
   /* --------------------- identity / claim / clock --------------------- */
-  const faceClaim = useFaceClaim(() => {
+  const pinClaim = usePinClaim(() => {
     void qc.invalidateQueries({ queryKey: ["my-work-state"] });
     void qc.invalidateQueries({ queryKey: ["my-shift-txns"] });
   });
@@ -1827,13 +1827,13 @@ export function EmployeeWorkView({
 
           <button
             type="button"
-            onClick={faceClaim.start}
+            onClick={pinClaim.start}
             className="flex w-[96px] shrink-0 flex-col items-center gap-1 rounded-2xl border border-[oklch(0.55_0.14_250)] bg-card/70 px-2 py-2 text-[11px] font-bold text-foreground/90 transition hover:bg-card disabled:opacity-60"
           >
-            <ScanFace className="size-5 text-foreground/85" />
+            <KeyRound className="size-5 text-foreground/85" />
             <span>استلم الشغل</span>
           </button>
-          {faceClaim.node}
+          {pinClaim.node}
 
           <div className="flex shrink-0 items-center gap-2">
             <div className="text-left leading-tight">

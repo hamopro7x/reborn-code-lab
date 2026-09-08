@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Loader2, Trash2 } from "lucide-react";
+import { EmployeePinMenu } from "@/components/admin/EmployeePinMenu";
 import { EmployeeWorkView } from "@/components/admin/EmployeeWorkView";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { listEmployees } from "@/lib/admin.functions";
@@ -288,6 +289,7 @@ function ShiftPickerMenu({
 export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [shiftOpen, setShiftOpen] = useState(false);
+  const [pinOpen, setPinOpen] = useState(false);
 
   const [selected, setSelected] = useState<Employee | null>(null);
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
@@ -338,6 +340,15 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
               اختيار الشفت
             </button>
           </ShiftPickerMenu>
+          <EmployeePinMenu
+            userId={selected?.user_id ?? null}
+            open={pinOpen}
+            onOpenChange={setPinOpen}
+          >
+            <button type="button" className={`${CHIP_BASE} ${CHIP_OFF}`}>
+              رمز الموظف
+            </button>
+          </EmployeePinMenu>
         </div>
 
         <div className="relative flex flex-1 p-4 md:p-6">
