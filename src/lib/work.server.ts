@@ -694,10 +694,21 @@ function visionConfig() {
       : own
         ? "https://api.openai.com/v1/chat/completions"
         : "https://ai.gateway.lovable.dev/v1/chat/completions");
-  const model =
-    process.env["VISION_MODEL"] ??
-    (isGemini ? "gemini-2.5-flash" : own ? "gpt-4o-mini" : "google/gemini-2.5-flash");
-  return { key, url, model };
+  /**
+   * Several models, tried in order. A retired model (404) or an exhausted
+   * per-model free quota (429) then falls back to the next one instead of
+   * failing the whole handover — the exact failure seen in production, where
+   * `gemini-2.5-flash` answered 429 while `gemini-flash-latest` worked.
+   */
+  const forced = process.env["VISION_MODEL"];
+  const models = forced
+    ? [forced]
+    : isGemini
+      ? ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.5-flash-lite"]
+      : own
+        ? ["gpt-4o-mini"]
+        : ["google/gemini-2.5-flash", "google/gemini-3.8-flash"];
+  return { key, url, model: models[0]!, models };
 }
 
 /** AI check that the frame really contains one clear, unobstructed live face. */
