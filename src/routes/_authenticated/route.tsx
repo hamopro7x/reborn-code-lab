@@ -107,16 +107,16 @@ function DeviceGate() {
   const [state, setState] = useState<
     | { status: "loading" }
     | { status: "ok" }
-    | { status: "blocked"; fingerprint: string }
+    | { status: "blocked"; fingerprint: string; error?: string }
   >({ status: "loading" });
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { ok, fingerprint } = await ensureDeviceChecked(checkFn as any);
+      const { ok, fingerprint, error } = await ensureDeviceChecked(checkFn as any);
       if (cancelled) return;
       if (ok) setState({ status: "ok" });
-      else setState({ status: "blocked", fingerprint });
+      else setState({ status: "blocked", fingerprint, ...(error ? { error } : {}) });
     })();
     return () => { cancelled = true; };
   }, [checkFn]);
