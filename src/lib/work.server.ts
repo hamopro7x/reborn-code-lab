@@ -684,9 +684,9 @@ export async function enrollMyFace(userId: string, frames: string[]) {
 function visionConfig() {
   const own = process.env["VISION_API_KEY"] ?? "";
   const key = own || process.env["LOVABLE_API_KEY"] || "";
-  // Google AI Studio keys start with "AIza": route them to Gemini's
-  // OpenAI-compatible endpoint so a self-hosted deploy works with no extra vars.
-  const isGemini = own.startsWith("AIza");
+  // Google AI Studio keys start with "AIza" (classic) or "AQ." (new auth keys):
+  // route them to Gemini's OpenAI-compatible endpoint automatically.
+  const isGemini = own.startsWith("AIza") || own.startsWith("AQ.");
   const url =
     process.env["VISION_API_URL"] ??
     (isGemini
