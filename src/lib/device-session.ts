@@ -21,7 +21,7 @@ function getCachedLegacy(): Promise<string> {
 }
 
 let deviceOk: boolean | null = null;
-let deviceCheckPromise: Promise<{ ok: boolean; fingerprint: string }> | null = null;
+let deviceCheckPromise: Promise<{ ok: boolean; fingerprint: string; error?: string }> | null = null;
 
 export function getCachedDeviceOk(): boolean | null {
   return deviceOk;
@@ -31,7 +31,7 @@ export function ensureDeviceChecked(
   checkFn: (args: {
     data: { fingerprint: string; user_agent?: string; hw_signature?: string; legacy_fingerprint?: string };
   }) => Promise<any>,
-): Promise<{ ok: boolean; fingerprint: string }> {
+): Promise<{ ok: boolean; fingerprint: string; error?: string }> {
   if (deviceCheckPromise) return deviceCheckPromise;
   deviceCheckPromise = (async () => {
     const [fingerprint, hw_signature, legacy_fingerprint] = await Promise.all([
