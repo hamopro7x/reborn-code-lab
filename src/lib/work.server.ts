@@ -2113,3 +2113,97 @@ export async function employeeManualCardTxns(userId: string) {
     return { serverNow: new Date().toISOString(), editWindowMs: MANUAL_CARD_EDIT_MS, rows: [] as ManualCardRow[] };
   return listManualCardTxns(userId, shiftId);
 }
+
+/* ------------------------------ employee PIN ------------------------------ */
+/**
+ * Shift handover is gated by a 6-digit PIN instead of face matching.
+ * The PIN is never stored in clear text: a random per-user salt plus SHA-256
+ * is kept in `work_pins`, which is reachable only through the service role.
+ */
+
+const PIN_RE = /^\d{6}$/;
+
+function randomSalt(): string {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function hashPin(pin: string, salt: string): Promise<string> {
+  const data = new TextEncoder().encode(`${salt}:${pin}`);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+export async function pinIsSet(userId: string): Promise<boolean> {
+  const db = await admin();
+  const { data } = await db.from("work_pins").select("user_id").eq("user_id", userId).maybeSingle();
+  return !!data;
+}
+
+/** Creates or replaces a PIN. `by` records who changed it (self or admin). */
+export async function savePin(userId: string, pin: string, by: string) {
+  if (!PIN_RE.test(pin)) return { ok: false as const, error: "الرمز يجب أن يكون 6 أرقام" };
+  const salt = randomSalt();
+  const db = await admin();
+  const { error } = await db.from("work_pins").upsert(
+    {
+      user_id: userId,
+      pin_hash: await hashPin(pin, salt),
+      pin_salt: salt,
+      fail_count: 0,
+      locked_until: null,
+      set_by: by,
+    },
+    { onConflict: "user_id" },
+  );
+  if (error) return { ok: false as const, error: error.message };
+  return { ok: true as const };
+}
+
+export async function clearPin(userId: string) {
+  const db = await admin();
+  const { error } = await db.from("work_pins").delete().eq("user_id", userId);
+  if (error) return { ok: false as const, error: error.message };
+  return { ok: true as const };
+}
+
+/** Verifies a PIN, with a short lockout after 5 wrong tries. */
+export async function verifyPin(userId: string, pin: string) {
+  if (!PIN_RE.test(pin)) return { ok: false as const, reason: "الرمز يجب أن يكون 6 أرقام" };
+  const db = await admin();
+  const { data } = await db
+    .from("work_pins")
+    .select("pin_hash, pin_salt, fail_count, locked_until")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!data) return { ok: false as const, reason: "NO_PIN" };
+
+  const locked = data.locked_until ? new Date(data.locked_until).getTime() : 0;
+  if (locked > Date.now()) {
+    const mins = Math.max(1, Math.ceil((locked - Date.now()) / 60_000));
+    return { ok: false as const, reason: `تم إيقاف المحاولات مؤقتًا، أعد المحاولة بعد ${mins} دقيقة` };
+  }
+
+  const same = (await hashPin(pin, data.pin_salt)) === data.pin_hash;
+  if (!same) {
+    const fails = (data.fail_count ?? 0) + 1;
+    await db
+      .from("work_pins")
+      .update({
+        fail_count: fails,
+        locked_until: fails >= 5 ? new Date(Date.now() + 5 * 60_000).toISOString() : null,
+      })
+      .eq("user_id", userId);
+    return {
+      ok: false as const,
+      reason:
+        fails >= 5
+          ? "محاولات خاطئة كثيرة — انتظر 5 دقائق"
+          : `الرمز غير صحيح (${5 - fails} محاولات متبقية)`,
+    };
+  }
+
+  await db.from("work_pins").update({ fail_count: 0, locked_until: null }).eq("user_id", userId);
+  return { ok: true as const };
+}
