@@ -862,11 +862,8 @@ export type FaceDir = "right" | "left";
  */
 export async function startFaceChallenge(userId: string) {
   const db = await admin();
-  // Exactly TWO movements per attempt, in a random order.
-  const pool: FaceDir[][] = [
-    ["right", "left"],
-    ["left", "right"],
-  ];
+  // A SINGLE random movement per attempt (kept simple for employees).
+  const pool: FaceDir[][] = [["right"], ["left"]];
   const steps = pool[Math.floor(Math.random() * pool.length)]!;
   await db.from("work_auth_challenges").delete().eq("user_id", userId).eq("purpose", "liveness");
   const { error } = await db.from("work_auth_challenges").insert({
