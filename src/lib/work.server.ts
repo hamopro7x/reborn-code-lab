@@ -682,22 +682,29 @@ export async function enrollMyFace(userId: string, frames: string[]) {
  * provider key (`VISION_API_KEY` + `VISION_API_URL` + `VISION_MODEL`).
  */
 function visionConfig() {
-  const key = process.env["VISION_API_KEY"] ?? process.env["LOVABLE_API_KEY"] ?? "";
+  const own = process.env["VISION_API_KEY"] ?? "";
+  const key = own || process.env["LOVABLE_API_KEY"] || "";
+  // Google AI Studio keys start with "AIza": route them to Gemini's
+  // OpenAI-compatible endpoint so a self-hosted deploy works with no extra vars.
+  const isGemini = own.startsWith("AIza");
   const url =
     process.env["VISION_API_URL"] ??
-    (process.env["VISION_API_KEY"]
-      ? "https://api.openai.com/v1/chat/completions"
-      : "https://ai.gateway.lovable.dev/v1/chat/completions");
+    (isGemini
+      ? "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+      : own
+        ? "https://api.openai.com/v1/chat/completions"
+        : "https://ai.gateway.lovable.dev/v1/chat/completions");
   const model =
     process.env["VISION_MODEL"] ??
-    (process.env["VISION_API_KEY"] ? "gpt-4o-mini" : "google/gemini-2.5-flash");
+    (isGemini ? "gemini-2.5-flash" : own ? "gpt-4o-mini" : "google/gemini-2.5-flash");
   return { key, url, model };
 }
 
 /** AI check that the frame really contains one clear, unobstructed live face. */
 async function faceQualityCheck(dataUrl: string): Promise<{ ok: boolean; reason?: string }> {
   const { key, url, model } = visionConfig();
-  if (!key) return { ok: false, reason: "خدمة التحقق غير متاحة" };
+  if (!key)
+    return { ok: false, reason: "خدمة التحقق غير مهيّأة على السيرفر (مفتاح الرؤية مفقود) — أبلغ الإدارة" };
   const res = await fetch(url, {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
@@ -719,7 +726,14 @@ async function faceQualityCheck(dataUrl: string): Promise<{ ok: boolean; reason?
       ],
     }),
   });
-  if (!res.ok) return { ok: false, reason: "فشل تحليل الصورة، حاول مرة أخرى" };
+  if (!res.ok)
+    return {
+      ok: false,
+      reason:
+        res.status === 401 || res.status === 403
+          ? "مفتاح خدمة التحقق غير صالح — أبلغ الإدارة"
+          : "فشل تحليل الصورة، حاول مرة أخرى",
+    };
   const json: any = await res.json();
   const text = String(json?.choices?.[0]?.message?.content ?? "");
   const m = text.match(/\{[\s\S]*\}/);
