@@ -18,23 +18,19 @@ const errorMiddleware = createMiddleware().server(async ({ next }) => {
   }
 });
 
-// Redirect fly.dev subdomain to the custom domain (production only)
-const domainRedirectMiddleware = createMiddleware().server(
+// Prevent Google from indexing the default fly.dev subdomain, but keep it usable.
+const flyDevNoIndexMiddleware = createMiddleware().server(
   async ({ request, next }) => {
-    const url = new URL(request.url);
-    const host = request.headers.get("host") ?? url.host;
-    if (host.endsWith(".fly.dev")) {
-      const target = `https://mag-pro1.com${url.pathname}${url.search}${url.hash}`;
-      return new Response(null, {
-        status: 301,
-        headers: { location: target },
-      });
+    const response = await next();
+    const host = request.headers.get("host") ?? new URL(request.url).host;
+    if (response instanceof Response && host.endsWith(".fly.dev")) {
+      response.headers.set("x-robots-tag", "noindex, nofollow");
     }
-    return next();
+    return response;
   },
 );
 
 export const startInstance = createStart(() => ({
   functionMiddleware: [attachSupabaseAuth],
-  requestMiddleware: [domainRedirectMiddleware, errorMiddleware],
+  requestMiddleware: [flyDevNoIndexMiddleware, errorMiddleware],
 }));
