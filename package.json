@@ -8,8 +8,7 @@
   },
   "scripts": {
     "dev": "vite dev",
-    "build": "npm run build:node",
-    "postinstall": "npm run build:node",
+    "build": "vite build",
     "start": "node scripts/start.mjs",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
