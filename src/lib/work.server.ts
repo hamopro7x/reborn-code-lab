@@ -780,9 +780,9 @@ export async function verifyFace(
   userId: string,
   liveFrames: string | string[],
 ): Promise<{ ok: boolean; reason?: string }> {
-  // Only two frames are ever compared: one decisive answer normally arrives on
-  // the first request, and fewer images keeps the check fast.
-  const frames = (Array.isArray(liveFrames) ? liveFrames : [liveFrames]).slice(0, 2);
+  // إطار واحد فقط: كان إرسال أكثر من صورة يضاعف زمن الانتظار بلا فائدة.
+  const frames = (Array.isArray(liveFrames) ? liveFrames : [liveFrames]).slice(0, 1);
+
   if (!frames.length) return { ok: false, reason: "لم يتم التقاط أي صورة" };
 
   const db = await admin();
