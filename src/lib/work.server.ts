@@ -868,6 +868,13 @@ async function compareOnePair(
     if (!res.ok) {
       const body = (await res.text().catch(() => "")).slice(0, 200);
       /**
+       * A retired model (404) or an exhausted per-model quota (429) is switched
+       * for the next model in the list before giving up.
+       */
+      const nextModel = modelIndex + 1 < models.length;
+      if (nextModel && (res.status === 404 || res.status === 429 || res.status === 400))
+        return compareOnePair(refUrl, liveUrl, 0, modelIndex + 1);
+      /**
        * Transient provider failures (rate limit / overloaded server) get up to
        * three retries with growing waits, honouring `Retry-After` when present.
        * This is what turns "الخدمة مشغولة الآن" into a normal successful check.
@@ -878,13 +885,13 @@ async function compareOnePair(
           ? Math.min(hinted * 1000, 6000)
           : 900 * Math.pow(2, attempt);
         await new Promise((r) => setTimeout(r, waitMs));
-        return compareOnePair(refUrl, liveUrl, attempt + 1);
+        return compareOnePair(refUrl, liveUrl, attempt + 1, modelIndex);
       }
       const error =
         res.status === 401 || res.status === 403
           ? "مفتاح الخدمة غير صالح — أبلغ الإدارة"
           : res.status === 429
-            ? "خدمة التحقق مشغولة — انتظر دقيقة ثم حاول مرة أخرى"
+            ? "انتهت حصة خدمة التحقق لهذا المفتاح — أبلغ الإدارة"
             : `خطأ ${res.status} من خدمة الرؤية${body ? ` — ${body}` : ""}`;
       return { decided: false, same: false, confidence: 0, error };
     }
