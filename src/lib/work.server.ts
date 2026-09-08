@@ -790,23 +790,36 @@ export async function verifyFace(
     return { ok: false, reason: "تعذّر قراءة الصورة المرجعية — أبلغ الإدارة" };
   const refUrl = `data:image/jpeg;base64,${bytesToB64(new Uint8Array(await dl.data.arrayBuffer()))}`;
 
-  const results = await Promise.all(frames.map((f) => compareOnePair(refUrl, f)));
-  const usable = results.filter((r) => r.decided);
-  if (!usable.length)
-    return {
-      ok: false,
-      reason: results.find((r) => r.error)?.error ?? "تعذّر التحقق من الوجه، حاول مرة أخرى",
-    };
+  /**
+   * Frames are compared ONE AT A TIME (never in parallel): firing three image
+   * requests at once is what triggered the provider rate limit (429) and made a
+   * legitimate attempt fail with "الخدمة مشغولة". A decisive answer also stops
+   * the loop early, so the usual attempt costs a single request.
+   */
+  let match = 0;
+  let mismatch = 0;
+  let lastError: string | undefined;
+  for (const f of frames) {
+    const r = await compareOnePair(refUrl, f);
+    if (!r.decided) {
+      lastError = r.error ?? lastError;
+      continue;
+    }
+    if (r.same && r.confidence >= 0.6) {
+      match++;
+      break; // a confident positive is enough
+    }
+    if (!r.same) {
+      mismatch++;
+      break; // a confident mismatch is final — never keep trying other frames
+    }
+  }
 
-  const match = usable.filter((r) => r.same && r.confidence >= 0.6).length;
-  const mismatch = usable.filter((r) => !r.same).length;
-
-  // A clear positive result is required, and any confident mismatch wins.
-  if (mismatch > 0 && mismatch >= match)
-    return { ok: false, reason: "الوجه لا يطابق الصورة المسجّلة لهذا الحساب" };
+  if (mismatch > 0) return { ok: false, reason: "الوجه لا يطابق الصورة المسجّلة لهذا الحساب" };
   if (match >= 1) return { ok: true };
-  return { ok: false, reason: "الوجه لا يطابق الصورة المسجّلة لهذا الحساب" };
+  return { ok: false, reason: lastError ?? "تعذّر التحقق من الوجه، حاول مرة أخرى" };
 }
+
 
 
 async function compareOnePair(
