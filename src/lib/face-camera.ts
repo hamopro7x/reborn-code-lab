@@ -89,7 +89,9 @@ export function captureUprightFrame(
   opts: { mirroredPreview?: boolean; size?: number } = {},
 ): string | null {
   if (!video || !video.videoWidth || !video.videoHeight) return null;
-  const longSide = opts.size ?? 720;
+  // Smaller frames upload and analyse much faster while staying well above the
+  // resolution face recognition needs.
+  const longSide = opts.size ?? 512;
   const { sx, sy, sw, sh, boxRatio } = coverSourceRect(video);
 
   const outW = boxRatio >= 1 ? longSide : Math.round(longSide * boxRatio);
