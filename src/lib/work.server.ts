@@ -780,7 +780,9 @@ export async function verifyFace(
   userId: string,
   liveFrames: string | string[],
 ): Promise<{ ok: boolean; reason?: string }> {
-  const frames = (Array.isArray(liveFrames) ? liveFrames : [liveFrames]).slice(0, 3);
+  // Only two frames are ever compared: one decisive answer normally arrives on
+  // the first request, and fewer images keeps the check fast.
+  const frames = (Array.isArray(liveFrames) ? liveFrames : [liveFrames]).slice(0, 2);
   if (!frames.length) return { ok: false, reason: "لم يتم التقاط أي صورة" };
 
   const db = await admin();
@@ -842,12 +844,18 @@ async function compareOnePair(
   const { key, url, models } = visionConfig();
   const model = models[modelIndex] ?? models[0]!;
   if (!key) return { decided: false, same: false, confidence: 0, error: "مفتاح الرؤية مفقود" };
+  // A stuck provider request must never hang the handover screen.
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 15000);
   try {
     const res = await fetch(url, {
       method: "POST",
+      signal: ctrl.signal,
       headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
       body: JSON.stringify({
         model,
+        // The answer is a tiny JSON object; capping tokens shortens the reply time.
+        max_tokens: 40,
         messages: [
           {
             role: "system",
@@ -886,11 +894,11 @@ async function compareOnePair(
        * three retries with growing waits, honouring `Retry-After` when present.
        * This is what turns "الخدمة مشغولة الآن" into a normal successful check.
        */
-      if (attempt < 3 && (res.status === 429 || res.status === 408 || res.status >= 500)) {
+      if (attempt < 2 && (res.status === 429 || res.status === 408 || res.status >= 500)) {
         const hinted = Number(res.headers.get("retry-after") ?? "");
         const waitMs = Number.isFinite(hinted) && hinted > 0
-          ? Math.min(hinted * 1000, 6000)
-          : 900 * Math.pow(2, attempt);
+          ? Math.min(hinted * 1000, 2000)
+          : 500 * (attempt + 1);
         await new Promise((r) => setTimeout(r, waitMs));
         return compareOnePair(refUrl, liveUrl, attempt + 1, modelIndex);
       }
@@ -906,9 +914,9 @@ async function compareOnePair(
     const text = String(json?.choices?.[0]?.message?.content ?? "");
     const m = text.match(/\{[\s\S]*\}/);
     if (!m) {
-      // Empty/garbled completions happen under load; one retry usually fixes it.
-      if (attempt < 2) {
-        await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
+      // Empty/garbled completions happen under load; one quick retry fixes it.
+      if (attempt < 1) {
+        await new Promise((r) => setTimeout(r, 300));
         return compareOnePair(refUrl, liveUrl, attempt + 1, modelIndex);
       }
       return { decided: false, same: false, confidence: 0, error: "رد غير مفهوم من خدمة الرؤية" };
@@ -920,18 +928,22 @@ async function compareOnePair(
       confidence: Number(parsed?.confidence ?? 0),
     };
   } catch (e: any) {
-    if (attempt < 3) {
-      await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
+    if (attempt < 1) {
+      await new Promise((r) => setTimeout(r, 400));
       return compareOnePair(refUrl, liveUrl, attempt + 1, modelIndex);
     }
+    const aborted = e?.name === "AbortError";
     return {
       decided: false,
       same: false,
       confidence: 0,
-      error: String(e?.message ?? e).slice(0, 160),
+      error: aborted
+        ? "خدمة التحقق تأخرت في الرد — حاول مرة أخرى"
+        : String(e?.message ?? e).slice(0, 160),
     };
+  } finally {
+    clearTimeout(timer);
   }
-
 }
 
 
