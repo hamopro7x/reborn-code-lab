@@ -1278,37 +1278,47 @@ export async function myShiftRows(userId: string, page = 1, pageSize = 50) {
 
 export async function adminEmployeeWorkState(userId: string) {
   const db = await admin();
-  const { data: open } = await db
-    .from("work_shifts")
-    .select("id")
-    .eq("user_id", userId)
-    .is("ended_at", null)
-    .maybeSingle();
-  const live = !!open;
+  // شفت مفتوح + آخر الشفتات في نفس الوقت (بدل استعلامين متتاليين).
+  const [openRes, recentRes] = await Promise.all([
+    db.from("work_shifts").select("id").eq("user_id", userId).is("ended_at", null).maybeSingle(),
+    db
+      .from("work_shifts")
+      .select("id,started_at,ended_at")
+      .eq("user_id", userId)
+      .order("started_at", { ascending: false })
+      .limit(20),
+  ]);
+  const live = !!openRes.data;
 
-  // آخر الشفتات (بما فيها الشفت الشغّال) — نختار أول شفت فيه معاملات ناجحة
-  // فعلاً حتى لا يفتح الأدمن على شفت فاضي فتظهر خانات «جنية / الكمية» كلها «—».
-  const { data: recent } = await db
-    .from("work_shifts")
-    .select("id,started_at,ended_at")
-    .eq("user_id", userId)
-    .order("started_at", { ascending: false })
-    .limit(20);
-
-  const list = (recent ?? []) as any[];
+  const list = (recentRes.data ?? []) as any[];
   if (!list.length) return { holding: false as const, live };
+
+  /**
+   * عدّ المعاملات الناجحة لكل الشفتات في استعلام واحد بدل استعلام لكل شفت،
+   * وهو ما كان يجعل فتح جدول بيانات الشغل بطيئًا جدًا (حتى 20 رحلة للسيرفر).
+   */
+  const { data: assigns } = await db
+    .from("work_txn_assignments")
+    .select("shift_id, bybit_ledger!inner(status)")
+    .in(
+      "shift_id",
+      list.map((s) => s.id),
+    )
+    .in("bybit_ledger.status", SUCCESS_STATUSES as unknown as string[]);
+
+  const counts = new Map<string, number>();
+  for (const a of (assigns ?? []) as any[]) {
+    const id = String(a.shift_id);
+    counts.set(id, (counts.get(id) ?? 0) + 1);
+  }
 
   let picked: any = list[0];
   let pickedCount = 0;
   for (const s of list) {
-    const { count } = await db
-      .from("work_txn_assignments")
-      .select("id, bybit_ledger!inner(status)", { count: "exact", head: true })
-      .eq("shift_id", s.id)
-      .in("bybit_ledger.status", SUCCESS_STATUSES as unknown as string[]);
-    if (Number(count ?? 0) > 0) {
+    const c = counts.get(String(s.id)) ?? 0;
+    if (c > 0) {
       picked = s;
-      pickedCount = Number(count ?? 0);
+      pickedCount = c;
       break;
     }
   }
@@ -1323,6 +1333,7 @@ export async function adminEmployeeWorkState(userId: string) {
   };
 
 }
+
 
 /** Rows of the employee's last CLOSED shift — تُعرض حتى لو عنده شفت شغّال. */
 export async function adminEmployeeShiftRows(userId: string, page = 1, pageSize = 50) {
