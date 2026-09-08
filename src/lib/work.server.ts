@@ -2021,21 +2021,16 @@ export async function deleteManualTxnRow(id: string) {
 export async function deleteShift(shiftId: string) {
   const db = await admin();
 
-  // طلبات P2P: لا نفقد تاريخ الربط. نحوّل روابطها إلى «previously_assigned»
-  // (shift_id = NULL) حتى لا تعود للظهور كطلبات متاحة بعد حذف الشفت.
+  // طلبات P2P: نفصل الرابط عن الشفت فقط (shift_id = NULL) ونُبقي صف الربط
+  // نفسه، حتى لا تعود الطلبات للظهور كطلبات متاحة بعد حذف الشفت.
+  // لا نغيّر assign_mode حتى لا نعتمد على قيود قاعدة بيانات قد تختلف.
   const { error: pErr } = await db
     .from("work_txn_assignments")
-    .update({ shift_id: null, assign_mode: "previously_assigned" })
+    .update({ shift_id: null })
     .eq("shift_id", shiftId)
     .in("kind", P2P_KINDS as unknown as string[]);
-  if (pErr) {
-    // قاعدة بيانات أقدم لا تعرف الحالة الجديدة: نفصل الشفت فقط ونُبقي الرابط.
-    await db
-      .from("work_txn_assignments")
-      .update({ shift_id: null })
-      .eq("shift_id", shiftId)
-      .in("kind", P2P_KINDS as unknown as string[]);
-  }
+  if (pErr) throw new Error(pErr.message);
+
 
 
   await db
