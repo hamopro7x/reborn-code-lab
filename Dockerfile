@@ -25,7 +25,9 @@ FROM node:22-slim AS runtime
 WORKDIR /app
 ENV NODE_ENV=production \
     PORT=3000 \
-    HOST=0.0.0.0
+    HOST=0.0.0.0 \
+    NITRO_PORT=3000 \
+    NITRO_HOST=0.0.0.0
 
 COPY --from=build /app/.output ./.output
 
