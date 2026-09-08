@@ -862,11 +862,8 @@ export type FaceDir = "right" | "left";
  */
 export async function startFaceChallenge(userId: string) {
   const db = await admin();
-  // Exactly TWO movements per attempt, in a random order.
-  const pool: FaceDir[][] = [
-    ["right", "left"],
-    ["left", "right"],
-  ];
+  // A SINGLE random movement per attempt (kept simple for employees).
+  const pool: FaceDir[][] = [["right"], ["left"]];
   const steps = pool[Math.floor(Math.random() * pool.length)]!;
   await db.from("work_auth_challenges").delete().eq("user_id", userId).eq("purpose", "liveness");
   const { error } = await db.from("work_auth_challenges").insert({
@@ -967,7 +964,7 @@ export async function checkHeadTurnLiveness(input: {
   back?: string;
 }): Promise<{ ok: boolean; reason?: string }> {
   const steps = input.steps.slice(0, 4);
-  if (steps.length < 2) return { ok: false, reason: "لم يتم رصد الحركة — حاول مرة أخرى" };
+  if (steps.length < 1) return { ok: false, reason: "لم يتم رصد الحركة — حاول مرة أخرى" };
   const images = [input.center, ...steps.map((s) => s.image), ...(input.back ? [input.back] : [])];
   const expected = steps
     .map((s, i) => `frame ${i + 2}: head turned to the person's own ${s.dir}`)

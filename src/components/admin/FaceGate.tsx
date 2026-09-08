@@ -314,12 +314,9 @@ export function FaceGate({
         return;
       }
 
-      const eyesOk = await waitForOpenEyes();
-      if (!eyesOk) throw new LivenessError("افتح عينيك وانظر إلى الكاميرا ثم حاول مرة أخرى");
-
-      // Movement order comes from the server; only ONE direction is shown at a time.
+      // Movement comes from the server; a SINGLE direction keeps the flow simple.
       const chal = await challengeFn({ data: undefined as any });
-      const center = await posePhase("انظر أمام الكاميرا مباشرة", 3);
+      const center = await posePhase("انظر أمام الكاميرا مباشرة", 2);
       if (!center.length) throw new LivenessError("لم يتم رصد الوجه — حاول مرة أخرى");
 
       const steps: Array<{ dir: Dir; image: string }> = [];
@@ -330,7 +327,6 @@ export function FaceGate({
 
         steps.push({ dir, image: got[got.length - 1]! });
       }
-      const back = await posePhase("عد بوجهك للأمام", 1);
 
       setInstruction("جاري التحقق");
       setStatus("مطابقة الوجه والتحقق من الحيوية...");
@@ -338,7 +334,6 @@ export function FaceGate({
         data: {
           faceImages: center,
           steps,
-          ...(back[0] ? { faceBack: back[0] } : {}),
         },
       });
       if (!res.ok) {
