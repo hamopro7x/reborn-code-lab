@@ -23,7 +23,7 @@ const flyDevNoIndexMiddleware = createMiddleware().server(
   async ({ request, next }) => {
     const response = await next();
     const host = request.headers.get("host") ?? new URL(request.url).host;
-    if (host.endsWith(".fly.dev")) {
+    if (response instanceof Response && host.endsWith(".fly.dev")) {
       response.headers.set("x-robots-tag", "noindex, nofollow");
     }
     return response;
@@ -32,5 +32,5 @@ const flyDevNoIndexMiddleware = createMiddleware().server(
 
 export const startInstance = createStart(() => ({
   functionMiddleware: [attachSupabaseAuth],
-  requestMiddleware: [domainRedirectMiddleware, errorMiddleware],
+  requestMiddleware: [flyDevNoIndexMiddleware, errorMiddleware],
 }));
