@@ -192,73 +192,42 @@ export const saveMyTxnEntry = createServerFn({ method: "POST" })
 
 /* ------------------------------- claiming ------------------------------- */
 
-/** Is the current employee's face already enrolled? */
-export const getMyFaceStatus = createServerFn({ method: "POST" })
+/** Has this employee already created a 6-digit PIN? */
+export const getMyPinStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertAccess(context.supabase, context.userId);
     const mod = await import("./work.server");
-    return { enrolled: await mod.faceEnrolled(context.userId) };
+    return { hasPin: await mod.pinIsSet(context.userId) };
   });
 
-const frame = z.string().min(100).max(4_000_000);
-const enrollSchema = z.object({ faceImages: z.array(frame).min(1).max(4) });
+const pin = z.string().regex(/^\d{6}$/, "الرمز يجب أن يكون 6 أرقام");
 
-/** First-time face enrollment from multiple frames, bound to this employee. */
-export const enrollMyFace = createServerFn({ method: "POST" })
+/** First-time PIN creation by the employee (only when none exists yet). */
+export const setMyPin = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => enrollSchema.parse(input))
+  .inputValidator((input: unknown) => z.object({ pin }).parse(input))
   .handler(async ({ data, context }) => {
     await assertAccess(context.supabase, context.userId);
     const mod = await import("./work.server");
-    return mod.enrollMyFace(context.userId, data.faceImages);
+    if (await mod.pinIsSet(context.userId)) {
+      return { ok: false as const, error: "لديك رمز بالفعل — تواصل مع الإدارة لتغييره" };
+    }
+    return mod.savePin(context.userId, data.pin, context.userId);
   });
 
-/** Server-issued random movement challenge (direction order is NOT client-chosen). */
-export const startFaceChallenge = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    await assertAccess(context.supabase, context.userId);
-    const mod = await import("./work.server");
-    return mod.startFaceChallenge(context.userId);
-  });
-
-const claimSchema = z.object({
-  faceImages: z.array(frame).min(1).max(3),
-  steps: z
-    .array(z.object({ dir: z.enum(["right", "left"]), image: frame }))
-    .min(1)
-    .max(4),
-  faceBack: frame.optional(),
-});
-
-/** Face verification + open eyes + server-issued movement challenge, then handover. */
+/** PIN verification, then shift handover. */
 export const claimWorkShift = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => claimSchema.parse(input))
+  .inputValidator((input: unknown) => z.object({ pin }).parse(input))
   .handler(async ({ data, context }) => {
     await assertAccess(context.supabase, context.userId);
     const mod = await import("./work.server");
 
-    if (!(await mod.faceEnrolled(context.userId))) {
-      return { ok: false as const, error: "NO_FACE_DATA" };
-    }
-
-    const chal = await mod.consumeFaceChallenge(
-      context.userId,
-      data.steps.map((s) => s.dir),
-    );
-    if (!chal.ok) return { ok: false as const, error: chal.reason ?? "فشل التحقق من الحركة" };
-
-    // Eye state and the requested head turn were already validated frame by
-    // frame on the device. Repeating both through the remote vision provider
-    // added two slow network requests without strengthening identity matching.
-    const face = await mod.verifyFace(context.userId, data.faceImages);
-    if (!face.ok) {
-      return {
-        ok: false as const,
-        error: face.reason ?? "تعذّر التحقق من الوجه، حاول مرة أخرى",
-      };
+    const check = await mod.verifyPin(context.userId, data.pin);
+    if (!check.ok) {
+      if (check.reason === "NO_PIN") return { ok: false as const, error: "NO_PIN" };
+      return { ok: false as const, error: check.reason ?? "الرمز غير صحيح" };
     }
 
     const { data: shift, error } = await context.supabase.rpc("work_claim_shift", {
