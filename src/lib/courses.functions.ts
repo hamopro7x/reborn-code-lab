@@ -22,9 +22,12 @@ export const checkDevice = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => checkSchema.parse(d))
   .handler(async ({ data, context }) => {
-    const role = await getRole(context.supabase, context.userId);
-    if (!role) throw new Error("Forbidden");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // نقرأ الدور بمفتاح الخدمة: أي نقص في سياسات user_roles لا يجوز أن يحوّل
+    // الموظف إلى "جهاز غير مصرّح" ويجعل تفعيل الكود بلا أثر.
+    const role = await getRole(supabaseAdmin, context.userId);
+    if (!role) return { ok: false as const, blocked: false, fingerprint: data.fingerprint, error: "هذا الحساب غير مسجّل كموظف — راجع الإدارة" };
+
 
     // Admins always pass — no device restriction on management accounts.
     if (role === "admin") {
