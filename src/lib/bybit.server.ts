@@ -502,18 +502,20 @@ async function bybitNow(): Promise<number> {
 
 
 /**
- * Fixed spend cycles, computed independently of each other:
- *  - daily  : today 03:00 Cairo (= 00:00 UTC) — unchanged, already correct
+ * Fixed spend cycles, computed independently of each other. UTC only — never a
+ * local, device or Cairo timezone, so summer/winter time cannot shift a window:
+ *  - daily  : today 00:00 UTC
  *  - monthly: the Bybit cycle from getMonthlySpendPeriod() — it opens on the LAST
  *    calendar day of the month at 00:00 UTC and is half-open
- *    (monthStart <= time < monthEnd). There is no other definition anywhere.
+ *    (monthStart <= time < monthEnd). There is no other definition anywhere,
+ *    and the monthly transaction cycle uses exactly this window.
  */
 export function spendWindows(nowMs: number) {
   const n = new Date(nowMs);
   const DAY = 24 * 3600_000;
-  // Cairo is UTC+3, so 03:00 Cairo == 00:00 UTC
   let dayStart = Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate(), 0);
   if (nowMs < dayStart) dayStart -= DAY;
+
 
   const { periodStart, periodEnd } = getMonthlySpendPeriod(nowMs);
 
@@ -918,12 +920,20 @@ async function changedCardTxns(db: any, payload: any[], accountId?: string): Pro
   return out;
 }
 
-/** Persist fetched rows and enforce the 10M cap (oldest 3M pruned). */
+/**
+ * Persist fetched rows. Only transactions of the CURRENT monthly cycle are
+ * archived: anything older than the cycle start (00:00 UTC of the last day of
+ * the month) belongs to a closed cycle and is never stored again.
+ */
 async function persistCardTxns(rows: CardTxn[], accountId?: string) {
   if (!rows.length) return;
   try {
+    const { currentCycleStart } = await import("./monthly-cycle.server");
+    const cycleStart = currentCycleStart();
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const payload = rows.map((r) => ({
+    const payload = rows
+      .filter((r) => Number(r.time ?? 0) >= cycleStart)
+      .map((r) => ({
         txn_id: r.id,
         account_id: accountId ?? null,
         merchant: r.merchant,
@@ -935,6 +945,8 @@ async function persistCardTxns(rows: CardTxn[], accountId?: string) {
         txn_type: r.type,
         detail: r.detail,
     }));
+    if (!payload.length) return;
+
     // نكتب الجديد والمتغيّر فقط بدل إعادة كتابة الأرشيف بالكامل.
     const pending = await changedCardTxns(supabaseAdmin as any, payload, accountId);
     for (let i = 0; i < pending.length; i += 500) {
@@ -1109,8 +1121,13 @@ export async function syncAllCardTxns(): Promise<{ added: number; accounts: numb
       }
     }),
   );
+  // Automatic monthly cycle: closed-cycle transactions are deleted for real.
+  // Employee work-sheet data is never touched (see monthly-cycle.server.ts).
+  const { runCyclePurgeSafe } = await import("./monthly-cycle.server");
+  await runCyclePurgeSafe();
   return { added: results.reduce((s, n) => s + n, 0), accounts: accounts.length };
 }
+
 
 /* ---------- resumable deep backfill (back to account creation) ---------- */
 
@@ -1172,9 +1189,24 @@ async function backfillChunk(
   accountId: string | undefined,
   creds: Creds,
 ): Promise<{ rows: CardTxn[]; done: boolean }> {
+  // Monthly cycles: history before the current cycle start is no longer kept,
+  // so walking Bybit back to account creation would only re-fetch rows that
+  // persistCardTxns drops again. The deep backfill is therefore disabled.
+  void accountId;
+  void creds;
+  return { rows: [], done: true };
+}
+
+/** Kept for reference only; no longer part of any sync path. */
+async function backfillChunkLegacy(
+  accountId: string | undefined,
+  creds: Creds,
+): Promise<{ rows: CardTxn[]; done: boolean }> {
   const key = accountId ?? "default";
   const cursor = await readCursor(key);
   if (cursor.done) return { rows: [], done: true };
+
+
 
   const collected: any[] = [];
   let { typeIndex, page } = cursor;
@@ -1715,8 +1747,15 @@ async function changedLedgerRows(db: any, rows: LedgerInsert[]): Promise<LedgerI
 }
 
 async function upsertLedger(rows: LedgerInsert[]) {
-  const clean = rows.filter((r) => r.ref_id);
+  // Central + internal transactions follow the same monthly cycle as spend:
+  // only movements inside the current cycle are mirrored/kept.
+  const { currentCycleStart } = await import("./monthly-cycle.server");
+  const cycleStart = currentCycleStart();
+  const clean = rows.filter(
+    (r) => r.ref_id && new Date(String(r.occurred_at)).getTime() >= cycleStart,
+  );
   if (!clean.length) return 0;
+
   const db = await admin();
   let saved = 0;
   // نكتب الجديد والمتغيّر فقط: لا إعادة كتابة لكل السجل في كل دورة.
