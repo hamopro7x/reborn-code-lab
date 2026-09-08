@@ -872,7 +872,14 @@ async function compareOnePair(
        * for the next model in the list before giving up.
        */
       const nextModel = modelIndex + 1 < models.length;
-      if (nextModel && (res.status === 404 || res.status === 429 || res.status === 400))
+      if (
+        nextModel &&
+        (res.status === 404 ||
+          res.status === 429 ||
+          res.status === 400 ||
+          res.status === 503 ||
+          attempt >= 2)
+      )
         return compareOnePair(refUrl, liveUrl, 0, modelIndex + 1);
       /**
        * Transient provider failures (rate limit / overloaded server) get up to
