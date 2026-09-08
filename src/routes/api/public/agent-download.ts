@@ -158,7 +158,7 @@ export async function handleAgentDownload(request: Request) {
 
   const headers: Record<string, string> = {
     "content-type": "application/octet-stream",
-    "content-disposition": 'attachment; filename="MagProAgent-Setup.exe"',
+    "content-disposition": 'attachment; filename="MagProConnect-Setup.exe"',
     "accept-ranges": "bytes",
     "cache-control": "no-store",
   };
