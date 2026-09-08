@@ -780,30 +780,34 @@ export async function verifyFace(
     .maybeSingle();
   if (!enroll?.image_path) return { ok: false, reason: "لا توجد صورة مرجعية مسجّلة لهذا الموظف" };
 
-  // No vision provider configured: the movement challenge + on-device liveness
-  // already proved a live person, so the handover must not be blocked.
-  if (!visionConfig().key) return { ok: true };
+  // Identity MUST be proven. Without a working vision provider we cannot tell
+  // one employee from another, so the handover is refused instead of accepted.
+  if (!visionConfig().key)
+    return { ok: false, reason: "خدمة التحقق من الوجه غير مهيأة — أبلغ الإدارة" };
 
   const dl = await db.storage.from(FACE_BUCKET).download(enroll.image_path);
-  if (dl.error || !dl.data) return { ok: true };
+  if (dl.error || !dl.data)
+    return { ok: false, reason: "تعذّر قراءة الصورة المرجعية — أبلغ الإدارة" };
   const refUrl = `data:image/jpeg;base64,${bytesToB64(new Uint8Array(await dl.data.arrayBuffer()))}`;
 
   const results = await Promise.all(frames.map((f) => compareOnePair(refUrl, f)));
   const usable = results.filter((r) => r.decided);
-  // Provider down, quota exceeded or unparseable answer: never punish the
-  // employee for an infrastructure problem — liveness already passed.
-  if (!usable.length) return { ok: true };
+  if (!usable.length)
+    return {
+      ok: false,
+      reason: results.find((r) => r.error)?.error ?? "تعذّر التحقق من الوجه، حاول مرة أخرى",
+    };
 
-  const strong = usable.filter((r) => r.same && r.confidence >= 0.7).length;
-  const soft = usable.filter((r) => r.same && r.confidence >= 0.55).length;
-  const mismatch = usable.filter((r) => !r.same && r.confidence >= 0.8).length;
+  const match = usable.filter((r) => r.same && r.confidence >= 0.6).length;
+  const mismatch = usable.filter((r) => !r.same).length;
 
-  if (strong >= 1 || soft >= 1) return { ok: true };
-  if (mismatch >= 2) return { ok: false, reason: "الوجه لا يطابق الصورة المسجّلة لهذا الحساب" };
-  // Undecided middle ground: accept, liveness is the binding gate.
-  return { ok: true };
-
+  // A clear positive result is required, and any confident mismatch wins.
+  if (mismatch > 0 && mismatch >= match)
+    return { ok: false, reason: "الوجه لا يطابق الصورة المسجّلة لهذا الحساب" };
+  if (match >= 1) return { ok: true };
+  return { ok: false, reason: "الوجه لا يطابق الصورة المسجّلة لهذا الحساب" };
 }
+
 
 async function compareOnePair(
   refUrl: string,
