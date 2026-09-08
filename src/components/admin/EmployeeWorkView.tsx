@@ -17,7 +17,7 @@ import { useServerFn } from "@tanstack/react-start";
 import {
   Loader2,
   User,
-  ScanFace,
+  KeyRound,
   Clock,
   ListOrdered,
   AlertTriangle,
