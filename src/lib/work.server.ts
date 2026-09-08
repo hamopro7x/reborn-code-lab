@@ -780,9 +780,9 @@ export async function verifyFace(
   userId: string,
   liveFrames: string | string[],
 ): Promise<{ ok: boolean; reason?: string }> {
-  // Only two frames are ever compared: one decisive answer normally arrives on
-  // the first request, and fewer images keeps the check fast.
-  const frames = (Array.isArray(liveFrames) ? liveFrames : [liveFrames]).slice(0, 2);
+  // إطار واحد فقط: كان إرسال أكثر من صورة يضاعف زمن الانتظار بلا فائدة.
+  const frames = (Array.isArray(liveFrames) ? liveFrames : [liveFrames]).slice(0, 1);
+
   if (!frames.length) return { ok: false, reason: "لم يتم التقاط أي صورة" };
 
   const db = await admin();
@@ -844,9 +844,10 @@ async function compareOnePair(
   const { key, url, models } = visionConfig();
   const model = models[modelIndex] ?? models[0]!;
   if (!key) return { decided: false, same: false, confidence: 0, error: "مفتاح الرؤية مفقود" };
-  // A stuck provider request must never hang the handover screen.
+  // مهلة أقصر: لو المزود بطيء نرد بسرعة بدل تعليق شاشة التحقق.
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 15000);
+  const timer = setTimeout(() => ctrl.abort(), 9000);
+
   try {
     const res = await fetch(url, {
       method: "POST",
@@ -890,18 +891,14 @@ async function compareOnePair(
       )
         return compareOnePair(refUrl, liveUrl, 0, modelIndex + 1);
       /**
-       * Transient provider failures (rate limit / overloaded server) get up to
-       * three retries with growing waits, honouring `Retry-After` when present.
-       * This is what turns "الخدمة مشغولة الآن" into a normal successful check.
+       * محاولة واحدة سريعة فقط عند انشغال المزود — الانتظار الطويل كان
+       * هو سبب بطء التحقق.
        */
-      if (attempt < 2 && (res.status === 429 || res.status === 408 || res.status >= 500)) {
-        const hinted = Number(res.headers.get("retry-after") ?? "");
-        const waitMs = Number.isFinite(hinted) && hinted > 0
-          ? Math.min(hinted * 1000, 2000)
-          : 500 * (attempt + 1);
-        await new Promise((r) => setTimeout(r, waitMs));
+      if (attempt < 1 && (res.status === 429 || res.status === 408 || res.status >= 500)) {
+        await new Promise((r) => setTimeout(r, 300));
         return compareOnePair(refUrl, liveUrl, attempt + 1, modelIndex);
       }
+
       const error =
         res.status === 401 || res.status === 403
           ? "مفتاح الخدمة غير صالح — أبلغ الإدارة"
@@ -1278,37 +1275,47 @@ export async function myShiftRows(userId: string, page = 1, pageSize = 50) {
 
 export async function adminEmployeeWorkState(userId: string) {
   const db = await admin();
-  const { data: open } = await db
-    .from("work_shifts")
-    .select("id")
-    .eq("user_id", userId)
-    .is("ended_at", null)
-    .maybeSingle();
-  const live = !!open;
+  // شفت مفتوح + آخر الشفتات في نفس الوقت (بدل استعلامين متتاليين).
+  const [openRes, recentRes] = await Promise.all([
+    db.from("work_shifts").select("id").eq("user_id", userId).is("ended_at", null).maybeSingle(),
+    db
+      .from("work_shifts")
+      .select("id,started_at,ended_at")
+      .eq("user_id", userId)
+      .order("started_at", { ascending: false })
+      .limit(20),
+  ]);
+  const live = !!openRes.data;
 
-  // آخر الشفتات (بما فيها الشفت الشغّال) — نختار أول شفت فيه معاملات ناجحة
-  // فعلاً حتى لا يفتح الأدمن على شفت فاضي فتظهر خانات «جنية / الكمية» كلها «—».
-  const { data: recent } = await db
-    .from("work_shifts")
-    .select("id,started_at,ended_at")
-    .eq("user_id", userId)
-    .order("started_at", { ascending: false })
-    .limit(20);
-
-  const list = (recent ?? []) as any[];
+  const list = (recentRes.data ?? []) as any[];
   if (!list.length) return { holding: false as const, live };
+
+  /**
+   * عدّ المعاملات الناجحة لكل الشفتات في استعلام واحد بدل استعلام لكل شفت،
+   * وهو ما كان يجعل فتح جدول بيانات الشغل بطيئًا جدًا (حتى 20 رحلة للسيرفر).
+   */
+  const { data: assigns } = await db
+    .from("work_txn_assignments")
+    .select("shift_id, bybit_ledger!inner(status)")
+    .in(
+      "shift_id",
+      list.map((s) => s.id),
+    )
+    .in("bybit_ledger.status", SUCCESS_STATUSES as unknown as string[]);
+
+  const counts = new Map<string, number>();
+  for (const a of (assigns ?? []) as any[]) {
+    const id = String(a.shift_id);
+    counts.set(id, (counts.get(id) ?? 0) + 1);
+  }
 
   let picked: any = list[0];
   let pickedCount = 0;
   for (const s of list) {
-    const { count } = await db
-      .from("work_txn_assignments")
-      .select("id, bybit_ledger!inner(status)", { count: "exact", head: true })
-      .eq("shift_id", s.id)
-      .in("bybit_ledger.status", SUCCESS_STATUSES as unknown as string[]);
-    if (Number(count ?? 0) > 0) {
+    const c = counts.get(String(s.id)) ?? 0;
+    if (c > 0) {
       picked = s;
-      pickedCount = Number(count ?? 0);
+      pickedCount = c;
       break;
     }
   }
@@ -1323,6 +1330,7 @@ export async function adminEmployeeWorkState(userId: string) {
   };
 
 }
+
 
 /** Rows of the employee's last CLOSED shift — تُعرض حتى لو عنده شفت شغّال. */
 export async function adminEmployeeShiftRows(userId: string, page = 1, pageSize = 50) {
