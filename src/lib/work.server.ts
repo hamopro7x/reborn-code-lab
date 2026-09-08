@@ -915,7 +915,7 @@ async function compareOnePair(
   } catch (e: any) {
     if (attempt < 3) {
       await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
-      return compareOnePair(refUrl, liveUrl, attempt + 1);
+      return compareOnePair(refUrl, liveUrl, attempt + 1, modelIndex);
     }
     return {
       decided: false,
