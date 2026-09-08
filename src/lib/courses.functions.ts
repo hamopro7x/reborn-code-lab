@@ -3,7 +3,8 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 async function getRole(supabase: any, userId: string): Promise<"admin" | "employee" | null> {
-  const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId);
+  const { data, error } = await supabase.from("user_roles").select("role").eq("user_id", userId);
+  if (error) throw new Error(`تعذّر قراءة صلاحية الحساب: ${error.message}`);
   const roles = (data ?? []).map((r: any) => r.role);
   if (roles.includes("admin")) return "admin";
   if (roles.includes("employee")) return "employee";
@@ -101,6 +102,19 @@ export const adminAddDevice = createServerFn({ method: "POST" })
     const role = await getRole(context.supabase, context.userId);
     if (role !== "admin") throw new Error("Forbidden");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Device activation is an employee-enrolment action. Imported/older users
+    // can have a profile without the employee role, so repair that role here
+    // before saving the device. Never downgrade an existing admin account.
+    const targetRole = await getRole(supabaseAdmin, data.user_id);
+    if (targetRole !== "admin" && targetRole !== "employee") {
+      const { error: roleError } = await supabaseAdmin.from("user_roles").upsert({
+        user_id: data.user_id,
+        role: "employee",
+      }, { onConflict: "user_id,role" });
+      if (roleError) throw new Error(`تعذّر تسجيل الحساب كموظف: ${roleError.message}`);
+    }
+
     const { error } = await supabaseAdmin.from("user_devices").upsert({
       user_id: data.user_id,
       device_fingerprint: data.fingerprint,
