@@ -790,23 +790,36 @@ export async function verifyFace(
     return { ok: false, reason: "تعذّر قراءة الصورة المرجعية — أبلغ الإدارة" };
   const refUrl = `data:image/jpeg;base64,${bytesToB64(new Uint8Array(await dl.data.arrayBuffer()))}`;
 
-  const results = await Promise.all(frames.map((f) => compareOnePair(refUrl, f)));
-  const usable = results.filter((r) => r.decided);
-  if (!usable.length)
-    return {
-      ok: false,
-      reason: results.find((r) => r.error)?.error ?? "تعذّر التحقق من الوجه، حاول مرة أخرى",
-    };
+  /**
+   * Frames are compared ONE AT A TIME (never in parallel): firing three image
+   * requests at once is what triggered the provider rate limit (429) and made a
+   * legitimate attempt fail with "الخدمة مشغولة". A decisive answer also stops
+   * the loop early, so the usual attempt costs a single request.
+   */
+  let match = 0;
+  let mismatch = 0;
+  let lastError: string | undefined;
+  for (const f of frames) {
+    const r = await compareOnePair(refUrl, f);
+    if (!r.decided) {
+      lastError = r.error ?? lastError;
+      continue;
+    }
+    if (r.same && r.confidence >= 0.6) {
+      match++;
+      break; // a confident positive is enough
+    }
+    if (!r.same) {
+      mismatch++;
+      break; // a confident mismatch is final — never keep trying other frames
+    }
+  }
 
-  const match = usable.filter((r) => r.same && r.confidence >= 0.6).length;
-  const mismatch = usable.filter((r) => !r.same).length;
-
-  // A clear positive result is required, and any confident mismatch wins.
-  if (mismatch > 0 && mismatch >= match)
-    return { ok: false, reason: "الوجه لا يطابق الصورة المسجّلة لهذا الحساب" };
+  if (mismatch > 0) return { ok: false, reason: "الوجه لا يطابق الصورة المسجّلة لهذا الحساب" };
   if (match >= 1) return { ok: true };
-  return { ok: false, reason: "الوجه لا يطابق الصورة المسجّلة لهذا الحساب" };
+  return { ok: false, reason: lastError ?? "تعذّر التحقق من الوجه، حاول مرة أخرى" };
 }
+
 
 
 async function compareOnePair(
@@ -841,24 +854,38 @@ async function compareOnePair(
     });
     if (!res.ok) {
       const body = (await res.text().catch(() => "")).slice(0, 200);
-      // Transient provider failures (rate limit / server) deserve one retry.
-      if (attempt === 0 && (res.status === 429 || res.status >= 500)) {
-        await new Promise((r) => setTimeout(r, 1200));
-        return compareOnePair(refUrl, liveUrl, 1);
+      /**
+       * Transient provider failures (rate limit / overloaded server) get up to
+       * three retries with growing waits, honouring `Retry-After` when present.
+       * This is what turns "الخدمة مشغولة الآن" into a normal successful check.
+       */
+      if (attempt < 3 && (res.status === 429 || res.status === 408 || res.status >= 500)) {
+        const hinted = Number(res.headers.get("retry-after") ?? "");
+        const waitMs = Number.isFinite(hinted) && hinted > 0
+          ? Math.min(hinted * 1000, 6000)
+          : 900 * Math.pow(2, attempt);
+        await new Promise((r) => setTimeout(r, waitMs));
+        return compareOnePair(refUrl, liveUrl, attempt + 1);
       }
       const error =
         res.status === 401 || res.status === 403
           ? "مفتاح الخدمة غير صالح — أبلغ الإدارة"
           : res.status === 429
-            ? "الخدمة مشغولة الآن، حاول بعد لحظات"
+            ? "خدمة التحقق مشغولة — انتظر دقيقة ثم حاول مرة أخرى"
             : `خطأ ${res.status} من خدمة الرؤية${body ? ` — ${body}` : ""}`;
       return { decided: false, same: false, confidence: 0, error };
     }
     const json: any = await res.json();
     const text = String(json?.choices?.[0]?.message?.content ?? "");
     const m = text.match(/\{[\s\S]*\}/);
-    if (!m)
+    if (!m) {
+      // Empty/garbled completions happen under load; one retry usually fixes it.
+      if (attempt < 2) {
+        await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
+        return compareOnePair(refUrl, liveUrl, attempt + 1);
+      }
       return { decided: false, same: false, confidence: 0, error: "رد غير مفهوم من خدمة الرؤية" };
+    }
     const parsed = JSON.parse(m[0]);
     return {
       decided: typeof parsed?.same === "boolean",
@@ -866,9 +893,9 @@ async function compareOnePair(
       confidence: Number(parsed?.confidence ?? 0),
     };
   } catch (e: any) {
-    if (attempt === 0) {
-      await new Promise((r) => setTimeout(r, 800));
-      return compareOnePair(refUrl, liveUrl, 1);
+    if (attempt < 3) {
+      await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
+      return compareOnePair(refUrl, liveUrl, attempt + 1);
     }
     return {
       decided: false,
@@ -877,6 +904,7 @@ async function compareOnePair(
       error: String(e?.message ?? e).slice(0, 160),
     };
   }
+
 }
 
 
