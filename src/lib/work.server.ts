@@ -726,7 +726,14 @@ async function faceQualityCheck(dataUrl: string): Promise<{ ok: boolean; reason?
       ],
     }),
   });
-  if (!res.ok) return { ok: false, reason: "فشل تحليل الصورة، حاول مرة أخرى" };
+  if (!res.ok)
+    return {
+      ok: false,
+      reason:
+        res.status === 401 || res.status === 403
+          ? "مفتاح خدمة التحقق غير صالح — أبلغ الإدارة"
+          : "فشل تحليل الصورة، حاول مرة أخرى",
+    };
   const json: any = await res.json();
   const text = String(json?.choices?.[0]?.message?.content ?? "");
   const m = text.match(/\{[\s\S]*\}/);
