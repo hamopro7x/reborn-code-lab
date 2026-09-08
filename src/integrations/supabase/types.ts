@@ -1646,6 +1646,39 @@ export type Database = {
           },
         ]
       }
+      work_pins: {
+        Row: {
+          created_at: string
+          fail_count: number
+          locked_until: string | null
+          pin_hash: string
+          pin_salt: string
+          set_by: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          fail_count?: number
+          locked_until?: string | null
+          pin_hash: string
+          pin_salt: string
+          set_by?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          fail_count?: number
+          locked_until?: string | null
+          pin_hash?: string
+          pin_salt?: string
+          set_by?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       work_shifts: {
         Row: {
           created_at: string
