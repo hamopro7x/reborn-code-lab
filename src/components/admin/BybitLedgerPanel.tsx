@@ -302,7 +302,7 @@ export function BybitLedgerPanel() {
     staleTime: 0,
     // Poll only while the tab is actually visible; a hidden panel used to keep
     // hitting the server in the background.
-    refetchInterval: 1_000,
+    refetchInterval: 2_000,
     refetchIntervalInBackground: false,
   });
 
@@ -316,7 +316,7 @@ export function BybitLedgerPanel() {
     queryKey: ["bybit-spend-totals"],
     queryFn: () => totalsFn({ data: undefined as any }),
     staleTime: 0,
-    refetchInterval: 1_000,
+    refetchInterval: 2_000,
     refetchIntervalInBackground: false,
   });
   const brandsFn = useServerFn(getBybitCardBrands);
