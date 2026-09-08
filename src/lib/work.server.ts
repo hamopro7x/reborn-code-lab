@@ -964,7 +964,7 @@ export async function checkHeadTurnLiveness(input: {
   back?: string;
 }): Promise<{ ok: boolean; reason?: string }> {
   const steps = input.steps.slice(0, 4);
-  if (steps.length < 2) return { ok: false, reason: "لم يتم رصد الحركة — حاول مرة أخرى" };
+  if (steps.length < 1) return { ok: false, reason: "لم يتم رصد الحركة — حاول مرة أخرى" };
   const images = [input.center, ...steps.map((s) => s.image), ...(input.back ? [input.back] : [])];
   const expected = steps
     .map((s, i) => `frame ${i + 2}: head turned to the person's own ${s.dir}`)
