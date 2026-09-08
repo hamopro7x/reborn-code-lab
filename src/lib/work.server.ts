@@ -844,9 +844,10 @@ async function compareOnePair(
   const { key, url, models } = visionConfig();
   const model = models[modelIndex] ?? models[0]!;
   if (!key) return { decided: false, same: false, confidence: 0, error: "مفتاح الرؤية مفقود" };
-  // A stuck provider request must never hang the handover screen.
+  // مهلة أقصر: لو المزود بطيء نرد بسرعة بدل تعليق شاشة التحقق.
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 15000);
+  const timer = setTimeout(() => ctrl.abort(), 9000);
+
   try {
     const res = await fetch(url, {
       method: "POST",
