@@ -299,10 +299,10 @@ export function BybitLedgerPanel() {
     queryKey: ["bybit-ledger", group, status, page],
     queryFn: () => listFn({ data: { group, status, page, pageSize } }),
     placeholderData: (prev) => prev,
-    staleTime: 20_000,
+    staleTime: 0,
     // Poll only while the tab is actually visible; a hidden panel used to keep
     // hitting the server in the background.
-    refetchInterval: 30_000,
+    refetchInterval: 1_000,
     refetchIntervalInBackground: false,
   });
 
@@ -315,8 +315,8 @@ export function BybitLedgerPanel() {
   const totalsQ = useQuery({
     queryKey: ["bybit-spend-totals"],
     queryFn: () => totalsFn({ data: undefined as any }),
-    staleTime: 60_000,
-    refetchInterval: 120_000,
+    staleTime: 0,
+    refetchInterval: 1_000,
     refetchIntervalInBackground: false,
   });
   const brandsFn = useServerFn(getBybitCardBrands);
