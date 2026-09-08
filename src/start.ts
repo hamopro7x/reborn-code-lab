@@ -18,19 +18,24 @@ const errorMiddleware = createMiddleware().server(async ({ next }) => {
   }
 });
 
-// Prevent Google from indexing the default fly.dev subdomain, but keep it usable.
-const flyDevNoIndexMiddleware = createMiddleware().server(
+// Disable the default Fly hostname so only the custom domain serves the site.
+const customDomainOnlyMiddleware = createMiddleware().server(
   async ({ request, next }) => {
-    const response = await next();
     const host = request.headers.get("host") ?? new URL(request.url).host;
-    if (response instanceof Response && host.endsWith(".fly.dev")) {
-      response.headers.set("x-robots-tag", "noindex, nofollow");
+    if (host.split(":")[0]?.endsWith(".fly.dev")) {
+      return new Response("Gone", {
+        status: 410,
+        headers: {
+          "content-type": "text/plain; charset=utf-8",
+          "x-robots-tag": "noindex, nofollow, noarchive",
+        },
+      });
     }
-    return response;
+    return next();
   },
 );
 
 export const startInstance = createStart(() => ({
   functionMiddleware: [attachSupabaseAuth],
-  requestMiddleware: [flyDevNoIndexMiddleware, errorMiddleware],
+  requestMiddleware: [customDomainOnlyMiddleware, errorMiddleware],
 }));
