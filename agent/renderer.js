@@ -1,5 +1,6 @@
-const SUPABASE_URL = "https://shrrrgvcrevujivuyvzv.supabase.co";
-const SUPABASE_KEY = "sb_publishable_nJ6QLZiRdWnK9_qtFKPZjQ_hDkY5zrz";
+// قاعدة بيانات الموقع الحقيقي على Fly، وليست قاعدة Lovable القديمة المتوقفة.
+const SUPABASE_URL = "https://kcdsdaytrnzoiharmyxo.supabase.co";
+const SUPABASE_KEY = "sb_publishable_SnDM9gGnsqswJtD08pq1HA_ffezyBvo";
 
 const RTC_CONFIG = {
   iceServers: [
