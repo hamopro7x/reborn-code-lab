@@ -1202,13 +1202,11 @@ export async function myShiftRows(userId: string, page = 1, pageSize = 50) {
 }
 
 /* ------------------------- admin view of one employee -------------------------
- * The admin must NOT see anything while the employee's shift is still running.
- * Data becomes visible only after that shift is closed — we then expose the
- * employee's most recently ENDED shift. */
+ * الأدمن يرى معاملات الموظف دائمًا — حتى لو الشفت شغّال الآن. نختار الشفت
+ * الحالي المفتوح إن وُجد، وإلا آخر شفت فيه معاملات ناجحة. */
 
 export async function adminEmployeeWorkState(userId: string) {
   const db = await admin();
-  // الشفت الشغّال لا يُعرض للأدمن، لكن آخر شفت منتهي يُعرض دائمًا.
   const { data: open } = await db
     .from("work_shifts")
     .select("id")
@@ -1217,14 +1215,13 @@ export async function adminEmployeeWorkState(userId: string) {
     .maybeSingle();
   const live = !!open;
 
-  // آخر الشفتات المنتهية — نختار أول شفت فيه معاملات ناجحة فعلاً حتى لا يفتح
-  // الأدمن على شفت فاضي فتظهر خانات «جنية / الكمية» كلها «—».
+  // آخر الشفتات (بما فيها الشفت الشغّال) — نختار أول شفت فيه معاملات ناجحة
+  // فعلاً حتى لا يفتح الأدمن على شفت فاضي فتظهر خانات «جنية / الكمية» كلها «—».
   const { data: recent } = await db
     .from("work_shifts")
     .select("id,started_at,ended_at")
     .eq("user_id", userId)
-    .not("ended_at", "is", null)
-    .order("ended_at", { ascending: false })
+    .order("started_at", { ascending: false })
     .limit(20);
 
   const list = (recent ?? []) as any[];
@@ -1250,7 +1247,7 @@ export async function adminEmployeeWorkState(userId: string) {
     live,
     shiftId: picked.id as string,
     startedAt: new Date(picked.started_at).getTime(),
-    endedAt: new Date(picked.ended_at).getTime(),
+    endedAt: picked.ended_at ? new Date(picked.ended_at).getTime() : null,
     txns: pickedCount,
   };
 
