@@ -2023,11 +2023,20 @@ export async function deleteShift(shiftId: string) {
 
   // طلبات P2P: لا نفقد تاريخ الربط. نحوّل روابطها إلى «previously_assigned»
   // (shift_id = NULL) حتى لا تعود للظهور كطلبات متاحة بعد حذف الشفت.
-  await db
+  const { error: pErr } = await db
     .from("work_txn_assignments")
     .update({ shift_id: null, assign_mode: "previously_assigned" })
     .eq("shift_id", shiftId)
     .in("kind", P2P_KINDS as unknown as string[]);
+  if (pErr) {
+    // قاعدة بيانات أقدم لا تعرف الحالة الجديدة: نفصل الشفت فقط ونُبقي الرابط.
+    await db
+      .from("work_txn_assignments")
+      .update({ shift_id: null })
+      .eq("shift_id", shiftId)
+      .in("kind", P2P_KINDS as unknown as string[]);
+  }
+
 
   await db
     .from("work_txn_assignments")
