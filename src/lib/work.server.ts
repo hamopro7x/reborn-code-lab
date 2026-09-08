@@ -891,18 +891,14 @@ async function compareOnePair(
       )
         return compareOnePair(refUrl, liveUrl, 0, modelIndex + 1);
       /**
-       * Transient provider failures (rate limit / overloaded server) get up to
-       * three retries with growing waits, honouring `Retry-After` when present.
-       * This is what turns "الخدمة مشغولة الآن" into a normal successful check.
+       * محاولة واحدة سريعة فقط عند انشغال المزود — الانتظار الطويل كان
+       * هو سبب بطء التحقق.
        */
-      if (attempt < 2 && (res.status === 429 || res.status === 408 || res.status >= 500)) {
-        const hinted = Number(res.headers.get("retry-after") ?? "");
-        const waitMs = Number.isFinite(hinted) && hinted > 0
-          ? Math.min(hinted * 1000, 2000)
-          : 500 * (attempt + 1);
-        await new Promise((r) => setTimeout(r, waitMs));
+      if (attempt < 1 && (res.status === 429 || res.status === 408 || res.status >= 500)) {
+        await new Promise((r) => setTimeout(r, 300));
         return compareOnePair(refUrl, liveUrl, attempt + 1, modelIndex);
       }
+
       const error =
         res.status === 401 || res.status === 403
           ? "مفتاح الخدمة غير صالح — أبلغ الإدارة"
