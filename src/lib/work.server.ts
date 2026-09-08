@@ -928,18 +928,22 @@ async function compareOnePair(
       confidence: Number(parsed?.confidence ?? 0),
     };
   } catch (e: any) {
-    if (attempt < 3) {
-      await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
+    if (attempt < 1) {
+      await new Promise((r) => setTimeout(r, 400));
       return compareOnePair(refUrl, liveUrl, attempt + 1, modelIndex);
     }
+    const aborted = e?.name === "AbortError";
     return {
       decided: false,
       same: false,
       confidence: 0,
-      error: String(e?.message ?? e).slice(0, 160),
+      error: aborted
+        ? "خدمة التحقق تأخرت في الرد — حاول مرة أخرى"
+        : String(e?.message ?? e).slice(0, 160),
     };
+  } finally {
+    clearTimeout(timer);
   }
-
 }
 
 
