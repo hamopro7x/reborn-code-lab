@@ -140,6 +140,18 @@ export async function handleAgentDownload(request: Request) {
     return new Response("method not allowed", { status: 405 });
   }
 
+  // الإصدار الحالي مرفوع مع ملفات الموقع مباشرة، فلا يعتمد تنزيل الموظف
+  // على مخزن القاعدة أو مفاتيحه.
+  if (AGENT_RELEASE.directAssetPath) {
+    return new Response(null, {
+      status: 302,
+      headers: {
+        location: new URL(AGENT_RELEASE.directAssetPath, request.url).toString(),
+        "cache-control": "no-store",
+      },
+    });
+  }
+
   // الملف الكامل موجود؟ التحويل المباشر أخف وأسرع.
   const whole = await wholeFileUrl();
   if (whole) {
