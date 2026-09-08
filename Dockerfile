@@ -4,7 +4,8 @@ FROM oven/bun:1 AS build
 WORKDIR /app
 
 COPY package.json bun.lock bunfig.toml ./
-RUN bun install --frozen-lockfile
+# نتجنب تشغيل postinstall أثناء التثبيت لأنه يحتاج ملفات المصدر التي لم تُنسخ بعد
+RUN bun install --frozen-lockfile --ignore-scripts
 
 COPY . .
 
