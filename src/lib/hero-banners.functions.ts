@@ -158,7 +158,7 @@ export const importHeroBanners = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin.from("hero_banners").insert(data.rows);
+    const { error } = await supabaseAdmin.from("hero_banners").insert(data.rows as any);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
