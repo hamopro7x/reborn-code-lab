@@ -121,9 +121,11 @@ export function PlatformIcon({
 export function PlatformBadge({
   platform,
   className = "",
+  iconClassName = "size-5 md:size-6",
 }: {
   platform: Platform;
   className?: string;
+  iconClassName?: string;
 }) {
   const bg = platform === "link" ? "#64748B" : BRAND[platform];
   return (
@@ -131,7 +133,7 @@ export function PlatformBadge({
       className={`inline-grid shrink-0 place-items-center rounded-full text-white ring-1 ring-white/20 ${className}`}
       style={{ backgroundColor: bg }}
     >
-      <PlatformIcon platform={platform} color={false} className="size-5 md:size-6" />
+      <PlatformIcon platform={platform} color={false} className={iconClassName} />
     </span>
   );
 }
