@@ -46,9 +46,18 @@ function FooterItem({ link }: { link: FooterLink }) {
         rel="noreferrer"
         className="inline-flex items-center gap-1.5 hover:text-foreground md:gap-2"
       >
-        <PlatformBadge platform={platform} className="size-6 md:size-7" />
+        <PlatformBadge platform={platform} className="size-7 md:size-8" />
         {link.label}
       </a>
+    );
+  }
+  const platformFromLabel = detectPlatformFromLabel(link.label);
+  if (platformFromLabel) {
+    return (
+      <span className="inline-flex items-center gap-1.5 md:gap-2">
+        <PlatformBadge platform={platformFromLabel} className="size-7 md:size-8" />
+        {link.label}
+      </span>
     );
   }
   return <span>{link.label}</span>;
