@@ -207,6 +207,31 @@ export function HeroBannerManager({ device = "desktop" }: { device?: HeroDevice 
     persistOrder(list);
   }
 
+  const [importing, setImporting] = useState(false);
+
+  /** ربط لوحة الموبايل بالبانر الظاهر حاليًا على الموبايل (بنرات الديسكتوب) بنسخها كبنرات موبايل. */
+  async function importFromDesktop() {
+    setImporting(true);
+    const { data, error } = await supabase.from("hero_banners").select("*").order("sort_order");
+    if (error) {
+      setImporting(false);
+      return toast.error(error.message);
+    }
+    const source = (data ?? []).map(normalizeBanner).filter((b) => b.device === "desktop");
+    if (!source.length) {
+      setImporting(false);
+      return toast.error("لا يوجد بانر حالي لنسخه");
+    }
+    const rows = source.map((b, i) =>
+      bannerToRow({ ...b, device: "mobile", sort_order: order.length + i, active: true }),
+    );
+    const res = await supabase.from("hero_banners").insert(rows as any);
+    setImporting(false);
+    if (res.error) return toast.error(res.error.message);
+    toast.success("تم ربط بانر الموبايل بالبانر الحالي");
+    refresh();
+  }
+
   const preview = useMemo(() => editing, [editing]);
 
   return (
@@ -222,15 +247,22 @@ export function HeroBannerManager({ device = "desktop" }: { device?: HeroDevice 
               : "إدارة كاملة للبنرات: المحتوى، الأزرار، الكروت، الوسائط، والترتيب."}
           </p>
         </div>
-        <Button
-          onClick={() => {
-            setEditing(blankBanner(order.length, device));
-            setIsNew(true);
-          }}
-          className="gap-2"
-        >
-          <Plus className="size-4" /> بانر جديد
-        </Button>
+        <div className="flex items-center gap-2">
+          {isMobilePanel && (
+            <Button variant="secondary" disabled={importing} onClick={importFromDesktop}>
+              {importing ? "جارٍ الربط…" : "ربط البانر الحالي"}
+            </Button>
+          )}
+          <Button
+            onClick={() => {
+              setEditing(blankBanner(order.length, device));
+              setIsNew(true);
+            }}
+            className="gap-2"
+          >
+            <Plus className="size-4" /> بانر جديد
+          </Button>
+        </div>
       </div>
 
       <div className="space-y-2">
