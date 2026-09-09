@@ -13,8 +13,8 @@ export function Footer() {
           </ul>
         </div>
         <div>
-          <h4 className="mb-3 text-sm font-bold md:text-base">الأقسام</h4>
-          <ul className="space-y-2 text-xs text-muted-foreground md:text-sm">
+          <h4 className="mb-2 text-[11px] font-bold md:text-base">الأقسام</h4>
+          <ul className="space-y-1 text-[11px] text-muted-foreground md:text-sm">
             <li>الألعاب</li>
             <li>أدوات الذكاء الاصطناعي</li>
             <li>منتجات تصميم</li>
