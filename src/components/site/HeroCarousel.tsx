@@ -127,13 +127,22 @@ export function HeroBannerView({
   preview,
   editable,
   onPositionsChange,
+  forceDevice,
 }: {
   banner: HeroBanner;
   preview?: boolean;
   /** يسمح بتحريك كل عنصر بالماوس داخل المعاينة. */
   editable?: boolean;
   onPositionsChange?: (p: HeroPositions) => void;
+  /** يفرض عرض تخطيط جهاز معيّن (مفيد في معاينة لوحة الإدارة). */
+  forceDevice?: "desktop" | "mobile";
 }) {
+  const desktopWrapCls =
+    forceDevice === "mobile" ? "hidden" : forceDevice === "desktop" ? "block" : "hidden md:block";
+  const mobileWrapCls = forceDevice === "mobile" ? "block" : forceDevice === "desktop" ? "hidden" : "md:hidden";
+  const overlayMobileCls = forceDevice === "mobile" ? "" : forceDevice === "desktop" ? "hidden" : "md:hidden";
+  const overlayDesktopCls =
+    forceDevice === "mobile" ? "hidden" : forceDevice === "desktop" ? "block" : "hidden md:block";
   const hasMedia = banner.media_type !== "none";
   const sideButtons = banner.buttons_position === "side";
   const pos = banner.positions ?? {};
@@ -281,7 +290,9 @@ export function HeroBannerView({
   return (
     <div
       ref={rootRef}
-      className="relative min-h-[152px] h-auto md:h-[230px] overflow-hidden"
+      className={`relative min-h-[152px] overflow-hidden ${
+        forceDevice === "mobile" ? "h-full" : forceDevice === "desktop" ? "h-[230px]" : "h-auto md:h-[230px]"
+      }`}
       style={{ backgroundColor: banner.background_color ?? undefined }}
     >
       {/* الخلفية / الوسائط — تغطي كامل مساحة البنر */}
@@ -295,13 +306,13 @@ export function HeroBannerView({
       {hasMedia && banner.overlay_enabled && (
         <>
           <div
-            className="absolute inset-0 md:hidden"
+            className={`absolute inset-0 ${overlayMobileCls}`}
             style={{
               background: `linear-gradient(270deg, ${banner.overlay_color}f2 0%, ${banner.overlay_color}e6 38%, ${banner.overlay_color}8c 54%, transparent 72%)`,
             }}
           />
           <div
-            className="absolute inset-0 hidden md:block"
+            className={`absolute inset-0 ${overlayDesktopCls}`}
             style={{ backgroundColor: banner.overlay_color, opacity: banner.overlay_opacity }}
           />
         </>
@@ -309,7 +320,7 @@ export function HeroBannerView({
 
 
       {/* ============= Desktop layout ============= */}
-      <div className="hidden md:block relative h-full">
+      <div className={`${desktopWrapCls} relative h-full`}>
         {/* العناصر ذات المواضع الحرة */}
         {freeKeys.has("title") && titleEl}
         {freeKeys.has("subtitle") && subtitleEl}
@@ -338,7 +349,7 @@ export function HeroBannerView({
       </div>
 
       {/* ============= Mobile layout — مطابق لتصميم كانفا ============= */}
-      <div className="md:hidden relative z-10 min-h-[152px]">
+      <div className={`${mobileWrapCls} relative z-10 h-full min-h-[152px]`}>
         {/* النص والأزرار على يمين البانر — مطابق للتصميم */}
         <div className="absolute inset-y-0 right-0 w-[52%] flex flex-col justify-center gap-1 px-3 text-right items-end">
           {banner.show_title && banner.title && (

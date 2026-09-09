@@ -337,6 +337,7 @@ export function HeroBannerManager({ device = "desktop" }: { device?: HeroDevice 
                     <HeroBannerView
                       banner={preview}
                       preview
+                      forceDevice={isMobilePanel ? "mobile" : "desktop"}
                       editable
                       onPositionsChange={(positions) => setEditing((cur) => (cur ? { ...cur, positions } : cur))}
                     />
