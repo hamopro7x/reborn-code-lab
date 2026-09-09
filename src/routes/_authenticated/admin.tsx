@@ -257,7 +257,7 @@ function Admin() {
                 </SidebarMenuItem>
               )}
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={async () => { await supabase.auth.signOut(); window.location.href = "/"; }}>
+                <SidebarMenuButton onClick={async () => { await supabase.auth.signOut(); window.location.replace("/auth"); }}>
                   <LogOut className="size-4" /><span>خروج</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
