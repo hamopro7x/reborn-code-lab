@@ -410,9 +410,12 @@ async function fetchCardPages(maxRows: number, creds: Creds): Promise<any[]> {
   const merged = new Map<string, { row: any; sourcePriority: number; updatedAt: number }>();
   const pageSize = 100; // Bybit caps this endpoint at 100 per page (larger values silently return 10)
   const maxPages = Math.max(1, Math.ceil(maxRows / pageSize));
+  let successfulTypes = 0;
+  let lastError: unknown;
 
   for (const [typeIndex, type] of CARD_QUERY_TYPES.entries()) {
     try {
+      successfulTypes++;
       for (let page = 1; page <= maxPages; page++) {
         const result = await callCardPage({
           limit: pageSize,
@@ -441,11 +444,18 @@ async function fetchCardPages(maxRows: number, creds: Creds): Promise<any[]> {
         if (!rows.length || (totalCount > 0 && pageNo * returnedPageSize >= totalCount)) break;
         await sleep(250);
       }
-    } catch {
-      /* a type may be unsupported for this key; keep the others */
+    } catch (error) {
+      successfulTypes--;
+      lastError = error;
+      /* a type may be unsupported for this key; keep the successful types */
     }
     await sleep(400);
   }
+
+  // Returning [] when every provider request failed made a linked account look
+  // as if it genuinely had no transactions and prevented the caller from
+  // reporting/retrying the real problem.
+  if (!successfulTypes && lastError) throw lastError;
 
   return [...merged.values()]
     .map(({ row }) => row)
@@ -1058,13 +1068,18 @@ export async function fetchCardTxnsPage(opts: {
   const pageSize = Math.min(Math.max(opts.pageSize ?? 150, 10), 500);
   const page = Math.max(opts.page ?? 1, 1);
   const from = (page - 1) * pageSize;
+  const { periodStart, periodEnd } = currentCycleForRead();
 
   const base = () => {
     let q = (supabaseAdmin as any).from("bybit_card_txns");
     return { q };
   };
 
-  const scoped = (q: any) => (opts.accountId ? q.eq("account_id", opts.accountId) : q);
+  const scoped = (q: any) => {
+    let scopedQuery = opts.accountId ? q.eq("account_id", opts.accountId) : q;
+    scopedQuery = scopedQuery.gte("txn_time", periodStart).lt("txn_time", periodEnd);
+    return scopedQuery;
+  };
 
   const applyStatus = (q: any, s: "all" | "success" | "failed" | "refund") =>
     s === "all" ? q : q.eq("status", s);
@@ -1094,6 +1109,10 @@ export async function fetchCardTxnsPage(opts: {
   };
 }
 
+function currentCycleForRead() {
+  return getMonthlySpendPeriod(Date.now());
+}
+
 /**
  * Live read of the current cycle straight from Bybit, used when the archive of a
  * specific account is still empty (e.g. its rows were purged with the previous
@@ -1107,8 +1126,7 @@ export async function fetchCardTxnsLive(opts: {
   page?: number;
   pageSize?: number;
 }): Promise<CardTxnPage> {
-  const { currentCycleStart } = await import("./monthly-cycle.server");
-  const cycleStart = currentCycleStart();
+  const { periodStart, periodEnd } = currentCycleForRead();
   const status = opts.status ?? "all";
   const pageSize = Math.min(Math.max(opts.pageSize ?? 150, 10), 500);
   const page = Math.max(opts.page ?? 1, 1);
@@ -1116,7 +1134,7 @@ export async function fetchCardTxnsLive(opts: {
   const raw = await callCard(500, opts.accountId);
   const rows = raw
     .map(mapCardTxn)
-    .filter((r) => Number(r.time ?? 0) >= cycleStart)
+    .filter((r) => Number(r.time ?? 0) >= periodStart && Number(r.time ?? 0) < periodEnd)
     .sort((a, b) => Number(b.time ?? 0) - Number(a.time ?? 0));
 
   // Archive them so the next read comes from the database again.
