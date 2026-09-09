@@ -1021,7 +1021,7 @@ async function storedCardTxns(limit: number, accountId?: string): Promise<CardTx
   try {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const CHUNK = 1000;
-    const BATCH = 10;
+    const BATCH = 3; // fewer parallel database reads per request keeps the worker responsive
     const data: any[] = [];
     for (let base = 0; base < limit; base += CHUNK * BATCH) {
       const requests: any[] = [];
