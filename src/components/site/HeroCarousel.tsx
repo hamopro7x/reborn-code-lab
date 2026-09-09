@@ -290,7 +290,9 @@ export function HeroBannerView({
   return (
     <div
       ref={rootRef}
-      className="relative min-h-[152px] h-auto md:h-[230px] overflow-hidden"
+      className={`relative min-h-[152px] overflow-hidden ${
+        forceDevice === "mobile" ? "h-full" : forceDevice === "desktop" ? "h-[230px]" : "h-auto md:h-[230px]"
+      }`}
       style={{ backgroundColor: banner.background_color ?? undefined }}
     >
       {/* الخلفية / الوسائط — تغطي كامل مساحة البنر */}
