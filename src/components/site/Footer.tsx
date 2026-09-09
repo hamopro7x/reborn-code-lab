@@ -61,18 +61,21 @@ export function Footer() {
         className="container mx-auto grid gap-2 px-2 py-8 md:gap-8 md:px-4 md:py-12"
         style={{ gridTemplateColumns: `repeat(${Math.max(cfg.columns.length, 1)}, minmax(0, 1fr))` }}
       >
-        {cfg.columns.map((col, i) => (
-          <div key={`${col.title}-${i}`}>
-            <h4 className="mb-2 text-[11px] font-bold md:text-base">{col.title}</h4>
-            <ul className="space-y-1 text-[11px] text-muted-foreground md:text-sm">
-              {col.links.map((l, j) => (
-                <li key={`${l.label}-${j}`}>
-                  <FooterItem link={l} />
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
+        {cfg.columns.map((col, i) => {
+          const compact = col.title.toLowerCase().includes("منصات");
+          return (
+            <div key={`${col.title}-${i}`}>
+              <h4 className="mb-2 text-[11px] font-bold md:text-base">{col.title}</h4>
+              <ul className="space-y-1 text-[11px] text-muted-foreground md:text-sm">
+                {col.links.map((l, j) => (
+                  <li key={`${l.label}-${j}`}>
+                    <FooterItem link={l} compact={compact} />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        })}
       </div>
       <div className="border-t border-border py-4 text-center text-xs text-muted-foreground">
         © {new Date().getFullYear()} {cfg.bottom_text}
