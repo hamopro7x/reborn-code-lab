@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { detectPlatform, PlatformBadge } from "@/components/site/PlatformIcon";
+import { detectPlatform, detectPlatformFromLabel, PlatformBadge } from "@/components/site/PlatformIcon";
 import {
   DEFAULT_FOOTER,
   FOOTER_KEY,
