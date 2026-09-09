@@ -127,13 +127,22 @@ export function HeroBannerView({
   preview,
   editable,
   onPositionsChange,
+  forceDevice,
 }: {
   banner: HeroBanner;
   preview?: boolean;
   /** يسمح بتحريك كل عنصر بالماوس داخل المعاينة. */
   editable?: boolean;
   onPositionsChange?: (p: HeroPositions) => void;
+  /** يفرض عرض تخطيط جهاز معيّن (مفيد في معاينة لوحة الإدارة). */
+  forceDevice?: "desktop" | "mobile";
 }) {
+  const desktopWrapCls =
+    forceDevice === "mobile" ? "hidden" : forceDevice === "desktop" ? "block" : "hidden md:block";
+  const mobileWrapCls = forceDevice === "mobile" ? "block" : forceDevice === "desktop" ? "hidden" : "md:hidden";
+  const overlayMobileCls = forceDevice === "mobile" ? "" : forceDevice === "desktop" ? "hidden" : "md:hidden";
+  const overlayDesktopCls =
+    forceDevice === "mobile" ? "hidden" : forceDevice === "desktop" ? "block" : "hidden md:block";
   const hasMedia = banner.media_type !== "none";
   const sideButtons = banner.buttons_position === "side";
   const pos = banner.positions ?? {};
