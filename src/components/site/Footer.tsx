@@ -12,7 +12,9 @@ import {
   type FooterLink,
 } from "@/lib/footer-config";
 
-function FooterItem({ link }: { link: FooterLink }) {
+function FooterItem({ link, compact }: { link: FooterLink; compact?: boolean }) {
+  const badgeClass = compact ? "size-10 md:size-11" : "size-7 md:size-8";
+  const iconClass = compact ? "size-7 md:size-8" : "size-5 md:size-6";
   if (isInternal(link.href)) {
     return <Link to={link.href!}>{link.label}</Link>;
   }
@@ -25,11 +27,7 @@ function FooterItem({ link }: { link: FooterLink }) {
         rel="noreferrer"
         className="inline-flex items-center gap-1.5 hover:text-foreground md:gap-2"
       >
-        <PlatformBadge
-          platform={platform}
-          className="size-10 md:size-11"
-          iconClassName="size-7 md:size-8"
-        />
+        <PlatformBadge platform={platform} className={badgeClass} iconClassName={iconClass} />
         {link.label}
       </a>
     );
@@ -38,11 +36,7 @@ function FooterItem({ link }: { link: FooterLink }) {
   if (platformFromLabel) {
     return (
       <span className="inline-flex items-center gap-1.5 md:gap-2">
-        <PlatformBadge
-          platform={platformFromLabel}
-          className="size-10 md:size-11"
-          iconClassName="size-7 md:size-8"
-        />
+        <PlatformBadge platform={platformFromLabel} className={badgeClass} iconClassName={iconClass} />
         {link.label}
       </span>
     );
