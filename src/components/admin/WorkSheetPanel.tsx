@@ -45,7 +45,10 @@ function EmployeePickerMenu({
     queryKey: ["admin-employees"],
     queryFn: () => list() as Promise<Employee[]>,
     enabled: open,
+    // قائمة الموظفين تتغيّر نادراً: بدون هذا كانت تُجلب من جديد مع كل فتح.
+    staleTime: 120_000,
   });
+
   const employees = (q.data ?? []).filter((e) => e.role === "employee");
 
   return (
@@ -153,7 +156,9 @@ function ShiftPickerMenu({
     queryKey: ["admin-employee-shifts", userId],
     queryFn: () => listFn({ data: { userId: userId! } }) as Promise<Shift[]>,
     enabled: !!userId && open,
+    staleTime: 60_000,
   });
+
   const shifts = q.data ?? [];
 
   return (

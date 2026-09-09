@@ -151,7 +151,10 @@ export const listCustomers = createServerFn({ method: "GET" })
     const { data: orders } = await supabaseAdmin
       .from("orders")
       .select("id, customer_name, customer_email, customer_phone, customer_country, total, currency_code, status, created_at")
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      // سقف واضح حتى لا يتحول الاستعلام إلى قراءة كامل الجدول مع نمو الطلبات.
+      .limit(5_000);
+
 
     type Row = {
       email: string; name: string; phone: string; country: string;

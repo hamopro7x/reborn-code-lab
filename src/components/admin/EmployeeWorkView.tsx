@@ -1137,10 +1137,11 @@ function ManualSection({
           ? empListFn({ data: { userId: viewUserId } })
           : listFn({ data: undefined as any }),
     enabled: !blank,
-    // Always re-read the stored rows when the section is opened again.
-    staleTime: 0,
-    refetchOnMount: "always",
+    // التحديث اللحظي يتولى تحديث هذه القائمة، فلا داعي لإعادة جلبها من
+    // الصفر مع كل فتح للقسم — كان ذلك أحد أسباب بطء ظهور البيانات.
+    staleTime: 15_000,
   });
+
   const all = blank ? [] : ((q.data as any)?.rows ?? []);
   const serverNow = (q.data as any)?.serverNow ?? null;
   const refresh = () => void qc.invalidateQueries({ queryKey: listKey });
@@ -1594,7 +1595,7 @@ export function EmployeeWorkView({
     // resolve the relevant shift themselves, so waiting for `st` created an
     // avoidable request waterfall for admins and employees.
     enabled: !blank,
-    refetchInterval: 2_000,
+    refetchInterval: 15_000,
     refetchIntervalInBackground: false,
   });
   // The rows response includes the shift state, avoiding a second authenticated
@@ -1617,7 +1618,7 @@ export function EmployeeWorkView({
           : myP2PFn({ data: undefined as any }),
     // الأدمن: لا تُحمّل بيانات P2P إلا بعد اختيار شفت محدد.
     enabled: !blank && (!viewUserId || shiftMode),
-    refetchInterval: 2_000,
+    refetchInterval: 15_000,
     refetchIntervalInBackground: false,
   });
 
@@ -1627,7 +1628,7 @@ export function EmployeeWorkView({
     queryKey: ["work-p2p-open"],
     queryFn: () => openP2PFn({ data: undefined as any }),
     enabled: !blank && !viewUserId && !shiftMode,
-    refetchInterval: 2_000,
+    refetchInterval: 15_000,
     refetchIntervalInBackground: false,
   });
 
@@ -1648,7 +1649,7 @@ export function EmployeeWorkView({
         ? shiftTransfersFn({ data: { shiftId: viewShiftId!, scope: "external" as const } })
         : transfersFn({ data: { scope: "external" as const } }),
     enabled: tab === "ext" && !blank,
-    refetchInterval: 2_000,
+    refetchInterval: 15_000,
     refetchIntervalInBackground: false,
   });
   const intQ = useQuery({
@@ -1658,7 +1659,7 @@ export function EmployeeWorkView({
         ? shiftTransfersFn({ data: { shiftId: viewShiftId!, scope: "internal" as const } })
         : transfersFn({ data: { scope: "internal" as const } }),
     enabled: tab === "int" && !blank,
-    refetchInterval: 2_000,
+    refetchInterval: 15_000,
     refetchIntervalInBackground: false,
   });
 
@@ -1720,7 +1721,7 @@ export function EmployeeWorkView({
           ? manualEmpFn({ data: { userId: viewUserId } })
           : manualCardFn({ data: undefined as any }),
     enabled: !blank && tab === "all",
-    refetchInterval: 2_000,
+    refetchInterval: 15_000,
     refetchIntervalInBackground: false,
   });
   const manualRows: any[] = blank || tab !== "all" ? [] : ((manualCardQ.data as any)?.rows ?? []);
