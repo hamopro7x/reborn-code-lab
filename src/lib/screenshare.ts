@@ -95,7 +95,7 @@ export function openSignaling(
   // من الجدول يظل يعمل. ربط send() بالاشتراك كان يجعل بعض الأجهزة فقط تظل
   // على «جاري الاتصال» إلى الأبد بدون أن يصلها join أصلاً.
   const ready = new Promise<void>((resolve) => {
-    const fallback = setTimeout(resolve, 1200);
+    const fallback = setTimeout(resolve, 400);
     channel.subscribe((status) => {
       if (status === "SUBSCRIBED") {
         clearTimeout(fallback);
@@ -147,7 +147,7 @@ export function openSignaling(
     pollTimer = setTimeout(async () => {
       await poll();
       schedule();
-    }, fast ? 180 : 900);
+    }, fast ? 120 : 900);
   };
   void poll();
   schedule();

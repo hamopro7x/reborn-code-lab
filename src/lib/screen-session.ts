@@ -315,7 +315,7 @@ class ScreenSession {
                 const onChange = () => {
                   if (pc.iceGatheringState === "complete") finish();
                 };
-                const timeout = setTimeout(finish, 1800);
+                const timeout = setTimeout(finish, 700);
                 pc.addEventListener("icegatheringstatechange", onChange);
               });
             }
@@ -358,14 +358,14 @@ class ScreenSession {
             return;
           }
           tries += 1;
-          if (tries > 30) {
+          if (tries > 40) {
             clearInterval(joinTimer);
             this.set({ failed: true });
             this.scheduleReconnect(3000, gen);
             return;
           }
           void sig.send({ type: "join", viewer: viewerId });
-        }, 2_000);
+        }, 800);
         this.timers.push(joinTimer);
       })
       .catch(() => {
