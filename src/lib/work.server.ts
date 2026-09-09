@@ -1847,7 +1847,10 @@ async function transfersByAssignment(
     .in("bybit_ledger.status", SUCCESS_STATUSES as unknown as string[]);
   if (where.shiftId) q = q.eq("shift_id", where.shiftId);
   if (where.userId) q = q.eq("user_id", where.userId);
-  const { data } = await q;
+  // سقف واضح للصفوف: بدونه كان الاستعلام يجلب كل تاريخ التحويلات في كل
+  // تحديث فيتباطأ جدول الشغل كلما كبرت البيانات.
+  const { data } = await q.order("id", { ascending: false }).limit(500);
+
 
   const accounts = await accountNames(db);
   const seen = new Set<string>();

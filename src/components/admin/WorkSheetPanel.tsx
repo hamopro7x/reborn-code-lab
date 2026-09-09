@@ -45,7 +45,10 @@ function EmployeePickerMenu({
     queryKey: ["admin-employees"],
     queryFn: () => list() as Promise<Employee[]>,
     enabled: open,
+    // قائمة الموظفين تتغيّر نادراً: بدون هذا كانت تُجلب من جديد مع كل فتح.
+    staleTime: 120_000,
   });
+
   const employees = (q.data ?? []).filter((e) => e.role === "employee");
 
   return (
