@@ -312,22 +312,30 @@ export function HeroBannerManager({ device = "desktop" }: { device?: HeroDevice 
       </div>
 
       <Dialog open={!!editing} onOpenChange={(v) => !v && setEditing(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{isNew ? "بانر جديد" : "تعديل البانر"}</DialogTitle>
+        <DialogContent
+          dir="rtl"
+          className="hero-editor-dialog grid h-[92vh] w-[calc(100vw-24px)] max-w-[1240px] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden rounded-lg border-border bg-background p-0 text-foreground shadow-none [&>button]:left-4 [&>button]:right-auto [&>button]:top-4 [&>button]:grid [&>button]:size-9 [&>button]:place-items-center [&>button]:border [&>button]:border-border [&>button]:bg-secondary [&>button]:opacity-100 [&>button]:hover:bg-accent"
+        >
+          <DialogHeader className="border-b border-border bg-card px-5 py-4 text-right sm:px-6">
+            <DialogTitle className="text-xl font-bold leading-9">{isNew ? "بانر جديد" : "تعديل البانر"}</DialogTitle>
+            <p className="text-sm text-muted-foreground">اضبط محتوى البانر ومظهره وشاهد النتيجة مباشرة</p>
           </DialogHeader>
 
           {editing && (
-            <div className="space-y-5">
+            <div className="grid min-h-0 gap-4 overflow-y-auto bg-background p-4 lg:grid-cols-[minmax(360px,0.9fr)_minmax(440px,1.1fr)] lg:items-start lg:p-6">
               {/* Live Preview */}
-              <div>
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs">معاينة مباشرة — اسحب كل عنصر (العنوان، الوصف، كل زر، كل كرت) بالماوس لتحديد مكانه</Label>
+              <aside className="rounded-lg border border-border bg-card p-4 lg:sticky lg:top-0">
+                <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-base font-bold">معاينة مباشرة</h3>
+                    <p className="mt-1 max-w-md text-xs leading-5 text-muted-foreground">اسحب العنوان أو الوصف أو الأزرار أو الكروت داخل المعاينة لتحديد موضعها.</p>
+                  </div>
                   <Button
                     size="sm"
-                    variant="ghost"
+                    variant="outline"
                     onClick={() => setEditing({ ...editing, positions: {} })}
                     disabled={!Object.keys(editing.positions ?? {}).length}
+                    className="shrink-0 border-border bg-secondary"
                   >
                     إعادة المواضع
                   </Button>
@@ -343,34 +351,35 @@ export function HeroBannerManager({ device = "desktop" }: { device?: HeroDevice 
                     />
                   )}
                 </ScaledPreview>
+              </aside>
 
-              </div>
+              <div className="space-y-4 [&_section]:space-y-4 [&_section]:rounded-lg [&_section]:border [&_section]:border-border [&_section]:bg-card [&_section]:p-4 [&_section>h3]:border-b [&_section>h3]:border-border [&_section>h3]:pb-3 [&_section>h3]:text-base [&_input]:bg-background [&_select]:bg-background [&_textarea]:bg-background">
 
               {/* المحتوى */}
-              <section className="space-y-3">
+              <section>
                 <h3 className="text-sm font-bold">المحتوى</h3>
-                <div>
-                  <div className="flex items-center justify-between">
-                    <Label>العنوان</Label>
-                    <label className="flex items-center gap-2 text-xs">
+                <div className="space-y-2 rounded-md border border-border bg-background p-3">
+                  <div className="flex items-center justify-between gap-4">
+                    <Label className="font-semibold">العنوان</Label>
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground">
                       <Switch checked={editing.show_title} onCheckedChange={(v) => setEditing({ ...editing, show_title: v })} /> إظهار
                     </label>
                   </div>
                   <Input value={editing.title} onChange={(e) => setEditing({ ...editing, title: e.target.value })} />
                 </div>
-                <div>
-                  <div className="flex items-center justify-between">
-                    <Label>الوصف</Label>
-                    <label className="flex items-center gap-2 text-xs">
+                <div className="space-y-2 rounded-md border border-border bg-background p-3">
+                  <div className="flex items-center justify-between gap-4">
+                    <Label className="font-semibold">الوصف</Label>
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground">
                       <Switch checked={editing.show_subtitle} onCheckedChange={(v) => setEditing({ ...editing, show_subtitle: v })} /> إظهار
                     </label>
                   </div>
                   <Textarea rows={2} value={editing.subtitle} onChange={(e) => setEditing({ ...editing, subtitle: e.target.value })} />
                 </div>
-                <div>
-                  <div className="flex items-center justify-between">
-                    <Label>الوصف الثاني</Label>
-                    <label className="flex items-center gap-2 text-xs">
+                <div className="space-y-2 rounded-md border border-border bg-background p-3">
+                  <div className="flex items-center justify-between gap-4">
+                    <Label className="font-semibold">الوصف الثاني</Label>
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground">
                       <Switch checked={editing.show_subtitle2} onCheckedChange={(v) => setEditing({ ...editing, show_subtitle2: v })} /> إظهار
                     </label>
                   </div>
@@ -390,7 +399,7 @@ export function HeroBannerManager({ device = "desktop" }: { device?: HeroDevice 
               </section>
 
               {/* الوسائط */}
-              <section className="space-y-3">
+              <section>
                 <h3 className="text-sm font-bold">الخلفية / الوسائط</h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   <div>
@@ -529,7 +538,7 @@ export function HeroBannerManager({ device = "desktop" }: { device?: HeroDevice 
               </section>
 
               {/* Overlay */}
-              <section className="space-y-3">
+              <section>
                 <h3 className="text-sm font-bold">طبقة التعتيم</h3>
                 <div className="grid grid-cols-3 gap-3 items-end">
                   <label className="flex items-center gap-2 text-xs">
@@ -549,7 +558,7 @@ export function HeroBannerManager({ device = "desktop" }: { device?: HeroDevice 
               </section>
 
               {/* التخطيط */}
-              <section className="space-y-3">
+              <section>
                 <h3 className="text-sm font-bold">أماكن العناصر والأحجام</h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <div>
@@ -588,7 +597,7 @@ export function HeroBannerManager({ device = "desktop" }: { device?: HeroDevice 
               </section>
 
               {/* الأزرار */}
-              <section className="space-y-3">
+              <section>
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-bold">الأزرار</h3>
                   <Button
@@ -609,7 +618,7 @@ export function HeroBannerManager({ device = "desktop" }: { device?: HeroDevice 
                   </Button>
                 </div>
                 {editing.buttons.map((b, i) => (
-                  <div key={b.id} className="rounded-xl border border-border p-3 grid grid-cols-2 md:grid-cols-5 gap-2 items-end">
+                  <div key={b.id} className="grid grid-cols-2 items-end gap-2 rounded-md border border-border bg-background p-3 md:grid-cols-5">
                     <div>
                       <Label className="text-xs">النص</Label>
                       <Input
@@ -683,7 +692,7 @@ export function HeroBannerManager({ device = "desktop" }: { device?: HeroDevice 
               </section>
 
               {/* الكروت */}
-              <section className="space-y-3">
+              <section>
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-bold">الكروت الصغيرة</h3>
                   <Button
@@ -704,7 +713,7 @@ export function HeroBannerManager({ device = "desktop" }: { device?: HeroDevice 
                   </Button>
                 </div>
                 {editing.badges.map((b, i) => (
-                  <div key={b.id} className="rounded-xl border border-border p-3 grid grid-cols-2 md:grid-cols-5 gap-2 items-end">
+                  <div key={b.id} className="grid grid-cols-2 items-end gap-2 rounded-md border border-border bg-background p-3 md:grid-cols-5">
                     <div>
                       <Label className="text-xs">العنوان</Label>
                       <Input
@@ -773,18 +782,19 @@ export function HeroBannerManager({ device = "desktop" }: { device?: HeroDevice 
                 ))}
               </section>
 
-              <label className="flex items-center gap-2 text-sm">
+              <label className="flex items-center justify-between rounded-lg border border-border bg-card p-4 text-sm font-semibold">
                 <Switch checked={editing.active} onCheckedChange={(v) => setEditing({ ...editing, active: v })} /> بانر نشط
               </label>
+              </div>
             </div>
           )}
 
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setEditing(null)}>
+          <DialogFooter className="flex-row justify-start gap-2 border-t border-border bg-card px-5 py-4 sm:px-6 sm:space-x-0">
+            <Button variant="outline" className="border-border bg-secondary" onClick={() => setEditing(null)}>
               إلغاء
             </Button>
-            <Button onClick={save} disabled={saving || uploading}>
-              حفظ
+            <Button className="min-w-24" onClick={save} disabled={saving || uploading}>
+              {saving ? "جارٍ الحفظ…" : "حفظ"}
             </Button>
           </DialogFooter>
         </DialogContent>
