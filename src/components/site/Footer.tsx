@@ -38,7 +38,11 @@ function FooterItem({ link }: { link: FooterLink }) {
   if (platformFromLabel) {
     return (
       <span className="inline-flex items-center gap-1.5 md:gap-2">
-        <PlatformBadge platform={platformFromLabel} className="size-7 md:size-8" />
+        <PlatformBadge
+          platform={platformFromLabel}
+          className="size-10 md:size-11"
+          iconClassName="size-7 md:size-8"
+        />
         {link.label}
       </span>
     );
