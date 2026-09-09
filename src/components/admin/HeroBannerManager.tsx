@@ -281,24 +281,24 @@ export function HeroBannerManager({ device = "desktop" }: { device?: HeroDevice 
   /** ربط لوحة الموبايل بالبانر الظاهر حاليًا على الموبايل (بنرات الديسكتوب) بنسخها كبنرات موبايل. */
   async function importFromDesktop() {
     setImporting(true);
-    const { data, error } = await supabase.from("hero_banners").select("*").order("sort_order");
-    if (error) {
+    try {
+      const all = await fetchList({ data: {} });
+      const source = (all ?? []).map(normalizeBanner).filter((b) => b.device === "desktop");
+      if (!source.length) {
+        setImporting(false);
+        return toast.error("لا يوجد بانر حالي لنسخه");
+      }
+      const rows = source.map((b, i) =>
+        bannerToRow({ ...b, device: "mobile", sort_order: order.length + i, active: true }),
+      );
+      await importFn({ data: { rows: rows as any } });
+      toast.success("تم ربط بانر الموبايل بالبانر الحالي");
+      refresh();
+    } catch (err: any) {
+      toast.error(err?.message ?? "فشل الربط");
+    } finally {
       setImporting(false);
-      return toast.error(error.message);
     }
-    const source = (data ?? []).map(normalizeBanner).filter((b) => b.device === "desktop");
-    if (!source.length) {
-      setImporting(false);
-      return toast.error("لا يوجد بانر حالي لنسخه");
-    }
-    const rows = source.map((b, i) =>
-      bannerToRow({ ...b, device: "mobile", sort_order: order.length + i, active: true }),
-    );
-    const res = await supabase.from("hero_banners").insert(rows as any);
-    setImporting(false);
-    if (res.error) return toast.error(res.error.message);
-    toast.success("تم ربط بانر الموبايل بالبانر الحالي");
-    refresh();
   }
 
   const preview = useMemo(() => editing, [editing]);
