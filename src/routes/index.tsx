@@ -161,22 +161,17 @@ function Home() {
 
           {/* CATEGORIES */}
           <section aria-labelledby="categories-title" className="py-3 md:py-5">
-            <div className="mb-4 md:mb-5 min-w-0 border-r-4 border-primary pr-3">
-              <h2 id="categories-title" className="text-lg md:text-2xl font-bold text-foreground">
-                تصفح الأقسام
-              </h2>
-              <p className="mt-1 text-xs md:text-sm text-muted-foreground">
-                اختر القسم الذي يناسبك
-              </p>
-            </div>
+            <h2 id="categories-title" className="mb-4 md:mb-5 text-base md:text-lg font-bold text-foreground">
+              تصفح الأقسام
+            </h2>
 
             <div className="overflow-x-auto scrollbar-hide snap-x snap-mandatory" aria-label="أقسام المتجر">
-              <div className="flex w-max min-w-full gap-3 pb-2 md:gap-4">
+              <div className="flex w-max min-w-full gap-4 pb-3 md:gap-6">
               {categoriesQ.isLoading &&
                 Array.from({ length: 6 }).map((_, i) => (
-                  <div key={`c-sk-${i}`} className="w-28 shrink-0 snap-start md:w-40">
+                  <div key={`c-sk-${i}`} className="w-40 shrink-0 snap-start md:w-56">
                     <div className="category-art-frame aspect-[3/4] bg-category-surface animate-pulse" />
-                    <div className="mt-2 h-4 w-3/4 bg-category-surface animate-pulse" />
+                    <div className="mt-4 h-5 w-3/4 bg-category-surface animate-pulse" />
                   </div>
                 ))}
               {categories.map((c: any, ci: number) => (
@@ -184,30 +179,30 @@ function Home() {
                   key={c.id}
                   to="/category/$slug"
                   params={{ slug: c.slug }}
-                  className="group block w-28 shrink-0 snap-start text-foreground focus-visible:outline-none md:w-40"
+                  className="group block w-40 shrink-0 snap-start text-foreground focus-visible:outline-none md:w-56"
                 >
                   <div className="category-art-frame relative aspect-[3/4] overflow-hidden bg-category-surface">
                     {c.banner_image ? (
                       <img
                         src={c.banner_image}
                         alt={c.name}
-                        width={320}
-                        height={426}
+                        width={448}
+                        height={596}
                         loading={ci < 6 ? "eager" : "lazy"}
                         decoding="async"
                         {...(ci < 6 ? { fetchPriority: "high" as const } : {})}
                         className="absolute inset-0 h-full w-full object-cover"
                       />
                     ) : (
-                      <div className="absolute inset-0 flex items-center justify-center px-3 text-center text-xs text-muted-foreground">
+                      <div className="absolute inset-0 flex items-center justify-center px-4 text-center text-sm text-muted-foreground">
                         {c.name}
                       </div>
                     )}
-                    <div className="absolute inset-x-0 bottom-0 bg-primary py-1 text-center text-[10px] font-bold text-primary-foreground md:text-[11px]">
+                    <div className="absolute inset-x-0 bottom-0 bg-primary py-1.5 text-center text-[11px] font-bold text-primary-foreground md:text-xs">
                       تصفح العروض
                     </div>
                   </div>
-                  <h3 className="category-title mt-2 line-clamp-2 min-h-9 px-0.5 text-center text-xs font-bold leading-5 text-foreground transition-colors duration-150 group-hover:text-primary md:text-sm">
+                  <h3 className="category-title mt-3 line-clamp-2 min-h-12 px-1 text-center text-base font-bold leading-6 text-foreground transition-colors duration-150 group-hover:text-primary md:text-lg">
                     {c.name}
                   </h3>
                 </Link>
