@@ -247,15 +247,22 @@ export function HeroBannerManager({ device = "desktop" }: { device?: HeroDevice 
               : "إدارة كاملة للبنرات: المحتوى، الأزرار، الكروت، الوسائط، والترتيب."}
           </p>
         </div>
-        <Button
-          onClick={() => {
-            setEditing(blankBanner(order.length, device));
-            setIsNew(true);
-          }}
-          className="gap-2"
-        >
-          <Plus className="size-4" /> بانر جديد
-        </Button>
+        <div className="flex items-center gap-2">
+          {isMobilePanel && (
+            <Button variant="secondary" disabled={importing} onClick={importFromDesktop}>
+              {importing ? "جارٍ الربط…" : "ربط البانر الحالي"}
+            </Button>
+          )}
+          <Button
+            onClick={() => {
+              setEditing(blankBanner(order.length, device));
+              setIsNew(true);
+            }}
+            className="gap-2"
+          >
+            <Plus className="size-4" /> بانر جديد
+          </Button>
+        </div>
       </div>
 
       <div className="space-y-2">
