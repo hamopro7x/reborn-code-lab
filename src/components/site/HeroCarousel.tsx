@@ -352,48 +352,100 @@ export function HeroBannerView({
         </div>
       </div>
 
-      {/* ============= Mobile layout — مطابق لتصميم كانفا ============= */}
+      {/* ============= Mobile layout — مطابق لتصميم كانفا + تحكم حر بالمواضع ============= */}
       <div className={`${mobileWrapCls} relative z-10 h-full`}>
-        {/* النص والأزرار على يمين البانر — مطابق للتصميم */}
-        <div className="absolute inset-y-0 right-0 w-[52%] flex flex-col justify-center gap-1 px-3 text-right items-end">
-          {banner.show_title && banner.title && (
-            <h1
-              className="font-black leading-tight whitespace-nowrap text-[15px] w-full text-right text-white drop-shadow-sm"
-              style={{ textShadow: "0 1px 4px rgba(0,0,0,0.6)" }}
-            >
-              {banner.title}
-            </h1>
-          )}
-          {banner.show_subtitle && banner.subtitle && (
-            <p className="text-white/85 leading-snug line-clamp-2 text-[9px] w-full text-right">{banner.subtitle}</p>
-          )}
-          {banner.show_subtitle2 && banner.subtitle2 && (
-            <p className="text-white/85 leading-snug line-clamp-2 text-[9px] w-full text-right">{banner.subtitle2}</p>
-          )}
+        {(() => {
+          const mTitle =
+            banner.show_title && banner.title ? (
+              <h1
+                className="font-black leading-tight whitespace-nowrap text-[15px] text-right text-white drop-shadow-sm"
+                style={{ textShadow: "0 1px 4px rgba(0,0,0,0.6)" }}
+              >
+                {banner.title}
+              </h1>
+            ) : null;
+          const mSubtitle =
+            banner.show_subtitle && banner.subtitle ? (
+              <p className="text-white/85 leading-snug line-clamp-2 text-[9px] text-right">{banner.subtitle}</p>
+            ) : null;
+          const mSubtitle2 =
+            banner.show_subtitle2 && banner.subtitle2 ? (
+              <p className="text-white/85 leading-snug line-clamp-2 text-[9px] text-right">{banner.subtitle2}</p>
+            ) : null;
 
-          {buttons.length > 0 && (
-            <div className="flex flex-nowrap justify-end gap-1.5 mt-1.5 w-full">
-              {(() => {
-                const shoppingIdx = buttons.findIndex((b) => /تسوق|shop/i.test(b.label));
-                const otherIdx = buttons.findIndex((_, i) => i !== shoppingIdx);
-                const otherVariant = otherIdx >= 0 ? buttons[otherIdx]!.variant : "teal";
-                const shoppingVariant = otherVariant === "teal" ? "outline-white" : "teal";
-                return buttons.map((b, i) => (
-                  <HeroButtonItem
-                    key={b.id}
-                    banner={banner}
-                    b={b}
-                    size={22}
-                    compact
-                    variant={i === shoppingIdx ? shoppingVariant : undefined}
-                  />
-                ));
-              })()}
-            </div>
-          )}
-        </div>
+          const shoppingIdx = buttons.findIndex((b) => /تسوق|shop/i.test(b.label));
+          const otherIdx = buttons.findIndex((_, i) => i !== shoppingIdx);
+          const otherVariant = otherIdx >= 0 ? buttons[otherIdx]!.variant : "teal";
+          const shoppingVariant = otherVariant === "teal" ? "outline-white" : "teal";
+          const mButton = (b: HeroButton, i: number) => (
+            <HeroButtonItem
+              banner={banner}
+              b={b}
+              size={22}
+              compact
+              variant={i === shoppingIdx ? shoppingVariant : undefined}
+            />
+          );
 
+          const freeNodes = (
+            <>
+              {freeKeys.has("title") && mTitle && <Layer k="title">{mTitle}</Layer>}
+              {freeKeys.has("subtitle") && mSubtitle && <Layer k="subtitle">{mSubtitle}</Layer>}
+              {freeKeys.has("subtitle2") && mSubtitle2 && <Layer k="subtitle2">{mSubtitle2}</Layer>}
+              {buttons.map((b, i) =>
+                freeKeys.has(`btn:${b.id}`) ? (
+                  <Layer key={b.id} k={`btn:${b.id}`}>
+                    {mButton(b, i)}
+                  </Layer>
+                ) : null,
+              )}
+              {badges.map((b) =>
+                freeKeys.has(`bdg:${b.id}`) ? (
+                  <Layer key={b.id} k={`bdg:${b.id}`}>
+                    <BadgeCard b={b} />
+                  </Layer>
+                ) : null,
+              )}
+            </>
+          );
+
+          const flowBtns = buttons.filter((b) => !freeKeys.has(`btn:${b.id}`));
+
+          return (
+            <>
+              {freeNodes}
+              {/* النص والأزرار على يمين البانر — لأي عنصر لم يُحرَّك يدويًا */}
+              <div className="absolute inset-y-0 right-0 w-[52%] flex flex-col justify-center gap-1 px-3 text-right items-end">
+                {!freeKeys.has("title") && mTitle && (
+                  <Layer k="title" className="w-full">
+                    {mTitle}
+                  </Layer>
+                )}
+                {!freeKeys.has("subtitle") && mSubtitle && (
+                  <Layer k="subtitle" className="w-full">
+                    {mSubtitle}
+                  </Layer>
+                )}
+                {!freeKeys.has("subtitle2") && mSubtitle2 && (
+                  <Layer k="subtitle2" className="w-full">
+                    {mSubtitle2}
+                  </Layer>
+                )}
+                {flowBtns.length > 0 && (
+                  <div className="flex flex-nowrap justify-end gap-1.5 mt-1.5 w-full">
+                    {flowBtns.map((b) => (
+                      <Layer key={b.id} k={`btn:${b.id}`}>
+                        {mButton(b, buttons.indexOf(b))}
+                      </Layer>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          );
+        })()}
       </div>
+
 
     </div>
   );
