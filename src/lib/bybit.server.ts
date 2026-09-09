@@ -1094,6 +1094,47 @@ export async function fetchCardTxnsPage(opts: {
   };
 }
 
+/**
+ * Live read of the current cycle straight from Bybit, used when the archive of a
+ * specific account is still empty (e.g. its rows were purged with the previous
+ * cycle and no successful sync has written the new ones yet). This keeps every
+ * account's transaction table in step with its own balance/spend cards instead
+ * of showing "no transactions" while the account clearly has spending.
+ */
+export async function fetchCardTxnsLive(opts: {
+  accountId?: string;
+  status?: "all" | "success" | "failed" | "refund";
+  page?: number;
+  pageSize?: number;
+}): Promise<CardTxnPage> {
+  const { currentCycleStart } = await import("./monthly-cycle.server");
+  const cycleStart = currentCycleStart();
+  const status = opts.status ?? "all";
+  const pageSize = Math.min(Math.max(opts.pageSize ?? 150, 10), 500);
+  const page = Math.max(opts.page ?? 1, 1);
+
+  const raw = await callCard(500, opts.accountId);
+  const rows = raw
+    .map(mapCardTxn)
+    .filter((r) => Number(r.time ?? 0) >= cycleStart)
+    .sort((a, b) => Number(b.time ?? 0) - Number(a.time ?? 0));
+
+  // Archive them so the next read comes from the database again.
+  try {
+    await persistCardTxns(rows, opts.accountId);
+  } catch {
+    /* الحفظ ليس شرطًا للعرض */
+  }
+
+  const filtered = status === "all" ? rows : rows.filter((r) => r.status === status);
+  const from = (page - 1) * pageSize;
+  return {
+    rows: filtered.slice(from, from + pageSize),
+    total: filtered.length,
+    counts: { all: filtered.length, success: 0, failed: 0, refund: 0 },
+  };
+}
+
 /** Sync recent records and one resumable historical chunk outside the visible read. */
 export async function syncCardTxns(accountId?: string): Promise<{ added: number; backfillDone: boolean }> {
   const creds = await getCreds(accountId);
