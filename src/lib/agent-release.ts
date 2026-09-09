@@ -3,25 +3,25 @@
 // دائماً آخر إصدار فقط — البرنامج ينزل هذا الإصدار مباشرة ولا يمر بأي
 // إصدارات وسيطة بالترتيب.
 export const AGENT_RELEASE = {
-  version: "3.1.25",
-  notes: "ثبات التشغيل في الخلفية: منع ويندوز من تجميد البرنامج المخفي حتى لا ينقطع الاتصال.",
+  version: "3.1.26",
+  notes: "تشغيل تلقائي متعدد الآليات: البرنامج يبدأ فور تشغيل الجهاز حتى لو أُغلق نهائياً.",
   url: "https://mag-pro1.com/api/public/agent-download.exe",
   storageBucket: "site-assets",
-  storagePath: "releases/MagProConnect-Setup-3.1.25.exe",
-  size: 110527065,
-  sha256: "a55043bcdf4988fa5d83cb5d2394c1d20829c6e82c35eec5a3d08afa88e2afa6",
+  storagePath: "releases/MagProConnect-Setup-3.1.26.exe",
+  size: 110527266,
+  sha256: "ed26543cf74785fd89426305d72cc69a0b9f5500b67e17bb401132c814ea013a",
   parts: [
   {
-    "path": "releases/parts/3.1.25/part-00",
+    "path": "releases/parts/3.1.26/part-00",
     "size": 40000000
   },
   {
-    "path": "releases/parts/3.1.25/part-01",
+    "path": "releases/parts/3.1.26/part-01",
     "size": 40000000
   },
   {
-    "path": "releases/parts/3.1.25/part-02",
-    "size": 30527065
+    "path": "releases/parts/3.1.26/part-02",
+    "size": 30527266
   }
 ],
 } as const;
