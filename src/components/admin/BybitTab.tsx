@@ -812,8 +812,6 @@ function BybitAccountView({ isAdmin, accountId, accountName, onBack }: { isAdmin
   }, [tab]);
 
   const overviewFn = useServerFn(getBybitOverview);
-  const cardFn = useServerFn(getBybitCardTxns);
-  const syncCardFn = useServerFn(syncBybitCardTxns);
   const cardsFn = useServerFn(getBybitCards);
   const [cardsOpen, setCardsOpen] = useState(false);
   useAdminBack(cardsOpen ? () => setCardsOpen(false) : onBack, [cardsOpen, onBack]);
@@ -827,46 +825,10 @@ function BybitAccountView({ isAdmin, accountId, accountName, onBack }: { isAdmin
   const [editCard, setEditCard] = useState<any | null>(null);
 
   const overview = useQuery({ queryKey: ["bybit-overview", accountId], queryFn: () => overviewFn({ data: { accountId } }) });
-  const card = useQuery({
-    queryKey: ["bybit-card", accountId],
-    queryFn: () => cardFn({ data: { accountId, page: 1, pageSize: 10 } }),
-    enabled: tab === "card",
-    staleTime: 30_000,
-  });
   const chain = useQuery({ queryKey: ["bybit-chain", accountId], queryFn: () => chainFn({ data: { accountId } }), enabled: tab === "onchain" });
   const internal = useQuery({ queryKey: ["bybit-internal", accountId], queryFn: () => internalFn({ data: { accountId } }), enabled: tab === "internal" });
   const p2p = useQuery({ queryKey: ["bybit-p2p", accountId], queryFn: () => p2pFn({ data: { accountId } }), enabled: tab === "p2p" });
   const cards = useQuery({ queryKey: ["bybit-cards", accountId], queryFn: () => cardsFn({ data: { accountId } }), enabled: cardsOpen });
-
-  useEffect(() => {
-    if (tab !== "card" || card.isLoading || card.isError) return;
-    let active = true;
-    let timer: number | undefined;
-
-    const syncUntilOldestPage = async () => {
-      if (!active) return;
-      try {
-        const result = await syncCardFn({ data: { accountId } });
-        if (!active) return;
-        await Promise.all([
-          qc.invalidateQueries({ queryKey: ["bybit-card", accountId] }),
-          qc.invalidateQueries({ queryKey: ["bybit-overview", accountId] }),
-          qc.invalidateQueries({ queryKey: ["bybit-cards", accountId] }),
-        ]);
-        if (!(result as any)?.backfillDone) {
-          timer = window.setTimeout(() => void syncUntilOldestPage(), 1_000);
-        }
-      } catch {
-        if (active) timer = window.setTimeout(() => void syncUntilOldestPage(), 5_000);
-      }
-    };
-
-    timer = window.setTimeout(() => void syncUntilOldestPage(), 2_000);
-    return () => {
-      active = false;
-      if (timer !== undefined) window.clearTimeout(timer);
-    };
-  }, [accountId, card.isError, card.isLoading, qc, syncCardFn, tab]);
 
   const createCard = useMutation({
     mutationFn: (data: { pan4: string; brand: string; currency: string; status: string; name?: string; fullNumber?: string; cvv?: string; expiry?: string }) =>
@@ -1027,7 +989,7 @@ function BybitAccountView({ isAdmin, accountId, accountName, onBack }: { isAdmin
         {show("txns") && <Chip active={tab === "p2p"} onClick={() => setTab("p2p")}>طلبات P2P</Chip>}
       </div>
 
-      {tab === "card" && show("txns") && <CardTable q={card} accountId={accountId} />}
+      {tab === "card" && show("txns") && <CardTable accountId={accountId} />}
       {tab === "onchain" && show("onchain") && <AssetTable q={chain} title="" icon inChip="الاستلام" outChip="التحويل على السلسلة" showAddress={false} hideFeeOnDeposit />}
       {tab === "internal" && show("internal") && <AssetTable q={internal} title="" inChip="إيداع" outChip="سحب" showAddress hideChain />}
       {tab === "p2p" && show("txns") && <P2PTable q={p2p} />}
@@ -1521,7 +1483,7 @@ function AddCardDialog({ open, onClose, onSubmit, busy, card }: {
   );
 }
 
-function CardTable({ q, accountId }: { q: any; accountId?: string }) {
+function CardTable({ accountId }: { accountId?: string }) {
   const cardsFn = useServerFn(getBybitCards);
   const cards = useQuery({
     queryKey: ["bybit-cards", accountId],
@@ -1600,14 +1562,17 @@ function CardTableInner({
   brandByPan4 = {},
   accountId,
 }: {
-  q?: any;
   brandByPan4?: Record<string, string>;
   accountId?: string;
 }) {
   const [filter, setFilter] = usePersistentState<"all" | "success" | "failed" | "refund">("bybit.card.filter", "all");
   const [openId, setOpenId] = usePersistentState<string | null>("bybit.card.open", null);
   const PAGE_SIZE = 150;
-  const [page, setPage] = useUiState<number>("bybit-card", "page", 1);
+  const [page, setPage] = useState(1);
+
+  // A page number from another account/filter must never make the newly opened
+  // account appear empty.
+  useEffect(() => setPage(1), [accountId, filter]);
 
   // The archive is read one page at a time: the full stored history is far too
   // large to travel in a single response, which is what left the table empty.
@@ -1615,7 +1580,6 @@ function CardTableInner({
   const q = useQuery({
     queryKey: ["bybit-card", accountId, filter, page],
     queryFn: () => txnsFn({ data: { accountId, status: filter, page, pageSize: PAGE_SIZE } }),
-    placeholderData: (prev: any) => prev,
     staleTime: 30_000,
   });
 
