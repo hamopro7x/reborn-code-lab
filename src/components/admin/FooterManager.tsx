@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowRight, ArrowLeft, ChevronDown, ChevronUp, Loader2, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { detectPlatform, PLATFORM_LABEL, PlatformIcon } from "@/components/site/PlatformIcon";
 import {
   DEFAULT_FOOTER,
   FOOTER_KEY,
