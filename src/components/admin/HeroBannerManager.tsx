@@ -176,12 +176,19 @@ function NumField({ label, value, onChange, min = 0, max = 120 }: { label: strin
 export function HeroBannerManager({ device = "desktop" }: { device?: HeroDevice } = {}) {
   const isMobilePanel = device === "mobile";
   const qc = useQueryClient();
+  const fetchList = useServerFn(listHeroBanners);
+  const saveFn = useServerFn(saveHeroBanner);
+  const deleteFn = useServerFn(deleteHeroBanner);
+  const toggleFn = useServerFn(toggleHeroBanner);
+  const reorderFn = useServerFn(reorderHeroBanners);
+  const duplicateFn = useServerFn(duplicateHeroBanner);
+  const importFn = useServerFn(importHeroBanners);
+
   const q = useQuery({
     queryKey: ["admin-hero-banners", device],
     queryFn: async () => {
-      const { data, error } = await supabase.from("hero_banners").select("*").order("sort_order");
-      if (error) throw error;
-      return (data ?? []).map(normalizeBanner).filter((b) => b.device === device);
+      const rows = await fetchList({ device });
+      return (rows ?? []).map(normalizeBanner);
     },
   });
 
