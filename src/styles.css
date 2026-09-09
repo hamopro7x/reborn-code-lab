@@ -234,6 +234,27 @@
   box-shadow: 0 0 0 1px oklch(0.78 0.24 120 / 0.55);
 }
 
+/* Hero editor only: the purple accent and navy surfaces from its UI reference. */
+.hero-editor-dialog {
+  --background: oklch(0.135 0.025 264);
+  --foreground: oklch(0.97 0.01 264);
+  --card: oklch(0.17 0.035 264);
+  --card-foreground: oklch(0.97 0.01 264);
+  --popover: oklch(0.17 0.035 264);
+  --popover-foreground: oklch(0.97 0.01 264);
+  --primary: oklch(0.61 0.23 285);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.21 0.045 264);
+  --secondary-foreground: oklch(0.95 0.01 264);
+  --muted: oklch(0.19 0.035 264);
+  --muted-foreground: oklch(0.71 0.035 264);
+  --accent: oklch(0.25 0.075 277);
+  --accent-foreground: oklch(0.97 0.01 264);
+  --border: oklch(0.31 0.045 264 / 0.8);
+  --input: oklch(0.27 0.04 264);
+  --ring: oklch(0.61 0.23 285);
+}
+
 /* ===== Unified data tables (Admin + Employee dashboards only) ===== */
 .data-surface {
   background-color: oklch(0.115 0 0);
