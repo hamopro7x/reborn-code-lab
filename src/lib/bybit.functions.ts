@@ -429,6 +429,12 @@ export const getBybitLedger = createServerFn({ method: "POST" })
   }))
   .handler(async ({ data, context }) => {
     await assertAccess(context.supabase, context.userId);
+    // Do not depend on an external scheduler: opening the central transaction
+    // screen itself guarantees that closed-cycle rows are physically removed.
+    // The purge has an internal six-hour guard, so normal two-second polling
+    // only performs the cheap state check after cleanup succeeds.
+    const { runCyclePurge } = await import("./monthly-cycle.server");
+    await runCyclePurge();
     const mod = await import("./bybit.server");
     return mod.fetchLedgerPage(data);
   });

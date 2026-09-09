@@ -41,8 +41,12 @@ export function inCurrentCycle(timeMs: number, nowMs: number = Date.now()): bool
 }
 
 const STATE_KEY = "monthly_cycle_purge";
-const BATCH = 2_000;
-const MAX_BATCHES = 200;
+// Keep PostgREST URLs comfortably below proxy limits. The old 2,000-id batch
+// made the DELETE request too large; it failed, but the failure was swallowed
+// and the cycle was incorrectly recorded as complete.
+const BATCH = 200;
+const MAX_BATCHES = 2_000;
+const PURGE_VERSION = 2;
 
 async function admin() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -66,14 +70,15 @@ async function purgeCardTxns(db: any, cycleStart: number): Promise<number> {
       .lt("txn_time", cycleStart)
       .order("txn_time", { ascending: true })
       .limit(BATCH);
-    if (error || !data?.length) break;
+    if (error) throw new Error(`bybit_card_txns select failed: ${error.message}`);
+    if (!data?.length) break;
     const ids = data.map((r: any) => r.txn_id);
     const { error: delErr } = await db
       .from("bybit_card_txns")
       .delete()
       .lt("txn_time", cycleStart)
       .in("txn_id", ids);
-    if (delErr) break;
+    if (delErr) throw new Error(`bybit_card_txns delete failed: ${delErr.message}`);
     deleted += ids.length;
     if (ids.length < BATCH) break;
   }
@@ -96,14 +101,20 @@ async function purgeLedger(db: any, cycleStart: number): Promise<{ deleted: numb
       .lt("occurred_at", cutoff)
       .order("occurred_at", { ascending: true })
       .range(offset, offset + BATCH - 1);
-    if (error || !data?.length) break;
+    if (error) throw new Error(`bybit_ledger select failed: ${error.message}`);
+    if (!data?.length) break;
     const ids: string[] = data.map((r: any) => String(r.id));
 
     // أي صف مربوط ببيانات الشغل يُترك كما هو (الأدمن وحده يحذفه يدويًا).
-    const { data: assigned } = await db
+    const { data: assigned, error: assignedError } = await db
       .from("work_txn_assignments")
       .select("ledger_id")
       .in("ledger_id", ids);
+    if (assignedError) {
+      // Never guess here: deleting without knowing the protected IDs could
+      // cascade into the employee work sheet.
+      throw new Error(`work_txn_assignments protection check failed: ${assignedError.message}`);
+    }
     const protectedIds = new Set((assigned ?? []).map((a: any) => String(a.ledger_id)));
     const removable = ids.filter((id) => !protectedIds.has(id));
     kept += ids.length - removable.length;
@@ -111,7 +122,7 @@ async function purgeLedger(db: any, cycleStart: number): Promise<{ deleted: numb
 
     if (removable.length) {
       const { error: delErr } = await db.from("bybit_ledger").delete().in("id", removable);
-      if (delErr) break;
+      if (delErr) throw new Error(`bybit_ledger delete failed: ${delErr.message}`);
       deleted += removable.length;
     }
     if (ids.length < BATCH) break;
@@ -130,10 +141,11 @@ async function purgeCardTransactions(db: any, cycleStart: number): Promise<numbe
       .lt("occurred_at", cutoff)
       .order("occurred_at", { ascending: true })
       .limit(BATCH);
-    if (error || !data?.length) break;
+    if (error) throw new Error(`card_transactions select failed: ${error.message}`);
+    if (!data?.length) break;
     const ids = data.map((r: any) => r.id);
     const { error: delErr } = await db.from("card_transactions").delete().in("id", ids);
-    if (delErr) break;
+    if (delErr) throw new Error(`card_transactions delete failed: ${delErr.message}`);
     deleted += ids.length;
     if (ids.length < BATCH) break;
   }
@@ -156,9 +168,10 @@ export async function runCyclePurge(force = false, nowMs: number = Date.now()): 
     .maybeSingle();
   const lastStart = Number((state?.value as any)?.cycleStart ?? 0);
   const lastRunAt = Number((state?.value as any)?.lastRunAt ?? 0);
+  const lastVersion = Number((state?.value as any)?.version ?? 0);
 
   // نفس الدورة ولا تجاوزنا 6 ساعات من آخر تنظيف: لا حاجة لأي حذف.
-  if (!force && lastStart === cycleStart && nowMs - lastRunAt < 6 * 3600_000) {
+  if (!force && lastVersion === PURGE_VERSION && lastStart === cycleStart && nowMs - lastRunAt < 6 * 3600_000) {
     return {
       cycleStart,
       ran: false,
@@ -174,7 +187,15 @@ export async function runCyclePurge(force = false, nowMs: number = Date.now()): 
   await db
     .from("site_settings")
     .upsert(
-      { key: STATE_KEY, value: { cycleStart, lastRunAt: nowMs, deleted: cardTxns + ledger.deleted + external } },
+      {
+        key: STATE_KEY,
+        value: {
+          version: PURGE_VERSION,
+          cycleStart,
+          lastRunAt: nowMs,
+          deleted: cardTxns + ledger.deleted + external,
+        },
+      },
       { onConflict: "key" },
     );
 

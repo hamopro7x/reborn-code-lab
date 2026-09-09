@@ -1109,6 +1109,11 @@ export async function syncCardTxns(accountId?: string): Promise<{ added: number;
 
 /** Runs the same sync for every linked Bybit account. */
 export async function syncAllCardTxns(): Promise<{ added: number; accounts: number }> {
+  // Purge first, before any provider network calls. This guarantees that merely
+  // opening the central ledger removes closed-cycle rows immediately even when
+  // Bybit is slow or unavailable.
+  const { runCyclePurgeSafe } = await import("./monthly-cycle.server");
+  await runCyclePurgeSafe();
   const accounts = await listAccounts();
   const results = await Promise.all(
     accounts.map(async (a) => {
@@ -1121,10 +1126,6 @@ export async function syncAllCardTxns(): Promise<{ added: number; accounts: numb
       }
     }),
   );
-  // Automatic monthly cycle: closed-cycle transactions are deleted for real.
-  // Employee work-sheet data is never touched (see monthly-cycle.server.ts).
-  const { runCyclePurgeSafe } = await import("./monthly-cycle.server");
-  await runCyclePurgeSafe();
   return { added: results.reduce((s, n) => s + n, 0), accounts: accounts.length };
 }
 
