@@ -100,3 +100,22 @@ export function PlatformIcon({
     </svg>
   );
 }
+
+/** دائرة ملونة مملوءة بالأيقونة البيضاء — تستخدم في الفوتر. */
+export function PlatformBadge({
+  platform,
+  className = "",
+}: {
+  platform: Platform;
+  className?: string;
+}) {
+  const bg = platform === "link" ? "#64748B" : BRAND[platform];
+  return (
+    <span
+      className={`inline-grid shrink-0 place-items-center rounded-full text-white ring-1 ring-white/20 ${className}`}
+      style={{ backgroundColor: bg }}
+    >
+      <PlatformIcon platform={platform} color={false} className="size-4 md:size-5" />
+    </span>
+  );
+}

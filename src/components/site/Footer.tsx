@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { detectPlatform, PlatformIcon } from "@/components/site/PlatformIcon";
+import { detectPlatform, PlatformBadge } from "@/components/site/PlatformIcon";
 import {
   DEFAULT_FOOTER,
   FOOTER_KEY,
@@ -46,9 +46,7 @@ function FooterItem({ link }: { link: FooterLink }) {
         rel="noreferrer"
         className="inline-flex items-center gap-1.5 hover:text-foreground md:gap-2"
       >
-        <span className="grid size-5 shrink-0 place-items-center rounded-md bg-background/80 ring-1 ring-border/60 md:size-6">
-          <PlatformIcon platform={platform} className="size-3.5 md:size-4" />
-        </span>
+        <PlatformBadge platform={platform} className="size-6 md:size-7" />
         {link.label}
       </a>
     );
