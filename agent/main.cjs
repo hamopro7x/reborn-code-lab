@@ -8,6 +8,14 @@ if (process.platform === "win32") {
   app.setPath("userData", path.join(app.getPath("appData"), "Mag Pro"));
 }
 
+// تشغيل خلفي دائم بلا انقطاع: ويندوز يعتبر النافذة المخفية «محجوبة» فيجمّد
+// مؤقّتاتها وWebRTC ويجعل الجهاز يظهر «غير متصل» في اللوحة رغم أن البرنامج
+// يعمل. هذه المفاتيح تمنع الخنق والتجميد وتجميد النوافذ المحجوبة نهائياً.
+app.commandLine.appendSwitch("disable-background-timer-throttling");
+app.commandLine.appendSwitch("disable-renderer-backgrounding");
+app.commandLine.appendSwitch("disable-backgrounding-occluded-windows");
+app.commandLine.appendSwitch("disable-features", "CalculateNativeWinOcclusion");
+
 let win = null;
 let tray = null;
 let rendererRecoveryAttempts = 0;
