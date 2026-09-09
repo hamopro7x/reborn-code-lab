@@ -146,7 +146,7 @@ export const duplicateHeroBanner = createServerFn({ method: "POST" })
     await assertAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { id, ...row } = data.banner;
-    const { error } = await supabaseAdmin.from("hero_banners").insert(row);
+    const { error } = await supabaseAdmin.from("hero_banners").insert(row as any);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
