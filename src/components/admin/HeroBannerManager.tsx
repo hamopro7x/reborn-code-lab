@@ -29,10 +29,6 @@ const TEN_YEARS = 60 * 60 * 24 * 365 * 10;
 /** إطار معاينة بعرض الموقع الحقيقي (1280px) مُصغّر بالتحويل — يعرض التصميم بنفس نسب الصفحة الرئيسية. */
 const SITE_WIDTH = 1280;
 const SITE_HEIGHT = 340;
-/** مقاس معاينة الموبايل (عرض شاشة هاتف نموذجي). */
-const PHONE_WIDTH = 390;
-const PHONE_HEIGHT = 230;
-
 function ScaledPreview({ children, width, height }: { children: React.ReactNode; width?: number; height?: number }) {
   const boxRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
