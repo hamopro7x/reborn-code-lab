@@ -291,7 +291,7 @@ export function HeroBannerView({
     <div
       ref={rootRef}
       className={`relative min-h-[152px] overflow-hidden ${
-        forceDevice === "mobile" ? "h-full" : forceDevice === "desktop" ? "h-[230px]" : "h-auto md:h-[230px]"
+        forceDevice === "mobile" ? "h-full" : forceDevice === "desktop" ? "h-[230px]" : "h-[380px] md:h-[230px]"
       }`}
       style={{ backgroundColor: banner.background_color ?? undefined }}
     >
