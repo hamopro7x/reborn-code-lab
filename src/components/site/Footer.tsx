@@ -5,8 +5,8 @@ export function Footer() {
     <footer className="mt-16 border-t border-border bg-card">
       <div className="container mx-auto grid grid-cols-4 gap-2 px-2 py-8 md:gap-8 md:px-4 md:py-12">
         <div>
-          <h4 className="mb-3 text-sm font-bold md:text-base">روابط</h4>
-          <ul className="space-y-2 text-xs text-muted-foreground md:text-sm">
+          <h4 className="mb-2 text-[11px] font-bold md:text-base">روابط</h4>
+          <ul className="space-y-1 text-[11px] text-muted-foreground md:text-sm">
             <li><Link to="/">الرئيسية</Link></li>
             <li><Link to="/shop">المتجر</Link></li>
             <li><Link to="/track">تتبع الطلب</Link></li>
