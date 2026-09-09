@@ -57,6 +57,9 @@
   --color-panel-foreground: var(--panel-foreground);
   --color-nav-pill: var(--nav-pill);
   --color-nav-pill-foreground: var(--nav-pill-foreground);
+  --color-category-surface: var(--category-surface);
+  --color-category-overlay: var(--category-overlay);
+  --font-category: "Libre Baskerville", "IBM Plex Sans Arabic", serif;
 }
 
 :root {
@@ -94,6 +97,8 @@
   --panel-foreground: #f2f5fa;
   --nav-pill: #505962;
   --nav-pill-foreground: #f2f5fa;
+  --category-surface: oklch(0.145 0.025 264);
+  --category-overlay: oklch(0.105 0.02 264 / 0.92);
   /* Product details panel (cart) */
   --details-bg: #13172e;
   --details-heading: #d11118;
@@ -155,6 +160,15 @@
 }
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+@utility category-art-frame {
+  clip-path: polygon(8% 0, 100% 0, 92% 100%, 0 100%);
+}
+
+@utility category-title {
+  font-family: var(--font-category);
+  letter-spacing: 0;
 }
 
 

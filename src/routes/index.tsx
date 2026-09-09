@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Heart, ShoppingCart } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
@@ -13,8 +13,6 @@ import { normalizeBanner } from "@/lib/hero-banners";
 import { TopupCard } from "@/components/site/TopupCard";
 import { useEffect, useMemo } from "react";
 import { useCurrency } from "@/lib/currency-context";
-import { useFavorites } from "@/lib/favorites";
-import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({
   component: Home,
@@ -56,7 +54,6 @@ function SectionHeading({ title, to }: { title: string; to?: string }) {
 
 function Home() {
   const { setRates, setCurrencies } = useCurrency();
-  const { isFavorite, toggle } = useFavorites();
 
   const categoriesQ = useQuery({
     queryKey: ["categories"],
@@ -162,61 +159,73 @@ function Home() {
             </section>
           )}
 
-          {/* CATEGORIES / CARDS SECTION */}
-          <section>
-            <SectionHeading title="تصفح الأقسام" to="/shop" />
-            <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-6 gap-2">
+          {/* CATEGORIES */}
+          <section aria-labelledby="categories-title" className="py-4 md:py-8">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-4 mb-6 md:mb-8">
+              <div className="min-w-0 border-r-4 border-primary pr-4">
+                <h2 id="categories-title" className="text-2xl md:text-4xl font-black text-foreground">
+                  تصفح الأقسام
+                </h2>
+                <p className="mt-2 text-sm md:text-base text-muted-foreground">
+                  اختر القسم الذي يناسبك
+                </p>
+              </div>
+              <Link
+                to="/shop"
+                className="shrink-0 inline-flex min-h-10 items-center gap-2 rounded-lg border border-border bg-category-surface px-4 text-sm font-bold text-foreground transition-colors duration-150 hover:border-primary hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                عرض الكل
+                <ArrowLeft className="size-4" />
+              </Link>
+            </div>
+
+            <div className="overflow-x-auto scrollbar-hide snap-x snap-mandatory" aria-label="أقسام المتجر">
+              <div className="flex w-max min-w-full gap-4 pb-3 md:gap-6">
               {categoriesQ.isLoading &&
-                Array.from({ length: 5 }).map((_, i) => (
-                  <div key={`c-sk-${i}`} className="rounded-xl border border-border bg-card h-[10rem] animate-pulse" />
+                Array.from({ length: 6 }).map((_, i) => (
+                  <div key={`c-sk-${i}`} className="w-40 shrink-0 snap-start md:w-56">
+                    <div className="category-art-frame aspect-[3/4] bg-category-surface animate-pulse" />
+                    <div className="mt-4 h-5 w-3/4 bg-category-surface animate-pulse" />
+                  </div>
                 ))}
               {categories.map((c: any, ci: number) => (
                 <Link
                   key={c.id}
                   to="/category/$slug"
                   params={{ slug: c.slug }}
-                  className="group rounded-xl border border-border bg-card text-card-foreground overflow-hidden flex flex-col transition-colors duration-150 hover:border-primary"
+                  className="group block w-40 shrink-0 snap-start text-foreground focus-visible:outline-none md:w-56"
                 >
-                  <div className="aspect-[4/3] bg-muted overflow-hidden">
-                    {c.banner_image ? (
-                      <img
-                        src={c.banner_image}
-                        alt={c.name}
-                        width={400}
-                        height={300}
-                        loading={ci < 6 ? "eager" : "lazy"}
-                        decoding="async"
-                        {...(ci < 6 ? { fetchPriority: "high" as const } : {})}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground px-2 text-center">
-                        {c.name}
-                      </div>
-                    )}
-                  </div>
-                  <div className="px-3 py-2.5 flex items-center justify-between gap-2 border-t border-border">
-                    <span className="text-sm font-bold text-right truncate min-w-0">{c.name}</span>
-                    <div className="flex items-center gap-1.5 text-muted-foreground shrink-0">
-                      <button
-                        type="button"
-                        aria-label={isFavorite(c.id) ? "إزالة من المفضلة" : "إضافة للمفضلة"}
-                        aria-pressed={isFavorite(c.id)}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          const on = toggle(c.id);
-                          toast.success(on ? "تمت الإضافة للمفضلة" : "تمت الإزالة من المفضلة");
-                        }}
-                        className="transition-colors hover:text-primary"
-                      >
-                        <Heart className={`size-3.5 ${isFavorite(c.id) ? "fill-primary text-primary" : ""}`} />
-                      </button>
-                      <ShoppingCart className="size-3.5" />
+                  <div className="category-art-frame relative aspect-[3/4] overflow-hidden border border-border bg-category-surface transition-colors duration-150 group-hover:border-primary group-focus-visible:border-primary group-focus-visible:ring-2 group-focus-visible:ring-ring">
+                    <div className="absolute inset-0">
+                      {c.banner_image ? (
+                        <img
+                          src={c.banner_image}
+                          alt={c.name}
+                          width={448}
+                          height={596}
+                          loading={ci < 6 ? "eager" : "lazy"}
+                          decoding="async"
+                          {...(ci < 6 ? { fetchPriority: "high" as const } : {})}
+                          className="h-full w-full object-cover opacity-80"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center px-4 text-center text-sm text-muted-foreground">
+                          {c.name}
+                        </div>
+                      )}
+                      <div className="absolute inset-x-0 bottom-0 h-2/5 bg-linear-to-t from-category-overlay to-transparent" />
+                    </div>
+                    <div className="absolute inset-x-0 bottom-0 p-5 md:p-6">
+                      <span className="mb-4 block h-1 w-12 bg-primary transition-[width] duration-150 group-hover:w-20" />
+                      <span className="text-xs font-semibold text-muted-foreground">قسم المتجر</span>
                     </div>
                   </div>
+                  <h3 className="category-title mt-4 line-clamp-2 min-h-12 px-2 text-center text-base font-bold leading-6 text-foreground md:text-lg">
+                    {c.name}
+                  </h3>
                 </Link>
               ))}
+              </div>
             </div>
           </section>
         </div>
