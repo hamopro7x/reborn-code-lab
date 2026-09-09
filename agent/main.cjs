@@ -98,25 +98,54 @@ function installStartupShortcut() {
   }
 }
 
+// مُشغِّل مخفي ثابت (VBS) نستخدمه في المهام المجدولة حتى لا تظهر نافذة سوداء.
+function launcherScriptPath() {
+  const fs = require("fs");
+  const dir = app.getPath("userData");
+  const file = path.join(dir, "launch-hidden.vbs");
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(
+      file,
+      `Set s = CreateObject("WScript.Shell")\r\ns.Run """${process.execPath}"" --hidden", 0, False\r\n`,
+    );
+  } catch {
+    // ignore
+  }
+  return file;
+}
+
 function installScheduledTask() {
   if (process.platform !== "win32") return;
   // امسح المهام القديمة أولاً
   for (const name of LEGACY_RUN_NAMES) {
     execFile("schtasks.exe", ["/Delete", "/TN", name, "/F"], { windowsHide: true }, () => {});
   }
-  // مهمة تعمل عند تسجيل دخول المستخدم الحالي بأعلى صلاحيات، حتى لو أُغلق
-  // البرنامج نهائياً — بمجرد تشغيل الجهاز ودخول المستخدم يبدأ البرنامج تلقائياً.
-  const cmd = `"${process.execPath}" --hidden`;
+  const launcher = launcherScriptPath();
+  const runner = `wscript.exe "${launcher}"`;
   const user = process.env.USERNAME || "";
-  const args = [
+  // 1) مهمة عند تسجيل دخول المستخدم: البرنامج يبدأ مع أول لحظة يفتح فيها الجهاز.
+  const logonArgs = [
     "/Create", "/TN", RUN_NAME,
-    "/TR", cmd,
+    "/TR", runner,
     "/SC", "ONLOGON",
     "/RL", "LIMITED",
     "/F",
   ];
-  if (user) args.push("/RU", user);
-  execFile("schtasks.exe", args, { windowsHide: true }, () => {});
+  if (user) logonArgs.push("/RU", user);
+  execFile("schtasks.exe", logonArgs, { windowsHide: true }, () => {});
+  // 2) مهمة حرس كل دقيقتين: لو البرنامج كان مقفولاً أو انهار، يعود تلقائياً.
+  //    قفل النسخة الواحدة يضمن إنهاء أي نسخة زائدة فوراً بدون أي تأثير.
+  const guardArgs = [
+    "/Create", "/TN", RUN_NAME + "Guard",
+    "/TR", runner,
+    "/SC", "MINUTE",
+    "/MO", "2",
+    "/RL", "LIMITED",
+    "/F",
+  ];
+  if (user) guardArgs.push("/RU", user);
+  execFile("schtasks.exe", guardArgs, { windowsHide: true }, () => {});
 }
 
 function enableAutoLaunch() {
@@ -136,6 +165,7 @@ function enableAutoLaunch() {
   installStartupShortcut();
   installScheduledTask();
 }
+
 
 
 
