@@ -18,9 +18,18 @@ const FALLBACK_RELAY = [
       "turn:openrelay.metered.ca:80",
       "turn:openrelay.metered.ca:443",
       "turn:openrelay.metered.ca:443?transport=tcp",
+      "turns:openrelay.metered.ca:443?transport=tcp",
     ],
     username: "openrelayproject",
     credential: "openrelayproject",
+  },
+  {
+    urls: [
+      "turn:relay1.expressturn.com:3478",
+      "turn:relay1.expressturn.com:3478?transport=tcp",
+    ],
+    username: "ef7RGDL7M4L2VQXR2M",
+    credential: "0nH9GfPMLLKQF1Uc",
   },
 ];
 
