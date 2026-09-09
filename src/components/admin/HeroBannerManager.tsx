@@ -65,7 +65,8 @@ function ScaledPreview({ children, width, height }: { children: React.ReactNode;
 function MobilePagePreview({ children }: { children: React.ReactNode }) {
   return (
     <ScaledPreview width={390} height={760}>
-      <div className="flex h-full flex-col bg-background">
+      <div className="relative flex h-full flex-col overflow-hidden rounded-[32px] border-8 border-secondary bg-background">
+        <span className="absolute left-1/2 top-0 z-20 h-5 w-28 -translate-x-1/2 rounded-b-2xl bg-secondary" aria-hidden="true" />
         <div className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-card px-4">
           <div className="flex items-center gap-3">
             <div className="size-9 rounded-lg border border-border bg-muted" />
@@ -356,7 +357,7 @@ export function HeroBannerManager({ device = "desktop" }: { device?: HeroDevice 
       <Dialog open={!!editing} onOpenChange={(v) => !v && setEditing(null)}>
         <DialogContent
           dir="rtl"
-          className="hero-editor-dialog grid h-[92vh] w-[calc(100vw-24px)] max-w-[1240px] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden rounded-lg border-border bg-background p-0 text-foreground shadow-none [&>button]:left-4 [&>button]:right-auto [&>button]:top-4 [&>button]:grid [&>button]:size-9 [&>button]:place-items-center [&>button]:border [&>button]:border-border [&>button]:bg-secondary [&>button]:opacity-100 [&>button]:hover:bg-accent"
+          className="hero-editor-dialog grid h-[94vh] w-[calc(100vw-24px)] max-w-[1400px] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden rounded-lg border-border bg-background p-0 text-foreground shadow-none [&>button]:left-4 [&>button]:right-auto [&>button]:top-4 [&>button]:grid [&>button]:size-9 [&>button]:place-items-center [&>button]:border [&>button]:border-border [&>button]:bg-secondary [&>button]:opacity-100 [&>button]:hover:bg-accent"
         >
           <DialogHeader className="border-b border-border bg-card px-5 py-4 text-right sm:px-6">
             <DialogTitle className="text-xl font-bold leading-9">{isNew ? "بانر جديد" : "تعديل البانر"}</DialogTitle>
