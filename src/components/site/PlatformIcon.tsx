@@ -28,6 +28,22 @@ export function detectPlatform(href?: string): Platform {
   return "link";
 }
 
+/** يتعرّف على المنصة من اسم الرابط لو مفيش href. */
+export function detectPlatformFromLabel(label?: string): Platform | null {
+  const l = (label ?? "").toLowerCase();
+  if (l.includes("فيس") || l.includes("facebook")) return "facebook";
+  if (l.includes("إنست") || l.includes("انست") || l.includes("instagram")) return "instagram";
+  if (l.includes("تيك") || l.includes("tiktok")) return "tiktok";
+  if (l.includes("تويتر") || l.includes("twitter") || l.includes("إكس") || l === "x") return "x";
+  if (l.includes("يوتيوب") || l.includes("youtube")) return "youtube";
+  if (l.includes("تيليجرام") || l.includes("telegram")) return "telegram";
+  if (l.includes("واتس") || l.includes("whatsapp")) return "whatsapp";
+  if (l.includes("سناب") || l.includes("snapchat")) return "snapchat";
+  if (l.includes("لينكد") || l.includes("linkedin")) return "linkedin";
+  if (l.includes("ديسكورد") || l.includes("discord")) return "discord";
+  return null;
+}
+
 export const PLATFORM_LABEL: Record<Platform, string> = {
   facebook: "فيسبوك",
   instagram: "إنستغرام",
@@ -98,5 +114,24 @@ export function PlatformIcon({
     >
       <path d={PATHS[platform]} />
     </svg>
+  );
+}
+
+/** دائرة ملونة مملوءة بالأيقونة البيضاء — تستخدم في الفوتر. */
+export function PlatformBadge({
+  platform,
+  className = "",
+}: {
+  platform: Platform;
+  className?: string;
+}) {
+  const bg = platform === "link" ? "#64748B" : BRAND[platform];
+  return (
+    <span
+      className={`inline-grid shrink-0 place-items-center rounded-full text-white ring-1 ring-white/20 ${className}`}
+      style={{ backgroundColor: bg }}
+    >
+      <PlatformIcon platform={platform} color={false} className="size-5 md:size-6" />
+    </span>
   );
 }
