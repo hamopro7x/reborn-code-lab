@@ -306,7 +306,7 @@ export function HeroBannerView({
       {hasMedia && banner.overlay_enabled && (
         <>
           <div
-            className="absolute inset-0 md:hidden"
+            className={`absolute inset-0 ${overlayMobileCls}`}
             style={{
               background: `linear-gradient(270deg, ${banner.overlay_color}f2 0%, ${banner.overlay_color}e6 38%, ${banner.overlay_color}8c 54%, transparent 72%)`,
             }}
