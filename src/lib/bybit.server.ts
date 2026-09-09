@@ -434,17 +434,22 @@ async function callCardPage(params: Record<string, unknown>, creds: Creds) {
 }
 
 /** Fetch every card record ever recorded on the account, for every Bybit query type. */
-async function fetchCardPages(maxRows: number, creds: Creds, sinceMs?: number): Promise<any[]> {
+async function fetchCardPages(maxRows: number, creds: Creds, sinceMs?: number, budgetMs = 20_000): Promise<any[]> {
   const merged = new Map<string, { row: any; sourcePriority: number; updatedAt: number }>();
   const pageSize = 100; // Bybit caps this endpoint at 100 per page (larger values silently return 10)
   const maxPages = Math.max(1, Math.ceil(maxRows / pageSize));
+  // Wall-clock budget: an unbounded page walk could keep one request busy for
+  // minutes and starve every other visitor of the same worker.
+  const deadline = Date.now() + budgetMs;
   let successfulTypes = 0;
   let lastError: unknown;
 
   for (const [typeIndex, type] of CARD_QUERY_TYPES.entries()) {
+    if (Date.now() > deadline) break;
     try {
       successfulTypes++;
-      for (let page = 1; page <= maxPages; page++) {
+      for (let page = 1; page <= maxPages && Date.now() < deadline; page++) {
+
         const result = await callCardPage({
           limit: pageSize,
           page,
