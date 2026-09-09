@@ -25,7 +25,11 @@ function FooterItem({ link }: { link: FooterLink }) {
         rel="noreferrer"
         className="inline-flex items-center gap-1.5 hover:text-foreground md:gap-2"
       >
-        <PlatformBadge platform={platform} className="size-7 md:size-8" />
+        <PlatformBadge
+          platform={platform}
+          className="size-10 md:size-11"
+          iconClassName="size-7 md:size-8"
+        />
         {link.label}
       </a>
     );
