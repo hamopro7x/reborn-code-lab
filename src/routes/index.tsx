@@ -195,36 +195,33 @@ function Home() {
                   params={{ slug: c.slug }}
                   className="group block w-40 shrink-0 snap-start text-foreground focus-visible:outline-none md:w-56"
                 >
-                  <div className="category-art-frame relative aspect-[3/4] overflow-hidden border border-border bg-category-surface transition-colors duration-150 group-hover:border-primary group-focus-visible:border-primary group-focus-visible:ring-2 group-focus-visible:ring-ring">
-                    <div className="absolute inset-0">
-                      {c.banner_image ? (
-                        <img
-                          src={c.banner_image}
-                          alt={c.name}
-                          width={448}
-                          height={596}
-                          loading={ci < 6 ? "eager" : "lazy"}
-                          decoding="async"
-                          {...(ci < 6 ? { fetchPriority: "high" as const } : {})}
-                          className="h-full w-full object-cover opacity-80"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center px-4 text-center text-sm text-muted-foreground">
-                          {c.name}
-                        </div>
-                      )}
-                      <div className="absolute inset-x-0 bottom-0 h-2/5 bg-linear-to-t from-category-overlay to-transparent" />
-                    </div>
-                    <div className="absolute inset-x-0 bottom-0 p-5 md:p-6">
-                      <span className="mb-4 block h-1 w-12 bg-primary transition-[width] duration-150 group-hover:w-20" />
-                      <span className="text-xs font-semibold text-muted-foreground">قسم المتجر</span>
+                  <div className="category-art-frame relative aspect-[3/4] overflow-hidden bg-category-surface">
+                    {c.banner_image ? (
+                      <img
+                        src={c.banner_image}
+                        alt={c.name}
+                        width={448}
+                        height={596}
+                        loading={ci < 6 ? "eager" : "lazy"}
+                        decoding="async"
+                        {...(ci < 6 ? { fetchPriority: "high" as const } : {})}
+                        className="absolute inset-0 h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center px-4 text-center text-sm text-muted-foreground">
+                        {c.name}
+                      </div>
+                    )}
+                    <div className="absolute inset-x-0 bottom-0 bg-primary py-1.5 text-center text-[11px] font-bold text-primary-foreground md:text-xs">
+                      تصفح العروض
                     </div>
                   </div>
-                  <h3 className="category-title mt-4 line-clamp-2 min-h-12 px-2 text-center text-base font-bold leading-6 text-foreground md:text-lg">
+                  <h3 className="category-title mt-3 line-clamp-2 min-h-12 px-1 text-center text-base font-bold leading-6 text-foreground transition-colors duration-150 group-hover:text-primary md:text-lg">
                     {c.name}
                   </h3>
                 </Link>
               ))}
+
               </div>
             </div>
           </section>
