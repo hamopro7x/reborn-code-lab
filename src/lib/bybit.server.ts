@@ -30,6 +30,34 @@ async function admin() {
   return supabaseAdmin as any;
 }
 
+/* ---------- overload protection ----------
+ * Heavy provider work (live card reads, full syncs) used to run once per request.
+ * With several admin/employee screens polling at the same time this piled up
+ * dozens of long Bybit page walks inside one worker and made the whole site
+ * unresponsive. Every heavy entry point now shares one in-flight run per key and
+ * a short cooldown, so extra callers reuse a result instead of adding load.
+ */
+const heavyInflight = new Map<string, Promise<any>>();
+const heavyLast = new Map<string, { at: number; value: any }>();
+
+async function heavyOnce<T>(key: string, cooldownMs: number, run: () => Promise<T>): Promise<T> {
+  const running = heavyInflight.get(key);
+  if (running) return running as Promise<T>;
+  const last = heavyLast.get(key);
+  if (last && Date.now() - last.at < cooldownMs) return last.value as T;
+  const p = run()
+    .then((value) => {
+      heavyLast.set(key, { at: Date.now(), value });
+      return value;
+    })
+    .finally(() => {
+      heavyInflight.delete(key);
+    });
+  heavyInflight.set(key, p);
+  return p;
+}
+
+
 export async function listAccounts(): Promise<BybitAccount[]> {
   const db = await admin();
   const { data } = await db
