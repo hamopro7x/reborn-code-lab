@@ -94,8 +94,8 @@ export const saveHeroBanner = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { id, ...row } = data.banner;
     const res = data.isNew
-      ? await supabaseAdmin.from("hero_banners").insert(row)
-      : await supabaseAdmin.from("hero_banners").update(row).eq("id", id);
+      ? await supabaseAdmin.from("hero_banners").insert(row as any)
+      : await supabaseAdmin.from("hero_banners").update(row as any).eq("id", id);
     if (res.error) throw new Error(res.error.message);
     return { ok: true };
   });
