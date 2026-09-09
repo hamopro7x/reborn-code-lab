@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowRight, ArrowLeft, ChevronDown, ChevronUp, Loader2, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { detectPlatform, PLATFORM_LABEL, PlatformIcon } from "@/components/site/PlatformIcon";
 import {
   DEFAULT_FOOTER,
   FOOTER_KEY,
@@ -140,6 +141,17 @@ export function FooterManager() {
                       }
                     />
                   </div>
+                  {(() => {
+                    const p = detectPlatform(l.href);
+                    return (
+                      <div className="flex min-w-[92px] items-center gap-1.5 pb-1.5">
+                        <span className="grid size-7 place-items-center rounded-lg bg-background ring-1 ring-border/60">
+                          <PlatformIcon platform={p} className="size-4" />
+                        </span>
+                        <span className="text-[11px] text-muted-foreground">{PLATFORM_LABEL[p]}</span>
+                      </div>
+                    );
+                  })()}
                   <Button variant="outline" size="icon" aria-label="أعلى" onClick={() => moveLink(ci, li, -1)}>
                     <ChevronUp className="size-4" />
                   </Button>
