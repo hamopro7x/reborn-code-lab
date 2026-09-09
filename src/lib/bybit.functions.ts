@@ -109,7 +109,7 @@ export const getBybitCardTxns = createServerFn({ method: "POST" })
     // the account's current API key. A missing/restricted Bybit key previously
     // made readOp return an empty fallback even while thousands of archived
     // successful purchases were present.
-    const archived = await mod.fetchCardTxnsPage({
+    let archived = await mod.fetchCardTxnsPage({
       accountId: data.accountId,
       status: data.status,
       page: data.page,
@@ -120,13 +120,26 @@ export const getBybitCardTxns = createServerFn({ method: "POST" })
     // Bybit so a funded account never renders as "no transactions".
     if (!archived.total && data.page === 1) {
       try {
-        const live = await mod.fetchCardTxnsLive({
+        // Sync the account that is actually open, preserving its account_id on
+        // every archived row. Re-read the archive afterwards so each account
+        // page shows only its own transactions from the current UTC cycle.
+        await mod.syncCardTxns(data.accountId);
+        archived = await mod.fetchCardTxnsPage({
           accountId: data.accountId,
           status: data.status,
           page: data.page,
           pageSize: data.pageSize,
         });
-        if (live.total) return live;
+        if (archived.total) return archived;
+
+        // If persistence is temporarily unavailable, still show the provider
+        // rows immediately rather than rendering an empty account.
+        return await mod.fetchCardTxnsLive({
+          accountId: data.accountId,
+          status: data.status,
+          page: data.page,
+          pageSize: data.pageSize,
+        });
       } catch (e) {
         console.error("live card txns fallback failed:", (e as Error)?.message);
       }

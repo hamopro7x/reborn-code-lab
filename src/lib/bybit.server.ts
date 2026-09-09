@@ -406,13 +406,16 @@ async function callCardPage(params: Record<string, unknown>, creds: Creds) {
 }
 
 /** Fetch every card record ever recorded on the account, for every Bybit query type. */
-async function fetchCardPages(maxRows: number, creds: Creds): Promise<any[]> {
+async function fetchCardPages(maxRows: number, creds: Creds, sinceMs?: number): Promise<any[]> {
   const merged = new Map<string, { row: any; sourcePriority: number; updatedAt: number }>();
   const pageSize = 100; // Bybit caps this endpoint at 100 per page (larger values silently return 10)
   const maxPages = Math.max(1, Math.ceil(maxRows / pageSize));
+  let successfulTypes = 0;
+  let lastError: unknown;
 
   for (const [typeIndex, type] of CARD_QUERY_TYPES.entries()) {
     try {
+      successfulTypes++;
       for (let page = 1; page <= maxPages; page++) {
         const result = await callCardPage({
           limit: pageSize,
@@ -438,21 +441,31 @@ async function fetchCardPages(maxRows: number, creds: Creds): Promise<any[]> {
         const totalCount = Number(result?.totalCount ?? 0);
         const pageNo = Number(result?.pageNo ?? page);
         const returnedPageSize = Number(result?.pageSize ?? pageSize);
+        const reachedCycleStart =
+          sinceMs !== undefined && rows.some((row: any) => Number(row?.txnCreate ?? 0) < sinceMs);
+        if (reachedCycleStart) break;
         if (!rows.length || (totalCount > 0 && pageNo * returnedPageSize >= totalCount)) break;
         await sleep(250);
       }
-    } catch {
-      /* a type may be unsupported for this key; keep the others */
+    } catch (error) {
+      successfulTypes--;
+      lastError = error;
+      /* a type may be unsupported for this key; keep the successful types */
     }
     await sleep(400);
   }
+
+  // Returning [] when every provider request failed made a linked account look
+  // as if it genuinely had no transactions and prevented the caller from
+  // reporting/retrying the real problem.
+  if (!successfulTypes && lastError) throw lastError;
 
   return [...merged.values()]
     .map(({ row }) => row)
     .sort((a, b) => Number(b?.txnCreate ?? 0) - Number(a?.txnCreate ?? 0));
 }
 
-async function callCard(limit: number, accountId?: string, creds?: Creds): Promise<any[]> {
+async function callCard(limit: number, accountId?: string, creds?: Creds, sinceMs?: number): Promise<any[]> {
   const key = accountId ?? "default";
   const cached = cardCache.get(key);
   // Short TTL: a settlement can land seconds after its authorisation, and a
@@ -461,7 +474,7 @@ async function callCard(limit: number, accountId?: string, creds?: Creds): Promi
 
   const running = cardInflight.get(key);
   if (running) return running;
-  const p = fetchCardPages(Math.max(limit, 100), creds ?? (await getCreds(accountId)))
+  const p = fetchCardPages(Math.max(limit, 100), creds ?? (await getCreds(accountId)), sinceMs)
     .then((rows) => {
       cardCache.set(key, { at: Date.now(), rows });
       return rows;
@@ -1058,13 +1071,18 @@ export async function fetchCardTxnsPage(opts: {
   const pageSize = Math.min(Math.max(opts.pageSize ?? 150, 10), 500);
   const page = Math.max(opts.page ?? 1, 1);
   const from = (page - 1) * pageSize;
+  const { periodStart, periodEnd } = currentCycleForRead();
 
   const base = () => {
     let q = (supabaseAdmin as any).from("bybit_card_txns");
     return { q };
   };
 
-  const scoped = (q: any) => (opts.accountId ? q.eq("account_id", opts.accountId) : q);
+  const scoped = (q: any) => {
+    let scopedQuery = opts.accountId ? q.eq("account_id", opts.accountId) : q;
+    scopedQuery = scopedQuery.gte("txn_time", periodStart).lt("txn_time", periodEnd);
+    return scopedQuery;
+  };
 
   const applyStatus = (q: any, s: "all" | "success" | "failed" | "refund") =>
     s === "all" ? q : q.eq("status", s);
@@ -1094,6 +1112,10 @@ export async function fetchCardTxnsPage(opts: {
   };
 }
 
+function currentCycleForRead() {
+  return getMonthlySpendPeriod(Date.now());
+}
+
 /**
  * Live read of the current cycle straight from Bybit, used when the archive of a
  * specific account is still empty (e.g. its rows were purged with the previous
@@ -1107,16 +1129,18 @@ export async function fetchCardTxnsLive(opts: {
   page?: number;
   pageSize?: number;
 }): Promise<CardTxnPage> {
-  const { currentCycleStart } = await import("./monthly-cycle.server");
-  const cycleStart = currentCycleStart();
+  const { periodStart, periodEnd } = currentCycleForRead();
   const status = opts.status ?? "all";
   const pageSize = Math.min(Math.max(opts.pageSize ?? 150, 10), 500);
   const page = Math.max(opts.page ?? 1, 1);
 
-  const raw = await callCard(500, opts.accountId);
+  // Walk all pages needed to reach the current cycle boundary. A fixed five
+  // pages hid older transactions in busy accounts even though they belonged to
+  // the same month.
+  const raw = await callCard(10_000, opts.accountId, undefined, periodStart);
   const rows = raw
     .map(mapCardTxn)
-    .filter((r) => Number(r.time ?? 0) >= cycleStart)
+    .filter((r) => Number(r.time ?? 0) >= periodStart && Number(r.time ?? 0) < periodEnd)
     .sort((a, b) => Number(b.time ?? 0) - Number(a.time ?? 0));
 
   // Archive them so the next read comes from the database again.
@@ -1141,7 +1165,8 @@ export async function syncCardTxns(accountId?: string): Promise<{ added: number;
   // An explicit sync must ask the provider again; cached authorisation rows can
   // still say pending after the account history has already settled them.
   cardCache.delete(accountId ?? "default");
-  const liveRows = await callCard(100, accountId, creds);
+  const { currentCycleStart } = await import("./monthly-cycle.server");
+  const liveRows = await callCard(10_000, accountId, creds, currentCycleStart());
   const rows = liveRows.map(mapCardTxn);
   await persistCardTxns(rows, accountId);
   const backfill = await backfillChunk(accountId, creds);
