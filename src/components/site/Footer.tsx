@@ -42,7 +42,7 @@ export function Footer() {
         </div>
         <div>
           <h4 className="mb-3 text-sm font-bold md:text-base">منصاتنا</h4>
-          <ul className="space-y-2 text-xs text-muted-foreground md:text-sm">
+          <ul className="grid grid-cols-2 gap-x-2 gap-y-1 text-xs text-muted-foreground md:grid-cols-1 md:gap-y-2 md:text-sm">
             <li>إنستغرام</li>
             <li>فيسبوك</li>
             <li>تيك توك</li>
