@@ -156,7 +156,9 @@ function ShiftPickerMenu({
     queryKey: ["admin-employee-shifts", userId],
     queryFn: () => listFn({ data: { userId: userId! } }) as Promise<Shift[]>,
     enabled: !!userId && open,
+    staleTime: 60_000,
   });
+
   const shifts = q.data ?? [];
 
   return (
