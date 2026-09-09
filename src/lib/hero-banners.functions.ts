@@ -9,6 +9,72 @@ async function assertAdmin(supabase: any, userId: string) {
 }
 
 const deviceSchema = z.enum(["desktop", "mobile"]);
+const HERO_MEDIA_BUCKET = "product-images";
+const HERO_MEDIA_URL_TTL = 60 * 60 * 24 * 365 * 10;
+
+const mediaKindSchema = z.enum(["image", "video", "poster"]);
+const prepareMediaSchema = z.object({
+  kind: mediaKindSchema,
+  fileName: z.string().min(1).max(180),
+  contentType: z.string().min(1).max(120),
+  size: z.number().int().positive().max(100 * 1024 * 1024),
+});
+
+function safeMediaFileName(fileName: string) {
+  const cleaned = fileName.replace(/[^\w.\-]/g, "_").slice(-120);
+  return cleaned || "upload";
+}
+
+function assertHeroMediaPath(path: string) {
+  if (!/^hero\/(image|video|poster)\/[\w.\-]+$/.test(path)) {
+    throw new Error("Invalid hero media path");
+  }
+}
+
+export const prepareHeroMediaUpload = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) => prepareMediaSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const expectedPrefix = data.kind === "video" ? "video/" : "image/";
+    if (!data.contentType.startsWith(expectedPrefix)) throw new Error("نوع الملف غير مسموح");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const path = `hero/${data.kind}/${crypto.randomUUID()}-${safeMediaFileName(data.fileName)}`;
+    const { data: upload, error } = await supabaseAdmin.storage
+      .from(HERO_MEDIA_BUCKET)
+      .createSignedUploadUrl(path);
+    if (error || !upload?.token) throw new Error(error?.message ?? "فشل تجهيز رفع الملف");
+    return { path, token: upload.token };
+  });
+
+const mediaPathSchema = z.object({ path: z.string().min(1).max(500) });
+
+export const getHeroMediaUrl = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) => mediaPathSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    assertHeroMediaPath(data.path);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: signed, error } = await supabaseAdmin.storage
+      .from(HERO_MEDIA_BUCKET)
+      .createSignedUrl(data.path, HERO_MEDIA_URL_TTL);
+    if (error || !signed?.signedUrl) throw new Error(error?.message ?? "فشل إنشاء رابط الملف");
+    return { url: signed.signedUrl };
+  });
+
+export const deleteHeroMedia = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) => mediaPathSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    assertHeroMediaPath(data.path);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.storage.from(HERO_MEDIA_BUCKET).remove([data.path]);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
 
 const heroButtonSchema = z.object({
   id: z.string(),

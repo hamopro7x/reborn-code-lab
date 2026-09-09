@@ -31,10 +31,12 @@ import {
   reorderHeroBanners,
   duplicateHeroBanner,
   importHeroBanners,
+  prepareHeroMediaUpload,
+  getHeroMediaUrl,
+  deleteHeroMedia,
 } from "@/lib/hero-banners.functions";
 
 const BUCKET = "product-images";
-const TEN_YEARS = 60 * 60 * 24 * 365 * 10;
 
 /** إطار معاينة بعرض الموقع الحقيقي (1280px) مُصغّر بالتحويل — يعرض التصميم بنفس نسب الصفحة الرئيسية. */
 const SITE_WIDTH = 1280;
@@ -120,20 +122,6 @@ function MobilePagePreview({ children }: { children: React.ReactNode }) {
 }
 
 
-async function uploadMedia(file: File, kind: "image" | "video" | "poster") {
-  const path = `hero/${kind}/${Date.now()}-${file.name.replace(/[^\w.\-]/g, "_")}`;
-  const { error } = await supabase.storage.from(BUCKET).upload(path, file);
-  if (error) throw error;
-  const { data, error: sErr } = await supabase.storage.from(BUCKET).createSignedUrl(path, TEN_YEARS);
-  if (sErr || !data?.signedUrl) throw sErr ?? new Error("فشل إنشاء الرابط");
-  return { url: data.signedUrl, path };
-}
-
-async function removeMedia(path?: string | null) {
-  if (!path) return;
-  await supabase.storage.from(BUCKET).remove([path]);
-}
-
 function Select({
   value,
   onChange,
@@ -183,6 +171,31 @@ export function HeroBannerManager({ device = "desktop" }: { device?: HeroDevice 
   const reorderFn = useServerFn(reorderHeroBanners);
   const duplicateFn = useServerFn(duplicateHeroBanner);
   const importFn = useServerFn(importHeroBanners);
+  const prepareMediaUploadFn = useServerFn(prepareHeroMediaUpload);
+  const getMediaUrlFn = useServerFn(getHeroMediaUrl);
+  const deleteMediaFn = useServerFn(deleteHeroMedia);
+
+  async function uploadMedia(file: File, kind: "image" | "video" | "poster") {
+    const prepared = await prepareMediaUploadFn({
+      data: {
+        kind,
+        fileName: file.name,
+        contentType: file.type,
+        size: file.size,
+      },
+    });
+    const { error } = await supabase.storage
+      .from(BUCKET)
+      .uploadToSignedUrl(prepared.path, prepared.token, file, { contentType: file.type });
+    if (error) throw error;
+    const signed = await getMediaUrlFn({ data: { path: prepared.path } });
+    return { url: signed.url, path: prepared.path };
+  }
+
+  async function removeMedia(path?: string | null) {
+    if (!path) return;
+    await deleteMediaFn({ data: { path } });
+  }
 
   const q = useQuery({
     queryKey: ["admin-hero-banners", device],
