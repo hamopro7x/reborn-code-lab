@@ -160,32 +160,23 @@ function Home() {
           )}
 
           {/* CATEGORIES */}
-          <section aria-labelledby="categories-title" className="py-4 md:py-8">
-            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-4 mb-6 md:mb-8">
-              <div className="min-w-0 border-r-4 border-primary pr-4">
-                <h2 id="categories-title" className="text-2xl md:text-4xl font-black text-foreground">
-                  تصفح الأقسام
-                </h2>
-                <p className="mt-2 text-sm md:text-base text-muted-foreground">
-                  اختر القسم الذي يناسبك
-                </p>
-              </div>
-              <Link
-                to="/shop"
-                className="shrink-0 inline-flex min-h-10 items-center gap-2 rounded-lg border border-border bg-category-surface px-4 text-sm font-bold text-foreground transition-colors duration-150 hover:border-primary hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                عرض الكل
-                <ArrowLeft className="size-4" />
-              </Link>
+          <section aria-labelledby="categories-title" className="py-3 md:py-5">
+            <div className="mb-4 md:mb-5 min-w-0 border-r-4 border-primary pr-3">
+              <h2 id="categories-title" className="text-lg md:text-2xl font-bold text-foreground">
+                تصفح الأقسام
+              </h2>
+              <p className="mt-1 text-xs md:text-sm text-muted-foreground">
+                اختر القسم الذي يناسبك
+              </p>
             </div>
 
             <div className="overflow-x-auto scrollbar-hide snap-x snap-mandatory" aria-label="أقسام المتجر">
-              <div className="flex w-max min-w-full gap-4 pb-3 md:gap-6">
+              <div className="flex w-max min-w-full gap-3 pb-2 md:gap-4">
               {categoriesQ.isLoading &&
                 Array.from({ length: 6 }).map((_, i) => (
-                  <div key={`c-sk-${i}`} className="w-40 shrink-0 snap-start md:w-56">
+                  <div key={`c-sk-${i}`} className="w-28 shrink-0 snap-start md:w-40">
                     <div className="category-art-frame aspect-[3/4] bg-category-surface animate-pulse" />
-                    <div className="mt-4 h-5 w-3/4 bg-category-surface animate-pulse" />
+                    <div className="mt-2 h-4 w-3/4 bg-category-surface animate-pulse" />
                   </div>
                 ))}
               {categories.map((c: any, ci: number) => (
@@ -193,30 +184,30 @@ function Home() {
                   key={c.id}
                   to="/category/$slug"
                   params={{ slug: c.slug }}
-                  className="group block w-40 shrink-0 snap-start text-foreground focus-visible:outline-none md:w-56"
+                  className="group block w-28 shrink-0 snap-start text-foreground focus-visible:outline-none md:w-40"
                 >
                   <div className="category-art-frame relative aspect-[3/4] overflow-hidden bg-category-surface">
                     {c.banner_image ? (
                       <img
                         src={c.banner_image}
                         alt={c.name}
-                        width={448}
-                        height={596}
+                        width={320}
+                        height={426}
                         loading={ci < 6 ? "eager" : "lazy"}
                         decoding="async"
                         {...(ci < 6 ? { fetchPriority: "high" as const } : {})}
                         className="absolute inset-0 h-full w-full object-cover"
                       />
                     ) : (
-                      <div className="absolute inset-0 flex items-center justify-center px-4 text-center text-sm text-muted-foreground">
+                      <div className="absolute inset-0 flex items-center justify-center px-3 text-center text-xs text-muted-foreground">
                         {c.name}
                       </div>
                     )}
-                    <div className="absolute inset-x-0 bottom-0 bg-primary py-1.5 text-center text-[11px] font-bold text-primary-foreground md:text-xs">
+                    <div className="absolute inset-x-0 bottom-0 bg-primary py-1 text-center text-[10px] font-bold text-primary-foreground md:text-[11px]">
                       تصفح العروض
                     </div>
                   </div>
-                  <h3 className="category-title mt-3 line-clamp-2 min-h-12 px-1 text-center text-base font-bold leading-6 text-foreground transition-colors duration-150 group-hover:text-primary md:text-lg">
+                  <h3 className="category-title mt-2 line-clamp-2 min-h-9 px-0.5 text-center text-xs font-bold leading-5 text-foreground transition-colors duration-150 group-hover:text-primary md:text-sm">
                     {c.name}
                   </h3>
                 </Link>
