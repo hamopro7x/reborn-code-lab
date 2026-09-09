@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { HeroBannerView } from "@/components/site/HeroCarousel";
 import {
   HERO_ICON_KEYS,
+  bannerToRow,
   blankBanner,
   newId,
   normalizeBanner,
