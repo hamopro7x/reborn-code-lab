@@ -30,6 +30,34 @@ async function admin() {
   return supabaseAdmin as any;
 }
 
+/* ---------- overload protection ----------
+ * Heavy provider work (live card reads, full syncs) used to run once per request.
+ * With several admin/employee screens polling at the same time this piled up
+ * dozens of long Bybit page walks inside one worker and made the whole site
+ * unresponsive. Every heavy entry point now shares one in-flight run per key and
+ * a short cooldown, so extra callers reuse a result instead of adding load.
+ */
+const heavyInflight = new Map<string, Promise<any>>();
+const heavyLast = new Map<string, { at: number; value: any }>();
+
+async function heavyOnce<T>(key: string, cooldownMs: number, run: () => Promise<T>): Promise<T> {
+  const running = heavyInflight.get(key);
+  if (running) return running as Promise<T>;
+  const last = heavyLast.get(key);
+  if (last && Date.now() - last.at < cooldownMs) return last.value as T;
+  const p = run()
+    .then((value) => {
+      heavyLast.set(key, { at: Date.now(), value });
+      return value;
+    })
+    .finally(() => {
+      heavyInflight.delete(key);
+    });
+  heavyInflight.set(key, p);
+  return p;
+}
+
+
 export async function listAccounts(): Promise<BybitAccount[]> {
   const db = await admin();
   const { data } = await db
@@ -406,17 +434,22 @@ async function callCardPage(params: Record<string, unknown>, creds: Creds) {
 }
 
 /** Fetch every card record ever recorded on the account, for every Bybit query type. */
-async function fetchCardPages(maxRows: number, creds: Creds, sinceMs?: number): Promise<any[]> {
+async function fetchCardPages(maxRows: number, creds: Creds, sinceMs?: number, budgetMs = 20_000): Promise<any[]> {
   const merged = new Map<string, { row: any; sourcePriority: number; updatedAt: number }>();
   const pageSize = 100; // Bybit caps this endpoint at 100 per page (larger values silently return 10)
   const maxPages = Math.max(1, Math.ceil(maxRows / pageSize));
+  // Wall-clock budget: an unbounded page walk could keep one request busy for
+  // minutes and starve every other visitor of the same worker.
+  const deadline = Date.now() + budgetMs;
   let successfulTypes = 0;
   let lastError: unknown;
 
   for (const [typeIndex, type] of CARD_QUERY_TYPES.entries()) {
+    if (Date.now() > deadline) break;
     try {
       successfulTypes++;
-      for (let page = 1; page <= maxPages; page++) {
+      for (let page = 1; page <= maxPages && Date.now() < deadline; page++) {
+
         const result = await callCardPage({
           limit: pageSize,
           page,
@@ -988,7 +1021,7 @@ async function storedCardTxns(limit: number, accountId?: string): Promise<CardTx
   try {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const CHUNK = 1000;
-    const BATCH = 10;
+    const BATCH = 3; // fewer parallel database reads per request keeps the worker responsive
     const data: any[] = [];
     for (let base = 0; base < limit; base += CHUNK * BATCH) {
       const requests: any[] = [];
@@ -1129,26 +1162,27 @@ export async function fetchCardTxnsLive(opts: {
   page?: number;
   pageSize?: number;
 }): Promise<CardTxnPage> {
-  const { periodStart, periodEnd } = currentCycleForRead();
   const status = opts.status ?? "all";
   const pageSize = Math.min(Math.max(opts.pageSize ?? 150, 10), 500);
   const page = Math.max(opts.page ?? 1, 1);
 
-  // Walk all pages needed to reach the current cycle boundary. A fixed five
-  // pages hid older transactions in busy accounts even though they belonged to
-  // the same month.
-  const raw = await callCard(10_000, opts.accountId, undefined, periodStart);
-  const rows = raw
-    .map(mapCardTxn)
-    .filter((r) => Number(r.time ?? 0) >= periodStart && Number(r.time ?? 0) < periodEnd)
-    .sort((a, b) => Number(b.time ?? 0) - Number(a.time ?? 0));
-
-  // Archive them so the next read comes from the database again.
-  try {
-    await persistCardTxns(rows, opts.accountId);
-  } catch {
-    /* الحفظ ليس شرطًا للعرض */
-  }
+  // One shared live read per account per 20s. Repeated polls (or several open
+  // admin screens) reuse it instead of each starting its own page walk.
+  const rows = await heavyOnce(`live:${opts.accountId ?? "default"}`, 20_000, async () => {
+    const { periodStart, periodEnd } = currentCycleForRead();
+    const raw = await callCard(2_000, opts.accountId, undefined, periodStart);
+    const mapped = raw
+      .map(mapCardTxn)
+      .filter((r) => Number(r.time ?? 0) >= periodStart && Number(r.time ?? 0) < periodEnd)
+      .sort((a, b) => Number(b.time ?? 0) - Number(a.time ?? 0));
+    // Archive them so the next read comes from the database again.
+    try {
+      await persistCardTxns(mapped, opts.accountId);
+    } catch {
+      /* الحفظ ليس شرطًا للعرض */
+    }
+    return mapped;
+  });
 
   const filtered = status === "all" ? rows : rows.filter((r) => r.status === status);
   const from = (page - 1) * pageSize;
@@ -1161,39 +1195,47 @@ export async function fetchCardTxnsLive(opts: {
 
 /** Sync recent records and one resumable historical chunk outside the visible read. */
 export async function syncCardTxns(accountId?: string): Promise<{ added: number; backfillDone: boolean }> {
-  const creds = await getCreds(accountId);
-  // An explicit sync must ask the provider again; cached authorisation rows can
-  // still say pending after the account history has already settled them.
-  cardCache.delete(accountId ?? "default");
-  const { currentCycleStart } = await import("./monthly-cycle.server");
-  const liveRows = await callCard(10_000, accountId, creds, currentCycleStart());
-  const rows = liveRows.map(mapCardTxn);
-  await persistCardTxns(rows, accountId);
-  const backfill = await backfillChunk(accountId, creds);
-  return { added: rows.length + backfill.rows.length, backfillDone: backfill.done };
+  return heavyOnce(`sync:${accountId ?? "default"}`, 10_000, async () => {
+    const creds = await getCreds(accountId);
+    // An explicit sync must ask the provider again; cached authorisation rows can
+    // still say pending after the account history has already settled them.
+    cardCache.delete(accountId ?? "default");
+    const { currentCycleStart } = await import("./monthly-cycle.server");
+    const liveRows = await callCard(2_000, accountId, creds, currentCycleStart());
+    const rows = liveRows.map(mapCardTxn);
+    await persistCardTxns(rows, accountId);
+    const backfill = await backfillChunk(accountId, creds);
+    return { added: rows.length + backfill.rows.length, backfillDone: backfill.done };
+  });
 }
 
 /** Runs the same sync for every linked Bybit account. */
 export async function syncAllCardTxns(): Promise<{ added: number; accounts: number }> {
-  // Purge first, before any provider network calls. This guarantees that merely
-  // opening the central ledger removes closed-cycle rows immediately even when
-  // Bybit is slow or unavailable.
-  const { runCyclePurgeSafe } = await import("./monthly-cycle.server");
-  await runCyclePurgeSafe();
-  const accounts = await listAccounts();
-  const results = await Promise.all(
-    accounts.map(async (a) => {
+  // One full sync at a time, at most once every 30s: several admin screens used
+  // to launch a full multi-account sync each, which overloaded the server.
+  return heavyOnce("sync:all", 30_000, async () => {
+    // Purge first, before any provider network calls. This guarantees that merely
+    // opening the central ledger removes closed-cycle rows immediately even when
+    // Bybit is slow or unavailable.
+    const { runCyclePurgeSafe } = await import("./monthly-cycle.server");
+    await runCyclePurgeSafe();
+    const accounts = await listAccounts();
+    // Sequential: parallel account syncs multiplied both provider rate limits
+    // and worker load.
+    let added = 0;
+    for (const a of accounts) {
       try {
-        if (!(await bybitConfigured(a.id))) return 0;
-        const { added } = await syncCardTxns(a.id);
-        return added;
+        if (!(await bybitConfigured(a.id))) continue;
+        const res = await syncCardTxns(a.id);
+        added += res.added;
       } catch {
-        return 0;
+        /* حساب واحد يفشل لا يوقف الباقي */
       }
-    }),
-  );
-  return { added: results.reduce((s, n) => s + n, 0), accounts: accounts.length };
+    }
+    return { added, accounts: accounts.length };
+  });
 }
+
 
 
 /* ---------- resumable deep backfill (back to account creation) ---------- */
@@ -2002,18 +2044,21 @@ export async function syncAccountLedger(accountId: string): Promise<number> {
 
 /** Runs the ledger sync for every linked account. */
 export async function syncAllLedger(): Promise<{ saved: number; accounts: number }> {
-  const accounts = await listAccounts();
-  const results = await Promise.all(
-    accounts.map(async (a) => {
+  // Shared, sequential and rate-limited for the same reason as syncAllCardTxns.
+  return heavyOnce("ledger:all", 30_000, async () => {
+    const accounts = await listAccounts();
+    let saved = 0;
+    for (const a of accounts) {
       try {
-        return await syncAccountLedger(a.id);
+        saved += await syncAccountLedger(a.id);
       } catch {
-        return 0;
+        /* حساب واحد يفشل لا يوقف الباقي */
       }
-    }),
-  );
-  return { saved: results.reduce((s, n) => s + n, 0), accounts: accounts.length };
+    }
+    return { saved, accounts: accounts.length };
+  });
 }
+
 
 const GROUP_KINDS: Record<string, string[]> = {
   txns: ["card", "refund"],
