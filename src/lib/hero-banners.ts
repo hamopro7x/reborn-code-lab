@@ -73,8 +73,12 @@ export const HERO_LAYER_LABELS: Record<string, string> = {
   subtitle2: "الوصف الثاني",
 };
 
+export type HeroDevice = "desktop" | "mobile";
+
 export type HeroBanner = {
   id: string;
+  /** الجهاز المستهدف: بانرات الديسكتوب أو بانرات الموبايل فقط. */
+  device: HeroDevice;
   title: string;
   show_title: boolean;
   subtitle: string;
@@ -133,6 +137,7 @@ export function defaultBadges(): HeroBadgeItem[] {
 
 /** القيم الافتراضية = التصميم الحالي للموقع بالضبط. */
 export const HERO_DEFAULTS: Omit<HeroBanner, "id"> = {
+  device: "desktop",
   title: "متجر الاشتراكات الرقمية",
   show_title: true,
   subtitle: "اشتراكات وأدوات وقوالب جاهزة للاستخدام مع ضمان حقيقي وتسليم فوري.",
@@ -217,6 +222,7 @@ export function normalizeBanner(row: any): HeroBanner {
   const d = HERO_DEFAULTS;
   return {
     id: String(row?.id ?? newId("hero")),
+    device: (row?.device === "mobile" ? "mobile" : "desktop") as HeroDevice,
     title: String(row?.title ?? d.title),
     show_title: row?.show_title !== false,
     subtitle: String(row?.subtitle ?? d.subtitle),
@@ -257,9 +263,10 @@ export function normalizeBanner(row: any): HeroBanner {
   };
 }
 
-export function blankBanner(sortOrder: number): HeroBanner {
+export function blankBanner(sortOrder: number, device: HeroDevice = "desktop"): HeroBanner {
   return {
     ...HERO_DEFAULTS,
+    device,
     id: newId("new"),
     buttons: defaultButtons(),
     badges: defaultBadges(),
