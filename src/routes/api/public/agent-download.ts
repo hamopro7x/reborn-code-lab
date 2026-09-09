@@ -140,30 +140,6 @@ export async function handleAgentDownload(request: Request) {
     return new Response("method not allowed", { status: 405 });
   }
 
-  // الإصدار الحالي مرفوع مع ملفات الموقع مباشرة، فلا يعتمد تنزيل الموظف
-  // على مخزن القاعدة أو مفاتيحه.
-  if (AGENT_RELEASE.directAssetPath) {
-    const target = new URL(AGENT_RELEASE.directAssetPath, request.url).toString();
-    const range = request.headers.get("range");
-    const upstream = await fetch(target, {
-      method: request.method,
-      headers: range ? { Range: range } : {},
-      redirect: "follow",
-    });
-    const headers = new Headers();
-    headers.set("content-type", "application/octet-stream");
-    headers.set("content-disposition", 'attachment; filename="MagProConnect-Setup.exe"');
-    headers.set("accept-ranges", "bytes");
-    headers.set("cache-control", "no-store");
-    for (const key of ["content-length", "content-range"]) {
-      const value = upstream.headers.get(key);
-      if (value) headers.set(key, value);
-    }
-    return new Response(request.method === "HEAD" ? null : upstream.body, {
-      status: upstream.status,
-      headers,
-    });
-  }
 
   // الملف الكامل موجود؟ التحويل المباشر أخف وأسرع.
   const whole = await wholeFileUrl();
