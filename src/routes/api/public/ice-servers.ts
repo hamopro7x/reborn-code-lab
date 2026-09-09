@@ -9,6 +9,22 @@ const STUN_ONLY = [
   { urls: "stun:stun.cloudflare.com:3478" },
 ];
 
+// مرحّل احتياطي عام: يُستخدم فقط لو لم تُضبط مفاتيح TURN الخاصة.
+// بدونه تفشل الشبكات المقيّدة (NAT متماثل / إنترنت موبايل) فتظل شاشة
+// الموظف على «جاري الاتصال…» رغم أن البرنامج شغّال عنده.
+const FALLBACK_RELAY = [
+  {
+    urls: [
+      "turn:openrelay.metered.ca:80",
+      "turn:openrelay.metered.ca:443",
+      "turn:openrelay.metered.ca:443?transport=tcp",
+    ],
+    username: "openrelayproject",
+    credential: "openrelayproject",
+  },
+];
+
+
 async function cloudflareTurn(keyId: string, token: string) {
   const res = await fetch(
     `https://rtc.live.cloudflare.com/v1/turn/keys/${keyId}/credentials/generate-ice-servers`,
