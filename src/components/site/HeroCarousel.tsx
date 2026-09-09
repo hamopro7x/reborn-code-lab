@@ -291,7 +291,7 @@ export function HeroBannerView({
     <div
       ref={rootRef}
       className={`relative min-h-[152px] overflow-hidden ${
-        forceDevice === "mobile" ? "h-full" : forceDevice === "desktop" ? "h-[230px]" : "h-auto md:h-[230px]"
+        forceDevice === "mobile" ? "h-full" : forceDevice === "desktop" ? "h-[230px]" : "h-[380px] md:h-[230px]"
       }`}
       style={{ backgroundColor: banner.background_color ?? undefined }}
     >
@@ -349,7 +349,7 @@ export function HeroBannerView({
       </div>
 
       {/* ============= Mobile layout — مطابق لتصميم كانفا ============= */}
-      <div className={`${mobileWrapCls} relative z-10 h-full min-h-[152px]`}>
+      <div className={`${mobileWrapCls} relative z-10 h-full min-h-[380px] md:min-h-0`}>
         {/* النص والأزرار على يمين البانر — مطابق للتصميم */}
         <div className="absolute inset-y-0 right-0 w-[52%] flex flex-col justify-center gap-1 px-3 text-right items-end">
           {banner.show_title && banner.title && (
