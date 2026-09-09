@@ -212,49 +212,58 @@ export function HeroBannerManager({ device = "desktop" }: { device?: HeroDevice 
   async function save() {
     if (!editing) return;
     setSaving(true);
-    const row = bannerToRow({ ...editing, device });
-    const res = isNew
-      ? await supabase.from("hero_banners").insert(row as any)
-      : await supabase.from("hero_banners").update(row as any).eq("id", editing.id);
-    setSaving(false);
-    if (res.error) return toast.error(res.error.message);
-    toast.success("تم حفظ البانر");
-    setEditing(null);
-    refresh();
+    try {
+      await saveFn({ data: { banner: { ...editing, device }, isNew } });
+      toast.success("تم حفظ البانر");
+      setEditing(null);
+      refresh();
+    } catch (err: any) {
+      toast.error(err?.message ?? "فشل الحفظ");
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function toggleActive(b: HeroBanner) {
-    const { error } = await supabase.from("hero_banners").update({ active: !b.active }).eq("id", b.id);
-    if (error) return toast.error(error.message);
-    refresh();
+    try {
+      await toggleFn({ data: { id: b.id, active: !b.active } });
+      refresh();
+    } catch (err: any) {
+      toast.error(err?.message ?? "فشل التحديث");
+    }
   }
 
   async function duplicate(b: HeroBanner) {
-    const row = bannerToRow({ ...b, device, title: `${b.title} (نسخة)`, sort_order: order.length, active: false });
-    const { error } = await supabase.from("hero_banners").insert(row as any);
-    if (error) return toast.error(error.message);
-    toast.success("تم نسخ البانر");
-    refresh();
+    try {
+      await duplicateFn({ data: { banner: { ...b, device, title: `${b.title} (نسخة)`, sort_order: order.length, active: false } } });
+      toast.success("تم نسخ البانر");
+      refresh();
+    } catch (err: any) {
+      toast.error(err?.message ?? "فشل النسخ");
+    }
   }
 
   async function del(b: HeroBanner) {
     if (!confirm("حذف هذا البانر؟")) return;
-    const { error } = await supabase.from("hero_banners").delete().eq("id", b.id);
-    if (error) return toast.error(error.message);
-    await removeMedia(b.media_path);
-    await removeMedia(b.poster_path);
-    toast.success("تم الحذف");
-    refresh();
+    try {
+      await deleteFn({ data: { id: b.id } });
+      await removeMedia(b.media_path);
+      await removeMedia(b.poster_path);
+      toast.success("تم الحذف");
+      refresh();
+    } catch (err: any) {
+      toast.error(err?.message ?? "فشل الحذف");
+    }
   }
 
   async function persistOrder(list: HeroBanner[]) {
     setOrder(list);
-    const results = await Promise.all(
-      list.map((b, i) => supabase.from("hero_banners").update({ sort_order: i }).eq("id", b.id)),
-    );
-    const err = results.find((r) => r.error)?.error;
-    if (err) toast.error(err.message);
-    else refresh();
+    try {
+      await reorderFn({ data: { ids: list.map((b) => b.id) } });
+      refresh();
+    } catch (err: any) {
+      toast.error(err?.message ?? "فشل ترتيب البانرات");
+    }
   }
 
   function onDrop(target: number) {
