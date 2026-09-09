@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Copy, Edit, Globe, GripVertical, Menu, Plus, Search, ShoppingCart, Trash2 } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +14,6 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { HeroBannerView } from "@/components/site/HeroCarousel";
 import {
   HERO_ICON_KEYS,
-  bannerToRow,
   blankBanner,
   newId,
   normalizeBanner,
@@ -22,6 +22,15 @@ import {
   type HeroBadgeItem,
   type HeroButton,
 } from "@/lib/hero-banners";
+import {
+  listHeroBanners,
+  saveHeroBanner,
+  deleteHeroBanner,
+  toggleHeroBanner,
+  reorderHeroBanners,
+  duplicateHeroBanner,
+  importHeroBanners,
+} from "@/lib/hero-banners.functions";
 
 const BUCKET = "product-images";
 const TEN_YEARS = 60 * 60 * 24 * 365 * 10;
