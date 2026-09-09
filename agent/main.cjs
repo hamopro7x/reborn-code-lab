@@ -67,10 +67,11 @@ function registryAutoLaunch() {
   );
 }
 
-// آلية بدء واحدة فقط = مفتاح Run في الريجستري. أي آلية إضافية (ملف Startup
-// أو مهمة مجدولة) كانت تُشغّل نسخة ثانية في نفس اللحظة، فتتنافس على قفل
-// النسخة الواحدة وقد تترك الواجهة/الالتقاط في حالة نصف مهيّأة.
-function removeDuplicateStartup() {
+// نستخدم أكثر من آلية لضمان تشغيل البرنامج مع أول لحظة يعمل فيها ويندوز حتى
+// بعد إغلاق البرنامج نهائياً: Run key + Startup folder + Scheduled Task.
+// قفل النسخة الواحدة (requestSingleInstanceLock) يضمن أن أي نسخة إضافية تُنهي
+// نفسها فوراً دون أن تُقاطع النسخة الأساسية.
+function installStartupShortcut() {
   if (process.platform !== "win32") return;
   const fs = require("fs");
   try {
@@ -82,21 +83,40 @@ function removeDuplicateStartup() {
       "Programs",
       "Startup",
     );
-    for (const name of [RUN_NAME, ...LEGACY_RUN_NAMES]) {
-      for (const ext of [".cmd", ".vbs"]) {
-        try {
-          fs.unlinkSync(path.join(startupDir, name + ext));
-        } catch {
-          /* لم يكن موجودًا */
-        }
+    // احذف أي بقايا قديمة بأسماء سابقة
+    for (const name of LEGACY_RUN_NAMES) {
+      for (const ext of [".cmd", ".vbs", ".lnk"]) {
+        try { fs.unlinkSync(path.join(startupDir, name + ext)); } catch { /* ignore */ }
       }
     }
+    // اختصار VBS يشغّل البرنامج مخفياً بدون نافذة سوداء
+    const vbs = `Set s = CreateObject("WScript.Shell")\r\ns.Run """${process.execPath}"" --hidden", 0, False\r\n`;
+    fs.mkdirSync(startupDir, { recursive: true });
+    fs.writeFileSync(path.join(startupDir, RUN_NAME + ".vbs"), vbs);
   } catch {
     // ignore
   }
-  for (const name of [RUN_NAME, ...LEGACY_RUN_NAMES]) {
+}
+
+function installScheduledTask() {
+  if (process.platform !== "win32") return;
+  // امسح المهام القديمة أولاً
+  for (const name of LEGACY_RUN_NAMES) {
     execFile("schtasks.exe", ["/Delete", "/TN", name, "/F"], { windowsHide: true }, () => {});
   }
+  // مهمة تعمل عند تسجيل دخول المستخدم الحالي بأعلى صلاحيات، حتى لو أُغلق
+  // البرنامج نهائياً — بمجرد تشغيل الجهاز ودخول المستخدم يبدأ البرنامج تلقائياً.
+  const cmd = `"${process.execPath}" --hidden`;
+  const user = process.env.USERNAME || "";
+  const args = [
+    "/Create", "/TN", RUN_NAME,
+    "/TR", cmd,
+    "/SC", "ONLOGON",
+    "/RL", "LIMITED",
+    "/F",
+  ];
+  if (user) args.push("/RU", user);
+  execFile("schtasks.exe", args, { windowsHide: true }, () => {});
 }
 
 function enableAutoLaunch() {
@@ -113,7 +133,8 @@ function enableAutoLaunch() {
   }
   // نتأكد دايماً: لو إعداد اتعطّل أو المسار اتغير بعد إعادة التشغيل.
   registryAutoLaunch();
-  removeDuplicateStartup();
+  installStartupShortcut();
+  installScheduledTask();
 }
 
 
