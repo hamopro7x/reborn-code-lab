@@ -160,7 +160,7 @@ function Home() {
           )}
 
           {/* CATEGORIES */}
-          <section aria-labelledby="categories-title" className="py-3 md:py-5">
+          <section aria-labelledby="categories-title" className="pt-1 pb-3 md:pt-2 md:pb-5">
             <h2 id="categories-title" className="mb-4 md:mb-5 text-base md:text-lg font-bold text-foreground">
               تصفح الأقسام
             </h2>
