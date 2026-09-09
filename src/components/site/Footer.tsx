@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 export function Footer() {
   return (
     <footer className="mt-16 border-t border-border bg-card">
-      <div className="container mx-auto grid grid-cols-2 gap-3 px-4 py-8 md:grid-cols-4 md:gap-8 md:py-12">
+      <div className="container mx-auto grid grid-cols-4 gap-2 px-2 py-8 md:gap-8 md:px-4 md:py-12">
         <div>
           <h4 className="mb-3 text-sm font-bold md:text-base">روابط</h4>
           <ul className="space-y-2 text-xs text-muted-foreground md:text-sm">
