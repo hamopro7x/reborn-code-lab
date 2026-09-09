@@ -295,7 +295,7 @@ export function HeroBannerView({
           ? "h-full"
           : forceDevice === "desktop"
             ? "h-[230px]"
-            : "aspect-[39/20] w-full md:aspect-auto md:h-[230px]"
+            : "aspect-[13/5] w-full md:aspect-auto md:h-[230px]"
       }`}
       style={{ backgroundColor: banner.background_color ?? undefined }}
     >
