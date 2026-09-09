@@ -1611,6 +1611,8 @@ function SettingsTab() {
 
       <HeroBannerManager />
 
+      <HeroBannerManager device="mobile" />
+
     </div>
   );
 }
