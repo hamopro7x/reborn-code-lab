@@ -320,7 +320,7 @@ export function HeroBannerView({
 
 
       {/* ============= Desktop layout ============= */}
-      <div className="hidden md:block relative h-full">
+      <div className={`${desktopWrapCls} relative h-full`}>
         {/* العناصر ذات المواضع الحرة */}
         {freeKeys.has("title") && titleEl}
         {freeKeys.has("subtitle") && subtitleEl}
