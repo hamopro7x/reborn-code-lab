@@ -46,13 +46,17 @@ export const Route = createFileRoute("/api/public/ice-servers")({
     handlers: {
       GET: async () => {
         const iceServers: unknown[] = [...STUN_ONLY];
+        let hasTurn = false;
 
         const keyId = process.env["CLOUDFLARE_TURN_KEY_ID"];
         const token = process.env["CLOUDFLARE_TURN_API_TOKEN"];
         if (keyId && token) {
           try {
             const cf = await cloudflareTurn(keyId, token);
-            if (cf) iceServers.push(...cf);
+            if (cf) {
+              iceServers.push(...cf);
+              hasTurn = true;
+            }
           } catch {
             /* نتجاهل ونكمل بـ STUN */
           }
@@ -67,9 +71,13 @@ export const Route = createFileRoute("/api/public/ice-servers")({
             username: staticUser,
             credential: staticPass,
           });
+          hasTurn = true;
         }
 
-        return new Response(JSON.stringify({ iceServers }), {
+        if (!hasTurn) iceServers.push(...FALLBACK_RELAY);
+
+        return new Response(JSON.stringify({ iceServers, hasTurn }), {
+
           headers: {
             "content-type": "application/json",
             "access-control-allow-origin": "*",
