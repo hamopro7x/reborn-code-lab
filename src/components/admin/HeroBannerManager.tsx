@@ -187,7 +187,7 @@ export function HeroBannerManager({ device = "desktop" }: { device?: HeroDevice 
   const q = useQuery({
     queryKey: ["admin-hero-banners", device],
     queryFn: async () => {
-      const rows = await fetchList({ device });
+      const rows = await fetchList({ data: { device } });
       return (rows ?? []).map(normalizeBanner);
     },
   });
