@@ -312,7 +312,7 @@ export function HeroBannerView({
             }}
           />
           <div
-            className="absolute inset-0 hidden md:block"
+            className={`absolute inset-0 ${overlayDesktopCls}`}
             style={{ backgroundColor: banner.overlay_color, opacity: banner.overlay_opacity }}
           />
         </>
