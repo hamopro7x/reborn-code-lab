@@ -76,7 +76,7 @@ function ScaledPreview({ children, width, height }: { children: React.ReactNode;
 
 function MobilePagePreview({ children }: { children: React.ReactNode }) {
   return (
-    <ScaledPreview width={390} height={760}>
+    <ScaledPreview width={408} height={778}>
       <div className="relative flex h-full flex-col overflow-hidden rounded-[32px] border-8 border-secondary bg-background">
         <span className="absolute left-1/2 top-0 z-20 h-5 w-28 -translate-x-1/2 rounded-b-2xl bg-secondary" aria-hidden="true" />
         <div className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-card px-4">
