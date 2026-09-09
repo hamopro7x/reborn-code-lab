@@ -2044,18 +2044,21 @@ export async function syncAccountLedger(accountId: string): Promise<number> {
 
 /** Runs the ledger sync for every linked account. */
 export async function syncAllLedger(): Promise<{ saved: number; accounts: number }> {
-  const accounts = await listAccounts();
-  const results = await Promise.all(
-    accounts.map(async (a) => {
+  // Shared, sequential and rate-limited for the same reason as syncAllCardTxns.
+  return heavyOnce("ledger:all", 30_000, async () => {
+    const accounts = await listAccounts();
+    let saved = 0;
+    for (const a of accounts) {
       try {
-        return await syncAccountLedger(a.id);
+        saved += await syncAccountLedger(a.id);
       } catch {
-        return 0;
+        /* حساب واحد يفشل لا يوقف الباقي */
       }
-    }),
-  );
-  return { saved: results.reduce((s, n) => s + n, 0), accounts: accounts.length };
+    }
+    return { saved, accounts: accounts.length };
+  });
 }
+
 
 const GROUP_KINDS: Record<string, string[]> = {
   txns: ["card", "refund"],
