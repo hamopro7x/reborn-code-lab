@@ -18,6 +18,7 @@ import {
   newId,
   normalizeBanner,
   type HeroBanner,
+  type HeroDevice,
   type HeroBadgeItem,
   type HeroButton,
 } from "@/lib/hero-banners";
@@ -28,28 +29,33 @@ const TEN_YEARS = 60 * 60 * 24 * 365 * 10;
 /** إطار معاينة بعرض الموقع الحقيقي (1280px) مُصغّر بالتحويل — يعرض التصميم بنفس نسب الصفحة الرئيسية. */
 const SITE_WIDTH = 1280;
 const SITE_HEIGHT = 340;
+/** مقاس معاينة الموبايل (عرض شاشة هاتف نموذجي). */
+const PHONE_WIDTH = 390;
+const PHONE_HEIGHT = 230;
 
-function ScaledPreview({ children }: { children: React.ReactNode }) {
+function ScaledPreview({ children, width, height }: { children: React.ReactNode; width?: number; height?: number }) {
   const boxRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
+  const w = width ?? SITE_WIDTH;
+  const h = height ?? SITE_HEIGHT;
 
   useEffect(() => {
     const el = boxRef.current;
     if (!el) return;
-    const update = () => setScale(Math.min(1, el.clientWidth / SITE_WIDTH));
+    const update = () => setScale(Math.min(1, el.clientWidth / w));
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [w]);
 
   return (
-    <div ref={boxRef} className="mt-1 w-full" style={{ height: SITE_HEIGHT * scale }}>
+    <div ref={boxRef} className="mt-1 w-full" style={{ height: h * scale }}>
       <div
         className="overflow-hidden rounded-2xl border border-border bg-hero text-hero-foreground"
         style={{
-          width: SITE_WIDTH,
-          height: SITE_HEIGHT,
+          width: w,
+          height: h,
           transform: `scale(${scale})`,
           transformOrigin: "top right",
         }}
@@ -114,14 +120,15 @@ function NumField({ label, value, onChange, min = 0, max = 120 }: { label: strin
   );
 }
 
-export function HeroBannerManager() {
+export function HeroBannerManager({ device = "desktop" }: { device?: HeroDevice } = {}) {
+  const isMobilePanel = device === "mobile";
   const qc = useQueryClient();
   const q = useQuery({
-    queryKey: ["admin-hero-banners"],
+    queryKey: ["admin-hero-banners", device],
     queryFn: async () => {
       const { data, error } = await supabase.from("hero_banners").select("*").order("sort_order");
       if (error) throw error;
-      return (data ?? []).map(normalizeBanner);
+      return (data ?? []).map(normalizeBanner).filter((b) => b.device === device);
     },
   });
 
@@ -138,13 +145,14 @@ export function HeroBannerManager() {
 
   function refresh() {
     qc.invalidateQueries({ queryKey: ["admin-hero-banners"] });
+    qc.invalidateQueries({ queryKey: ["admin-hero-banners", device] });
     qc.invalidateQueries({ queryKey: ["hero-banners"] });
   }
 
   async function save() {
     if (!editing) return;
     setSaving(true);
-    const row = bannerToRow(editing);
+    const row = bannerToRow({ ...editing, device });
     const res = isNew
       ? await supabase.from("hero_banners").insert(row as any)
       : await supabase.from("hero_banners").update(row as any).eq("id", editing.id);
@@ -162,7 +170,7 @@ export function HeroBannerManager() {
   }
 
   async function duplicate(b: HeroBanner) {
-    const row = bannerToRow({ ...b, title: `${b.title} (نسخة)`, sort_order: order.length, active: false });
+    const row = bannerToRow({ ...b, device, title: `${b.title} (نسخة)`, sort_order: order.length, active: false });
     const { error } = await supabase.from("hero_banners").insert(row as any);
     if (error) return toast.error(error.message);
     toast.success("تم نسخ البانر");
@@ -205,12 +213,18 @@ export function HeroBannerManager() {
     <div>
       <div className="flex items-center justify-between mb-3">
         <div>
-          <h2 className="text-xl font-bold">بانر الصفحة الرئيسية</h2>
-          <p className="text-xs text-muted-foreground">إدارة كاملة للبنرات: المحتوى، الأزرار، الكروت، الوسائط، والترتيب.</p>
+          <h2 className="text-xl font-bold">
+            {isMobilePanel ? "بانر الصفحة الرئيسية — الموبايل" : "بانر الصفحة الرئيسية"}
+          </h2>
+          <p className="text-xs text-muted-foreground">
+            {isMobilePanel
+              ? "بنرات تظهر لزوار الموبايل فقط: المحتوى، الأزرار، الكروت، الوسائط، والترتيب."
+              : "إدارة كاملة للبنرات: المحتوى، الأزرار، الكروت، الوسائط، والترتيب."}
+          </p>
         </div>
         <Button
           onClick={() => {
-            setEditing(blankBanner(order.length));
+            setEditing(blankBanner(order.length, device));
             setIsNew(true);
           }}
           className="gap-2"
@@ -286,7 +300,7 @@ export function HeroBannerManager() {
                     إعادة المواضع
                   </Button>
                 </div>
-                <ScaledPreview>
+                <ScaledPreview width={isMobilePanel ? PHONE_WIDTH : undefined} height={isMobilePanel ? PHONE_HEIGHT : undefined}>
                   {preview && (
                     <HeroBannerView
                       banner={preview}

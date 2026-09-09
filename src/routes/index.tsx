@@ -104,6 +104,12 @@ function Home() {
   });
   const banners = useMemo(() => (bannersQ.data ?? []).map((r: any) => normalizeBanner(r)), [bannersQ.data]);
 
+  const desktopBanners = useMemo(() => banners.filter((b) => b.device !== "mobile"), [banners]);
+  const mobileBanners = useMemo(() => {
+    const only = banners.filter((b) => b.device === "mobile");
+    return only.length ? only : desktopBanners;
+  }, [banners, desktopBanners]);
+
   // بطاقات الشحن = منتجات الأقسام التي تمثل بطاقات/شحن في قاعدة البيانات نفسها.
   const topups = useMemo(() => {
     const all = latestQ.data ?? [];
@@ -120,7 +126,14 @@ function Home() {
       {bannersQ.isLoading ? (
         <div className="min-h-[152px] h-auto md:h-[230px] bg-card animate-pulse" />
       ) : (
-        <HeroCarousel banners={banners} />
+        <>
+          <div className="md:hidden">
+            <HeroCarousel banners={mobileBanners} />
+          </div>
+          <div className="hidden md:block">
+            <HeroCarousel banners={desktopBanners} />
+          </div>
+        </>
       )}
 
       <main className="flex-1 container mx-auto px-4 py-6">
