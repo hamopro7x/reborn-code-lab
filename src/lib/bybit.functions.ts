@@ -109,7 +109,7 @@ export const getBybitCardTxns = createServerFn({ method: "POST" })
     // the account's current API key. A missing/restricted Bybit key previously
     // made readOp return an empty fallback even while thousands of archived
     // successful purchases were present.
-    let archived = await mod.fetchCardTxnsPage({
+    const archived = await mod.fetchCardTxnsPage({
       accountId: data.accountId,
       status: data.status,
       page: data.page,
@@ -120,20 +120,10 @@ export const getBybitCardTxns = createServerFn({ method: "POST" })
     // Bybit so a funded account never renders as "no transactions".
     if (!archived.total && data.page === 1) {
       try {
-        // Sync the account that is actually open, preserving its account_id on
-        // every archived row. Re-read the archive afterwards so each account
-        // page shows only its own transactions from the current UTC cycle.
-        await mod.syncCardTxns(data.accountId);
-        archived = await mod.fetchCardTxnsPage({
-          accountId: data.accountId,
-          status: data.status,
-          page: data.page,
-          pageSize: data.pageSize,
-        });
-        if (archived.total) return archived;
-
-        // If persistence is temporarily unavailable, still show the provider
-        // rows immediately rather than rendering an empty account.
+        // One live request is enough: it returns the rows immediately and also
+        // archives them under this exact account. The previous sync + re-read +
+        // second live request could hit Bybit three times, get rate-limited and
+        // replace visible rows with an empty archive on the next refresh.
         return await mod.fetchCardTxnsLive({
           accountId: data.accountId,
           status: data.status,
