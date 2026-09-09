@@ -297,7 +297,7 @@ export function HeroBannerView({
           <div
             className="absolute inset-0 md:hidden"
             style={{
-              background: `linear-gradient(90deg, ${banner.overlay_color}f2 0%, ${banner.overlay_color}e6 38%, ${banner.overlay_color}8c 52%, transparent 68%)`,
+              background: `linear-gradient(270deg, ${banner.overlay_color}f2 0%, ${banner.overlay_color}e6 38%, ${banner.overlay_color}8c 54%, transparent 72%)`,
             }}
           />
           <div
@@ -339,25 +339,25 @@ export function HeroBannerView({
 
       {/* ============= Mobile layout — مطابق لتصميم كانفا ============= */}
       <div className="md:hidden relative z-10 min-h-[152px]">
-        {/* النص والأزرار على يسار البانر */}
-        <div className="absolute inset-y-0 left-0 w-[46%] flex flex-col justify-center gap-1 px-2.5 text-center items-center">
+        {/* النص والأزرار على يمين البانر — مطابق للتصميم */}
+        <div className="absolute inset-y-0 right-0 w-[52%] flex flex-col justify-center gap-1 px-3 text-right items-end">
           {banner.show_title && banner.title && (
             <h1
-              className="font-black leading-tight whitespace-nowrap text-[15px] w-full text-white drop-shadow-sm"
+              className="font-black leading-tight whitespace-nowrap text-[15px] w-full text-right text-white drop-shadow-sm"
               style={{ textShadow: "0 1px 4px rgba(0,0,0,0.6)" }}
             >
               {banner.title}
             </h1>
           )}
           {banner.show_subtitle && banner.subtitle && (
-            <p className="text-teal leading-snug line-clamp-2 text-[9px] w-full text-center">{banner.subtitle}</p>
+            <p className="text-white/85 leading-snug line-clamp-2 text-[9px] w-full text-right">{banner.subtitle}</p>
           )}
           {banner.show_subtitle2 && banner.subtitle2 && (
-            <p className="text-teal leading-snug line-clamp-2 text-[9px] w-full text-center">{banner.subtitle2}</p>
+            <p className="text-white/85 leading-snug line-clamp-2 text-[9px] w-full text-right">{banner.subtitle2}</p>
           )}
 
           {buttons.length > 0 && (
-            <div className="flex flex-nowrap justify-center gap-1.5 mt-1 w-full">
+            <div className="flex flex-nowrap justify-end gap-1.5 mt-1.5 w-full">
               {(() => {
                 const shoppingIdx = buttons.findIndex((b) => /تسوق|shop/i.test(b.label));
                 const otherIdx = buttons.findIndex((_, i) => i !== shoppingIdx);
