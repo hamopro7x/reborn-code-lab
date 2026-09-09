@@ -58,6 +58,13 @@ export const Route = createFileRoute("/api/public/hooks/bybit-ledger-sync")({
           result = { error: e instanceof Error ? e.message : "sync failed" };
         }
 
+        // Monthly-cycle cleanup runs even when the sync above failed, so old
+        // cycles are always removed from the database. Work-sheet data is never
+        // touched (see monthly-cycle.server.ts).
+        const { runCyclePurgeSafe } = await import("@/lib/monthly-cycle.server");
+        await runCyclePurgeSafe();
+
+
         await supabaseAdmin
           .from("bybit_sync_state")
           .update({ lease_until: null, last_run_at: new Date().toISOString(), last_result: result as never })
