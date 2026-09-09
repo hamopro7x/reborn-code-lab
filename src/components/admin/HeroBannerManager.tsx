@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Copy, GripVertical, Plus, Trash2, Edit } from "lucide-react";
+import { Copy, Edit, Globe, GripVertical, Menu, Plus, Search, ShoppingCart, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -63,6 +63,52 @@ function ScaledPreview({ children, width, height }: { children: React.ReactNode;
         {children}
       </div>
     </div>
+  );
+}
+
+function MobilePagePreview({ children }: { children: React.ReactNode }) {
+  return (
+    <ScaledPreview width={390} height={760}>
+      <div className="flex h-full flex-col bg-background">
+        <div className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-card px-4">
+          <div className="flex items-center gap-3">
+            <div className="size-9 rounded-lg border border-border bg-muted" />
+            <div className="text-right leading-tight">
+              <p className="text-sm font-bold">MG Pro</p>
+              <p className="text-xs text-muted-foreground">الاشتراكات الرقمية</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4 text-muted-foreground">
+            <Search className="size-4" />
+            <Globe className="size-4" />
+            <ShoppingCart className="size-4" />
+            <Menu className="size-4" />
+          </div>
+        </div>
+        <div className="h-[230px] shrink-0">{children}</div>
+        <div className="flex-1 space-y-5 bg-background px-4 py-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="h-6 w-1 rounded-full bg-primary" />
+              <span className="text-base font-bold">تصفح الأقسام</span>
+            </div>
+            <span className="rounded-lg bg-card px-3 py-2 text-xs text-muted-foreground">عرض الكل</span>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {[0, 1].map((item) => (
+              <div key={item} className="overflow-hidden rounded-lg border border-border bg-card">
+                <div className="h-28 bg-muted" />
+                <div className="border-t border-border p-3 text-sm font-bold">قسم المتجر</div>
+              </div>
+            ))}
+          </div>
+          <div className="rounded-lg border border-border bg-card p-4 text-right">
+            <p className="text-sm font-bold">متجر الاشتراكات الرقمية</p>
+            <p className="mt-2 text-xs leading-6 text-muted-foreground">اشتراكات رقمية وخدمة موثوقة في مكان واحد.</p>
+          </div>
+        </div>
+      </div>
+    </ScaledPreview>
   );
 }
 
@@ -322,9 +368,9 @@ export function HeroBannerManager({ device = "desktop" }: { device?: HeroDevice 
           </DialogHeader>
 
           {editing && (
-            <div className="grid min-h-0 gap-4 overflow-y-auto bg-background p-4 lg:grid-cols-[minmax(360px,0.9fr)_minmax(440px,1.1fr)] lg:items-start lg:p-6">
+            <div dir="ltr" className="grid min-h-0 gap-5 overflow-y-auto bg-background p-4 lg:grid-cols-[minmax(360px,0.82fr)_minmax(520px,1.18fr)] lg:items-start lg:p-6">
               {/* Live Preview */}
-              <aside className="rounded-lg border border-border bg-card p-4 lg:sticky lg:top-0">
+              <aside dir="rtl" className="rounded-lg border border-border bg-card p-4 lg:sticky lg:top-0">
                 <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <h3 className="text-base font-bold">معاينة مباشرة</h3>
@@ -340,24 +386,38 @@ export function HeroBannerManager({ device = "desktop" }: { device?: HeroDevice 
                     إعادة المواضع
                   </Button>
                 </div>
-                <ScaledPreview width={isMobilePanel ? PHONE_WIDTH : undefined} height={isMobilePanel ? PHONE_HEIGHT : undefined}>
-                  {preview && (
-                    <HeroBannerView
-                      banner={preview}
-                      preview
-                      forceDevice={isMobilePanel ? "mobile" : "desktop"}
-                      editable
-                      onPositionsChange={(positions) => setEditing((cur) => (cur ? { ...cur, positions } : cur))}
-                    />
-                  )}
-                </ScaledPreview>
+                {isMobilePanel ? (
+                  <MobilePagePreview>
+                    {preview && (
+                      <HeroBannerView
+                        banner={preview}
+                        preview
+                        forceDevice="mobile"
+                        editable
+                        onPositionsChange={(positions) => setEditing((cur) => (cur ? { ...cur, positions } : cur))}
+                      />
+                    )}
+                  </MobilePagePreview>
+                ) : (
+                  <ScaledPreview>
+                    {preview && (
+                      <HeroBannerView
+                        banner={preview}
+                        preview
+                        forceDevice="desktop"
+                        editable
+                        onPositionsChange={(positions) => setEditing((cur) => (cur ? { ...cur, positions } : cur))}
+                      />
+                    )}
+                  </ScaledPreview>
+                )}
               </aside>
 
-              <div className="space-y-4 [&_section]:space-y-4 [&_section]:rounded-lg [&_section]:border [&_section]:border-border [&_section]:bg-card [&_section]:p-4 [&_section>h3]:border-b [&_section>h3]:border-border [&_section>h3]:pb-3 [&_section>h3]:text-base [&_input]:bg-background [&_select]:bg-background [&_textarea]:bg-background">
+              <div dir="rtl" className="space-y-4 [&_section]:space-y-4 [&_section]:rounded-lg [&_section]:border [&_section]:border-border [&_section]:bg-card [&_section]:p-4 [&_section>h3]:border-b [&_section>h3]:border-border [&_section>h3]:pb-3 [&_section>h3]:text-base [&_input]:bg-background [&_select]:bg-background [&_textarea]:bg-background">
 
               {/* المحتوى */}
               <section>
-                <h3 className="text-sm font-bold">المحتوى</h3>
+                <h3 className="text-sm font-bold">المعلومات الأساسية</h3>
                 <div className="space-y-2 rounded-md border border-border bg-background p-3">
                   <div className="flex items-center justify-between gap-4">
                     <Label className="font-semibold">العنوان</Label>
