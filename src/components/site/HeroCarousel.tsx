@@ -349,7 +349,7 @@ export function HeroBannerView({
       </div>
 
       {/* ============= Mobile layout — مطابق لتصميم كانفا ============= */}
-      <div className="md:hidden relative z-10 min-h-[152px]">
+      <div className={`${mobileWrapCls} relative z-10 h-full min-h-[152px]`}>
         {/* النص والأزرار على يمين البانر — مطابق للتصميم */}
         <div className="absolute inset-y-0 right-0 w-[52%] flex flex-col justify-center gap-1 px-3 text-right items-end">
           {banner.show_title && banner.title && (
