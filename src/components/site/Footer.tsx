@@ -13,8 +13,8 @@ import {
 } from "@/lib/footer-config";
 
 function FooterItem({ link, compact }: { link: FooterLink; compact?: boolean }) {
-  const badgeClass = compact ? "size-10 md:size-11" : "size-7 md:size-8";
-  const iconClass = compact ? "size-7 md:size-8" : "size-5 md:size-6";
+  const badgeClass = compact ? "size-9 md:size-10" : "size-7 md:size-8";
+  const iconClass = compact ? "size-6 md:size-7" : "size-5 md:size-6";
   if (isInternal(link.href)) {
     return <Link to={link.href!}>{link.label}</Link>;
   }
