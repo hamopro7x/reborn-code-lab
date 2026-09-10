@@ -181,7 +181,7 @@ function Home() {
                   params={{ slug: c.slug }}
                   className="group block w-40 shrink-0 snap-start text-foreground focus-visible:outline-none md:w-56"
                 >
-                  <div className="category-art-frame relative aspect-[3/4] overflow-hidden bg-category-surface">
+                  <div className="category-art-frame relative h-[2.5cm] overflow-hidden bg-category-surface">
                     {c.banner_image ? (
                       <img
                         src={c.banner_image}
