@@ -198,7 +198,8 @@ function Home() {
                         {c.name}
                       </div>
                     )}
-                    <div className="absolute inset-x-0 bottom-0 bg-primary py-1.5 text-center text-[11px] font-bold text-primary-foreground md:text-xs">
+                    <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 bg-[linear-gradient(90deg,#f59e0b,#f97316)] py-1.5 text-[11px] font-bold text-white md:text-xs">
+                      <BadgePercent className="size-3 md:size-3.5" />
                       تصفح العروض
                     </div>
                   </div>
