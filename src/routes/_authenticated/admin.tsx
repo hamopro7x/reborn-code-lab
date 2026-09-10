@@ -28,6 +28,7 @@ import { createEmployee, deleteEmployee, listEmployees, listCustomers, updateEmp
 import { adminListDevices, adminDeleteDevice, adminResetUserDevices, adminAddDevice, adminListEmployees,
   adminListCourseAccess, adminGrantCourseAccess, adminRevokeCourseAccess, checkDevice, getViewerIdentity } from "@/lib/courses.functions";
 import { getDeviceFingerprint } from "@/lib/device";
+import { prepareCategoryImageUpload, getCategoryImageUrl, saveCategory, deleteCategory } from "@/lib/categories.functions";
 import { ShieldAlert } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { ReportsTab } from "@/components/admin/ReportsTab";
