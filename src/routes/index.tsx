@@ -191,14 +191,14 @@ function Home() {
                         loading={ci < 6 ? "eager" : "lazy"}
                         decoding="async"
                         {...(ci < 6 ? { fetchPriority: "high" as const } : {})}
-                        className="absolute inset-0 h-full w-full object-cover"
+                        className="category-art-content absolute inset-0 h-full w-full object-cover"
                       />
                     ) : (
-                      <div className="absolute inset-0 flex items-center justify-center px-4 text-center text-sm text-muted-foreground">
+                      <div className="category-art-content absolute inset-0 flex items-center justify-center px-4 text-center text-sm text-muted-foreground">
                         {c.name}
                       </div>
                     )}
-                    <div className="absolute inset-x-0 bottom-0 flex h-8 items-center justify-center gap-1 bg-discount text-[11px] font-bold text-discount-foreground md:text-xs">
+                    <div className="category-art-content absolute -inset-x-4 bottom-0 flex h-8 items-center justify-center gap-1 bg-discount text-[11px] font-bold text-discount-foreground md:text-xs">
                       <ThumbsUp className="size-3 fill-current md:size-3.5" />
                       خصم إضافي
                     </div>

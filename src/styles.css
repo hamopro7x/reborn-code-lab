@@ -163,7 +163,13 @@
 }
 
 @utility category-art-frame {
-  clip-path: polygon(18% 0, 100% 0, 82% 100%, 0 100%);
+  border-radius: 28px 6px 6px 6px;
+  transform: skewX(-10deg);
+  transform-origin: center;
+}
+
+@utility category-art-content {
+  transform: skewX(10deg) scale(1.12);
 }
 
 @utility category-title {
