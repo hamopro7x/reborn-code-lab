@@ -170,7 +170,7 @@ function Home() {
               {categoriesQ.isLoading &&
                 Array.from({ length: 6 }).map((_, i) => (
                   <div key={`c-sk-${i}`} className="w-40 shrink-0 snap-start md:w-56">
-                    <div className="category-art-frame h-[4.5cm] animate-pulse bg-category-surface" />
+                    <div className="category-art-frame h-[5cm] animate-pulse bg-category-surface" />
                     <div className="mx-auto mt-2 h-4 w-3/4 animate-pulse rounded bg-category-surface" />
                   </div>
                 ))}
@@ -181,7 +181,7 @@ function Home() {
                   params={{ slug: c.slug }}
                   className="group block w-40 shrink-0 snap-start text-foreground focus-visible:outline-none md:w-56"
                 >
-                  <div className="category-art-frame relative h-[4.5cm] overflow-hidden bg-category-surface">
+                  <div className="category-art-frame relative h-[5cm] overflow-hidden bg-category-surface">
                     {c.banner_image ? (
                       <img
                         src={c.banner_image}
