@@ -170,7 +170,7 @@ function Home() {
               {categoriesQ.isLoading &&
                 Array.from({ length: 6 }).map((_, i) => (
                   <div key={`c-sk-${i}`} className="w-40 shrink-0 snap-start md:w-56">
-                    <div className="category-art-frame aspect-[16/9] bg-category-surface animate-pulse" />
+                    <div className="category-art-frame aspect-[3/4] bg-category-surface animate-pulse" />
                     <div className="mt-4 h-5 w-3/4 bg-category-surface animate-pulse" />
                   </div>
                 ))}
@@ -181,13 +181,13 @@ function Home() {
                   params={{ slug: c.slug }}
                   className="group block w-40 shrink-0 snap-start text-foreground focus-visible:outline-none md:w-56"
                 >
-                  <div className="category-art-frame relative aspect-[16/9] overflow-hidden bg-category-surface">
+                  <div className="category-art-frame relative aspect-[3/4] overflow-hidden bg-category-surface">
                     {c.banner_image ? (
                       <img
                         src={c.banner_image}
                         alt={c.name}
                         width={448}
-                        height={280}
+                        height={596}
                         loading={ci < 6 ? "eager" : "lazy"}
                         decoding="async"
                         {...(ci < 6 ? { fetchPriority: "high" as const } : {})}
