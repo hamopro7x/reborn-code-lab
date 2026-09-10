@@ -169,9 +169,9 @@ function Home() {
               <div className="flex w-max min-w-full gap-4 pb-3 md:gap-6">
               {categoriesQ.isLoading &&
                 Array.from({ length: 6 }).map((_, i) => (
-                  <div key={`c-sk-${i}`} className="w-[280px] shrink-0 snap-start">
-                    <div className="category-art-frame aspect-[6/5] bg-category-surface animate-pulse" />
-                    <div className="mt-5 h-5 w-3/4 bg-category-surface animate-pulse" />
+                  <div key={`c-sk-${i}`} className="w-40 shrink-0 snap-start md:w-56">
+                    <div className="category-art-frame aspect-[3/4] bg-category-surface animate-pulse" />
+                    <div className="mt-4 h-5 w-3/4 bg-category-surface animate-pulse" />
                   </div>
                 ))}
               {categories.map((c: any, ci: number) => (
@@ -179,9 +179,9 @@ function Home() {
                   key={c.id}
                   to="/category/$slug"
                   params={{ slug: c.slug }}
-                  className="group block w-[280px] shrink-0 snap-start text-foreground focus-visible:outline-none"
+                  className="group block w-40 shrink-0 snap-start text-foreground focus-visible:outline-none md:w-56"
                 >
-                  <div className="category-art-frame relative aspect-[6/5] overflow-hidden bg-category-surface">
+                  <div className="category-art-frame relative aspect-[3/4] overflow-hidden bg-category-surface">
                     {c.banner_image ? (
                       <img
                         src={c.banner_image}
@@ -198,11 +198,11 @@ function Home() {
                         {c.name}
                       </div>
                     )}
-                    <div className="absolute inset-x-0 bottom-0 flex h-11 items-center justify-center bg-primary px-4 text-center text-sm font-bold text-primary-foreground">
+                    <div className="absolute inset-x-0 bottom-0 bg-primary py-1.5 text-center text-[11px] font-bold text-primary-foreground md:text-xs">
                       تصفح العروض
                     </div>
                   </div>
-                  <h3 className="category-title mt-5 line-clamp-2 min-h-14 px-2 text-center text-lg font-bold leading-7 text-foreground transition-colors duration-150 group-hover:text-primary">
+                  <h3 className="category-title mt-3 line-clamp-2 min-h-12 px-1 text-center text-base font-bold leading-6 text-foreground transition-colors duration-150 group-hover:text-primary md:text-lg">
                     {c.name}
                   </h3>
                 </Link>
