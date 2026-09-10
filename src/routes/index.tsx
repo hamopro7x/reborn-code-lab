@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, BadgePercent } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
@@ -198,7 +198,8 @@ function Home() {
                         {c.name}
                       </div>
                     )}
-                    <div className="absolute inset-x-0 bottom-0 bg-primary py-1.5 text-center text-[11px] font-bold text-primary-foreground md:text-xs">
+                    <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 bg-[linear-gradient(90deg,#f59e0b,#f97316)] py-1.5 text-[11px] font-bold text-white md:text-xs">
+                      <BadgePercent className="size-3 md:size-3.5" />
                       تصفح العروض
                     </div>
                   </div>
