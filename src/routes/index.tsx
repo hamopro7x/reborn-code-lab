@@ -170,7 +170,7 @@ function Home() {
               {categoriesQ.isLoading &&
                 Array.from({ length: 6 }).map((_, i) => (
                   <div key={`c-sk-${i}`} className="w-40 shrink-0 snap-start md:w-56">
-                    <div className="category-art-frame aspect-[3/4] bg-category-surface animate-pulse" />
+                    <div className="category-art-frame h-[2.5cm] bg-category-surface animate-pulse" />
                     <div className="mt-4 h-5 w-3/4 bg-category-surface animate-pulse" />
                   </div>
                 ))}
