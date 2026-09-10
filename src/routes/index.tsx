@@ -184,23 +184,25 @@ function Home() {
                   className="group block w-40 shrink-0 snap-start text-foreground focus-visible:outline-none md:w-56"
                 >
                   <div className="rounded-2xl bg-category-surface p-1.5 ring-1 ring-white/5 transition-colors duration-150 group-hover:ring-white/10">
-                    <div className="category-art-frame relative h-[4.5cm] overflow-hidden">
-                      {c.banner_image ? (
-                        <img
-                          src={c.banner_image}
-                          alt={c.name}
-                          width={448}
-                          height={596}
-                          loading={ci < 6 ? "eager" : "lazy"}
-                          decoding="async"
-                          {...(ci < 6 ? { fetchPriority: "high" as const } : {})}
-                          className="absolute inset-0 h-full w-full object-cover"
-                        />
-                      ) : (
-                        <div className="absolute inset-0 flex items-center justify-center px-4 text-center text-sm text-muted-foreground">
-                          {c.name}
-                        </div>
-                      )}
+                    <div className="relative h-[4.5cm]">
+                      <div className="category-art-frame absolute inset-0 overflow-hidden">
+                        {c.banner_image ? (
+                          <img
+                            src={c.banner_image}
+                            alt={c.name}
+                            width={448}
+                            height={596}
+                            loading={ci < 6 ? "eager" : "lazy"}
+                            decoding="async"
+                            {...(ci < 6 ? { fetchPriority: "high" as const } : {})}
+                            className="absolute inset-0 h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center px-4 text-center text-sm text-muted-foreground">
+                            {c.name}
+                          </div>
+                        )}
+                      </div>
                       <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 bg-[linear-gradient(90deg,#fbbf24,#f97316)] py-2 text-[11px] font-bold text-white md:py-2.5 md:text-xs">
                         <Tag className="size-3 md:size-3.5" />
                         خصم إضافي
