@@ -163,11 +163,11 @@
 }
 
 @utility category-art-frame {
-  clip-path: polygon(0 0, 100% 0, 94% 100%, 6% 100%);
+  clip-path: polygon(18% 0, 100% 0, 82% 100%, 0 100%);
 }
 
 @utility category-title {
-  font-family: var(--font-category);
+  font-family: "Cairo", "Tajawal", system-ui, sans-serif;
   letter-spacing: 0;
 }
 

@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Tag } from "lucide-react";
+import { ArrowLeft, ThumbsUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
@@ -170,9 +170,7 @@ function Home() {
               {categoriesQ.isLoading &&
                 Array.from({ length: 6 }).map((_, i) => (
                   <div key={`c-sk-${i}`} className="w-40 shrink-0 snap-start md:w-56">
-                    <div className="rounded-2xl bg-category-surface p-1.5 ring-1 ring-white/5">
-                      <div className="category-art-frame h-[4.5cm] animate-pulse bg-white/5" />
-                    </div>
+                    <div className="category-art-frame h-[4.5cm] animate-pulse bg-category-surface" />
                     <div className="mx-auto mt-2 h-4 w-3/4 animate-pulse rounded bg-category-surface" />
                   </div>
                 ))}
@@ -183,30 +181,26 @@ function Home() {
                   params={{ slug: c.slug }}
                   className="group block w-40 shrink-0 snap-start text-foreground focus-visible:outline-none md:w-56"
                 >
-                  <div className="rounded-2xl bg-category-surface p-1.5 ring-1 ring-white/5 transition-colors duration-150 group-hover:ring-white/10">
-                    <div className="relative h-[4.5cm]">
-                      <div className="category-art-frame absolute inset-0 overflow-hidden">
-                        {c.banner_image ? (
-                          <img
-                            src={c.banner_image}
-                            alt={c.name}
-                            width={448}
-                            height={596}
-                            loading={ci < 6 ? "eager" : "lazy"}
-                            decoding="async"
-                            {...(ci < 6 ? { fetchPriority: "high" as const } : {})}
-                            className="absolute inset-0 h-full w-full object-cover"
-                          />
-                        ) : (
-                          <div className="absolute inset-0 flex items-center justify-center px-4 text-center text-sm text-muted-foreground">
-                            {c.name}
-                          </div>
-                        )}
+                  <div className="category-art-frame relative h-[4.5cm] overflow-hidden bg-category-surface">
+                    {c.banner_image ? (
+                      <img
+                        src={c.banner_image}
+                        alt={c.name}
+                        width={448}
+                        height={596}
+                        loading={ci < 6 ? "eager" : "lazy"}
+                        decoding="async"
+                        {...(ci < 6 ? { fetchPriority: "high" as const } : {})}
+                        className="absolute inset-0 h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center px-4 text-center text-sm text-muted-foreground">
+                        {c.name}
                       </div>
-                      <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 bg-[linear-gradient(90deg,#fbbf24,#f97316)] py-2 text-[11px] font-bold text-white md:py-2.5 md:text-xs">
-                        <Tag className="size-3 md:size-3.5" />
-                        خصم إضافي
-                      </div>
+                    )}
+                    <div className="absolute inset-x-0 bottom-0 flex h-8 items-center justify-center gap-1 bg-discount text-[11px] font-bold text-discount-foreground md:text-xs">
+                      <ThumbsUp className="size-3 fill-current md:size-3.5" />
+                      خصم إضافي
                     </div>
                   </div>
                   <h3 className="category-title mt-2 line-clamp-1 px-1 text-center text-sm font-bold text-foreground transition-colors duration-150 group-hover:text-primary md:text-base">
