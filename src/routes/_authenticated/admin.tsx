@@ -1238,26 +1238,49 @@ function CategoriesTab() {
 
   async function save() {
     if (!editing.name) return toast.error("الاسم مطلوب");
-    const payload: any = {
-      name: editing.name, slug: ensureSlug(editing.slug, editing.name), icon: editing.icon,
-      banner_image: editing.banner_image ?? null,
-      sort_order: editing.sort_order, active: editing.active,
-    };
-    const op = editing.id
-      ? supabase.from("categories").update(payload).eq("id", editing.id)
-      : supabase.from("categories").insert(payload);
-    const { error } = await op;
-    if (error) toast.error(error.message); else { toast.success("محفوظ"); setOpen(false); qc.invalidateQueries({ queryKey: ["admin-categories"] }); }
+    try {
+      await saveCategory({
+        data: {
+          id: editing.id ?? null,
+          name: editing.name,
+          slug: ensureSlug(editing.slug, editing.name),
+          icon: editing.icon ?? null,
+          banner_image: editing.banner_image ?? null,
+          sort_order: Number(editing.sort_order) || 0,
+          active: !!editing.active,
+        },
+      });
+      toast.success("محفوظ");
+      setOpen(false);
+      qc.invalidateQueries({ queryKey: ["admin-categories"] });
+    } catch (e: any) {
+      toast.error(e?.message || "فشل الحفظ");
+    }
   }
-  async function del(id: string) { if (!confirm("حذف؟")) return; await supabase.from("categories").delete().eq("id", id); qc.invalidateQueries({ queryKey: ["admin-categories"] }); }
+  async function del(id: string) {
+    if (!confirm("حذف؟")) return;
+    try { await deleteCategory({ data: { id } }); qc.invalidateQueries({ queryKey: ["admin-categories"] }); }
+    catch (e: any) { toast.error(e?.message || "فشل الحذف"); }
+  }
   async function uploadCategoryBanner(file: File) {
-    const path = `categories/${Date.now()}-${file.name}`;
-    const { error } = await supabase.storage.from("product-images").upload(path, file);
-    if (error) { toast.error(error.message); return; }
-    const { data, error: sErr } = await supabase.storage.from("product-images").createSignedUrl(path, 60 * 60 * 24 * 365 * 5);
-    if (sErr || !data?.signedUrl) { toast.error(sErr?.message || "فشل إنشاء الرابط"); return; }
-    setEditing({ ...editing, banner_image: data.signedUrl });
-    toast.success("تم رفع صورة البانر");
+    try {
+      const { path, token } = await prepareCategoryImageUpload({
+        data: {
+          fileName: file.name,
+          contentType: file.type || "image/png",
+          size: file.size,
+        },
+      });
+      const { error } = await supabase.storage
+        .from("product-images")
+        .uploadToSignedUrl(path, token, file, { contentType: file.type || "image/png" });
+      if (error) throw new Error(error.message);
+      const { url } = await getCategoryImageUrl({ data: { path } });
+      setEditing((prev: any) => ({ ...(prev ?? {}), banner_image: url }));
+      toast.success("تم رفع صورة القسم");
+    } catch (e: any) {
+      toast.error(e?.message || "فشل رفع الصورة");
+    }
   }
 
   return (
