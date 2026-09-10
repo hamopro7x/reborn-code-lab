@@ -164,8 +164,7 @@
 
 @utility category-art-frame {
   border-radius: 28px 6px 6px 6px;
-  transform: skewX(-10deg);
-  transform-origin: center;
+  clip-path: polygon(9% 0, 100% 0, 91% 100%, 0 100%);
   background-image: linear-gradient(
     160deg,
     oklch(0.24 0.04 264) 0%,
@@ -176,7 +175,19 @@
 }
 
 @utility category-art-content {
-  transform: skewX(10deg) scale(1.12);
+  transform: scale(1.02);
+}
+
+@media (min-width: 768px) {
+  .category-art-frame {
+    clip-path: none;
+    transform: skewX(-10deg);
+    transform-origin: center;
+  }
+
+  .category-art-content {
+    transform: skewX(10deg) scale(1.12);
+  }
 }
 
 @utility category-title {
