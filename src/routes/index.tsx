@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, BadgePercent } from "lucide-react";
+import { ArrowLeft, Tag } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
@@ -170,8 +170,10 @@ function Home() {
               {categoriesQ.isLoading &&
                 Array.from({ length: 6 }).map((_, i) => (
                   <div key={`c-sk-${i}`} className="w-40 shrink-0 snap-start md:w-56">
-                    <div className="category-art-frame h-[4.5cm] bg-category-surface animate-pulse" />
-                    <div className="mt-4 h-5 w-3/4 bg-category-surface animate-pulse" />
+                    <div className="rounded-2xl bg-category-surface p-1.5 ring-1 ring-white/5">
+                      <div className="category-art-frame h-[4.5cm] animate-pulse bg-white/5" />
+                    </div>
+                    <div className="mx-auto mt-2 h-4 w-3/4 animate-pulse rounded bg-category-surface" />
                   </div>
                 ))}
               {categories.map((c: any, ci: number) => (
