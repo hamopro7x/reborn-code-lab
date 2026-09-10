@@ -181,29 +181,31 @@ function Home() {
                   params={{ slug: c.slug }}
                   className="group block w-40 shrink-0 snap-start text-foreground focus-visible:outline-none md:w-56"
                 >
-                  <div className="category-art-frame relative h-[4.5cm] overflow-hidden bg-category-surface">
-                    {c.banner_image ? (
-                      <img
-                        src={c.banner_image}
-                        alt={c.name}
-                        width={448}
-                        height={596}
-                        loading={ci < 6 ? "eager" : "lazy"}
-                        decoding="async"
-                        {...(ci < 6 ? { fetchPriority: "high" as const } : {})}
-                        className="absolute inset-0 h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center px-4 text-center text-sm text-muted-foreground">
-                        {c.name}
+                  <div className="rounded-2xl bg-category-surface p-1.5 ring-1 ring-white/5 transition-colors duration-150 group-hover:ring-white/10">
+                    <div className="category-art-frame relative h-[4.5cm] overflow-hidden">
+                      {c.banner_image ? (
+                        <img
+                          src={c.banner_image}
+                          alt={c.name}
+                          width={448}
+                          height={596}
+                          loading={ci < 6 ? "eager" : "lazy"}
+                          decoding="async"
+                          {...(ci < 6 ? { fetchPriority: "high" as const } : {})}
+                          className="absolute inset-0 h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center px-4 text-center text-sm text-muted-foreground">
+                          {c.name}
+                        </div>
+                      )}
+                      <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 bg-[linear-gradient(90deg,#fbbf24,#f97316)] py-2 text-[11px] font-bold text-white md:py-2.5 md:text-xs">
+                        <Tag className="size-3 md:size-3.5" />
+                        خصم إضافي
                       </div>
-                    )}
-                    <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 bg-[linear-gradient(90deg,#f59e0b,#f97316)] py-1.5 text-[11px] font-bold text-white md:text-xs">
-                      <BadgePercent className="size-3 md:size-3.5" />
-                      تصفح العروض
                     </div>
                   </div>
-                  <h3 className="category-title mt-3 line-clamp-2 min-h-12 px-1 text-center text-base font-bold leading-6 text-foreground transition-colors duration-150 group-hover:text-primary md:text-lg">
+                  <h3 className="category-title mt-2 line-clamp-1 px-1 text-center text-sm font-bold text-foreground transition-colors duration-150 group-hover:text-primary md:text-base">
                     {c.name}
                   </h3>
                 </Link>
