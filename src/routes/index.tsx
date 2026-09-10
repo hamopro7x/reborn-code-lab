@@ -194,11 +194,13 @@ function Home() {
                         className="category-art-content absolute inset-0 h-full w-full object-cover"
                       />
                     ) : null}
-                    <div className="category-art-content absolute inset-0 flex items-center justify-center px-3 text-center">
-                      <span className="w-full text-sm font-bold text-foreground md:text-base">
-                        {c.name}
-                      </span>
-                    </div>
+                    {!c.banner_image && (
+                      <div className="category-art-content absolute inset-0 flex items-center justify-center px-3 text-center">
+                        <span className="w-full text-sm font-bold text-foreground md:text-base">
+                          {c.name}
+                        </span>
+                      </div>
+                    )}
                     <div className="category-art-content absolute -inset-x-4 bottom-0 flex h-8 items-center justify-center gap-1 bg-discount text-[11px] font-bold text-discount-foreground md:text-xs">
                       <ThumbsUp className="size-3 fill-current md:size-3.5" />
                       خصم إضافي
