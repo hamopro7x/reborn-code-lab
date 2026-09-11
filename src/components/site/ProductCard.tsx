@@ -74,13 +74,13 @@ export function ProductCard({ p, compact = false }: { p: any; compact?: boolean 
           <div className="flex-1 min-w-0">
             <h3 className={cn("font-bold text-[#f5f6fa] leading-[1.3] line-clamp-1", compact ? "text-[13px]" : "text-[15.5px]")}>{p.name}</h3>
             {rating !== null && (
-              <div className="mt-1 flex items-center gap-[5px]">
-                <svg viewBox="0 0 24 24" fill="#ffc94d" className="size-[13px]">
+              <div className={cn("mt-1 flex items-center gap-[5px]", compact && "gap-[3px]")}>
+                <svg viewBox="0 0 24 24" fill="#ffc94d" className={compact ? "size-[11px]" : "size-[13px]">
                   <path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1L12 2z" />
                 </svg>
-                <span className="font-bold text-[#d6d8e2] text-[12px]">{rating}</span>
+                <span className={cn("font-bold text-[#d6d8e2]", compact ? "text-[11px]" : "text-[12px]")}>{rating}</span>
                 {ratingCount !== null && !compact && (
-                  <span className="text-[11.5px] text-[#6f7280]">({ratingCount.toLocaleString("en-US")} )</span>
+                  <span className="text-[11.5px] text-[#6f7280]">{`(${ratingCount.toLocaleString("en-US")} تقييم)`}</span>
                 )}
               </div>
             )}
