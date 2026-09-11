@@ -27,12 +27,20 @@ const forbiddenClientCode = [
   /\.from\([`"']products[`"']\)[^;]{0,500}\.(insert|update|delete)\(/,
 ];
 
+let productComponentFound = false;
+
 for (const file of listJavaScriptFiles(publicDirectory)) {
   const source = readFileSync(file, "utf8");
   if (forbiddenClientCode.some((pattern) => pattern.test(source))) {
     console.error(`[build] obsolete client-side product code found in: ${file}`);
     process.exit(1);
   }
+  if (source.includes("server-authorized-v2")) productComponentFound = true;
+}
+
+if (!productComponentFound) {
+  console.error("[build] current server-authorized product save path is missing from client assets");
+  process.exit(1);
 }
 
 console.log(`[build] verified Node server entry: ${entry}`);

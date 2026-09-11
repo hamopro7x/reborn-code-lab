@@ -15,6 +15,8 @@ async function assertStaff(supabase: any, userId: string) {
   if (!isStaff) throw new Error("Forbidden: staff only");
 }
 
+const PRODUCT_WRITE_PATH_VERSION = "server-authorized-v2";
+
 function databaseOperationError(operation: string, error: { message: string; code?: string | null }) {
   const code = error.code ? ` (${error.code})` : "";
   return new Error(`[${operation}]${code} ${error.message}`);
@@ -143,13 +145,19 @@ export const saveProduct = createServerFn({ method: "POST" })
     await assertStaff(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { id, ...row } = data;
+    const operation = id ? "products.update" : "products.insert";
+    console.info(`[product-save] ${PRODUCT_WRITE_PATH_VERSION} ${operation}`);
     const result = id
       ? await supabaseAdmin.from("products").update(row).eq("id", id)
       : await supabaseAdmin.from("products").insert(row);
     if (result.error) {
-      throw databaseOperationError(id ? "products.update" : "products.insert", result.error);
+      console.error(`[product-save] ${operation} failed`, {
+        code: result.error.code,
+        message: result.error.message,
+      });
+      throw databaseOperationError(operation, result.error);
     }
-    return { ok: true, operation: id ? "products.update" : "products.insert" };
+    return { ok: true, operation, pathVersion: PRODUCT_WRITE_PATH_VERSION };
   });
 
 export const deleteProduct = createServerFn({ method: "POST" })
