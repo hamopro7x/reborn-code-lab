@@ -199,14 +199,12 @@
   animation: marquee-rtl var(--marquee-duration, 40s) linear infinite;
   will-change: transform;
 }
-.category-marquee-container:hover .category-marquee-track {
-  animation-play-state: paused;
-}
 @media (prefers-reduced-motion: reduce) {
   .category-marquee-track {
     animation: none;
   }
 }
+
 
 @keyframes marquee-rtl {
   0% { transform: translateX(0); }

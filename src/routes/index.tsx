@@ -232,7 +232,7 @@ function Home() {
               تصفح الأقسام
             </h2>
 
-            <div ref={categoriesContainerRef} className="category-marquee-container overflow-hidden" aria-label="أقسام المتجر">
+            <div ref={categoriesContainerRef} className="category-marquee-container overflow-x-auto scrollbar-hide touch-pan-x" aria-label="أقسام المتجر">
               <div
                 ref={categoriesTrackRef}
                 className={`${!categoriesQ.isLoading && categories.length > 0 ? "category-marquee-track" : ""} flex w-max gap-4 px-4 pb-3 md:gap-6 md:px-5`}
