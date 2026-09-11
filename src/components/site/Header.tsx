@@ -10,7 +10,6 @@ import { Input } from "@/components/ui/input";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import logoAsset from "@/assets/magpro-logo.jpg.asset.json";
 
 const navLinks = [
   { to: "/", label: "الرئيسية" },
@@ -58,7 +57,7 @@ export function Header() {
       <div className="container mx-auto px-4 h-16 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
         <Link to="/" className="flex items-center gap-2 shrink-0">
           <img
-            src={logoAsset.url}
+            src="/favicon.png"
             alt="شعار متجر الاشتراكات الرقمية"
             width={36}
             height={36}

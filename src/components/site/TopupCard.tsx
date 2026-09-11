@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useCurrency } from "@/lib/currency-context";
 import { convertFromEgp, formatPrice, computeDiscountedPrice } from "@/lib/format";
+import { SafeImage } from "@/components/site/SafeImage";
 
 /**
  * كارت أفقي مختصر لبطاقات الشحن — نفس بيانات المنتج الموجودة بدون أي مصادر جديدة.
@@ -21,16 +22,15 @@ export function TopupCard({ p }: { p: any }) {
       className="group flex h-full items-center gap-3 rounded-xl border border-border bg-card text-card-foreground p-3 transition-colors duration-150 hover:border-primary"
     >
       <div className="size-12 shrink-0 overflow-hidden rounded-lg border border-border bg-muted">
-        {p.main_image ? (
-          <img
-            src={p.main_image}
-            alt={p.name}
-            width={96}
-            height={96}
-            loading="lazy"
-            className="size-full object-cover"
-          />
-        ) : null}
+        <SafeImage
+          src={p.main_image ?? undefined}
+          alt={p.name}
+          width={96}
+          height={96}
+          loading="lazy"
+          className="size-full object-cover"
+          fallbackClassName="gap-0 [&_svg]:size-4 [&_span]:hidden"
+        />
       </div>
       <div className="min-w-0 flex-1">
         <div className="truncate text-sm font-bold">{p.name}</div>

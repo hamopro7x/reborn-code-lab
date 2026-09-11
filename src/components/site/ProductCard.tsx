@@ -6,6 +6,7 @@ import { Heart } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { useFavorites } from "@/lib/favorites";
 import { toast } from "sonner";
+import { SafeImage } from "@/components/site/SafeImage";
 
 export function ProductCard({ p, compact = false }: { p: any; compact?: boolean }) {
   const { currency, rates } = useCurrency();
@@ -59,11 +60,15 @@ export function ProductCard({ p, compact = false }: { p: any; compact?: boolean 
           {/* header: app icon + name */}
           <div className="flex items-center gap-[6px]">
             <div className="size-[52px] rounded-[14px] shrink-0 overflow-hidden bg-[#1d1e27] border border-[#2a2b38] flex items-center justify-center">
-              {p.main_image ? (
-                <img src={p.main_image} alt={p.name} width={104} height={104} className="w-full h-full object-cover" loading="lazy" />
-              ) : (
-                <span className="text-[10px] text-muted-foreground px-1 text-center line-clamp-2">{p.name}</span>
-              )}
+              <SafeImage
+                src={p.main_image ?? undefined}
+                alt={p.name}
+                width={104}
+                height={104}
+                className="h-full w-full object-cover"
+                fallbackClassName="gap-1 [&_svg]:size-4 [&_span]:text-[9px]"
+                loading="lazy"
+              />
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="text-[13px] font-extrabold text-[#f5f6fa] leading-[1.35] text-right line-clamp-2">{p.name}</h3>
