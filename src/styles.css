@@ -196,7 +196,7 @@
 }
 
 .category-marquee-track {
-  animation: marquee-ltr 35s linear infinite;
+  animation: marquee-rtl 40s linear infinite;
   will-change: transform;
 }
 .category-marquee-container:hover .category-marquee-track {
@@ -208,10 +208,11 @@
   }
 }
 
-@keyframes marquee-ltr {
+@keyframes marquee-rtl {
   0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+  100% { transform: translateX(-66.6667%); }
 }
+
 
 
 @keyframes floaty { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }

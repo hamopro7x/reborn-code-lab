@@ -204,7 +204,7 @@ function Home() {
             </h2>
 
             <div className="category-marquee-container overflow-hidden" aria-label="أقسام المتجر">
-              <div className="category-marquee-track flex w-max gap-4 px-4 pb-3 md:gap-6 md:px-5" dir="ltr">
+              <div className="category-marquee-track flex w-max gap-4 px-4 pb-3 md:gap-6 md:px-5" dir="rtl">
                 {categoriesQ.isLoading &&
                   Array.from({ length: 6 }).map((_, i) => (
                     <div key={`c-sk-${i}`} className="w-40 shrink-0 md:w-56">
@@ -216,10 +216,14 @@ function Home() {
                   <CategoryCard key={c.id} c={c} index={ci} />
                 ))}
                 {!categoriesQ.isLoading && categories.map((c: any, ci: number) => (
-                  <CategoryCard key={`dup-${c.id}`} c={c} index={ci + categories.length} />
+                  <CategoryCard key={`dup1-${c.id}`} c={c} index={ci + categories.length} />
+                ))}
+                {!categoriesQ.isLoading && categories.map((c: any, ci: number) => (
+                  <CategoryCard key={`dup2-${c.id}`} c={c} index={ci + categories.length * 2} />
                 ))}
               </div>
             </div>
+
           </section>
         </div>
       </main>
