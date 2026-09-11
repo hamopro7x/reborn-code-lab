@@ -131,36 +131,10 @@ function Home() {
 
   const categories = categoriesQ.data ?? [];
 
-  const categoriesContainerRef = useRef<HTMLDivElement>(null);
-  const categoriesTrackRef = useRef<HTMLDivElement>(null);
-  const [categoryRepeat, setCategoryRepeat] = useState(3);
-  const [categoryDuration, setCategoryDuration] = useState(40);
-  const [categoryShift, setCategoryShift] = useState(0);
+  // عدد النسخ: كافٍ لتغطية أي شاشة مع تكرار دائري بلا فراغ
+  const categoryRepeat = Math.max(4, Math.ceil(16 / Math.max(1, categories.length)));
+  const categoryDuration = Math.max(24, categories.length * categoryRepeat * 3);
 
-  useEffect(() => {
-    const container = categoriesContainerRef.current;
-    const track = categoriesTrackRef.current;
-    if (!container || !track || !categories.length) return;
-
-    const compute = () => {
-      const items = Array.from(track.children) as HTMLElement[];
-      if (items.length <= categories.length) return;
-      // طول مجموعة واحدة بالبكسل (شامل الفراغات) = المسافة بين أول بطاقة وأول بطاقة في المجموعة التالية
-      const period = Math.abs(items[categories.length].offsetLeft - items[0].offsetLeft);
-      if (!period) return;
-      const containerWidth = container.clientWidth;
-      // نسخ كافية لتغطية الشاشة + مجموعة إضافية حتى لا يظهر أي قطع
-      const needed = Math.max(3, Math.ceil((containerWidth + period) / period) + 2);
-      const duration = Math.max(20, period / 60); // سرعة ثابتة ~60 بكسل/ثانية
-      if (needed !== categoryRepeat) setCategoryRepeat(needed);
-      if (Math.abs(period - categoryShift) > 1) setCategoryShift(period);
-      if (Math.abs(duration - categoryDuration) > 1) setCategoryDuration(duration);
-    };
-
-    compute();
-    window.addEventListener("resize", compute);
-    return () => window.removeEventListener("resize", compute);
-  }, [categories.length, categoryRepeat, categoryDuration, categoryShift]);
 
   const bannersQ = useQuery({
     queryKey: ["hero-banners"],
@@ -234,15 +208,14 @@ function Home() {
               تصفح الأقسام
             </h2>
 
-            <div ref={categoriesContainerRef} className="category-marquee-container overflow-x-auto scrollbar-hide touch-pan-x" aria-label="أقسام المتجر">
+            <div className="category-marquee-container overflow-x-auto scrollbar-hide touch-pan-x" aria-label="أقسام المتجر">
               <div
-                ref={categoriesTrackRef}
-                className={`${!categoriesQ.isLoading && categories.length > 0 && categoryShift > 0 ? "category-marquee-track" : ""} flex w-max gap-4 px-4 pb-3 md:gap-6 md:px-5`}
+                className={`${!categoriesQ.isLoading && categories.length > 0 ? "category-marquee-track" : ""} flex w-max pb-3 [&>*]:me-4 md:[&>*]:me-6`}
                 dir="rtl"
                 style={
-                  !categoriesQ.isLoading && categories.length > 0 && categoryShift > 0
+                  !categoriesQ.isLoading && categories.length > 0
                     ? ({
-                        ["--marquee-shift" as string]: `${categoryShift}px`,
+                        ["--marquee-shift" as string]: `${100 / categoryRepeat}%`,
                         ["--marquee-duration" as string]: `${categoryDuration}s`,
                       } as Record<string, string>)
                     : undefined
