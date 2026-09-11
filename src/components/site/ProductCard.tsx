@@ -56,8 +56,8 @@ export function ProductCard({ p, compact = false }: { p: any; compact?: boolean 
     >
       <div className={`flex flex-col ${compact ? "px-3 pt-4 pb-3" : "px-6 pt-[26px] pb-[22px]"}`}>
         {/* header: app icon + name + rating */}
-        <div className="flex items-center gap-3">
-          <div className="size-[52px] rounded-[14px] overflow-hidden shrink-0 bg-[#1d1e27] border border-[#2a2b38] flex items-center justify-center">
+        <div className={`flex items-center gap-3 ${compact ? "gap-2" : ""}`}>
+          <div className={`rounded-[14px] overflow-hidden shrink-0 bg-[#1d1e27] border border-[#2a2b38] flex items-center justify-center ${compact ? "size-10 rounded-[12px]" : "size-[52px]"}`}>
             {p.main_image ? (
               <img src={p.main_image} alt={p.name} width={104} height={104} className="w-full h-full object-cover" loading="lazy" />
             ) : (
@@ -65,12 +65,12 @@ export function ProductCard({ p, compact = false }: { p: any; compact?: boolean 
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="text-[15.5px] font-bold text-[#f5f6fa] leading-[1.3] line-clamp-1">{p.name}</h3>
+            <h3 className={`font-bold text-[#f5f6fa] leading-[1.3] line-clamp-1 ${compact ? "text-[13px]" : "text-[15.5px]"}`}>{p.name}</h3>
             {rating !== null && (
-              <div className="mt-1 flex items-center gap-[5px]">
-                <svg viewBox="0 0 24 24" fill="#ffc94d" className="size-[13px]"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1L12 2z" /></svg>
-                <span className="text-[12px] font-bold text-[#d6d8e2]">{rating}</span>
-                {ratingCount !== null && (
+              <div className={`mt-1 flex items-center gap-[5px] ${compact ? "gap-[3px]" : ""}`}>
+                <svg viewBox="0 0 24 24" fill="#ffc94d" className={compact ? "size-[11px]" : "size-[13px]"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1L12 2z" /></svg>
+                <span className={`font-bold text-[#d6d8e2] ${compact ? "text-[11px]" : "text-[12px]"}`}>{rating}</span>
+                {ratingCount !== null && !compact && (
                   <span className="text-[11.5px] text-[#6f7280]">({ratingCount.toLocaleString("en-US")} تقييم)</span>
                 )}
               </div>
