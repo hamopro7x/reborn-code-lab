@@ -240,9 +240,9 @@ function Home() {
                 className={`${!categoriesQ.isLoading && categories.length > 0 ? "category-marquee-track" : ""} flex w-max gap-4 px-4 pb-3 md:gap-6 md:px-5`}
                 dir="rtl"
                 style={
-                  !categoriesQ.isLoading && categories.length > 0
+                  !categoriesQ.isLoading && categories.length > 0 && categoryShift > 0
                     ? ({
-                        ["--marquee-shift" as string]: `${-100 / categoryRepeat}%`,
+                        ["--marquee-shift" as string]: `${-categoryShift}px`,
                         ["--marquee-duration" as string]: `${categoryDuration}s`,
                       } as Record<string, string>)
                     : undefined
