@@ -33,6 +33,8 @@ import {
   getCategoryImageUrl,
   prepareProductImageUpload,
   getProductImageUrl,
+  saveProduct,
+  deleteProduct,
   saveCategory,
   deleteCategory,
 } from "@/lib/categories.functions";
@@ -1124,17 +1126,45 @@ function ProductsTab() {
   function edit(p: any) { setEditing({ ...p }); setOpen(true); }
   async function del(id: string) {
     if (!confirm("حذف المنتج؟")) return;
-    const { error } = await supabase.from("products").delete().eq("id", id);
-    if (error) toast.error(error.message); else { toast.success("تم الحذف"); qc.invalidateQueries({ queryKey: ["admin-products"] }); }
+    try {
+      await deleteProduct({ data: { id } });
+      toast.success("تم الحذف");
+      qc.invalidateQueries({ queryKey: ["admin-products"] });
+    } catch (error: any) {
+      toast.error(error?.message || "فشل حذف المنتج");
+    }
   }
   async function save() {
     if (!editing.name) { toast.error("الاسم مطلوب"); return; }
-    const payload = { ...editing, slug: ensureSlug(editing.slug, editing.name) };
-    delete payload.category;
-    const op = payload.id ? supabase.from("products").update(payload).eq("id", payload.id) : supabase.from("products").insert(payload);
-    const { error } = await op;
-    if (error) toast.error(error.message);
-    else { toast.success("تم الحفظ"); setOpen(false); qc.invalidateQueries({ queryKey: ["admin-products"] }); }
+    try {
+      await saveProduct({
+        data: {
+          id: editing.id ?? null,
+          name: String(editing.name).trim(),
+          slug: ensureSlug(editing.slug, editing.name),
+          description: editing.description || null,
+          short_description: editing.short_description || null,
+          category_id: editing.category_id || null,
+          main_image: editing.main_image || null,
+          gallery: Array.isArray(editing.gallery) ? editing.gallery : [],
+          warranty_days: Number(editing.warranty_days) || 0,
+          warranty_text: editing.warranty_text || null,
+          refund_text: editing.refund_text || null,
+          base_price_egp: Number(editing.base_price_egp) || 0,
+          discount_percent: Number(editing.discount_percent) || 0,
+          discount_ends_at: editing.discount_ends_at || null,
+          featured: !!editing.featured,
+          active: !!editing.active,
+          sort_order: Number(editing.sort_order) || 0,
+          upsell_ids: Array.isArray(editing.upsell_ids) ? editing.upsell_ids : [],
+        },
+      });
+      toast.success("تم الحفظ");
+      setOpen(false);
+      qc.invalidateQueries({ queryKey: ["admin-products"] });
+    } catch (error: any) {
+      toast.error(error?.message || "فشل حفظ المنتج");
+    }
   }
   async function uploadImage(file: File) {
     try {

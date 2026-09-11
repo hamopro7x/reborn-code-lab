@@ -8,6 +8,13 @@ async function assertAdmin(supabase: any, userId: string) {
   if (!isAdmin) throw new Error("Forbidden: admin only");
 }
 
+async function assertStaff(supabase: any, userId: string) {
+  const { data, error } = await supabase.from("user_roles").select("role").eq("user_id", userId);
+  if (error) throw new Error(error.message);
+  const isStaff = (data ?? []).some((r: any) => r.role === "admin" || r.role === "employee");
+  if (!isStaff) throw new Error("Forbidden: staff only");
+}
+
 const CATEGORY_BUCKET = "product-images";
 const CATEGORY_URL_TTL = 60 * 60 * 24 * 365 * 10;
 
@@ -99,6 +106,52 @@ export const getProductImageUrl = createServerFn({ method: "POST" })
       .createSignedUrl(data.path, CATEGORY_URL_TTL);
     if (error || !signed?.signedUrl) throw new Error(error?.message ?? "فشل إنشاء رابط الصورة");
     return { url: signed.signedUrl };
+  });
+
+const productSchema = z.object({
+  id: z.string().uuid().nullable(),
+  name: z.string().trim().min(1).max(300),
+  slug: z.string().trim().min(1).max(300),
+  description: z.string().max(50_000).nullable(),
+  short_description: z.string().max(2_000).nullable(),
+  category_id: z.string().uuid().nullable(),
+  main_image: z.string().max(4_000).nullable(),
+  gallery: z.array(z.string().max(4_000)).max(100),
+  warranty_days: z.number().int().min(0).max(100_000),
+  warranty_text: z.string().max(2_000).nullable(),
+  refund_text: z.string().max(2_000).nullable(),
+  base_price_egp: z.number().nonnegative(),
+  discount_percent: z.number().min(0).max(100),
+  discount_ends_at: z.string().datetime().nullable(),
+  featured: z.boolean(),
+  active: z.boolean(),
+  sort_order: z.number().int(),
+  upsell_ids: z.array(z.string().uuid()).max(100),
+});
+
+export const saveProduct = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) => productSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    await assertStaff(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { id, ...row } = data;
+    const result = id
+      ? await supabaseAdmin.from("products").update(row).eq("id", id)
+      : await supabaseAdmin.from("products").insert(row);
+    if (result.error) throw new Error(result.error.message);
+    return { ok: true };
+  });
+
+export const deleteProduct = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) => z.object({ id: z.string().uuid() }).parse(data))
+  .handler(async ({ data, context }) => {
+    await assertStaff(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("products").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });
 
 const saveSchema = z.object({
