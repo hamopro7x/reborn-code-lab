@@ -11,7 +11,7 @@ import { ProductRail } from "@/components/site/ProductRail";
 import { HeroCarousel } from "@/components/site/HeroCarousel";
 import { normalizeBanner } from "@/lib/hero-banners";
 import { TopupCard } from "@/components/site/TopupCard";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useCurrency } from "@/lib/currency-context";
 
 export const Route = createFileRoute("/")({
@@ -131,6 +131,35 @@ function Home() {
 
   const categories = categoriesQ.data ?? [];
 
+  const categoriesContainerRef = useRef<HTMLDivElement>(null);
+  const categoriesTrackRef = useRef<HTMLDivElement>(null);
+  const [categoryRepeat, setCategoryRepeat] = useState(2);
+  const [categoryDuration, setCategoryDuration] = useState(40);
+
+  useEffect(() => {
+    const container = categoriesContainerRef.current;
+    const track = categoriesTrackRef.current;
+    if (!container || !track || !categories.length) return;
+
+    const compute = () => {
+      const setWidth = track.scrollWidth / categoryRepeat;
+      if (!setWidth) return;
+      const containerWidth = container.clientWidth;
+      // أقل عدد نسخ ليغطي العرض المعروض + مجموعة كاملة للتكرار السلس
+      const needed = Math.max(2, Math.ceil((containerWidth + setWidth) / setWidth));
+      const totalWidth = needed * setWidth;
+      const duration = Math.max(20, totalWidth / 60); // سرعة ثابتة ~60 بكسل/ثانية
+      if (needed !== categoryRepeat || Math.abs(duration - categoryDuration) > 1) {
+        setCategoryRepeat(needed);
+        setCategoryDuration(duration);
+      }
+    };
+
+    compute();
+    window.addEventListener("resize", compute);
+    return () => window.removeEventListener("resize", compute);
+  }, [categories.length, categoryRepeat, categoryDuration]);
+
   const bannersQ = useQuery({
     queryKey: ["hero-banners"],
     queryFn: async () =>
@@ -203,8 +232,20 @@ function Home() {
               تصفح الأقسام
             </h2>
 
-            <div className="category-marquee-container overflow-hidden" aria-label="أقسام المتجر">
-              <div className="category-marquee-track flex w-max gap-4 px-4 pb-3 md:gap-6 md:px-5" dir="rtl">
+            <div ref={categoriesContainerRef} className="category-marquee-container overflow-hidden" aria-label="أقسام المتجر">
+              <div
+                ref={categoriesTrackRef}
+                className={`${!categoriesQ.isLoading && categories.length > 0 ? "category-marquee-track" : ""} flex w-max gap-4 px-4 pb-3 md:gap-6 md:px-5`}
+                dir="rtl"
+                style={
+                  !categoriesQ.isLoading && categories.length > 0
+                    ? ({
+                        ["--marquee-shift" as string]: `${-100 / categoryRepeat}%`,
+                        ["--marquee-duration" as string]: `${categoryDuration}s`,
+                      } as Record<string, string>)
+                    : undefined
+                }
+              >
                 {categoriesQ.isLoading &&
                   Array.from({ length: 6 }).map((_, i) => (
                     <div key={`c-sk-${i}`} className="w-40 shrink-0 md:w-56">
@@ -212,19 +253,17 @@ function Home() {
                       <div className="mx-auto mt-2 h-4 w-3/4 animate-pulse rounded bg-category-surface" />
                     </div>
                   ))}
-                {!categoriesQ.isLoading && categories.map((c: any, ci: number) => (
-                  <CategoryCard key={c.id} c={c} index={ci} />
-                ))}
-                {!categoriesQ.isLoading && categories.map((c: any, ci: number) => (
-                  <CategoryCard key={`dup1-${c.id}`} c={c} index={ci + categories.length} />
-                ))}
-                {!categoriesQ.isLoading && categories.map((c: any, ci: number) => (
-                  <CategoryCard key={`dup2-${c.id}`} c={c} index={ci + categories.length * 2} />
-                ))}
+                {!categoriesQ.isLoading &&
+                  Array.from({ length: categoryRepeat }).map((_, setIndex) =>
+                    categories.map((c: any, ci: number) => (
+                      <CategoryCard key={`set-${setIndex}-${c.id}`} c={c} index={ci + setIndex * categories.length} />
+                    ))
+                  )}
               </div>
             </div>
 
           </section>
+
         </div>
       </main>
 
