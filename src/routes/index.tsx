@@ -250,7 +250,7 @@ function Home() {
                     >
                       {Array.from({ length: productCopies }).map((_, setIndex) =>
                         marqueeProducts.map((p: any) => (
-                          <div key={`g${groupIndex}-s${setIndex}-${p.id}`} className="w-40 shrink-0 md:w-auto">
+                          <div key={`g${groupIndex}-s${setIndex}-${p.id}`} className="w-48 shrink-0 md:w-auto">
                             <ProductCard p={p} />
                           </div>
                         ))
