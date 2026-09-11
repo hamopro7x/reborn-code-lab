@@ -52,7 +52,7 @@ export function ProductCard({ p }: { p: any }) {
     toast.success(added ? "تمت الإضافة إلى المفضلة" : "تمت الإزالة من المفضلة");
   };
 
-  const onOpen = () => navigate({ to: "/p/$slug", params: { slug: p.slug } });
+  const onOpen = () => navigate({ to: "/product/$slug", params: { slug: p.slug } });
 
   return (
     <div
