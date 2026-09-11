@@ -44,13 +44,6 @@ export function ProductCard({ p }: { p: any }) {
     navigate({ to: "/cart" });
   };
 
-  const onFav = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const added = toggle(p.id);
-    toast.success(added ? "تمت الإضافة إلى المفضلة" : "تمت الإزالة من المفضلة");
-  };
-
   const onOpen = () => navigate({ to: "/product/$slug", params: { slug: p.slug } });
 
   return (
