@@ -210,6 +210,21 @@
   100% { transform: translateX(-50%); }
 }
 
+/* شريط منتجات يتحرك من اليسار إلى اليمين بلا نهاية */
+.marquee-ltr-track {
+  animation: marquee-ltr var(--marquee-duration, 40s) linear infinite;
+  will-change: transform;
+}
+@media (prefers-reduced-motion: reduce) {
+  .marquee-ltr-track {
+    animation: none;
+  }
+}
+@keyframes marquee-ltr {
+  0% { transform: translateX(-50%); }
+  100% { transform: translateX(0); }
+}
+
 
 
 

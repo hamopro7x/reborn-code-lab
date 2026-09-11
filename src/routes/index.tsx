@@ -11,6 +11,7 @@ import { ProductRail } from "@/components/site/ProductRail";
 import { HeroCarousel } from "@/components/site/HeroCarousel";
 import { normalizeBanner } from "@/lib/hero-banners";
 import { TopupCard } from "@/components/site/TopupCard";
+import { ProductCard } from "@/components/site/ProductCard";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useCurrency } from "@/lib/currency-context";
 
