@@ -71,6 +71,21 @@ export function Footer() {
   });
   const cfg = data ?? DEFAULT_FOOTER;
 
+  const { data: categories } = useQuery({
+    queryKey: ["footer-categories"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("categories")
+        .select("name,slug")
+        .eq("active", true)
+        .order("sort_order", { ascending: true });
+      return (data ?? []) as { name: string; slug: string }[];
+    },
+    staleTime: 5 * 60_000,
+  });
+
+  const slugByName = new Map((categories ?? []).map((c) => [c.name.trim(), c.slug]));
+
   return (
     <footer className="mt-16 border-t border-border bg-card">
       <div
