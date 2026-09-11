@@ -28,7 +28,14 @@ import { createEmployee, deleteEmployee, listEmployees, listCustomers, updateEmp
 import { adminListDevices, adminDeleteDevice, adminResetUserDevices, adminAddDevice, adminListEmployees,
   adminListCourseAccess, adminGrantCourseAccess, adminRevokeCourseAccess, checkDevice, getViewerIdentity } from "@/lib/courses.functions";
 import { getDeviceFingerprint } from "@/lib/device";
-import { prepareCategoryImageUpload, getCategoryImageUrl, saveCategory, deleteCategory } from "@/lib/categories.functions";
+import {
+  prepareCategoryImageUpload,
+  getCategoryImageUrl,
+  prepareProductImageUpload,
+  getProductImageUrl,
+  saveCategory,
+  deleteCategory,
+} from "@/lib/categories.functions";
 import { ShieldAlert } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { ReportsTab } from "@/components/admin/ReportsTab";
@@ -1130,13 +1137,21 @@ function ProductsTab() {
     else { toast.success("تم الحفظ"); setOpen(false); qc.invalidateQueries({ queryKey: ["admin-products"] }); }
   }
   async function uploadImage(file: File) {
-    const path = `products/${Date.now()}-${file.name}`;
-    const { error } = await supabase.storage.from("product-images").upload(path, file);
-    if (error) { toast.error(error.message); return; }
-    const { data, error: sErr } = await supabase.storage.from("product-images").createSignedUrl(path, 60 * 60 * 24 * 365 * 5);
-    if (sErr || !data?.signedUrl) { toast.error(sErr?.message || "فشل إنشاء الرابط"); return; }
-    setEditing({ ...editing, main_image: data.signedUrl });
-    toast.success("تم رفع الصورة");
+    try {
+      const contentType = file.type || "image/png";
+      const { path, token } = await prepareProductImageUpload({
+        data: { fileName: file.name, contentType, size: file.size },
+      });
+      const { error } = await supabase.storage
+        .from("product-images")
+        .uploadToSignedUrl(path, token, file, { contentType });
+      if (error) throw new Error(error.message);
+      const { url } = await getProductImageUrl({ data: { path } });
+      setEditing((prev: any) => ({ ...(prev ?? {}), main_image: url }));
+      toast.success("تم رفع الصورة");
+    } catch (e: any) {
+      toast.error(e?.message || "فشل رفع الصورة");
+    }
   }
 
   return (

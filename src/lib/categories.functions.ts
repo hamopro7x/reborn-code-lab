@@ -22,6 +22,10 @@ function assertCategoryPath(path: string) {
   if (!/^categories\/[\w.\-]+$/.test(path)) throw new Error("Invalid category image path");
 }
 
+function assertProductPath(path: string) {
+  if (!/^products\/[\w.\-]+$/.test(path)) throw new Error("Invalid product image path");
+}
+
 const prepareSchema = z.object({
   fileName: z.string().min(1).max(300),
   contentType: z.string().min(1).max(120),
@@ -52,6 +56,36 @@ export const getCategoryImageUrl = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
     assertCategoryPath(data.path);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: signed, error } = await supabaseAdmin.storage
+      .from(CATEGORY_BUCKET)
+      .createSignedUrl(data.path, CATEGORY_URL_TTL);
+    if (error || !signed?.signedUrl) throw new Error(error?.message ?? "فشل إنشاء رابط الصورة");
+    return { url: signed.signedUrl };
+  });
+
+export const prepareProductImageUpload = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) => prepareSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    if (!data.contentType.startsWith("image/")) throw new Error("نوع الملف غير مسموح");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const path = `products/${crypto.randomUUID()}.${safeExtension(data.fileName, data.contentType)}`;
+    const { data: upload, error } = await supabaseAdmin.storage
+      .from(CATEGORY_BUCKET)
+      .createSignedUploadUrl(path);
+    if (error || !upload?.token) throw new Error(error?.message ?? "فشل تجهيز رفع الصورة");
+    return { path, token: upload.token };
+  });
+
+export const getProductImageUrl = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) => pathSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    assertProductPath(data.path);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: signed, error } = await supabaseAdmin.storage
       .from(CATEGORY_BUCKET)
