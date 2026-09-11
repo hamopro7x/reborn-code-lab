@@ -150,7 +150,7 @@ export function ProductsTab() {
   }
 
   return (
-    <div>
+    <div data-product-save-path="server-authorized-v2">
       <div className="flex justify-between mb-4">
         <h2 className="text-xl font-bold">المنتجات ({productsQuery.data?.length ?? 0})</h2>
         <Button onClick={newProduct} className="gradient-primary text-white gap-1"><Plus className="size-4" />منتج جديد</Button>
