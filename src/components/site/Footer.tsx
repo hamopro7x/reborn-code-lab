@@ -95,8 +95,9 @@ export function Footer() {
         {cfg.columns.map((col, i) => {
           const compact = col.title.includes("منصات");
           const isCategoriesCol = col.title.includes("أقسام") || col.title.includes("اقسام");
+          // نعتمد دائمًا على ما حفظه الأدمن، ولا نستبدله بأقسام الموقع إلا لو العمود فاضي.
           const links =
-            isCategoriesCol && (categories?.length ?? 0) > 0
+            isCategoriesCol && col.links.length === 0 && (categories?.length ?? 0) > 0
               ? categories!.map((c) => ({ label: c.name.trim(), href: undefined }))
               : col.links;
           return (
