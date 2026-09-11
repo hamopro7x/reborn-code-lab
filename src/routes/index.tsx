@@ -232,8 +232,20 @@ function Home() {
               تصفح الأقسام
             </h2>
 
-            <div className="category-marquee-container overflow-hidden" aria-label="أقسام المتجر">
-              <div className="category-marquee-track flex w-max gap-4 px-4 pb-3 md:gap-6 md:px-5" dir="rtl">
+            <div ref={categoriesContainerRef} className="category-marquee-container overflow-hidden" aria-label="أقسام المتجر">
+              <div
+                ref={categoriesTrackRef}
+                className={`${!categoriesQ.isLoading && categories.length > 0 ? "category-marquee-track" : ""} flex w-max gap-4 px-4 pb-3 md:gap-6 md:px-5`}
+                dir="rtl"
+                style={
+                  !categoriesQ.isLoading && categories.length > 0
+                    ? ({
+                        ["--marquee-shift" as string]: `${-100 / categoryRepeat}%`,
+                        ["--marquee-duration" as string]: `${categoryDuration}s`,
+                      } as Record<string, string>)
+                    : undefined
+                }
+              >
                 {categoriesQ.isLoading &&
                   Array.from({ length: 6 }).map((_, i) => (
                     <div key={`c-sk-${i}`} className="w-40 shrink-0 md:w-56">
@@ -241,19 +253,17 @@ function Home() {
                       <div className="mx-auto mt-2 h-4 w-3/4 animate-pulse rounded bg-category-surface" />
                     </div>
                   ))}
-                {!categoriesQ.isLoading && categories.map((c: any, ci: number) => (
-                  <CategoryCard key={c.id} c={c} index={ci} />
-                ))}
-                {!categoriesQ.isLoading && categories.map((c: any, ci: number) => (
-                  <CategoryCard key={`dup1-${c.id}`} c={c} index={ci + categories.length} />
-                ))}
-                {!categoriesQ.isLoading && categories.map((c: any, ci: number) => (
-                  <CategoryCard key={`dup2-${c.id}`} c={c} index={ci + categories.length * 2} />
-                ))}
+                {!categoriesQ.isLoading &&
+                  Array.from({ length: categoryRepeat }).map((_, setIndex) =>
+                    categories.map((c: any, ci: number) => (
+                      <CategoryCard key={`set-${setIndex}-${c.id}`} c={c} index={ci + setIndex * categories.length} />
+                    ))
+                  )}
               </div>
             </div>
 
           </section>
+
         </div>
       </main>
 
