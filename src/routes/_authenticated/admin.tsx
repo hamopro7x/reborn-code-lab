@@ -1117,6 +1117,10 @@ function OrdersTab({ isAdmin }: { isAdmin: boolean }) {
 // ============ PRODUCTS ============
 function ProductsTab() {
   const qc = useQueryClient();
+  const prepareProductUploadFn = useServerFn(prepareProductImageUpload);
+  const getProductImageUrlFn = useServerFn(getProductImageUrl);
+  const saveProductFn = useServerFn(saveProduct);
+  const deleteProductFn = useServerFn(deleteProduct);
   const productsQ = useQuery({ queryKey: ["admin-products"], queryFn: async () => (await supabase.from("products").select("*, category:categories(name,icon)").order("sort_order")).data ?? [] });
   const catsQ = useQuery({ queryKey: ["admin-cats"], queryFn: async () => (await supabase.from("categories").select("*").order("sort_order")).data ?? [] });
   const [open, setOpen] = useState(false);
@@ -1127,7 +1131,7 @@ function ProductsTab() {
   async function del(id: string) {
     if (!confirm("حذف المنتج؟")) return;
     try {
-      await deleteProduct({ data: { id } });
+      await deleteProductFn({ data: { id } });
       toast.success("تم الحذف");
       qc.invalidateQueries({ queryKey: ["admin-products"] });
     } catch (error: any) {
@@ -1137,7 +1141,7 @@ function ProductsTab() {
   async function save() {
     if (!editing.name) { toast.error("الاسم مطلوب"); return; }
     try {
-      await saveProduct({
+      await saveProductFn({
         data: {
           id: editing.id ?? null,
           name: String(editing.name).trim(),
@@ -1169,14 +1173,14 @@ function ProductsTab() {
   async function uploadImage(file: File) {
     try {
       const contentType = file.type || "image/png";
-      const { path, token } = await prepareProductImageUpload({
+      const { path, token } = await prepareProductUploadFn({
         data: { contentType, size: file.size },
       });
       const { error } = await supabase.storage
         .from("product-images")
         .uploadToSignedUrl(path, token, file, { contentType });
       if (error) throw new Error(error.message);
-      const { url } = await getProductImageUrl({ data: { path } });
+      const { url } = await getProductImageUrlFn({ data: { path } });
       setEditing((prev: any) => ({ ...(prev ?? {}), main_image: url }));
       toast.success("تم رفع الصورة");
     } catch (e: any) {
