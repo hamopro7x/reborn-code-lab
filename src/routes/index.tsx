@@ -93,35 +93,6 @@ function CategoryCard({ c, index }: { c: any; index: number }) {
 function Home() {
   const { setRates, setCurrencies } = useCurrency();
 
-  const categoriesContainerRef = useRef<HTMLDivElement>(null);
-  const categoriesTrackRef = useRef<HTMLDivElement>(null);
-  const [categoryRepeat, setCategoryRepeat] = useState(2);
-  const [categoryDuration, setCategoryDuration] = useState(40);
-
-  useEffect(() => {
-    const container = categoriesContainerRef.current;
-    const track = categoriesTrackRef.current;
-    if (!container || !track || !categories.length) return;
-
-    const compute = () => {
-      const setWidth = track.scrollWidth / categoryRepeat;
-      if (!setWidth) return;
-      const containerWidth = container.clientWidth;
-      // أقل عدد نسخ ليغطي العرض المعروض + مجموعة كاملة للتكرار السلس
-      const needed = Math.max(2, Math.ceil((containerWidth + setWidth) / setWidth));
-      const totalWidth = needed * setWidth;
-      const duration = Math.max(20, totalWidth / 60); // سرعة ثابتة ~60 بكسل/ثانية
-      if (needed !== categoryRepeat || Math.abs(duration - categoryDuration) > 1) {
-        setCategoryRepeat(needed);
-        setCategoryDuration(duration);
-      }
-    };
-
-    compute();
-    window.addEventListener("resize", compute);
-    return () => window.removeEventListener("resize", compute);
-  }, [categories.length, categoryRepeat, categoryDuration]);
-
   const categoriesQ = useQuery({
     queryKey: ["categories"],
     queryFn: async () => (await supabase.from("categories").select("*").eq("active", true).order("sort_order")).data ?? [],
