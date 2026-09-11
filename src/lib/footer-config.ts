@@ -58,7 +58,8 @@ export const DEFAULT_FOOTER: FooterConfig = {
 
 export function normalizeFooter(value: unknown): FooterConfig {
   const v = (value ?? {}) as Partial<FooterConfig>;
-  const columns = Array.isArray(v.columns) ? v.columns : DEFAULT_FOOTER.columns;
+  const columns =
+    Array.isArray(v.columns) && v.columns.length > 0 ? v.columns : DEFAULT_FOOTER.columns;
   return {
     columns: columns.map((c) => ({
       title: String(c?.title ?? ""),
