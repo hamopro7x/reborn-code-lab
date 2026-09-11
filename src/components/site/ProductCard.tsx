@@ -106,15 +106,25 @@ export function ProductCard({ p }: { p: any }) {
         </div>
 
         {/* CTA */}
-        <button
-          type="button"
-          onClick={onAdd}
-          aria-label={`أضف ${p.name} إلى السلة`}
-          className="mt-4 w-full inline-flex items-center justify-center gap-1.5 bg-[#f5f6fa] text-[#14151c] rounded-xl py-2.5 text-sm font-bold hover:bg-white transition-colors"
-        >
-          <ShoppingCart className="size-4" />
-          <span>اطلب الآن</span>
-        </button>
+        <div className="mt-4 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onAdd}
+            aria-label={`أضف ${p.name} إلى السلة`}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 bg-[#f5f6fa] text-[#14151c] rounded-xl py-2.5 text-sm font-bold hover:bg-white transition-colors"
+          >
+            <ShoppingCart className="size-4" />
+            <span>اطلب الآن</span>
+          </button>
+          <button
+            type="button"
+            onClick={onFav}
+            aria-label={fav ? `إزالة ${p.name} من المفضلة` : `أضف ${p.name} إلى المفضلة`}
+            className={fav ? "h-10 w-10 inline-flex items-center justify-center rounded-xl bg-[#22c55e]/10 text-primary shrink-0" : "h-10 w-10 inline-flex items-center justify-center rounded-xl bg-[#1d1e27] border border-[#2a2b38] text-muted-foreground hover:text-primary hover:border-primary transition-colors shrink-0"}
+          >
+            <Heart className="size-4" fill={fav ? "currentColor" : "none"} />
+          </button>
+        </div>
 
         {/* footnote */}
         <div className="mt-3 flex items-center justify-center gap-1.5 text-[10.5px] text-[#6f7280]">
