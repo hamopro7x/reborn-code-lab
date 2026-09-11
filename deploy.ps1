@@ -49,7 +49,7 @@ $serviceRoleMatch = [regex]::Match($envContent, 'SUPABASE_SERVICE_ROLE_KEY="([^"
 if ($serviceRoleMatch.Success) {
     $serviceRoleKey = $serviceRoleMatch.Groups[1].Value
     Write-Host "Setting the new database connection on Fly..." -ForegroundColor Cyan
-    fly secrets set -a mag-pro1 `
+    fly secrets set -a m-hamo `
       SUPABASE_URL="https://kcdsdaytrnzoiharmyxo.supabase.co" `
       SUPABASE_PROJECT_ID="kcdsdaytrnzoiharmyxo" `
       SUPABASE_PUBLISHABLE_KEY="sb_publishable_SnDM9gGnsqswJtD08pq1HA_ffezyBvo" `
@@ -61,13 +61,13 @@ if ($serviceRoleMatch.Success) {
 }
 
 Write-Host "Deploying to Fly.io..." -ForegroundColor Green
-fly deploy -a mag-pro1 --config fly.toml --no-cache --strategy immediate `
+fly deploy -a m-hamo --config fly.toml --no-cache --strategy immediate `
   --build-arg VITE_SUPABASE_URL=https://kcdsdaytrnzoiharmyxo.supabase.co `
   --build-arg VITE_SUPABASE_PROJECT_ID=kcdsdaytrnzoiharmyxo `
   --build-arg VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_SnDM9gGnsqswJtD08pq1HA_ffezyBvo
 if ($LASTEXITCODE -ne 0) {
     Write-Warning "The default Fly builder failed. Retrying without Depot..."
-    fly deploy -a mag-pro1 --config fly.toml --no-cache --strategy immediate --depot=false `
+    fly deploy -a m-hamo --config fly.toml --no-cache --strategy immediate --depot=false `
       --build-arg VITE_SUPABASE_URL=https://kcdsdaytrnzoiharmyxo.supabase.co `
       --build-arg VITE_SUPABASE_PROJECT_ID=kcdsdaytrnzoiharmyxo `
       --build-arg VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_SnDM9gGnsqswJtD08pq1HA_ffezyBvo
@@ -76,7 +76,7 @@ Assert-LastCommandSucceeded "fly deploy (including the non-Depot retry)"
 
 # لا تعتمد على رسالة Fly وحدها: انتظر حتى تستقر النسخة الجديدة وتصبح سليمة.
 Write-Host "Waiting for the new Fly release to become healthy..." -ForegroundColor Cyan
-fly status -a mag-pro1
+fly status -a m-hamo
 Assert-LastCommandSucceeded "fly status"
 
 Write-Host "Verifying the production bundle..." -ForegroundColor Cyan
