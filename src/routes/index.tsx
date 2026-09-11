@@ -211,17 +211,9 @@ function Home() {
               تصفح الأقسام
             </h2>
 
-            <div className="category-marquee-container overflow-x-auto scrollbar-hide touch-pan-x" aria-label="أقسام المتجر">
-              <div
-                className={`${!categoriesQ.isLoading && categories.length > 0 ? "category-marquee-track" : ""} flex w-max pb-3`}
-                style={
-                  !categoriesQ.isLoading && categories.length > 0
-                    ? ({
-                        ["--marquee-duration" as string]: `${categoryDuration}s`,
-                      } as Record<string, string>)
-                    : undefined
-                }
-              >
+            {/* ثابت — العميل يحركه يدويًا بالسحب فقط */}
+            <div className="overflow-x-auto scrollbar-hide touch-pan-x" aria-label="أقسام المتجر">
+              <div className="flex w-max gap-4 pb-3 md:gap-6">
                 {categoriesQ.isLoading &&
                   Array.from({ length: 6 }).map((_, i) => (
                     <div key={`c-sk-${i}`} className="w-40 shrink-0 md:w-56">
@@ -229,27 +221,46 @@ function Home() {
                       <div className="mx-auto mt-2 h-4 w-3/4 animate-pulse rounded bg-category-surface" />
                     </div>
                   ))}
-                {!categoriesQ.isLoading && [0, 1].map((groupIndex) => (
-                  <div
-                    key={`marquee-group-${groupIndex}`}
-                    className="category-marquee-group flex shrink-0 [&>*]:me-4 md:[&>*]:me-6"
-                    aria-hidden={groupIndex === 1 ? true : undefined}
-                  >
-                    {Array.from({ length: categoryCopiesPerGroup }).map((_, setIndex) =>
-                      categories.map((c: any, ci: number) => (
-                        <CategoryCard
-                          key={`group-${groupIndex}-set-${setIndex}-${c.id}`}
-                          c={c}
-                          index={ci + setIndex * categories.length}
-                        />
-                      ))
-                    )}
-                  </div>
-                ))}
+                {!categoriesQ.isLoading &&
+                  categories.map((c: any, ci: number) => (
+                    <CategoryCard key={c.id} c={c} index={ci} />
+                  ))}
               </div>
             </div>
 
           </section>
+
+          {/* PRODUCTS — شريط متحرك تلقائيًا من اليسار إلى اليمين */}
+          {!latestQ.isLoading && marqueeProducts.length > 0 && (
+            <section aria-labelledby="products-marquee-title">
+              <h2 id="products-marquee-title" className="mb-3 md:mb-4 text-base md:text-lg font-bold text-foreground">
+                المنتجات
+              </h2>
+              <div className="overflow-hidden" aria-label="المنتجات">
+                <div
+                  className="marquee-ltr-track flex w-max"
+                  style={{ ["--marquee-duration" as string]: `${productDuration}s` } as Record<string, string>}
+                >
+                  {[0, 1].map((groupIndex) => (
+                    <div
+                      key={`products-group-${groupIndex}`}
+                      className="flex shrink-0 [&>*]:me-3"
+                      aria-hidden={groupIndex === 1 ? true : undefined}
+                    >
+                      {Array.from({ length: productCopies }).map((_, setIndex) =>
+                        marqueeProducts.map((p: any) => (
+                          <div key={`g${groupIndex}-s${setIndex}-${p.id}`} className="shrink-0">
+                            <ProductCard p={p} />
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+          )}
+
 
         </div>
       </main>
