@@ -32,6 +32,11 @@ const prepareSchema = z.object({
   size: z.number().int().positive().max(25 * 1024 * 1024),
 });
 
+const productUploadSchema = z.object({
+  contentType: z.string().min(1).max(120),
+  size: z.number().int().positive().max(25 * 1024 * 1024),
+});
+
 export const prepareCategoryImageUpload = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data) => prepareSchema.parse(data))
@@ -66,13 +71,15 @@ export const getCategoryImageUrl = createServerFn({ method: "POST" })
 
 export const prepareProductImageUpload = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data) => prepareSchema.parse(data))
+  .inputValidator((data) => productUploadSchema.parse(data))
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
     if (!data.contentType.startsWith("image/")) throw new Error("نوع الملف غير مسموح");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const path = `products/${crypto.randomUUID()}.${safeExtension(data.fileName, data.contentType)}`;
+    // Never include the original filename. Storage keys must remain ASCII-safe
+    // regardless of the filename, language, punctuation, or extension supplied.
+    const path = `products/${crypto.randomUUID()}`;
     const { data: upload, error } = await supabaseAdmin.storage
       .from(CATEGORY_BUCKET)
       .createSignedUploadUrl(path);
