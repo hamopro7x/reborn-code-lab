@@ -14,6 +14,14 @@ Write-Host "Pulling latest changes from Git..." -ForegroundColor Cyan
 git pull origin main
 Assert-LastCommandSucceeded "git pull"
 
+# PowerShell يحمّل السكربت قبل تنفيذه؛ لو git pull حدّث هذا الملف فالتشغيل الحالي
+# سيكمل بالنسخة القديمة. أعد تشغيله مرة واحدة لضمان تنفيذ أحدث تعليمات النشر.
+if ($env:MAG_PRO_DEPLOY_RESTARTED -ne "1") {
+    $env:MAG_PRO_DEPLOY_RESTARTED = "1"
+    & $PSCommandPath
+    exit $LASTEXITCODE
+}
+
 # امنع نشر أي نسخة أعادت مساري المنتجات القديمين بالخطأ.
 $legacyProductCode = rg -n `
   'from\(["'']products["'']\)\.(insert|update|delete)|products/\$\{Date\.now\(\)\}.*\.name' `
@@ -44,13 +52,13 @@ if ($serviceRoleMatch.Success) {
 }
 
 Write-Host "Deploying to Fly.io..." -ForegroundColor Green
-fly deploy --no-cache `
+fly deploy -a mag-pro1 --config fly.toml --no-cache `
   --build-arg VITE_SUPABASE_URL=https://kcdsdaytrnzoiharmyxo.supabase.co `
   --build-arg VITE_SUPABASE_PROJECT_ID=kcdsdaytrnzoiharmyxo `
   --build-arg VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_SnDM9gGnsqswJtD08pq1HA_ffezyBvo
 if ($LASTEXITCODE -ne 0) {
     Write-Warning "The default Fly builder failed. Retrying without Depot..."
-    fly deploy --no-cache --depot=false `
+    fly deploy -a mag-pro1 --config fly.toml --no-cache --depot=false `
       --build-arg VITE_SUPABASE_URL=https://kcdsdaytrnzoiharmyxo.supabase.co `
       --build-arg VITE_SUPABASE_PROJECT_ID=kcdsdaytrnzoiharmyxo `
       --build-arg VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_SnDM9gGnsqswJtD08pq1HA_ffezyBvo
@@ -58,14 +66,16 @@ if ($LASTEXITCODE -ne 0) {
 Assert-LastCommandSucceeded "fly deploy (including the non-Depot retry)"
 
 Write-Host "Verifying the production bundle..." -ForegroundColor Cyan
-$html = (Invoke-WebRequest -UseBasicParsing -Uri "https://mag-pro1.com/admin?panel=products" -Headers @{ "Cache-Control" = "no-cache" }).Content
+$cacheBust = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+$html = (Invoke-WebRequest -UseBasicParsing -Uri "https://mag-pro1.com/admin?panel=products&deploy=$cacheBust" -Headers @{ "Cache-Control" = "no-cache, no-store" }).Content
 $assetMatches = [regex]::Matches($html, '(?:src|href)="([^"]+\.js[^"]*)"')
 $legacyLiveCode = $false
 foreach ($match in $assetMatches) {
     $assetPath = $match.Groups[1].Value
     $assetUrl = if ($assetPath.StartsWith("/")) { "https://mag-pro1.com$assetPath" } else { $assetPath }
-    $asset = (Invoke-WebRequest -UseBasicParsing -Uri $assetUrl -Headers @{ "Cache-Control" = "no-cache" }).Content
-    if ($asset -match 'products/\$\{Date\.now' -or $asset -match 'from\(`products`\)\.insert') {
+    $separator = if ($assetUrl.Contains("?")) { "&" } else { "?" }
+    $asset = (Invoke-WebRequest -UseBasicParsing -Uri "$assetUrl${separator}deploy=$cacheBust" -Headers @{ "Cache-Control" = "no-cache, no-store" }).Content
+    if ($asset -match 'products/\$\{Date\.now' -or $asset -match 'from\([`"'']products[`"'']\)\.(insert|update|delete)') {
         $legacyLiveCode = $true
         break
     }
