@@ -122,7 +122,7 @@ const productSchema = z.object({
   refund_text: z.string().max(2_000).nullable(),
   base_price_egp: z.number().nonnegative(),
   discount_percent: z.number().min(0).max(100),
-  discount_ends_at: z.string().datetime().nullable(),
+  discount_ends_at: z.string().datetime({ offset: true }).nullable(),
   featured: z.boolean(),
   active: z.boolean(),
   sort_order: z.number().int(),
