@@ -79,7 +79,7 @@ export function ProductCard({ p }: { p: any }) {
           {features.map((f, i) => (
             <div key={i} className="flex items-start gap-2 text-[11.5px] text-[#a7a9b8] leading-snug">
               <span className="text-[#22c55e] shrink-0">{f.icon}</span>
-              <span className="line-clamp-2">{f.text}</span>
+              <span className="line-clamp-1">{f.text}</span>
             </div>
           ))}
         </div>
