@@ -3,6 +3,8 @@
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.products TO authenticated;
 GRANT ALL ON public.products TO service_role;
+GRANT USAGE ON SCHEMA private TO authenticated;
+GRANT EXECUTE ON FUNCTION private.is_staff(uuid) TO authenticated, service_role;
 
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 

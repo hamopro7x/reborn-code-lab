@@ -48,6 +48,8 @@ CREATE INDEX IF NOT EXISTS hero_banners_device_idx ON public.hero_banners (devic
 -- 3) إصلاح صلاحيات حفظ المنتجات ورفع صورها للأدمن/الموظف فقط
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.products TO authenticated;
 GRANT ALL ON public.products TO service_role;
+GRANT USAGE ON SCHEMA private TO authenticated;
+GRANT EXECUTE ON FUNCTION private.is_staff(uuid) TO authenticated, service_role;
 
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 
