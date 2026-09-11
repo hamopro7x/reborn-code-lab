@@ -48,7 +48,14 @@ fly deploy --no-cache `
   --build-arg VITE_SUPABASE_URL=https://kcdsdaytrnzoiharmyxo.supabase.co `
   --build-arg VITE_SUPABASE_PROJECT_ID=kcdsdaytrnzoiharmyxo `
   --build-arg VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_SnDM9gGnsqswJtD08pq1HA_ffezyBvo
-Assert-LastCommandSucceeded "fly deploy"
+if ($LASTEXITCODE -ne 0) {
+    Write-Warning "The default Fly builder failed. Retrying without Depot..."
+    fly deploy --no-cache --depot=false `
+      --build-arg VITE_SUPABASE_URL=https://kcdsdaytrnzoiharmyxo.supabase.co `
+      --build-arg VITE_SUPABASE_PROJECT_ID=kcdsdaytrnzoiharmyxo `
+      --build-arg VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_SnDM9gGnsqswJtD08pq1HA_ffezyBvo
+}
+Assert-LastCommandSucceeded "fly deploy (including the non-Depot retry)"
 
 Write-Host "Verifying the production bundle..." -ForegroundColor Cyan
 $html = (Invoke-WebRequest -UseBasicParsing -Uri "https://mag-pro1.com/admin?panel=products" -Headers @{ "Cache-Control" = "no-cache" }).Content
