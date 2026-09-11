@@ -11,6 +11,7 @@ import { useCart } from "@/lib/cart";
 import { ShoppingCart, ShieldCheck, Sparkles, Star, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { ProductCard } from "@/components/site/ProductCard";
+import { SafeImage } from "@/components/site/SafeImage";
 
 export const Route = createFileRoute("/product/$slug")({
   component: ProductPage,
@@ -125,7 +126,7 @@ function ProductPage() {
       <div className="grid md:grid-cols-2 gap-8 animate-slide-up">
         <div className="card-surface rounded-3xl overflow-hidden aspect-square relative">
           {p.main_image ? (
-            <img src={p.main_image} alt={p.name} className="w-full h-full object-contain" />
+            <SafeImage src={p.main_image} alt={p.name} className="h-full w-full object-contain" />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-9xl opacity-40">{p.category?.icon ?? "🎁"}</div>
           )}

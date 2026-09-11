@@ -14,9 +14,29 @@ import { TopupCard } from "@/components/site/TopupCard";
 import { ProductCard } from "@/components/site/ProductCard";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useCurrency } from "@/lib/currency-context";
+import { SafeImage } from "@/components/site/SafeImage";
 
 export const Route = createFileRoute("/")({
   component: Home,
+  loader: async () => {
+    const now = new Date().toISOString();
+    const [categories, products, timer, rates, currencies, banners] = await Promise.all([
+      supabase.from("categories").select("*").eq("active", true).order("sort_order"),
+      supabase.from("products").select("*, category:categories(icon,name)").eq("active", true).order("created_at", { ascending: false }).limit(10),
+      supabase.from("countdown_timers").select("*").eq("active", true).gt("ends_at", now).order("ends_at").limit(1).maybeSingle(),
+      supabase.from("exchange_rates").select("*"),
+      supabase.from("currencies").select("*").eq("active", true).order("sort_order"),
+      supabase.from("hero_banners").select("*").eq("active", true).order("sort_order"),
+    ]);
+    return {
+      categories: categories.data ?? [],
+      products: products.data ?? [],
+      timer: timer.data ?? null,
+      rates: rates.data ?? [],
+      currencies: currencies.data ?? [],
+      banners: banners.data ?? [],
+    };
+  },
   head: () => ({
     meta: [
       { title: "متجر الاشتراكات الرقمية | اشتراكات وأدوات AI" },
@@ -62,7 +82,7 @@ function CategoryCard({ c, index }: { c: any; index: number }) {
     >
       <div className="category-art-frame relative h-[5cm] overflow-hidden bg-category-surface">
         {c.banner_image ? (
-          <img
+          <SafeImage
             src={c.banner_image}
             alt={c.name}
             width={448}
@@ -71,6 +91,7 @@ function CategoryCard({ c, index }: { c: any; index: number }) {
             decoding="async"
             {...(index < 6 ? { fetchPriority: "high" as const } : {})}
             className="category-art-content absolute inset-0 h-full w-full object-cover"
+            fallbackClassName="category-art-content absolute inset-0"
           />
         ) : null}
         {!c.banner_image && (
@@ -92,31 +113,37 @@ function CategoryCard({ c, index }: { c: any; index: number }) {
 }
 
 function Home() {
+  const initial = Route.useLoaderData();
   const { setRates, setCurrencies } = useCurrency();
 
   const categoriesQ = useQuery({
     queryKey: ["categories"],
     queryFn: async () => (await supabase.from("categories").select("*").eq("active", true).order("sort_order")).data ?? [],
     staleTime: 5 * 60_000,
+    initialData: initial.categories,
   });
   const latestQ = useQuery({
     queryKey: ["latest-products"],
     queryFn: async () => (await supabase.from("products").select("*, category:categories(icon,name)").eq("active", true).order("created_at", { ascending: false }).limit(10)).data ?? [],
     staleTime: 2 * 60_000,
+    initialData: initial.products,
   });
   const timerQ = useQuery({
     queryKey: ["timer"],
     queryFn: async () => (await supabase.from("countdown_timers").select("*").eq("active", true).gt("ends_at", new Date().toISOString()).order("ends_at").limit(1).maybeSingle()).data,
+    initialData: initial.timer,
   });
   const ratesQ = useQuery({
     queryKey: ["rates"],
     queryFn: async () => (await supabase.from("exchange_rates").select("*")).data ?? [],
     staleTime: 10 * 60_000,
+    initialData: initial.rates,
   });
   const currenciesQ = useQuery({
     queryKey: ["currencies"],
     queryFn: async () => (await supabase.from("currencies").select("*").eq("active", true).order("sort_order")).data ?? [],
     staleTime: 10 * 60_000,
+    initialData: initial.currencies,
   });
 
   useEffect(() => {
@@ -145,6 +172,7 @@ function Home() {
     queryFn: async () =>
       (await supabase.from("hero_banners").select("*").eq("active", true).order("sort_order")).data ?? [],
     staleTime: 2 * 60_000,
+    initialData: initial.banners,
   });
   const banners = useMemo(() => (bannersQ.data ?? []).map((r: any) => normalizeBanner(r)), [bannersQ.data]);
 
