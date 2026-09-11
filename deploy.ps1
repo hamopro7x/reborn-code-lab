@@ -52,8 +52,8 @@ if ($serviceRoleMatch.Success) {
     fly secrets set -a m-hamo `
       SUPABASE_URL="https://kcdsdaytrnzoiharmyxo.supabase.co" `
       SUPABASE_PROJECT_ID="kcdsdaytrnzoiharmyxo" `
-      SUPABASE_PUBLISHABLE_KEY="sb_publishable_SnDM9gGnsqswJtD08pq1HA_ffezyBvo" `
-      SUPABASE_ANON_KEY="sb_publishable_SnDM9gGnsqswJtD08pq1HA_ffezyBvo" `
+      SUPABASE_PUBLISHABLE_KEY="sb_publishable_RTmbXinMhCr9B3oNa6dqqg_iVsKBKG6" `
+      SUPABASE_ANON_KEY="sb_publishable_RTmbXinMhCr9B3oNa6dqqg_iVsKBKG6" `
       SUPABASE_SERVICE_ROLE_KEY="$serviceRoleKey"
     Assert-LastCommandSucceeded "fly secrets set"
 } else {
@@ -64,13 +64,13 @@ Write-Host "Deploying to Fly.io..." -ForegroundColor Green
 fly deploy -a m-hamo --config fly.toml --no-cache --strategy immediate `
   --build-arg VITE_SUPABASE_URL=https://kcdsdaytrnzoiharmyxo.supabase.co `
   --build-arg VITE_SUPABASE_PROJECT_ID=kcdsdaytrnzoiharmyxo `
-  --build-arg VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_SnDM9gGnsqswJtD08pq1HA_ffezyBvo
+  --build-arg VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_RTmbXinMhCr9B3oNa6dqqg_iVsKBKG6
 if ($LASTEXITCODE -ne 0) {
     Write-Warning "The default Fly builder failed. Retrying without Depot..."
     fly deploy -a m-hamo --config fly.toml --no-cache --strategy immediate --depot=false `
       --build-arg VITE_SUPABASE_URL=https://kcdsdaytrnzoiharmyxo.supabase.co `
       --build-arg VITE_SUPABASE_PROJECT_ID=kcdsdaytrnzoiharmyxo `
-      --build-arg VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_SnDM9gGnsqswJtD08pq1HA_ffezyBvo
+      --build-arg VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_RTmbXinMhCr9B3oNa6dqqg_iVsKBKG6
 }
 Assert-LastCommandSucceeded "fly deploy (including the non-Depot retry)"
 
