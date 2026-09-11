@@ -117,19 +117,31 @@ type Shift = {
   label?: string;
 };
 
+/** توقيت موحّد (القاهرة) بأرقام لاتينية حتى تتطابق شاشة الأدمن مع الموظف. */
+const shiftFmt = new Intl.DateTimeFormat("en-GB", {
+  timeZone: "Africa/Cairo",
+  weekday: "short",
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: true,
+});
+const SHIFT_DAY_AR: Record<string, string> = {
+  Sun: "الأحد", Mon: "الإثنين", Tue: "الثلاثاء", Wed: "الأربعاء",
+  Thu: "الخميس", Fri: "الجمعة", Sat: "السبت",
+};
+
 const fmtShift = (ms: number) => {
-  const d = new Date(ms);
-  const day = d.toLocaleDateString("ar-EG", { weekday: "long" });
-  const date = d.toLocaleDateString("ar-EG", {
-    day: "numeric",
-    month: "numeric",
-    year: "numeric",
-  });
-  const time = d.toLocaleTimeString("ar-EG", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-  return { day, date, time };
+  const parts = shiftFmt.formatToParts(new Date(ms));
+  const get = (t: string) => parts.find((x) => x.type === t)?.value ?? "";
+  const ampm = get("dayPeriod").toLowerCase().includes("a") ? "ص" : "م";
+  return {
+    day: SHIFT_DAY_AR[get("weekday")] ?? get("weekday"),
+    date: `${get("day")}/${get("month")}/${get("year")}`,
+    time: `${get("hour")}:${get("minute")} ${ampm}`,
+  };
 };
 
 /** قائمة اختيار الشفت (Popover) بنفس تصميم كروت الشفتات الجديد. */
