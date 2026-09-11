@@ -179,7 +179,8 @@ function Home() {
                   key={c.id}
                   to="/category/$slug"
                   params={{ slug: c.slug }}
-                  className="group block w-40 shrink-0 snap-start text-foreground focus-visible:outline-none md:w-56"
+                  className="group block w-40 shrink-0 snap-start text-foreground focus-visible:outline-none md:w-56 animate-slide-in-left"
+                  style={{ animationDelay: `${ci * 80}ms` }}
                 >
                   <div className="category-art-frame relative h-[5cm] overflow-hidden bg-category-surface">
                     {c.banner_image ? (
