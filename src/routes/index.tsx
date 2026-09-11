@@ -150,7 +150,7 @@ function Home() {
       if (!period) return;
       const containerWidth = container.clientWidth;
       // نسخ كافية لتغطية الشاشة + مجموعة إضافية حتى لا يظهر أي قطع
-      const needed = Math.max(3, Math.ceil(containerWidth / period) + 2);
+      const needed = Math.max(3, Math.ceil((containerWidth + period) / period) + 2);
       const duration = Math.max(20, period / 60); // سرعة ثابتة ~60 بكسل/ثانية
       if (needed !== categoryRepeat) setCategoryRepeat(needed);
       if (Math.abs(period - categoryShift) > 1) setCategoryShift(period);
@@ -242,7 +242,7 @@ function Home() {
                 style={
                   !categoriesQ.isLoading && categories.length > 0 && categoryShift > 0
                     ? ({
-                        ["--marquee-shift" as string]: `${-categoryShift}px`,
+                        ["--marquee-shift" as string]: `${categoryShift}px`,
                         ["--marquee-duration" as string]: `${categoryDuration}s`,
                       } as Record<string, string>)
                     : undefined
