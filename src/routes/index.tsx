@@ -208,15 +208,14 @@ function Home() {
               تصفح الأقسام
             </h2>
 
-            <div ref={categoriesContainerRef} className="category-marquee-container overflow-x-auto scrollbar-hide touch-pan-x" aria-label="أقسام المتجر">
+            <div className="category-marquee-container overflow-x-auto scrollbar-hide touch-pan-x" aria-label="أقسام المتجر">
               <div
-                ref={categoriesTrackRef}
-                className={`${!categoriesQ.isLoading && categories.length > 0 && categoryShift > 0 ? "category-marquee-track" : ""} flex w-max gap-4 px-4 pb-3 md:gap-6 md:px-5`}
+                className={`${!categoriesQ.isLoading && categories.length > 0 ? "category-marquee-track" : ""} flex w-max pb-3 [&>*]:me-4 md:[&>*]:me-6`}
                 dir="rtl"
                 style={
-                  !categoriesQ.isLoading && categories.length > 0 && categoryShift > 0
+                  !categoriesQ.isLoading && categories.length > 0
                     ? ({
-                        ["--marquee-shift" as string]: `${categoryShift}px`,
+                        ["--marquee-shift" as string]: `${100 / categoryRepeat}%`,
                         ["--marquee-duration" as string]: `${categoryDuration}s`,
                       } as Record<string, string>)
                     : undefined
