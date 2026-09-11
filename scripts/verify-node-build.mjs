@@ -24,6 +24,7 @@ function listJavaScriptFiles(directory) {
 const forbiddenClientCode = [
   /products\/\$\{Date\.now\(\)\}[^`"']*\.name/,
   /\.from\([`"']products[`"']\)\.(insert|update|delete)/,
+  /\.from\([`"']products[`"']\)[^;]{0,500}\.(insert|update|delete)\(/,
 ];
 
 for (const file of listJavaScriptFiles(publicDirectory)) {
