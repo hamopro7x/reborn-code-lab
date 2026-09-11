@@ -131,9 +131,9 @@ function Home() {
 
   const categories = categoriesQ.data ?? [];
 
-  // عدد النسخ: كافٍ لتغطية أي شاشة مع تكرار دائري بلا فراغ
-  const categoryRepeat = Math.max(4, Math.ceil(16 / Math.max(1, categories.length)));
-  const categoryDuration = Math.max(24, categories.length * categoryRepeat * 3);
+  // كل نصف من الشريط نسخة مطابقة وطويلة بما يكفي لتغطية الشاشة بالكامل.
+  const categoryCopiesPerGroup = Math.max(4, Math.ceil(16 / Math.max(1, categories.length)));
+  const categoryDuration = Math.max(24, categories.length * categoryCopiesPerGroup * 3);
 
 
   const bannersQ = useQuery({
@@ -210,12 +210,10 @@ function Home() {
 
             <div className="category-marquee-container overflow-x-auto scrollbar-hide touch-pan-x" aria-label="أقسام المتجر">
               <div
-                className={`${!categoriesQ.isLoading && categories.length > 0 ? "category-marquee-track" : ""} flex w-max pb-3 [&>*]:me-4 md:[&>*]:me-6`}
-                dir="rtl"
+                className={`${!categoriesQ.isLoading && categories.length > 0 ? "category-marquee-track" : ""} flex w-max pb-3`}
                 style={
                   !categoriesQ.isLoading && categories.length > 0
                     ? ({
-                        ["--marquee-shift" as string]: `${100 / categoryRepeat}%`,
                         ["--marquee-duration" as string]: `${categoryDuration}s`,
                       } as Record<string, string>)
                     : undefined
@@ -228,12 +226,23 @@ function Home() {
                       <div className="mx-auto mt-2 h-4 w-3/4 animate-pulse rounded bg-category-surface" />
                     </div>
                   ))}
-                {!categoriesQ.isLoading &&
-                  Array.from({ length: categoryRepeat }).map((_, setIndex) =>
-                    categories.map((c: any, ci: number) => (
-                      <CategoryCard key={`set-${setIndex}-${c.id}`} c={c} index={ci + setIndex * categories.length} />
-                    ))
-                  )}
+                {!categoriesQ.isLoading && [0, 1].map((groupIndex) => (
+                  <div
+                    key={`marquee-group-${groupIndex}`}
+                    className="category-marquee-group flex shrink-0 [&>*]:me-4 md:[&>*]:me-6"
+                    aria-hidden={groupIndex === 1 ? true : undefined}
+                  >
+                    {Array.from({ length: categoryCopiesPerGroup }).map((_, setIndex) =>
+                      categories.map((c: any, ci: number) => (
+                        <CategoryCard
+                          key={`group-${groupIndex}-set-${setIndex}-${c.id}`}
+                          c={c}
+                          index={ci + setIndex * categories.length}
+                        />
+                      ))
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
 
