@@ -1,6 +1,10 @@
 # deploy.ps1 - deploy latest updates to Fly.io
 # Run from the project folder:  .\deploy.ps1
 
+param(
+    [switch]$DeployLatest
+)
+
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
 
@@ -10,15 +14,14 @@ function Assert-LastCommandSucceeded([string]$Step) {
     }
 }
 
-Write-Host "Pulling latest changes from Git..." -ForegroundColor Cyan
-git pull origin main
-Assert-LastCommandSucceeded "git pull"
-
-# PowerShell يحمّل السكربت قبل تنفيذه؛ لو git pull حدّث هذا الملف فالتشغيل الحالي
-# سيكمل بالنسخة القديمة. أعد تشغيله مرة واحدة لضمان تنفيذ أحدث تعليمات النشر.
-if ($env:MAG_PRO_DEPLOY_RESTARTED -ne "1") {
-    $env:MAG_PRO_DEPLOY_RESTARTED = "1"
-    & $PSCommandPath
+# PowerShell يحمّل السكربت كاملًا قبل تنفيذه. لذلك مرحلة السحب لا تنشر بنفس
+# النسخة المحمّلة في الذاكرة، بل تبدأ نسخة جديدة صراحةً من الملف المحدّث.
+# نستخدم switch خاصًا بالاستدعاء بدل متغير بيئة يبقى عالقًا في جلسة PowerShell.
+if (-not $DeployLatest) {
+    Write-Host "Pulling latest changes from Git..." -ForegroundColor Cyan
+    git pull origin main
+    Assert-LastCommandSucceeded "git pull"
+    & $PSCommandPath -DeployLatest
     exit $LASTEXITCODE
 }
 
