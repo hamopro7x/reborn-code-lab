@@ -129,15 +129,31 @@ const AR_MONTHS = [
 ];
 const AR_DAYS = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
 
+/** توقيت موحّد (القاهرة) بأرقام لاتينية حتى تتطابق شاشة الموظف مع الأدمن. */
+const SHIFT_TZ = "Africa/Cairo";
+const shiftPartsFmt = new Intl.DateTimeFormat("en-GB", {
+  timeZone: SHIFT_TZ,
+  weekday: "short",
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: true,
+});
+const EN_DAY_TO_AR: Record<string, string> = {
+  Sun: "الأحد", Mon: "الإثنين", Tue: "الثلاثاء", Wed: "الأربعاء",
+  Thu: "الخميس", Fri: "الجمعة", Sat: "السبت",
+};
+
 function fmtShiftDate(ts: number) {
-  const d = new Date(ts);
-  const p = (n: number) => String(n).padStart(2, "0");
-  const h24 = d.getHours();
-  const h = ((h24 + 11) % 12) || 12;
+  const parts = shiftPartsFmt.formatToParts(new Date(ts));
+  const get = (t: string) => parts.find((x) => x.type === t)?.value ?? "";
+  const ampm = get("dayPeriod").toLowerCase().includes("a") ? "ص" : "م";
   return {
-    day: AR_DAYS[d.getDay()],
-    date: `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`,
-    time: `${p(h)}:${p(d.getMinutes())} ${h24 < 12 ? "ص" : "م"}`,
+    day: EN_DAY_TO_AR[get("weekday")] ?? get("weekday"),
+    date: `${get("day")}/${get("month")}/${get("year")}`,
+    time: `${get("hour")}:${get("minute")} ${ampm}`,
   };
 }
 
