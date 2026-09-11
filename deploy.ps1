@@ -6,13 +6,18 @@ Set-Location $PSScriptRoot
 Write-Host "Pulling latest changes from Git..." -ForegroundColor Cyan
 git pull origin main
 
-# اقرأ SUPABASE_SERVICE_ROLE_KEY من ملف .env واضبطه كسر على Fly
+# اقرأ مفتاح الخدمة من ملف .env، وثبّت كل اتصال Fly على القاعدة الجديدة فقط
 $envContent = Get-Content .env -Raw
 $serviceRoleMatch = [regex]::Match($envContent, 'SUPABASE_SERVICE_ROLE_KEY="([^"]+)"')
 if ($serviceRoleMatch.Success) {
     $serviceRoleKey = $serviceRoleMatch.Groups[1].Value
-Write-Host "Setting SUPABASE_SERVICE_ROLE_KEY secret on Fly..." -ForegroundColor Cyan
-    fly secrets set -a mag-pro1 SUPABASE_SERVICE_ROLE_KEY="$serviceRoleKey"
+    Write-Host "Setting the new database connection on Fly..." -ForegroundColor Cyan
+    fly secrets set -a mag-pro1 `
+      SUPABASE_URL="https://kcdsdaytrnzoiharmyxo.supabase.co" `
+      SUPABASE_PROJECT_ID="kcdsdaytrnzoiharmyxo" `
+      SUPABASE_PUBLISHABLE_KEY="sb_publishable_SnDM9gGnsqswJtD08pq1HA_ffezyBvo" `
+      SUPABASE_ANON_KEY="sb_publishable_SnDM9gGnsqswJtD08pq1HA_ffezyBvo" `
+      SUPABASE_SERVICE_ROLE_KEY="$serviceRoleKey"
 } else {
     Write-Warning "Could not find SUPABASE_SERVICE_ROLE_KEY in .env; skipping secret update."
 }

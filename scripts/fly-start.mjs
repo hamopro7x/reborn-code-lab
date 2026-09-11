@@ -2,11 +2,18 @@
 // تُوحّد أسماء متغيرات Supabase قبل تشغيل السيرفر حتى لا يظهر خطأ
 // "Missing Supabase environment variable(s)" لو الأسرار مضبوطة بأسماء VITE_* فقط.
 
+const DATABASE_URL = "https://kcdsdaytrnzoiharmyxo.supabase.co";
+const DATABASE_PROJECT_ID = "kcdsdaytrnzoiharmyxo";
+
+// لا نقبل عنوان قاعدة موروث من نشر قديم.
+process.env["SUPABASE_URL"] = DATABASE_URL;
+process.env["VITE_SUPABASE_URL"] = DATABASE_URL;
+process.env["SUPABASE_PROJECT_ID"] = DATABASE_PROJECT_ID;
+process.env["VITE_SUPABASE_PROJECT_ID"] = DATABASE_PROJECT_ID;
+
 const pairs = [
-  ["SUPABASE_URL", "VITE_SUPABASE_URL"],
   ["SUPABASE_PUBLISHABLE_KEY", "VITE_SUPABASE_PUBLISHABLE_KEY"],
   ["SUPABASE_ANON_KEY", "VITE_SUPABASE_ANON_KEY"],
-  ["SUPABASE_PROJECT_ID", "VITE_SUPABASE_PROJECT_ID"],
 ];
 
 for (const [serverName, viteName] of pairs) {
@@ -36,7 +43,7 @@ const missing = required.filter((name) => !process.env[name]);
 if (missing.length > 0) {
   console.error(
     `[fly-start] متغيرات ناقصة: ${missing.join(", ")}\n` +
-      `اضبطها بأمر: fly secrets set -a m-hamo SUPABASE_URL=... SUPABASE_PUBLISHABLE_KEY=...`,
+      `اضبطها بأمر: fly secrets set -a mag-pro1 SUPABASE_PUBLISHABLE_KEY=...`,
   );
 }
 
