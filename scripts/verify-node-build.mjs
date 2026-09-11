@@ -1,8 +1,13 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-const entry = resolve(process.cwd(), ".output/server/index.mjs");
-const publicDirectory = resolve(process.cwd(), ".output/public");
+const outputDirectory = existsSync(resolve(process.cwd(), ".output/server/index.mjs"))
+  ? resolve(process.cwd(), ".output")
+  : resolve(process.cwd(), "dist");
+const entry = resolve(outputDirectory, "server/index.mjs");
+const publicDirectory = existsSync(resolve(outputDirectory, "public"))
+  ? resolve(outputDirectory, "public")
+  : resolve(outputDirectory, "client");
 
 if (!existsSync(entry)) {
   console.error(`[build] missing Node server entry: ${entry}`);
