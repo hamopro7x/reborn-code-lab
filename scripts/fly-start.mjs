@@ -38,13 +38,39 @@ process.env["HOST"] ||= "0.0.0.0";
 process.env["NITRO_PORT"] ||= process.env["PORT"];
 process.env["NITRO_HOST"] ||= process.env["HOST"];
 
-const required = ["SUPABASE_URL", "SUPABASE_PUBLISHABLE_KEY"];
+const required = [
+  "SUPABASE_URL",
+  "SUPABASE_PUBLISHABLE_KEY",
+  "SUPABASE_SERVICE_ROLE_KEY",
+];
 const missing = required.filter((name) => !process.env[name]);
 if (missing.length > 0) {
   console.error(
     `[fly-start] متغيرات ناقصة: ${missing.join(", ")}\n` +
-      `اضبطها بأمر: fly secrets set -a mag-pro1 SUPABASE_PUBLISHABLE_KEY=...`,
+      `اضبط أسرار قاعدة البيانات على تطبيق mag-pro1 قبل التشغيل.`,
   );
+  process.exit(1);
+}
+
+// لا نعتبر الإصدار سليمًا لمجرد أن المفتاح موجود. المفتاح القديم أو القابل
+// للنشر يجعل كتابة المنتجات تصل بصلاحية زائر ثم تفشل برسالة RLS.
+const serviceRoleKey = process.env["SUPABASE_SERVICE_ROLE_KEY"];
+if (!serviceRoleKey?.startsWith("sb_secret_") && serviceRoleKey?.split(".").length !== 3) {
+  console.error("[fly-start] SUPABASE_SERVICE_ROLE_KEY is not a server secret key.");
+  process.exit(1);
+}
+
+try {
+  const response = await fetch(`${DATABASE_URL}/rest/v1/user_roles?select=id&limit=1`, {
+    headers: { apikey: serviceRoleKey },
+  });
+  if (!response.ok) {
+    console.error(`[fly-start] Database server credential was rejected (${response.status}).`);
+    process.exit(1);
+  }
+} catch (error) {
+  console.error("[fly-start] Could not validate the database server credential.", error);
+  process.exit(1);
 }
 
 await import("../.output/server/index.mjs");
