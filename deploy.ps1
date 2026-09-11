@@ -65,23 +65,45 @@ if ($LASTEXITCODE -ne 0) {
 }
 Assert-LastCommandSucceeded "fly deploy (including the non-Depot retry)"
 
+# لا تعتمد على رسالة Fly وحدها: انتظر حتى تستقر النسخة الجديدة وتصبح سليمة.
+Write-Host "Waiting for the new Fly release to become healthy..." -ForegroundColor Cyan
+fly status -a mag-pro1
+Assert-LastCommandSucceeded "fly status"
+
 Write-Host "Verifying the production bundle..." -ForegroundColor Cyan
-$cacheBust = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
-$html = (Invoke-WebRequest -UseBasicParsing -Uri "https://mag-pro1.com/admin?panel=products&deploy=$cacheBust" -Headers @{ "Cache-Control" = "no-cache, no-store" }).Content
-$assetMatches = [regex]::Matches($html, '(?:src|href)="([^"]+\.js[^"]*)"')
-$legacyLiveCode = $false
-foreach ($match in $assetMatches) {
-    $assetPath = $match.Groups[1].Value
-    $assetUrl = if ($assetPath.StartsWith("/")) { "https://mag-pro1.com$assetPath" } else { $assetPath }
-    $separator = if ($assetUrl.Contains("?")) { "&" } else { "?" }
-    $asset = (Invoke-WebRequest -UseBasicParsing -Uri "$assetUrl${separator}deploy=$cacheBust" -Headers @{ "Cache-Control" = "no-cache, no-store" }).Content
-    if ($asset -match 'products/\$\{Date\.now' -or $asset -match 'from\([`"'']products[`"'']\)\.(insert|update|delete)') {
-        $legacyLiveCode = $true
+$verified = $false
+for ($attempt = 1; $attempt -le 12; $attempt++) {
+    $cacheBust = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+    $headers = @{ "Cache-Control" = "no-cache, no-store, max-age=0"; "Pragma" = "no-cache" }
+    $html = (Invoke-WebRequest -UseBasicParsing -Uri "https://mag-pro1.com/admin?panel=products&deploy=$cacheBust" -Headers $headers).Content
+    $assetMatches = [regex]::Matches($html, '(?:src|href)="([^"]+\.js[^"]*)"')
+    $legacyLiveCode = $false
+    foreach ($match in $assetMatches) {
+        $assetPath = $match.Groups[1].Value
+        $assetUrl = if ($assetPath.StartsWith("/")) { "https://mag-pro1.com$assetPath" } else { $assetPath }
+        $separator = if ($assetUrl.Contains("?")) { "&" } else { "?" }
+        $asset = (Invoke-WebRequest -UseBasicParsing -Uri "$assetUrl${separator}deploy=$cacheBust" -Headers $headers).Content
+        # افحص النصوص الفعلية التي ظهرت في الحزمة القديمة بعد التصغير، بما فيها backticks.
+        if (
+            $asset.Contains('products/${Date.now()}-${e.name}') -or
+            $asset -match 'products/\$\{Date\.now\(\)\}[^`"'']*\.name' -or
+            $asset -match '\.from\([`"'']products[`"'']\)\.(insert|update|delete)'
+        ) {
+            $legacyLiveCode = $true
+            break
+        }
+    }
+    if (-not $legacyLiveCode) {
+        $verified = $true
         break
     }
+    if ($attempt -lt 12) {
+        Write-Warning "The domain still serves the old product code (attempt $attempt/12). Retrying in 5 seconds..."
+        Start-Sleep -Seconds 5
+    }
 }
-if ($legacyLiveCode) {
-    throw "Fly completed, but mag-pro1.com still serves the legacy product bundle. Deployment verification failed."
+if (-not $verified) {
+    throw "Fly finished, but mag-pro1.com still serves the OLD product bundle. Do not test this release; deployment verification failed."
 }
 
 Write-Host "Deploy finished and the production product bundle was verified." -ForegroundColor Green
