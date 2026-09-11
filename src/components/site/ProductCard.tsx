@@ -1,22 +1,19 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useCurrency } from "@/lib/currency-context";
 import { convertFromEgp, formatPrice, computeDiscountedPrice } from "@/lib/format";
-import { Heart, Lock } from "lucide-react";
+import { Lock } from "lucide-react";
 import { useCart } from "@/lib/cart";
-import { useFavorites } from "@/lib/favorites";
 import { toast } from "sonner";
 
 export function ProductCard({ p }: { p: any }) {
   const { currency, rates } = useCurrency();
   const navigate = useNavigate();
   const { add } = useCart();
-  const { isFavorite, toggle } = useFavorites();
   const rate = rates[currency.code] ?? 1;
   const price = computeDiscountedPrice(p.base_price_egp, p.discount_percent ?? 0);
   const localized = convertFromEgp(price, rate, currency.code);
   const original = convertFromEgp(p.base_price_egp, rate, currency.code);
   const hasDiscount = (p.discount_percent ?? 0) > 0;
-  const fav = isFavorite(p.id);
   const warranty = p.warranty_text?.trim() || (p.warranty_days > 0 ? `ضمان ${p.warranty_days} يوم` : null);
   const rating = p.rating ? Number(p.rating) : null;
   const ratingCount = p.rating_count ? Number(p.rating_count) : null;
