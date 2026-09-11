@@ -35,3 +35,5 @@
 ## تطبيق تعديلات القاعدة الجديدة
 - [x] تجميع كل التعديلات المعلّقة في ملف واحد: `supabase/manual/apply-all.sql` (رمز الاستلام + عمود جهاز البانر).
 - [ ] المستخدم: تشغيل الملف في SQL Editor على القاعدة الجديدة (لا يوجد اتصال مباشر بالقاعدة من هنا).
+
+- [ ] Trace and fix the exact RLS failure in the product save flow; verify CRUD, image upload, type-check, and Node build without changing product UI.
