@@ -49,7 +49,7 @@ export function ProductCard({ p }: { p: any }) {
   return (
     <div
       onClick={onOpen}
-      className="group w-[340px] max-w-full shrink-0 cursor-pointer rounded-[20px] border border-[#24252f] bg-[#14151c] overflow-hidden transition-colors duration-150 hover:border-primary"
+      className="group w-[280px] md:w-[340px] max-w-full shrink-0 cursor-pointer rounded-[20px] border border-[#24252f] bg-[#14151c] overflow-hidden transition-colors duration-150 hover:border-primary"
       style={{ boxShadow: "0 24px 48px -20px rgba(0,0,0,0.35)" }}
     >
       <div className="px-6 pt-[26px] pb-[22px] flex flex-col">
