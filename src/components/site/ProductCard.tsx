@@ -1,22 +1,19 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useCurrency } from "@/lib/currency-context";
 import { convertFromEgp, formatPrice, computeDiscountedPrice } from "@/lib/format";
-import { Heart, Lock } from "lucide-react";
+import { Lock } from "lucide-react";
 import { useCart } from "@/lib/cart";
-import { useFavorites } from "@/lib/favorites";
 import { toast } from "sonner";
 
 export function ProductCard({ p }: { p: any }) {
   const { currency, rates } = useCurrency();
   const navigate = useNavigate();
   const { add } = useCart();
-  const { isFavorite, toggle } = useFavorites();
   const rate = rates[currency.code] ?? 1;
   const price = computeDiscountedPrice(p.base_price_egp, p.discount_percent ?? 0);
   const localized = convertFromEgp(price, rate, currency.code);
   const original = convertFromEgp(p.base_price_egp, rate, currency.code);
   const hasDiscount = (p.discount_percent ?? 0) > 0;
-  const fav = isFavorite(p.id);
   const warranty = p.warranty_text?.trim() || (p.warranty_days > 0 ? `ضمان ${p.warranty_days} يوم` : null);
   const rating = p.rating ? Number(p.rating) : null;
   const ratingCount = p.rating_count ? Number(p.rating_count) : null;
@@ -47,19 +44,12 @@ export function ProductCard({ p }: { p: any }) {
     navigate({ to: "/cart" });
   };
 
-  const onFav = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const added = toggle(p.id);
-    toast.success(added ? "تمت الإضافة إلى المفضلة" : "تمت الإزالة من المفضلة");
-  };
-
   const onOpen = () => navigate({ to: "/product/$slug", params: { slug: p.slug } });
 
   return (
     <div
       onClick={onOpen}
-      className="group w-[340px] max-w-full shrink-0 cursor-pointer rounded-[20px] border border-[#24252f] bg-[#14151c] overflow-hidden transition-colors duration-150 hover:border-primary"
+      className="group w-[280px] md:w-[340px] max-w-full shrink-0 cursor-pointer rounded-[20px] border border-[#24252f] bg-[#14151c] overflow-hidden transition-colors duration-150 hover:border-primary"
       style={{ boxShadow: "0 24px 48px -20px rgba(0,0,0,0.35)" }}
     >
       <div className="px-6 pt-[26px] pb-[22px] flex flex-col">
@@ -84,14 +74,6 @@ export function ProductCard({ p }: { p: any }) {
               </div>
             )}
           </div>
-          <button
-            type="button"
-            onClick={onFav}
-            aria-label={fav ? `إزالة ${p.name} من المفضلة` : `أضف ${p.name} إلى المفضلة`}
-            className={fav ? "size-9 inline-flex items-center justify-center rounded-[9px] bg-[#22c55e]/10 text-primary shrink-0" : "size-9 inline-flex items-center justify-center rounded-[9px] bg-[#1d1e27] border border-[#2a2b38] text-muted-foreground hover:text-primary hover:border-primary transition-colors shrink-0"}
-          >
-            <Heart className="size-4" fill={fav ? "currentColor" : "none"} />
-          </button>
         </div>
 
         {/* features */}
