@@ -12,13 +12,27 @@ import {
   type FooterLink,
 } from "@/lib/footer-config";
 
-function FooterItem({ link, compact }: { link: FooterLink; compact?: boolean }) {
+function FooterItem({
+  link,
+  compact,
+  categorySlug,
+}: {
+  link: FooterLink;
+  compact?: boolean;
+  categorySlug?: string;
+}) {
   const badgeClass = compact ? "size-[17px]" : "size-7 md:size-8";
   const iconClass = compact ? "size-[12px]" : "size-5 md:size-6";
 
-
   if (isInternal(link.href)) {
     return <Link to={link.href!}>{link.label}</Link>;
+  }
+  if (!link.href && categorySlug) {
+    return (
+      <Link to="/category/$slug" params={{ slug: categorySlug }} className="hover:text-foreground">
+        {link.label}
+      </Link>
+    );
   }
   if (link.href) {
     const platform = isWhatsApp(link.href) ? "whatsapp" : detectPlatform(link.href);
@@ -57,6 +71,21 @@ export function Footer() {
   });
   const cfg = data ?? DEFAULT_FOOTER;
 
+  const { data: categories } = useQuery({
+    queryKey: ["footer-categories"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("categories")
+        .select("name,slug")
+        .eq("active", true)
+        .order("sort_order", { ascending: true });
+      return (data ?? []) as { name: string; slug: string }[];
+    },
+    staleTime: 5 * 60_000,
+  });
+
+  const slugByName = new Map((categories ?? []).map((c) => [c.name.trim(), c.slug]));
+
   return (
     <footer className="mt-16 border-t border-border bg-card">
       <div
@@ -64,14 +93,19 @@ export function Footer() {
         style={{ gridTemplateColumns: `repeat(${Math.max(cfg.columns.length, 1)}, minmax(0, 1fr))` }}
       >
         {cfg.columns.map((col, i) => {
-          const compact = col.title.toLowerCase().includes("منصات");
+          const compact = col.title.includes("منصات");
+          const isCategoriesCol = col.title.includes("أقسام") || col.title.includes("اقسام");
+          const links =
+            isCategoriesCol && (categories?.length ?? 0) > 0
+              ? categories!.map((c) => ({ label: c.name.trim(), href: undefined }))
+              : col.links;
           return (
             <div key={`${col.title}-${i}`}>
               <h4 className="mb-2 text-[11px] font-bold md:text-base">{col.title}</h4>
               <ul className="space-y-1 text-[11px] text-muted-foreground md:text-sm">
-                {col.links.map((l, j) => (
+                {links.map((l, j) => (
                   <li key={`${l.label}-${j}`}>
-                    <FooterItem link={l} compact={compact} />
+                    <FooterItem link={l} compact={compact} categorySlug={slugByName.get(l.label.trim())} />
                   </li>
                 ))}
               </ul>
