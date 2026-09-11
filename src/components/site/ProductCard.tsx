@@ -18,6 +18,8 @@ export function ProductCard({ p, compact = false }: { p: any; compact?: boolean 
   const warranty = p.warranty_text?.trim() || (p.warranty_days > 0 ? `ضمان ${p.warranty_days} يوم` : null);
   const rating = p.rating ? Number(p.rating) : null;
   const ratingCount = p.rating_count ? Number(p.rating_count) : null;
+  const starSize = compact ? "size-[11px]" : "size-[13px]";
+  const ratingTextSize = compact ? "text-[11px]" : "text-[12px]";
 
   const features: string[] = [];
   if (warranty) features.push(warranty);
