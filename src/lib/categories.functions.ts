@@ -15,6 +15,13 @@ async function assertStaff(supabase: any, userId: string) {
   if (!isStaff) throw new Error("Forbidden: staff only");
 }
 
+const PRODUCT_WRITE_PATH_VERSION = "server-authorized-v2";
+
+function databaseOperationError(operation: string, error: { message: string; code?: string | null }) {
+  const code = error.code ? ` (${error.code})` : "";
+  return new Error(`[${operation}]${code} ${error.message}`);
+}
+
 const CATEGORY_BUCKET = "product-images";
 const CATEGORY_URL_TTL = 60 * 60 * 24 * 365 * 10;
 
@@ -56,7 +63,8 @@ export const prepareCategoryImageUpload = createServerFn({ method: "POST" })
     const { data: upload, error } = await supabaseAdmin.storage
       .from(CATEGORY_BUCKET)
       .createSignedUploadUrl(path);
-    if (error || !upload?.token) throw new Error(error?.message ?? "فشل تجهيز رفع الصورة");
+    if (error) throw databaseOperationError("product-images.createSignedUploadUrl", error);
+    if (!upload?.token) throw new Error("[product-images.createSignedUploadUrl] لم يتم إنشاء رمز الرفع");
     return { path, token: upload.token };
   });
 
@@ -72,7 +80,8 @@ export const getCategoryImageUrl = createServerFn({ method: "POST" })
     const { data: signed, error } = await supabaseAdmin.storage
       .from(CATEGORY_BUCKET)
       .createSignedUrl(data.path, CATEGORY_URL_TTL);
-    if (error || !signed?.signedUrl) throw new Error(error?.message ?? "فشل إنشاء رابط الصورة");
+    if (error) throw databaseOperationError("product-images.createSignedUrl", error);
+    if (!signed?.signedUrl) throw new Error("[product-images.createSignedUrl] لم يتم إنشاء رابط الصورة");
     return { url: signed.signedUrl };
   });
 
@@ -136,11 +145,19 @@ export const saveProduct = createServerFn({ method: "POST" })
     await assertStaff(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { id, ...row } = data;
+    const operation = id ? "products.update" : "products.insert";
+    console.info(`[product-save] ${PRODUCT_WRITE_PATH_VERSION} ${operation}`);
     const result = id
       ? await supabaseAdmin.from("products").update(row).eq("id", id)
       : await supabaseAdmin.from("products").insert(row);
-    if (result.error) throw new Error(result.error.message);
-    return { ok: true };
+    if (result.error) {
+      console.error(`[product-save] ${operation} failed`, {
+        code: result.error.code,
+        message: result.error.message,
+      });
+      throw databaseOperationError(operation, result.error);
+    }
+    return { ok: true, operation, pathVersion: PRODUCT_WRITE_PATH_VERSION };
   });
 
 export const deleteProduct = createServerFn({ method: "POST" })
@@ -150,8 +167,8 @@ export const deleteProduct = createServerFn({ method: "POST" })
     await assertStaff(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin.from("products").delete().eq("id", data.id);
-    if (error) throw new Error(error.message);
-    return { ok: true };
+    if (error) throw databaseOperationError("products.delete", error);
+    return { ok: true, operation: "products.delete" };
   });
 
 const saveSchema = z.object({
