@@ -5,7 +5,7 @@ import { Lock } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { toast } from "sonner";
 
-export function ProductCard({ p }: { p: any }) {
+export function ProductCard({ p, compact = false }: { p: any; compact?: boolean }) {
   const { currency, rates } = useCurrency();
   const navigate = useNavigate();
   const { add } = useCart();
