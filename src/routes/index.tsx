@@ -202,8 +202,7 @@ function Home() {
                       </div>
                     )}
                     <div className="category-art-content absolute -inset-x-4 bottom-0 flex h-8 items-center justify-center gap-1 bg-discount text-[11px] font-bold text-discount-foreground md:text-xs">
-                      <ThumbsUp className="size-3 fill-current md:size-3.5" />
-                      خصم إضافي
+                      تصفح العروض
                     </div>
                   </div>
                   <h3 className="category-title mt-2 line-clamp-1 px-1 text-center text-sm font-bold text-foreground transition-colors duration-150 group-hover:text-primary md:text-base">
