@@ -45,7 +45,7 @@ type ProductDraft = {
   active?: boolean;
   sort_order?: number;
   upsell_ids?: string[];
-  category?: { name?: string; icon?: string } | null;
+  category?: { name?: string | null; icon?: string | null } | null;
 };
 
 export function ProductsTab() {

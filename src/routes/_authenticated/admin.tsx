@@ -31,13 +31,10 @@ import { getDeviceFingerprint } from "@/lib/device";
 import {
   prepareCategoryImageUpload,
   getCategoryImageUrl,
-  prepareProductImageUpload,
-  getProductImageUrl,
-  saveProduct,
-  deleteProduct,
   saveCategory,
   deleteCategory,
 } from "@/lib/categories.functions";
+import { ProductsTab } from "@/components/admin/ProductsTab";
 import { ShieldAlert } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { ReportsTab } from "@/components/admin/ReportsTab";
