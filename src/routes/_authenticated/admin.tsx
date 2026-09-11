@@ -34,7 +34,7 @@ import {
   saveCategory,
   deleteCategory,
 } from "@/lib/categories.functions";
-import { ProductsTab } from "@/components/admin/ProductsTab";
+
 import { ShieldAlert } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { ReportsTab } from "@/components/admin/ReportsTab";
@@ -56,11 +56,11 @@ import { HandControl } from "@/components/admin/HandControl";
 
 
 type PanelKey =
-  | "overview" | "orders" | "products" | "categories" | "customers" | "employees"
+  | "overview" | "orders" | "categories" | "customers" | "employees"
   | "reviews" | "payments" | "currencies" | "timers" | "settings" | "courses" | "devices" | "reports" | "remote" | "cardtx" | "apikey" | "worksheet" | "sheet";
 
 const panelKeys: PanelKey[] = [
-  "overview", "orders", "products", "categories", "customers", "employees",
+  "overview", "orders", "categories", "customers", "employees",
   "reviews", "payments", "currencies", "timers", "settings", "courses", "devices", "reports", "remote", "cardtx", "apikey", "worksheet", "sheet",
 ];
 
@@ -185,7 +185,7 @@ function Admin() {
     {
       label: "الكتالوج",
       items: [
-        { key: "products", label: "المنتجات", icon: Package },
+        
         { key: "categories", label: "الأقسام", icon: Layers, adminOnly: true },
         { key: "timers", label: "مؤقتات العروض", icon: Clock },
       ],
@@ -319,7 +319,7 @@ function Admin() {
             {panel === "sheet" && adminOnly && <AdminSheet />}
 
 
-            {panel === "products" && canView("products") && <ProductsTab />}
+            
             {panel === "categories" && canView("categories") && <CategoriesTab />}
             {panel === "timers" && canView("timers") && <TimersTab />}
             {panel === "employees" && canView("employees") && <EmployeesTab />}
