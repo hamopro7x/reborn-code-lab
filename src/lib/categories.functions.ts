@@ -80,7 +80,7 @@ export const prepareProductImageUpload = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data) => productUploadSchema.parse(data))
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.supabase, context.userId);
+    await assertStaff(context.supabase, context.userId);
     if (!data.contentType.startsWith("image/")) throw new Error("نوع الملف غير مسموح");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -98,7 +98,7 @@ export const getProductImageUrl = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data) => pathSchema.parse(data))
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.supabase, context.userId);
+    await assertStaff(context.supabase, context.userId);
     assertProductPath(data.path);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: signed, error } = await supabaseAdmin.storage
