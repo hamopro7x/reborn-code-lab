@@ -36,4 +36,4 @@
 - [x] تجميع كل التعديلات المعلّقة في ملف واحد: `supabase/manual/apply-all.sql` (رمز الاستلام + عمود جهاز البانر).
 - [ ] المستخدم: تشغيل الملف في SQL Editor على القاعدة الجديدة (لا يوجد اتصال مباشر بالقاعدة من هنا).
 
-- [ ] Trace and fix the exact RLS failure in the product save flow; verify CRUD, image upload, type-check, and Node build without changing product UI.
+- [x] تتبع وإصلاح RLS في حفظ المنتجات: عزل ProductsTab، كل CRUD عبر Server Functions المصرح بها، رفع الصور بمفتاح UUID، وفحص TypeScript و33 اختبارًا وNode build بنجاح. اختبار المتصفح المصادق تعذر لأن المشروع يستخدم قاعدة خارجية لا توفر جلسة معاينة.
