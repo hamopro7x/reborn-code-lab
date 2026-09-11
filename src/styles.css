@@ -196,7 +196,7 @@
 }
 
 .category-marquee-track {
-  animation: marquee-ltr var(--marquee-duration, 40s) linear infinite;
+  animation: marquee-rtl var(--marquee-duration, 40s) linear infinite;
   will-change: transform;
 }
 @media (prefers-reduced-motion: reduce) {
@@ -205,10 +205,9 @@
   }
 }
 
-
-@keyframes marquee-ltr {
-  0% { transform: translateX(-50%); }
-  100% { transform: translateX(0); }
+@keyframes marquee-rtl {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
 }
 
 
