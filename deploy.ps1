@@ -52,13 +52,13 @@ if ($serviceRoleMatch.Success) {
 }
 
 Write-Host "Deploying to Fly.io..." -ForegroundColor Green
-fly deploy -a mag-pro1 --config fly.toml --no-cache `
+fly deploy -a mag-pro1 --config fly.toml --no-cache --strategy immediate `
   --build-arg VITE_SUPABASE_URL=https://kcdsdaytrnzoiharmyxo.supabase.co `
   --build-arg VITE_SUPABASE_PROJECT_ID=kcdsdaytrnzoiharmyxo `
   --build-arg VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_SnDM9gGnsqswJtD08pq1HA_ffezyBvo
 if ($LASTEXITCODE -ne 0) {
     Write-Warning "The default Fly builder failed. Retrying without Depot..."
-    fly deploy -a mag-pro1 --config fly.toml --no-cache --depot=false `
+    fly deploy -a mag-pro1 --config fly.toml --no-cache --strategy immediate --depot=false `
       --build-arg VITE_SUPABASE_URL=https://kcdsdaytrnzoiharmyxo.supabase.co `
       --build-arg VITE_SUPABASE_PROJECT_ID=kcdsdaytrnzoiharmyxo `
       --build-arg VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_SnDM9gGnsqswJtD08pq1HA_ffezyBvo
