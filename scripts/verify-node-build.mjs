@@ -1,8 +1,13 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-const entry = resolve(process.cwd(), ".output/server/index.mjs");
-const publicDirectory = resolve(process.cwd(), ".output/public");
+const outputDirectory = existsSync(resolve(process.cwd(), ".output/server/index.mjs"))
+  ? resolve(process.cwd(), ".output")
+  : resolve(process.cwd(), "dist");
+const entry = resolve(outputDirectory, "server/index.mjs");
+const publicDirectory = existsSync(resolve(outputDirectory, "public"))
+  ? resolve(outputDirectory, "public")
+  : resolve(outputDirectory, "client");
 
 if (!existsSync(entry)) {
   console.error(`[build] missing Node server entry: ${entry}`);
@@ -28,6 +33,7 @@ const forbiddenClientCode = [
 ];
 
 let productComponentFound = false;
+let productComponentFiles = 0;
 
 for (const file of listJavaScriptFiles(publicDirectory)) {
   const source = readFileSync(file, "utf8");
@@ -35,11 +41,19 @@ for (const file of listJavaScriptFiles(publicDirectory)) {
     console.error(`[build] obsolete client-side product code found in: ${file}`);
     process.exit(1);
   }
-  if (source.includes("server-authorized-v2")) productComponentFound = true;
+  if (source.includes("server-authorized-v2")) {
+    productComponentFound = true;
+    productComponentFiles += 1;
+  }
 }
 
 if (!productComponentFound) {
   console.error("[build] current server-authorized product save path is missing from client assets");
+  process.exit(1);
+}
+
+if (productComponentFiles !== 1) {
+  console.error(`[build] expected exactly one authorized product UI bundle; found ${productComponentFiles}`);
   process.exit(1);
 }
 
