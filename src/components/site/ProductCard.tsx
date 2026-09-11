@@ -60,18 +60,10 @@ export function ProductCard({ p }: { p: any }) {
       className="group rounded-2xl border border-[#24252f] bg-[#14151c] overflow-hidden flex flex-col transition-colors duration-150 hover:border-primary cursor-pointer md:w-[6cm]"
     >
       <div className="p-5 md:p-6 flex flex-col flex-1">
-        {/* header: icon + name + favorite */}
+        {/* header: icon + name */}
         <div className="flex items-start gap-3">
-          <button
-            type="button"
-            onClick={onFav}
-            aria-label={fav ? `إزالة ${p.name} من المفضلة` : `أضف ${p.name} إلى المفضلة`}
-            className={fav ? "text-primary shrink-0 mt-0.5" : "text-muted-foreground hover:text-primary transition-colors shrink-0 mt-0.5"}
-          >
-            <Heart className="size-4" fill={fav ? "currentColor" : "none"} />
-          </button>
           <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-bold text-[#f5f6fa] leading-snug line-clamp-3">{p.name}</h3>
+            <h3 className="text-sm font-bold text-[#f5f6fa] leading-snug line-clamp-1">{p.name}</h3>
           </div>
           <div className="size-12 rounded-xl bg-[#1d1e27] border border-[#2a2b38] overflow-hidden flex items-center justify-center shrink-0">
             {p.main_image ? (
@@ -87,7 +79,7 @@ export function ProductCard({ p }: { p: any }) {
           {features.map((f, i) => (
             <div key={i} className="flex items-start gap-2 text-[11.5px] text-[#a7a9b8] leading-snug">
               <span className="text-[#22c55e] shrink-0">{f.icon}</span>
-              <span className="line-clamp-2">{f.text}</span>
+              <span className="line-clamp-1">{f.text}</span>
             </div>
           ))}
         </div>
@@ -114,15 +106,25 @@ export function ProductCard({ p }: { p: any }) {
         </div>
 
         {/* CTA */}
-        <button
-          type="button"
-          onClick={onAdd}
-          aria-label={`أضف ${p.name} إلى السلة`}
-          className="mt-4 w-full inline-flex items-center justify-center gap-1.5 bg-[#f5f6fa] text-[#14151c] rounded-xl py-2.5 text-sm font-bold hover:bg-white transition-colors"
-        >
-          <ShoppingCart className="size-4" />
-          <span>اطلب الآن</span>
-        </button>
+        <div className="mt-4 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onAdd}
+            aria-label={`أضف ${p.name} إلى السلة`}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 bg-[#f5f6fa] text-[#14151c] rounded-xl py-2.5 text-sm font-bold hover:bg-white transition-colors"
+          >
+            <ShoppingCart className="size-4" />
+            <span>اطلب الآن</span>
+          </button>
+          <button
+            type="button"
+            onClick={onFav}
+            aria-label={fav ? `إزالة ${p.name} من المفضلة` : `أضف ${p.name} إلى المفضلة`}
+            className={fav ? "h-10 w-10 inline-flex items-center justify-center rounded-xl bg-[#22c55e]/10 text-primary shrink-0" : "h-10 w-10 inline-flex items-center justify-center rounded-xl bg-[#1d1e27] border border-[#2a2b38] text-muted-foreground hover:text-primary hover:border-primary transition-colors shrink-0"}
+          >
+            <Heart className="size-4" fill={fav ? "currentColor" : "none"} />
+          </button>
+        </div>
 
         {/* footnote */}
         <div className="mt-3 flex items-center justify-center gap-1.5 text-[10.5px] text-[#6f7280]">
