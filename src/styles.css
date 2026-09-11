@@ -224,6 +224,14 @@
   0% { transform: translateX(-50%); }
   100% { transform: translateX(0); }
 }
+/* في التخطيط العربي (RTL) يبدأ المحتوى من اليمين، فنعكس مسار الحركة */
+[dir="rtl"] .marquee-ltr-track {
+  animation-name: marquee-ltr-rtl;
+}
+@keyframes marquee-ltr-rtl {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(50%); }
+}
 
 
 
