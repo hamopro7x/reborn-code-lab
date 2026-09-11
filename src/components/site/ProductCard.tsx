@@ -74,14 +74,6 @@ export function ProductCard({ p }: { p: any }) {
               </div>
             )}
           </div>
-          <button
-            type="button"
-            onClick={onFav}
-            aria-label={fav ? `إزالة ${p.name} من المفضلة` : `أضف ${p.name} إلى المفضلة`}
-            className={fav ? "size-9 inline-flex items-center justify-center rounded-[9px] bg-[#22c55e]/10 text-primary shrink-0" : "size-9 inline-flex items-center justify-center rounded-[9px] bg-[#1d1e27] border border-[#2a2b38] text-muted-foreground hover:text-primary hover:border-primary transition-colors shrink-0"}
-          >
-            <Heart className="size-4" fill={fav ? "currentColor" : "none"} />
-          </button>
         </div>
 
         {/* features */}
