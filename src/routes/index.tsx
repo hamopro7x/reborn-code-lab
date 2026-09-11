@@ -131,9 +131,12 @@ function Home() {
 
   const categories = categoriesQ.data ?? [];
 
-  // كل نصف من الشريط نسخة مطابقة وطويلة بما يكفي لتغطية الشاشة بالكامل.
-  const categoryCopiesPerGroup = Math.max(4, Math.ceil(16 / Math.max(1, categories.length)));
-  const categoryDuration = Math.max(24, categories.length * categoryCopiesPerGroup * 3);
+  // شريط المنتجات المتحرك: مجموعتان متطابقتان، والحركة تحدث بلا نهاية.
+  const marqueeProducts = latestQ.data ?? [];
+  const productCopies = Math.max(3, Math.ceil(12 / Math.max(1, marqueeProducts.length)));
+  const productDuration = Math.max(30, marqueeProducts.length * productCopies * 3);
+
+
 
 
   const bannersQ = useQuery({
