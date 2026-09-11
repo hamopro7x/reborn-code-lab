@@ -60,18 +60,10 @@ export function ProductCard({ p }: { p: any }) {
       className="group rounded-2xl border border-[#24252f] bg-[#14151c] overflow-hidden flex flex-col transition-colors duration-150 hover:border-primary cursor-pointer md:w-[6cm]"
     >
       <div className="p-5 md:p-6 flex flex-col flex-1">
-        {/* header: icon + name + favorite */}
+        {/* header: icon + name */}
         <div className="flex items-start gap-3">
-          <button
-            type="button"
-            onClick={onFav}
-            aria-label={fav ? `إزالة ${p.name} من المفضلة` : `أضف ${p.name} إلى المفضلة`}
-            className={fav ? "text-primary shrink-0 mt-0.5" : "text-muted-foreground hover:text-primary transition-colors shrink-0 mt-0.5"}
-          >
-            <Heart className="size-4" fill={fav ? "currentColor" : "none"} />
-          </button>
           <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-bold text-[#f5f6fa] leading-snug line-clamp-3">{p.name}</h3>
+            <h3 className="text-sm font-bold text-[#f5f6fa] leading-snug line-clamp-1">{p.name}</h3>
           </div>
           <div className="size-12 rounded-xl bg-[#1d1e27] border border-[#2a2b38] overflow-hidden flex items-center justify-center shrink-0">
             {p.main_image ? (
