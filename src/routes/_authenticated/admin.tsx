@@ -1140,7 +1140,7 @@ function ProductsTab() {
     try {
       const contentType = file.type || "image/png";
       const { path, token } = await prepareProductImageUpload({
-        data: { fileName: file.name, contentType, size: file.size },
+        data: { contentType, size: file.size },
       });
       const { error } = await supabase.storage
         .from("product-images")
