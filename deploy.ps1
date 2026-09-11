@@ -77,6 +77,7 @@ for ($attempt = 1; $attempt -le 12; $attempt++) {
     $html = (Invoke-WebRequest -UseBasicParsing -Uri "https://mag-pro1.com/admin?panel=products&deploy=$cacheBust" -Headers $headers).Content
     $assetMatches = [regex]::Matches($html, '(?:src|href)="([^"]+\.js[^"]*)"')
     $legacyLiveCode = $false
+    $authorizedProductCode = $false
     foreach ($match in $assetMatches) {
         $assetPath = $match.Groups[1].Value
         $assetUrl = if ($assetPath.StartsWith("/")) { "https://mag-pro1.com$assetPath" } else { $assetPath }
@@ -89,20 +90,24 @@ for ($attempt = 1; $attempt -le 12; $attempt++) {
             $asset -match '\.from\([`"'']products[`"'']\)\.(insert|update|delete)'
         ) {
             $legacyLiveCode = $true
-            break
+        }
+        if ($asset.Contains('server-authorized-v2')) {
+            $authorizedProductCode = $true
         }
     }
-    if (-not $legacyLiveCode) {
+    # النجاح لا يعني فقط غياب نص قديم معروف؛ يجب أن تكون حزمة المنتجات الجديدة
+    # نفسها هي المرتبطة بالصفحة الحية. هذا يمنع اعتبار نشر ناقص/قديم ناجحًا.
+    if (-not $legacyLiveCode -and $authorizedProductCode) {
         $verified = $true
         break
     }
     if ($attempt -lt 12) {
-        Write-Warning "The domain still serves the old product code (attempt $attempt/12). Retrying in 5 seconds..."
+        Write-Warning "Production is not serving only the authorized product path (attempt $attempt/12). Retrying in 5 seconds..."
         Start-Sleep -Seconds 5
     }
 }
 if (-not $verified) {
-    throw "Fly finished, but mag-pro1.com still serves the OLD product bundle. Do not test this release; deployment verification failed."
+    throw "Fly finished, but mag-pro1.com is not serving the verified server-authorized product bundle. Production was NOT verified."
 }
 
 Write-Host "Deploy finished and the production product bundle was verified." -ForegroundColor Green
