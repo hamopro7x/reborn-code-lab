@@ -12,13 +12,27 @@ import {
   type FooterLink,
 } from "@/lib/footer-config";
 
-function FooterItem({ link, compact }: { link: FooterLink; compact?: boolean }) {
+function FooterItem({
+  link,
+  compact,
+  categorySlug,
+}: {
+  link: FooterLink;
+  compact?: boolean;
+  categorySlug?: string;
+}) {
   const badgeClass = compact ? "size-[17px]" : "size-7 md:size-8";
   const iconClass = compact ? "size-[12px]" : "size-5 md:size-6";
 
-
   if (isInternal(link.href)) {
     return <Link to={link.href!}>{link.label}</Link>;
+  }
+  if (!link.href && categorySlug) {
+    return (
+      <Link to="/category/$slug" params={{ slug: categorySlug }} className="hover:text-foreground">
+        {link.label}
+      </Link>
+    );
   }
   if (link.href) {
     const platform = isWhatsApp(link.href) ? "whatsapp" : detectPlatform(link.href);
