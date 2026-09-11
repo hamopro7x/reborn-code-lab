@@ -22,16 +22,12 @@ if ($env:MAG_PRO_DEPLOY_RESTARTED -ne "1") {
     exit $LASTEXITCODE
 }
 
-# امنع نشر أي نسخة أعادت مساري المنتجات القديمين بالخطأ.
-$legacyProductCode = rg -n `
-  'from\(["'']products["'']\)\.(insert|update|delete)|products/\$\{Date\.now\(\)\}.*\.name' `
-  src/routes src/components
-if ($LASTEXITCODE -eq 0) {
-    Write-Host $legacyProductCode -ForegroundColor Red
+# امنع نشر أي نسخة أعادت مساري المنتجات القديمين بالخطأ، بدون الاعتماد على rg.
+$legacyProductCode = Get-ChildItem src/routes,src/components -Recurse -File -Include *.ts,*.tsx |
+    Select-String -Pattern 'from\(["'']products["'']\)\.(insert|update|delete)','products/\$\{Date\.now\(\)\}.*\.name'
+if ($legacyProductCode) {
+    $legacyProductCode | ForEach-Object { Write-Host $_ -ForegroundColor Red }
     throw "Legacy client-side product write/upload path detected. Deployment stopped."
-}
-if ($LASTEXITCODE -ne 1) {
-    throw "Could not scan the product code before deployment."
 }
 
 # اقرأ مفتاح الخدمة من ملف .env، وثبّت كل اتصال Fly على القاعدة الجديدة فقط
