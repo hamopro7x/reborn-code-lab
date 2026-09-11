@@ -49,10 +49,12 @@ export function ProductCard({ p, compact = false }: { p: any; compact?: boolean 
   return (
     <div
       onClick={onOpen}
-      className="group w-[280px] md:w-[340px] max-w-full shrink-0 cursor-pointer rounded-[20px] border border-[#24252f] bg-[#14151c] overflow-hidden transition-colors duration-150 hover:border-primary"
+      className={`group cursor-pointer rounded-[20px] border border-[#24252f] bg-[#14151c] overflow-hidden transition-colors duration-150 hover:border-primary ${
+        compact ? "w-full shrink" : "w-[280px] md:w-[340px] max-w-full shrink-0"
+      }`}
       style={{ boxShadow: "0 24px 48px -20px rgba(0,0,0,0.35)" }}
     >
-      <div className="px-6 pt-[26px] pb-[22px] flex flex-col">
+      <div className={`flex flex-col ${compact ? "px-3 pt-4 pb-3" : "px-6 pt-[26px] pb-[22px]"}`}>
         {/* header: app icon + name + rating */}
         <div className="flex items-center gap-3">
           <div className="size-[52px] rounded-[14px] overflow-hidden shrink-0 bg-[#1d1e27] border border-[#2a2b38] flex items-center justify-center">
