@@ -9,6 +9,9 @@ RUN bun install --frozen-lockfile --ignore-scripts
 
 COPY . .
 
+# احذف أي مخرجات قديمة قبل البناء حتى يستحيل دخول حزمة سابقة في الصورة الجديدة.
+RUN node scripts/clean-build.mjs
+
 # متغيرات البناء المطلوبة للـ client bundle (تُمرر عبر --build-arg)
 ARG VITE_SUPABASE_URL
 ARG VITE_SUPABASE_PUBLISHABLE_KEY

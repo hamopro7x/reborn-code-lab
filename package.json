@@ -8,13 +8,13 @@
   },
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build",
+    "build": "npm run build:node",
     "start": "node scripts/start.mjs",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "build:node": "NITRO_PRESET=node-server NITRO_OUTPUT_DIR=.output vite build && node scripts/verify-node-build.mjs"
+    "build:node": "node scripts/clean-build.mjs && NITRO_PRESET=node-server NITRO_OUTPUT_DIR=.output vite build && node scripts/verify-node-build.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

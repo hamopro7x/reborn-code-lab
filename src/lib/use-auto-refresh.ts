@@ -19,7 +19,11 @@ export function useAutoRefreshOnDeploy(intervalMs = 60_000) {
         const { build } = (await res.json()) as { build?: string };
         if (!build || build === "dev" || build === APP_BUILD_ID) return;
         stopped = true;
-        window.location.reload();
+        // Force a fresh document URL so browsers and intermediary caches cannot
+        // return an HTML page that still references an obsolete JS bundle.
+        const url = new URL(window.location.href);
+        url.searchParams.set("_build", build);
+        window.location.replace(url.toString());
       } catch {
         /* تجاهل أخطاء الشبكة المؤقتة */
       }
