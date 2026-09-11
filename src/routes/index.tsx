@@ -52,6 +52,44 @@ function SectionHeading({ title, to }: { title: string; to?: string }) {
   );
 }
 
+function CategoryCard({ c, index }: { c: any; index: number }) {
+  return (
+    <Link
+      to="/category/$slug"
+      params={{ slug: c.slug }}
+      className="group block w-40 shrink-0 text-foreground focus-visible:outline-none md:w-56"
+    >
+      <div className="category-art-frame relative h-[5cm] overflow-hidden bg-category-surface">
+        {c.banner_image ? (
+          <img
+            src={c.banner_image}
+            alt={c.name}
+            width={448}
+            height={596}
+            loading={index < 6 ? "eager" : "lazy"}
+            decoding="async"
+            {...(index < 6 ? { fetchPriority: "high" as const } : {})}
+            className="category-art-content absolute inset-0 h-full w-full object-cover"
+          />
+        ) : null}
+        {!c.banner_image && (
+          <div className="category-art-content absolute inset-0 flex items-center justify-center px-3 text-center">
+            <span className="w-full text-sm font-bold text-foreground md:text-base">
+              {c.name}
+            </span>
+          </div>
+        )}
+        <div className="category-art-content absolute -inset-x-4 bottom-0 flex h-8 items-center justify-center gap-1 bg-discount text-[11px] font-bold text-discount-foreground md:text-xs">
+          تصفح العروض
+        </div>
+      </div>
+      <h3 className="category-title mt-2 line-clamp-1 px-1 text-center text-sm font-bold text-foreground transition-colors duration-150 group-hover:text-primary md:text-base">
+        {c.name}
+      </h3>
+    </Link>
+  );
+}
+
 function Home() {
   const { setRates, setCurrencies } = useCurrency();
 
