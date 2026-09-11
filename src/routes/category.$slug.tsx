@@ -68,7 +68,7 @@ function CategoryPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      <main className="flex-1 container mx-auto px-3 md:px-4 py-8">
+      <main className="flex-1 container mx-auto px-2 md:px-4 py-8">
 
         {filtered.length === 0 ? (
           <div className="card-surface rounded-2xl p-16 text-center text-muted-foreground">

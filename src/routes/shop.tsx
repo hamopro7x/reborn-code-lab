@@ -59,7 +59,7 @@ function Shop() {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      <main className="flex-1 container mx-auto px-3 md:px-4 py-8">
+      <main className="flex-1 container mx-auto px-2 md:px-4 py-8">
         <div className="mb-6 flex gap-3 flex-col md:flex-row">
           <div className="relative w-full md:w-1/4">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
