@@ -133,8 +133,9 @@ function Home() {
 
   const categoriesContainerRef = useRef<HTMLDivElement>(null);
   const categoriesTrackRef = useRef<HTMLDivElement>(null);
-  const [categoryRepeat, setCategoryRepeat] = useState(2);
+  const [categoryRepeat, setCategoryRepeat] = useState(3);
   const [categoryDuration, setCategoryDuration] = useState(40);
+  const [categoryShift, setCategoryShift] = useState(0);
 
   useEffect(() => {
     const container = categoriesContainerRef.current;
@@ -142,23 +143,24 @@ function Home() {
     if (!container || !track || !categories.length) return;
 
     const compute = () => {
-      const setWidth = track.scrollWidth / categoryRepeat;
-      if (!setWidth) return;
+      const items = Array.from(track.children) as HTMLElement[];
+      if (items.length <= categories.length) return;
+      // طول مجموعة واحدة بالبكسل (شامل الفراغات) = المسافة بين أول بطاقة وأول بطاقة في المجموعة التالية
+      const period = Math.abs(items[categories.length].offsetLeft - items[0].offsetLeft);
+      if (!period) return;
       const containerWidth = container.clientWidth;
-      // أقل عدد نسخ ليغطي العرض المعروض + مجموعة كاملة للتكرار السلس
-      const needed = Math.max(2, Math.ceil((containerWidth + setWidth) / setWidth));
-      const totalWidth = needed * setWidth;
-      const duration = Math.max(20, totalWidth / 60); // سرعة ثابتة ~60 بكسل/ثانية
-      if (needed !== categoryRepeat || Math.abs(duration - categoryDuration) > 1) {
-        setCategoryRepeat(needed);
-        setCategoryDuration(duration);
-      }
+      // نسخ كافية لتغطية الشاشة + مجموعة إضافية حتى لا يظهر أي قطع
+      const needed = Math.max(3, Math.ceil(containerWidth / period) + 2);
+      const duration = Math.max(20, period / 60); // سرعة ثابتة ~60 بكسل/ثانية
+      if (needed !== categoryRepeat) setCategoryRepeat(needed);
+      if (Math.abs(period - categoryShift) > 1) setCategoryShift(period);
+      if (Math.abs(duration - categoryDuration) > 1) setCategoryDuration(duration);
     };
 
     compute();
     window.addEventListener("resize", compute);
     return () => window.removeEventListener("resize", compute);
-  }, [categories.length, categoryRepeat, categoryDuration]);
+  }, [categories.length, categoryRepeat, categoryDuration, categoryShift]);
 
   const bannersQ = useQuery({
     queryKey: ["hero-banners"],
