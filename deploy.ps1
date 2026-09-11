@@ -33,6 +33,16 @@ if ($legacyProductCode) {
     throw "Legacy client-side product write/upload path detected. Deployment stopped."
 }
 
+# احتفظ برقم النسخة الحية قبل النشر. بعد النشر يجب أن يعرض الموقع رقمًا
+# مختلفًا، وإلا فمعنى ذلك أن Fly لم يستبدل النسخة التي تخدم الدومين.
+$previousBuild = $null
+try {
+    $beforeDeploy = Invoke-RestMethod -Uri "https://mag-pro1.com/api/public/build-version?before=$([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())" -Headers @{ "Cache-Control" = "no-cache, no-store, max-age=0" }
+    $previousBuild = $beforeDeploy.build
+} catch {
+    Write-Warning "Could not read the current production build number; deployment will continue."
+}
+
 # اقرأ مفتاح الخدمة من ملف .env، وثبّت كل اتصال Fly على القاعدة الجديدة فقط
 $envContent = Get-Content .env -Raw
 $serviceRoleMatch = [regex]::Match($envContent, 'SUPABASE_SERVICE_ROLE_KEY="([^"]+)"')
@@ -77,7 +87,6 @@ for ($attempt = 1; $attempt -le 12; $attempt++) {
     $html = (Invoke-WebRequest -UseBasicParsing -Uri "https://mag-pro1.com/admin?panel=products&deploy=$cacheBust" -Headers $headers).Content
     $assetMatches = [regex]::Matches($html, '(?:src|href)="([^"]+\.js[^"]*)"')
     $legacyLiveCode = $false
-    $authorizedProductCode = $false
     foreach ($match in $assetMatches) {
         $assetPath = $match.Groups[1].Value
         $assetUrl = if ($assetPath.StartsWith("/")) { "https://mag-pro1.com$assetPath" } else { $assetPath }
@@ -91,23 +100,30 @@ for ($attempt = 1; $attempt -le 12; $attempt++) {
         ) {
             $legacyLiveCode = $true
         }
-        if ($asset.Contains('server-authorized-v2')) {
-            $authorizedProductCode = $true
-        }
     }
-    # النجاح لا يعني فقط غياب نص قديم معروف؛ يجب أن تكون حزمة المنتجات الجديدة
-    # نفسها هي المرتبطة بالصفحة الحية. هذا يمنع اعتبار نشر ناقص/قديم ناجحًا.
-    if (-not $legacyLiveCode -and $authorizedProductCode) {
+
+    $liveBuild = $null
+    try {
+        $buildResponse = Invoke-RestMethod -Uri "https://mag-pro1.com/api/public/build-version?deploy=$cacheBust" -Headers $headers
+        $liveBuild = $buildResponse.build
+    } catch {
+        Write-Warning "Could not read the production build number on attempt $attempt."
+    }
+
+    # قسم المنتجات حُذف، لذلك لا نبحث عن علامته القديمة. نجاح النشر يعني أن
+    # رقم النسخة تغيّر فعلًا وأن الملفات الحية لا تحتوي مسار المنتجات القديم.
+    $newBuildIsLive = $liveBuild -and (($null -eq $previousBuild) -or ($liveBuild -ne $previousBuild))
+    if (-not $legacyLiveCode -and $newBuildIsLive) {
         $verified = $true
         break
     }
     if ($attempt -lt 12) {
-        Write-Warning "Production is not serving only the authorized product path (attempt $attempt/12). Retrying in 5 seconds..."
+        Write-Warning "Production has not switched to the new build yet (attempt $attempt/12). Retrying in 5 seconds..."
         Start-Sleep -Seconds 5
     }
 }
 if (-not $verified) {
-    throw "Fly finished, but mag-pro1.com is not serving the verified server-authorized product bundle. Production was NOT verified."
+    throw "Fly finished, but mag-pro1.com did not switch to the new verified build. Production was NOT verified."
 }
 
-Write-Host "Deploy finished and the production product bundle was verified." -ForegroundColor Green
+Write-Host "Deploy finished and mag-pro1.com is serving the new build." -ForegroundColor Green
