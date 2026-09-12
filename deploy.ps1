@@ -94,44 +94,45 @@ Assert-LastCommandSucceeded "fly status"
 
 Write-Host "Verifying the production bundle..." -ForegroundColor Cyan
 $verified = $false
-for ($attempt = 1; $attempt -le 12; $attempt++) {
+for ($attempt = 1; $attempt -le 24; $attempt++) {
     $cacheBust = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
     $headers = @{ "Cache-Control" = "no-cache, no-store, max-age=0"; "Pragma" = "no-cache" }
-    $html = (Invoke-WebRequest -UseBasicParsing -Uri "https://mag-pro1.com/admin?panel=products&deploy=$cacheBust" -Headers $headers).Content
-    $assetMatches = [regex]::Matches($html, '(?:src|href)="([^"]+\.js[^"]*)"')
-    $legacyLiveCode = $false
-    foreach ($match in $assetMatches) {
-        $assetPath = $match.Groups[1].Value
-        $assetUrl = if ($assetPath.StartsWith("/")) { "https://mag-pro1.com$assetPath" } else { $assetPath }
-        $separator = if ($assetUrl.Contains("?")) { "&" } else { "?" }
-        $asset = (Invoke-WebRequest -UseBasicParsing -Uri "$assetUrl${separator}deploy=$cacheBust" -Headers $headers).Content
-        # افحص النصوص الفعلية التي ظهرت في الحزمة القديمة بعد التصغير، بما فيها backticks.
-        if (
-            $asset.Contains('products/${Date.now()}-${e.name}') -or
-            $asset -match 'products/\$\{Date\.now\(\)\}[^`"'']*\.name' -or
-            $asset -match '\.from\([`"'']products[`"'']\)\.(insert|update|delete)'
-        ) {
-            $legacyLiveCode = $true
-        }
-    }
-
-    $liveBuild = $null
     try {
-        $buildResponse = Invoke-RestMethod -Uri "https://mag-pro1.com/api/public/build-version?deploy=$cacheBust" -Headers $headers
-        $liveBuild = $buildResponse.build
-    } catch {
-        Write-Warning "Could not read the production build number on attempt $attempt."
-    }
+        $html = (Invoke-WebRequest -UseBasicParsing -TimeoutSec 20 -Uri "https://mag-pro1.com/admin?panel=products&deploy=$cacheBust" -Headers $headers).Content
+        $assetMatches = [regex]::Matches($html, '(?:src|href)="([^"]+\.js[^"]*)"')
+        $legacyLiveCode = $false
+        foreach ($match in $assetMatches) {
+            $assetPath = $match.Groups[1].Value
+            $assetUrl = if ($assetPath.StartsWith("/")) { "https://mag-pro1.com$assetPath" } else { $assetPath }
+            $separator = if ($assetUrl.Contains("?")) { "&" } else { "?" }
+            $asset = (Invoke-WebRequest -UseBasicParsing -TimeoutSec 20 -Uri "$assetUrl${separator}deploy=$cacheBust" -Headers $headers).Content
+            # افحص النصوص الفعلية التي ظهرت في الحزمة القديمة بعد التصغير، بما فيها backticks.
+            if (
+                $asset.Contains('products/${Date.now()}-${e.name}') -or
+                $asset -match 'products/\$\{Date\.now\(\)\}[^`"'']*\.name' -or
+                $asset -match '\.from\([`"'']products[`"'']\)\.(insert|update|delete)'
+            ) {
+                $legacyLiveCode = $true
+            }
+        }
 
-    # قسم المنتجات حُذف، لذلك لا نبحث عن علامته القديمة. نجاح النشر يعني أن
-    # رقم النسخة تغيّر فعلًا وأن الملفات الحية لا تحتوي مسار المنتجات القديم.
-    $newBuildIsLive = $liveBuild -and (($null -eq $previousBuild) -or ($liveBuild -ne $previousBuild))
-    if (-not $legacyLiveCode -and $newBuildIsLive) {
-        $verified = $true
-        break
+        $buildResponse = Invoke-RestMethod -TimeoutSec 20 -Uri "https://mag-pro1.com/api/public/build-version?deploy=$cacheBust" -Headers $headers
+        $liveBuild = $buildResponse.build
+
+        # قسم المنتجات حُذف، لذلك لا نبحث عن علامته القديمة. نجاح النشر يعني أن
+        # رقم النسخة تغيّر فعلًا وأن الملفات الحية لا تحتوي مسار المنتجات القديم.
+        $newBuildIsLive = $liveBuild -and (($null -eq $previousBuild) -or ($liveBuild -ne $previousBuild))
+        if (-not $legacyLiveCode -and $newBuildIsLive) {
+            $verified = $true
+            break
+        }
+    } catch {
+        # أثناء strategy=immediate قد يرفض النطاق الاتصال لثوانٍ بينما تُستبدل
+        # الأجهزة. لا تجعل هذا الانقطاع المؤقت ينهي النشر قبل اكتماله.
+        Write-Warning "Production is temporarily unavailable while Fly switches machines (attempt $attempt/24)."
     }
-    if ($attempt -lt 12) {
-        Write-Warning "Production has not switched to the new build yet (attempt $attempt/12). Retrying in 5 seconds..."
+    if ($attempt -lt 24) {
+        Write-Warning "Production has not switched to the new build yet (attempt $attempt/24). Retrying in 5 seconds..."
         Start-Sleep -Seconds 5
     }
 }
