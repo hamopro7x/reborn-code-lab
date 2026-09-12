@@ -1,60 +1,112 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
+import { Edit, Plus, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-import { toast } from "sonner";
-import { Plus, Trash2, Edit } from "lucide-react";
-import { ensureSlug } from "@/lib/slug";
+import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/integrations/supabase/client";
 import {
-  saveProduct,
   deleteProduct,
-  prepareProductImageUpload,
   getProductImageUrl,
+  prepareProductImageUpload,
+  saveProduct,
 } from "@/lib/categories.functions";
+import { ensureSlug } from "@/lib/slug";
 
-const emptyProduct = {
-  id: null as string | null,
-  name: "",
-  slug: "",
-  short_description: "",
-  description: "",
-  category_id: null as string | null,
-  main_image: null as string | null,
-  warranty_days: 0,
-  warranty_text: "",
-  base_price_egp: 0,
-  discount_percent: 0,
-  featured: false,
-  active: true,
-  sort_order: 0,
+type ProductDraft = {
+  id?: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  short_description?: string | null;
+  category_id?: string | null;
+  main_image?: string | null;
+  gallery?: string[];
+  warranty_days?: number;
+  warranty_text?: string | null;
+  refund_text?: string | null;
+  base_price_egp?: number;
+  discount_percent?: number;
+  discount_ends_at?: string | null;
+  featured?: boolean;
+  active?: boolean;
+  sort_order?: number;
+  upsell_ids?: string[];
+  category?: { name?: string | null; icon?: string | null } | null;
 };
 
 export function ProductsTab() {
-  const qc = useQueryClient();
-  const productsQ = useQuery({
+  const queryClient = useQueryClient();
+  const prepareUpload = useServerFn(prepareProductImageUpload);
+  const getImageUrl = useServerFn(getProductImageUrl);
+  const saveProductOnServer = useServerFn(saveProduct);
+  const deleteProductOnServer = useServerFn(deleteProduct);
+  const productsQuery = useQuery({
     queryKey: ["admin-products"],
     queryFn: async () =>
-      (await supabase.from("products").select("*, category:categories(name)").order("sort_order")).data ?? [],
+      (await supabase.from("products").select("*, category:categories(name,icon)").order("sort_order")).data ?? [],
   });
-  const catsQ = useQuery({
-    queryKey: ["admin-categories"],
-    queryFn: async () => (await supabase.from("categories").select("id,name").order("sort_order")).data ?? [],
+  const categoriesQuery = useQuery({
+    queryKey: ["admin-cats"],
+    queryFn: async () => (await supabase.from("categories").select("*").order("sort_order")).data ?? [],
   });
-  const [editing, setEditing] = useState<any>(null);
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<ProductDraft | null>(null);
+
+  function newProduct() {
+    setEditing({
+      name: "",
+      slug: "",
+      description: "",
+      short_description: "",
+      base_price_egp: 0,
+      discount_percent: 0,
+      warranty_days: 30,
+      warranty_text: "",
+      refund_text: "",
+      category_id: categoriesQuery.data?.[0]?.id,
+      active: true,
+      featured: false,
+      sort_order: 0,
+    });
+    setOpen(true);
+  }
+
+  async function removeProduct(id: string) {
+    if (!confirm("حذف المنتج؟")) return;
+    try {
+      await deleteProductOnServer({ data: { id } });
+      toast.success("تم الحذف");
+      await queryClient.invalidateQueries({ queryKey: ["admin-products"] });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "فشل حذف المنتج");
+    }
+  }
 
   async function save() {
-    if (!editing.name) return toast.error("الاسم مطلوب");
+    if (!editing?.name) {
+      toast.error("الاسم مطلوب");
+      return;
+    }
+
     try {
-      await saveProduct({
+      await saveProductOnServer({
         data: {
           id: editing.id ?? null,
-          name: editing.name,
+          name: editing.name.trim(),
           slug: ensureSlug(editing.slug, editing.name),
           description: editing.description || null,
           short_description: editing.short_description || null,
@@ -67,149 +119,94 @@ export function ProductsTab() {
           base_price_egp: Number(editing.base_price_egp) || 0,
           discount_percent: Number(editing.discount_percent) || 0,
           discount_ends_at: editing.discount_ends_at || null,
-          featured: !!editing.featured,
-          active: !!editing.active,
+          featured: Boolean(editing.featured),
+          active: Boolean(editing.active),
           sort_order: Number(editing.sort_order) || 0,
           upsell_ids: Array.isArray(editing.upsell_ids) ? editing.upsell_ids : [],
         },
       });
-      toast.success("محفوظ");
+      toast.success("تم الحفظ");
       setOpen(false);
-      qc.invalidateQueries({ queryKey: ["admin-products"] });
-      qc.invalidateQueries({ queryKey: ["latest-products"] });
-    } catch (e: any) {
-      toast.error(e?.message || "فشل الحفظ");
-    }
-  }
-
-  async function del(id: string) {
-    if (!confirm("حذف المنتج؟")) return;
-    try {
-      await deleteProduct({ data: { id } });
-      qc.invalidateQueries({ queryKey: ["admin-products"] });
-    } catch (e: any) {
-      toast.error(e?.message || "فشل الحذف");
+      await queryClient.invalidateQueries({ queryKey: ["admin-products"] });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "فشل حفظ المنتج");
     }
   }
 
   async function uploadImage(file: File) {
     try {
-      const { path, token } = await prepareProductImageUpload({
-        data: { fileName: file.name, contentType: file.type || "image/png", size: file.size },
-      });
+      const contentType = file.type || "image/png";
+      const { path, token } = await prepareUpload({ data: { contentType, size: file.size } });
       const { error } = await supabase.storage
         .from("product-images")
-        .uploadToSignedUrl(path, token, file, { contentType: file.type || "image/png" });
-      if (error) throw new Error(error.message);
-      const { url } = await getProductImageUrl({ data: { path } });
-      setEditing((prev: any) => ({ ...(prev ?? {}), main_image: url }));
+        .uploadToSignedUrl(path, token, file, { contentType });
+      if (error) throw new Error(`[product-images.upload] ${error.message}`);
+      const { url } = await getImageUrl({ data: { path } });
+      setEditing((previous) => (previous ? { ...previous, main_image: url } : previous));
       toast.success("تم رفع الصورة");
-    } catch (e: any) {
-      toast.error(e?.message || "فشل رفع الصورة");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "فشل رفع الصورة");
     }
   }
 
   return (
     <div>
-      <div className="flex justify-between mb-6">
-        <h2 className="text-xl font-bold">المنتجات</h2>
-        <Button
-          onClick={() => { setEditing({ ...emptyProduct }); setOpen(true); }}
-          className="gradient-primary text-white gap-1"
-        >
-          <Plus className="size-4" />منتج جديد
-        </Button>
+      <div className="flex justify-between mb-4">
+        <h2 className="text-xl font-bold">المنتجات ({productsQuery.data?.length ?? 0})</h2>
+        <Button onClick={newProduct} className="gradient-primary text-white gap-1"><Plus className="size-4" />منتج جديد</Button>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
-        {(productsQ.data ?? []).map((p: any) => (
-          <div key={p.id} className="bg-card border border-border/60 rounded-2xl p-4 flex flex-col gap-3 hover:border-primary/50 transition-all">
-            <div className="flex items-center gap-3">
-              <div className="size-14 rounded-xl overflow-hidden bg-muted flex items-center justify-center shrink-0">
-                {p.main_image ? (
-                  <img src={p.main_image} alt={p.name} className="h-full w-full object-cover" />
-                ) : (
-                  <span className="text-lg font-black">{p.name?.trim().charAt(0)}</span>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="font-bold truncate">{p.name}</div>
-                <div className="text-xs text-muted-foreground truncate">{p.category?.name ?? "بدون قسم"}</div>
-                <div className="text-sm font-bold text-primary">{p.base_price_egp} ج.م</div>
-              </div>
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {(productsQuery.data ?? []).map((product: ProductDraft & { id: string }) => (
+          <div key={product.id} className="card-surface rounded-2xl p-4">
+            <div className="aspect-video bg-primary/10 rounded-lg overflow-hidden mb-3">
+              {product.main_image ? <img src={product.main_image} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-4xl opacity-40">{product.category?.icon ?? "🎁"}</div>}
             </div>
-            <div className="flex gap-1.5">
-              <Button size="sm" variant="outline" className="rounded-full flex-1" onClick={() => { setEditing(p); setOpen(true); }}>
-                <Edit className="size-4" />تعديل
-              </Button>
-              <Button size="sm" variant="outline" className="rounded-full text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => del(p.id)}>
-                <Trash2 className="size-4" />حذف
-              </Button>
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <div className="font-bold text-sm">{product.name}</div>
+                <div className="text-xs text-muted-foreground">{product.base_price_egp} ج.م {Number(product.discount_percent) > 0 && `- ${product.discount_percent}%`}</div>
+                {!product.active && <Badge variant="destructive" className="mt-1 text-[10px]">مخفي</Badge>}
+              </div>
+              <div className="flex gap-1">
+                <Button size="icon" variant="ghost" onClick={() => { setEditing({ ...product }); setOpen(true); }}><Edit className="size-4" /></Button>
+                <Button size="icon" variant="ghost" onClick={() => void removeProduct(product.id)}><Trash2 className="size-4 text-destructive" /></Button>
+              </div>
             </div>
           </div>
         ))}
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>منتج</DialogTitle></DialogHeader>
-          {editing && (
-            <div className="space-y-3">
-              <div><Label>الاسم</Label><Input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} /></div>
-              <div><Label>الرابط (slug)</Label><Input value={editing.slug ?? ""} onChange={(e) => setEditing({ ...editing, slug: e.target.value })} /></div>
-              <div>
-                <Label>القسم</Label>
-                <select
-                  value={editing.category_id ?? ""}
-                  onChange={(e) => setEditing({ ...editing, category_id: e.target.value || null })}
-                  className="w-full h-10 rounded-md border border-input bg-input px-3 text-sm"
-                >
-                  <option value="">— بدون قسم —</option>
-                  {(catsQ.data ?? []).map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div><Label>السعر (ج.م)</Label><Input type="number" step="any" value={editing.base_price_egp} onChange={(e) => setEditing({ ...editing, base_price_egp: Number(e.target.value) })} /></div>
-                <div><Label>الخصم %</Label><Input type="number" min={0} max={100} value={editing.discount_percent ?? 0} onChange={(e) => setEditing({ ...editing, discount_percent: Number(e.target.value) })} /></div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div><Label>أيام الضمان</Label><Input type="number" min={0} value={editing.warranty_days ?? 0} onChange={(e) => setEditing({ ...editing, warranty_days: Number(e.target.value) })} /></div>
-                <div><Label>نص الضمان (اختياري)</Label><Input value={editing.warranty_text ?? ""} onChange={(e) => setEditing({ ...editing, warranty_text: e.target.value })} /></div>
-              </div>
-              <div><Label>وصف قصير</Label><Input value={editing.short_description ?? ""} onChange={(e) => setEditing({ ...editing, short_description: e.target.value })} /></div>
-              <div><Label>الوصف الكامل</Label><Textarea rows={4} value={editing.description ?? ""} onChange={(e) => setEditing({ ...editing, description: e.target.value })} /></div>
-              <div>
-                <Label>صورة المنتج</Label>
-                {editing.main_image && (
-                  <div className="flex items-center gap-2 my-2">
-                    <img src={editing.main_image} alt="" className="size-20 rounded-lg object-cover" />
-                    <Button size="sm" variant="outline" onClick={() => setEditing({ ...editing, main_image: null })}>حذف الصورة</Button>
-                  </div>
-                )}
-                <input
-                  id="product-image-input"
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => e.target.files?.[0] && uploadImage(e.target.files[0])}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="mt-2 gap-2 w-full"
-                  onClick={() => document.getElementById("product-image-input")?.click()}
-                >
-                  <Plus className="size-4" />
-                  {editing.main_image ? "تغيير الصورة" : "تحميل صورة"}
-                </Button>
-              </div>
-              <div><Label>الترتيب</Label><Input type="number" value={editing.sort_order ?? 0} onChange={(e) => setEditing({ ...editing, sort_order: Number(e.target.value) })} /></div>
-              <div className="flex gap-6">
-                <label className="flex items-center gap-2"><Switch checked={!!editing.active} onCheckedChange={(v) => setEditing({ ...editing, active: v })} /> نشط</label>
-                <label className="flex items-center gap-2"><Switch checked={!!editing.featured} onCheckedChange={(v) => setEditing({ ...editing, featured: v })} /> مميز</label>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>{editing?.id ? "تعديل" : "منتج جديد"}</DialogTitle></DialogHeader>
+          {editing && <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>الاسم</Label><Input value={editing.name} onChange={(event) => setEditing({ ...editing, name: event.target.value, slug: editing.slug || ensureSlug(event.target.value) })} /></div>
+              <div><Label>الرابط (slug)</Label><Input value={editing.slug} onChange={(event) => setEditing({ ...editing, slug: event.target.value })} /></div>
+            </div>
+            <div><Label>وصف قصير</Label><Input value={editing.short_description ?? ""} onChange={(event) => setEditing({ ...editing, short_description: event.target.value })} /></div>
+            <div><Label>الوصف الكامل</Label><Textarea rows={4} value={editing.description ?? ""} onChange={(event) => setEditing({ ...editing, description: event.target.value })} /></div>
+            <div className="grid grid-cols-3 gap-3">
+              <div><Label>السعر (ج.م)</Label><Input type="number" value={editing.base_price_egp} onChange={(event) => setEditing({ ...editing, base_price_egp: Number(event.target.value) })} /></div>
+              <div><Label>السعر بعد الخصم (ج.م)</Label><Input type="number" value={Math.round(Number(editing.base_price_egp ?? 0) * (1 - Number(editing.discount_percent ?? 0) / 100) * 100) / 100} onChange={(event) => { const base = Number(editing.base_price_egp ?? 0); const after = Number(event.target.value); setEditing({ ...editing, discount_percent: base > 0 ? Math.max(0, Math.min(100, Math.round((1 - after / base) * 10000) / 100)) : 0 }); }} /></div>
+              <div><Label>الضمان</Label><Input value={editing.warranty_text ?? ""} placeholder="مثال: ضمان 30 يوم استبدال" onChange={(event) => setEditing({ ...editing, warranty_text: event.target.value })} /></div>
+            </div>
+            <div><Label>الاسترداد</Label><Input value={editing.refund_text ?? ""} placeholder="مثال: استرداد خلال 7 أيام" onChange={(event) => setEditing({ ...editing, refund_text: event.target.value })} /></div>
+            <div><Label>نهاية الخصم</Label><Input type="datetime-local" value={editing.discount_ends_at?.slice(0, 16) ?? ""} onChange={(event) => setEditing({ ...editing, discount_ends_at: event.target.value ? new Date(event.target.value).toISOString() : null })} /></div>
+            <div><Label>القسم</Label><select value={editing.category_id ?? ""} onChange={(event) => setEditing({ ...editing, category_id: event.target.value })} className="w-full h-10 rounded-md border border-input bg-input px-3 text-sm"><option value="">— بدون —</option>{(categoriesQuery.data ?? []).map((category: any) => <option key={category.id} value={category.id}>{category.icon} {category.name}</option>)}</select></div>
+            <div className="rounded-xl border border-border p-3">
+              <Label>صورة المنتج</Label>
+              <div className="mt-2 flex items-center gap-3">
+                {editing.main_image ? <img src={editing.main_image} alt="" className="w-24 h-24 object-cover rounded-lg border border-border" /> : <div className="w-24 h-24 rounded-lg border border-dashed border-border flex items-center justify-center text-xs text-muted-foreground">لا توجد صورة</div>}
+                <label className="cursor-pointer rounded-lg border border-border px-4 py-2 text-sm hover:bg-primary/10">رفع صورة<input type="file" accept="image/*" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadImage(file); }} /></label>
               </div>
             </div>
-          )}
-          <DialogFooter><Button onClick={save} className="gradient-primary text-white">حفظ</Button></DialogFooter>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2"><Switch checked={Boolean(editing.active)} onCheckedChange={(value) => setEditing({ ...editing, active: value })} /> نشط</label>
+              <label className="flex items-center gap-2"><Switch checked={Boolean(editing.featured)} onCheckedChange={(value) => setEditing({ ...editing, featured: value })} /> مميز</label>
+            </div>
+          </div>}
+          <DialogFooter><Button onClick={() => void save()} className="gradient-primary text-white">حفظ</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
