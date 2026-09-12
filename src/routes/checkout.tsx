@@ -369,7 +369,7 @@ function CheckoutPage() {
               </div>
             </div>
 
-            <div className="lg:col-span-1 order-first lg:order-last">
+            <div className="lg:col-span-1">
               <OrderSummary total={total} currency={currency} items={items} />
             </div>
           </div>
