@@ -102,7 +102,7 @@ export function ProductCard({ p, compact = false }: { p: any; compact?: boolean 
           {/* price row */}
           <div className="flex items-end justify-between gap-2 mt-2">
             <div className="flex flex-col gap-[5px] min-w-0">
-              <span className="text-[11.5px] text-[#6f7280]">السعر شامل الضريبة</span>
+              <span className="text-[11.5px] text-[#6f7280]">السعر</span>
               <div className="flex items-baseline gap-[5px] min-w-0 flex-wrap translate-y-[4px]">
                 <span className="text-[18px] font-black text-white leading-none">
                   {formatPrice(localized, { ...currency, symbol: "" }).trim()}
