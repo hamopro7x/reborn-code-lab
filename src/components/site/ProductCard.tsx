@@ -114,8 +114,8 @@ export function ProductCard({ p, compact = false }: { p: any; compact?: boolean 
               </div>
             </div>
             {hasDiscount && (
-              <span className="self-start text-[11.5px] font-extrabold text-[#22c55e] bg-[#22c55e]/[0.12] px-[9px] py-[5px] rounded-[7px] whitespace-nowrap">
-                وفّر {p.discount_percent}%
+              <span className="self-start text-[10.5px] font-extrabold text-[#22c55e] bg-[#22c55e]/[0.12] px-[7px] py-[4px] rounded-[7px] whitespace-nowrap">
+                وفّر {Math.round(p.discount_percent)}%
               </span>
             )}
           </div>
