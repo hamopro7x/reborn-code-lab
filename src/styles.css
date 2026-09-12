@@ -232,6 +232,11 @@
   0% { transform: translateX(0); }
   100% { transform: translateX(50%); }
 }
+/* إيقاف حركة الشريط مؤقتًا عند مرور الماوس على المنتجات (للتفاعل اليدوي) */
+.marquee-section:hover .marquee-ltr-track {
+  animation-play-state: paused;
+}
+
 
 
 

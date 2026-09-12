@@ -266,7 +266,7 @@ function Home() {
               <h2 id="products-marquee-title" className="mb-3 md:mb-4 text-base md:text-lg font-bold text-foreground">
                 المنتجات
               </h2>
-              <div className="overflow-hidden" aria-label="المنتجات">
+              <div className="marquee-section overflow-x-auto scrollbar-hide touch-pan-x [-webkit-overflow-scrolling:touch]" aria-label="المنتجات">
                 <div
                   className="marquee-ltr-track flex w-max"
                   style={{ ["--marquee-duration" as string]: `${productDuration}s` } as Record<string, string>}
