@@ -265,6 +265,7 @@ function CheckoutPage() {
                   required
                   placeholder="example@mail.com"
                   dir="ltr"
+                  className="text-right"
                 />
               </div>
             </div>
@@ -298,6 +299,7 @@ function CheckoutPage() {
                     required
                     placeholder="0000000000"
                     dir="ltr"
+                    className="text-right"
                   />
                 </div>
               </div>
