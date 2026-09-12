@@ -103,13 +103,13 @@ export function ProductCard({ p, compact = false }: { p: any; compact?: boolean 
           <div className="flex items-end justify-between gap-2 mt-2">
             <div className="flex flex-col gap-[5px] min-w-0">
               <span className="text-[11.5px] text-[#6f7280]">السعر</span>
-              <div className="flex items-baseline gap-[5px] min-w-0 flex-wrap translate-y-[4px]">
-                <span className="text-[18px] font-black text-white leading-none">
+              <div className="flex items-baseline gap-[6px] min-w-0 flex-nowrap translate-y-[4px]">
+                <span dir="ltr" className="inline-flex items-baseline gap-[4px] text-[18px] font-black text-white leading-none whitespace-nowrap">
+                  <span className="text-[12px] font-extrabold">{currency.symbol}</span>
                   {formatPrice(localized, { ...currency, symbol: "" }).trim()}
                 </span>
-                <span className="text-[12px] font-extrabold text-white">{currency.symbol}</span>
                 {hasDiscount && (
-                  <span className="text-[11px] font-medium text-[#7f879a] line-through whitespace-nowrap">{formatPrice(original, currency)}</span>
+                  <span dir="ltr" className="text-[11px] font-medium text-[#7f879a] line-through whitespace-nowrap">{formatPrice(original, currency)}</span>
                 )}
               </div>
             </div>
