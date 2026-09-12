@@ -43,22 +43,35 @@ try {
     Write-Warning "Could not read the current production build number; deployment will continue."
 }
 
-# اقرأ مفتاح الخدمة من ملف .env، وثبّت كل اتصال Fly على القاعدة الجديدة فقط
-$envContent = Get-Content .env -Raw
-$serviceRoleMatch = [regex]::Match($envContent, 'SUPABASE_SERVICE_ROLE_KEY="([^"]+)"')
-if ($serviceRoleMatch.Success) {
-    $serviceRoleKey = $serviceRoleMatch.Groups[1].Value
-    Write-Host "Setting the new database connection on Fly..." -ForegroundColor Cyan
-    fly secrets set -a m-hamo `
-      SUPABASE_URL="https://kcdsdaytrnzoiharmyxo.supabase.co" `
-      SUPABASE_PROJECT_ID="kcdsdaytrnzoiharmyxo" `
-      SUPABASE_PUBLISHABLE_KEY="sb_publishable_RTmbXinMhCr9B3oNa6dqqg_iVsKBKG6" `
-      SUPABASE_ANON_KEY="sb_publishable_RTmbXinMhCr9B3oNa6dqqg_iVsKBKG6" `
-      SUPABASE_SERVICE_ROLE_KEY="$serviceRoleKey"
-    Assert-LastCommandSucceeded "fly secrets set"
-} else {
-    throw "SUPABASE_SERVICE_ROLE_KEY was not found in .env. Deployment stopped before replacing a working release."
+# اقرأ مفتاح الخدمة من ملف .env إن وُجد. لو الملف غير موجود على هذا الجهاز،
+# نكتفي بتثبيت روابط/مفاتيح القاعدة العامة ونترك مفتاح الخدمة المحفوظ في Fly كما هو.
+$serviceRoleKey = $null
+if (Test-Path .env) {
+    $envContent = Get-Content .env -Raw
+    $serviceRoleMatch = [regex]::Match($envContent, 'SUPABASE_SERVICE_ROLE_KEY="?([^"\r\n]+)"?')
+    if ($serviceRoleMatch.Success) {
+        $serviceRoleKey = $serviceRoleMatch.Groups[1].Value
+    }
 }
+
+Write-Host "Setting the new database connection on Fly..." -ForegroundColor Cyan
+$secretArgs = @(
+    'SUPABASE_URL=https://kcdsdaytrnzoiharmyxo.supabase.co',
+    'SUPABASE_PROJECT_ID=kcdsdaytrnzoiharmyxo',
+    'SUPABASE_PUBLISHABLE_KEY=sb_publishable_RTmbXinMhCr9B3oNa6dqqg_iVsKBKG6',
+    'SUPABASE_ANON_KEY=sb_publishable_RTmbXinMhCr9B3oNa6dqqg_iVsKBKG6'
+)
+if ($serviceRoleKey) {
+    $secretArgs += "SUPABASE_SERVICE_ROLE_KEY=$serviceRoleKey"
+} else {
+    Write-Warning "No local .env service key found; keeping the SUPABASE_SERVICE_ROLE_KEY already stored on Fly."
+    $existingSecrets = fly secrets list -a m-hamo
+    if (-not ($existingSecrets -match 'SUPABASE_SERVICE_ROLE_KEY')) {
+        throw "SUPABASE_SERVICE_ROLE_KEY is missing both locally and on Fly. Deployment stopped."
+    }
+}
+fly secrets set -a m-hamo @secretArgs
+Assert-LastCommandSucceeded "fly secrets set"
 
 Write-Host "Deploying to Fly.io..." -ForegroundColor Green
 fly deploy -a m-hamo --config fly.toml --no-cache --strategy immediate `
