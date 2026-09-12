@@ -194,7 +194,6 @@
 .checkout-step-label { color: var(--checkout-soft); font-size: 10px; font-weight: 600; }
 .checkout-step-label.is-on { color: var(--checkout-text); font-weight: 700; }
 .checkout-content { padding: 20px 18px 0; }
-.checkout-notice { display: flex; flex-direction: column; gap: 3px; margin-bottom: 14px; padding: 11px 13px; border-radius: 12px; background: rgb(47 111 237 / 8%); color: var(--checkout-primary); font-size: 11px; }
 .checkout-summary { padding: 16px; border: 1px solid var(--checkout-border); border-radius: 16px; background: var(--checkout-surface); box-shadow: 0 1px 2px rgb(20 25 45 / 3%), 0 8px 20px -12px rgb(20 25 45 / 8%); }
 .checkout-summary-head { display: flex; align-items: center; gap: 12px; }
 .checkout-summary-icon { width: 42px; height: 42px; flex: none; display: flex; align-items: center; justify-content: center; border-radius: 11px; color: var(--checkout-surface); background: linear-gradient(135deg, var(--checkout-primary), #6f8bff); }
@@ -208,10 +207,6 @@
 .checkout-price-lines > .is-discount b { color: var(--checkout-success); }
 .checkout-price-lines > .is-total { margin-top: 4px; padding-top: 10px; border-top: 1px solid var(--checkout-border); color: var(--checkout-text); font-size: 13.5px; font-weight: 800; }
 .checkout-price-lines > .is-total b { font-size: 17px; font-weight: 800; }
-.checkout-trust { display: flex; gap: 8px; margin-top: 16px; }
-.checkout-trust > div { flex: 1; min-width: 0; padding: 10px 6px; display: flex; flex-direction: column; align-items: center; gap: 6px; border: 1px solid var(--checkout-border); border-radius: 12px; background: var(--checkout-surface); }
-.checkout-trust svg { width: 16px; height: 16px; color: var(--checkout-primary); }
-.checkout-trust span { color: #6d707d; font-size: 9.5px; font-weight: 600; text-align: center; }
 .checkout-section-title { margin: 26px 0 3px; color: var(--checkout-text); font-size: 15.5px; font-weight: 800; }
 .checkout-section-subtitle { margin-bottom: 16px; color: var(--checkout-muted); font-size: 11.5px; }
 .checkout-field { margin-bottom: 14px; }

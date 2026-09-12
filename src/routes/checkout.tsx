@@ -24,14 +24,12 @@ import {
   ChevronDown,
   CircleHelp,
   Copy,
-  Headphones,
   Mail,
   Phone,
   ShieldCheck,
   ShoppingBag,
   Upload,
   UserRound,
-  Zap,
 } from "lucide-react";
 
 export const Route = createFileRoute("/checkout")({
@@ -124,10 +122,6 @@ function CheckoutPage() {
   const countriesQ = useQuery({
     queryKey: ["countries"],
     queryFn: async () => (await supabase.from("countries").select("*").eq("active", true).order("sort_order")).data ?? [],
-  });
-  const bannerQ = useQuery({
-    queryKey: ["checkout-banner"],
-    queryFn: async () => (await supabase.from("site_settings").select("value").eq("key", "checkout_banner").maybeSingle()).data?.value as any,
   });
   const paymentQ = useQuery({
     queryKey: ["payments", form.country_code],
@@ -240,22 +234,9 @@ function CheckoutPage() {
         <Stepper step={step} />
 
         <div className="checkout-content">
-        {bannerQ.data?.enabled && (bannerQ.data.title || bannerQ.data.subtitle) && (
-          <div className="checkout-notice">
-            {bannerQ.data.title && <strong>{bannerQ.data.title}</strong>}
-            {bannerQ.data.subtitle && <span>{bannerQ.data.subtitle}</span>}
-          </div>
-        )}
-
         {step === "info" && (
           <form onSubmit={submitInfo}>
             <OrderSummary total={total} originalTotal={originalTotal} currency={currency} items={items} />
-
-            <div className="checkout-trust">
-              <div><ShieldCheck aria-hidden="true" /><span>دفع آمن</span></div>
-              <div><Zap aria-hidden="true" /><span>تفعيل سريع</span></div>
-              <div><Headphones aria-hidden="true" /><span>دعم متواصل</span></div>
-            </div>
 
             <h2 className="checkout-section-title">بياناتك</h2>
             <p className="checkout-section-subtitle">لتفعيل الاشتراك والتواصل معاك</p>
