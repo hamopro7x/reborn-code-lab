@@ -92,7 +92,7 @@ export function ProductCard({ p, compact = false }: { p: any; compact?: boolean 
                 >
                   <path d="M20 6L9 17l-5-5" />
                 </svg>
-                <span className="break-words">{text}</span>
+                <span className="line-clamp-2 break-words">{text}</span>
               </div>
             ))}
           </div>
