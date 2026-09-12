@@ -416,7 +416,7 @@ function CheckoutPage() {
         )}
       </main>
       <Footer />
-      <WhatsAppFab />
+      <WhatsAppFab className="bottom-6 right-6" showLabel={false} />
     </div>
   );
 }
