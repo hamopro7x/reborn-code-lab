@@ -123,10 +123,6 @@ function CheckoutPage() {
     queryKey: ["countries"],
     queryFn: async () => (await supabase.from("countries").select("*").eq("active", true).order("sort_order")).data ?? [],
   });
-  const bannerQ = useQuery({
-    queryKey: ["checkout-banner"],
-    queryFn: async () => (await supabase.from("site_settings").select("value").eq("key", "checkout_banner").maybeSingle()).data?.value as any,
-  });
   const paymentQ = useQuery({
     queryKey: ["payments", form.country_code],
     queryFn: async () => await listPaymentsFn({ data: { country_code: form.country_code } }),
