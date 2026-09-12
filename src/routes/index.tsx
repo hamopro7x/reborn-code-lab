@@ -162,7 +162,7 @@ function Home() {
   // شريط المنتجات المتحرك: مجموعتان متطابقتان، والحركة تحدث بلا نهاية.
   const marqueeProducts = latestQ.data ?? [];
   const productCopies = Math.max(3, Math.ceil(12 / Math.max(1, marqueeProducts.length)));
-  const productDuration = Math.max(30, marqueeProducts.length * productCopies * 3);
+  const productDuration = Math.max(60, marqueeProducts.length * productCopies * 6);
 
 
 
