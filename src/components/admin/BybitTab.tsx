@@ -312,6 +312,13 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
   const [selected, setSelected] = usePersistentState<string | null>("bybit_selected_account", null);
   // القسم يفتح على المنظرة المركزية أولاً، وبعدها يفتح المستخدم باقي الحسابات.
   const [listOpen, setListOpen] = usePersistentState<boolean>("bybit_list_open", false);
+
+  // كل مرة يُفتح فيها قسم معاملات الفيزا يبدأ من المنظرة المركزية، لا من حساب محدد.
+  useEffect(() => {
+    setSelected(null);
+    setListOpen(false);
+  }, []);
+
   const [addOpen, setAddOpen] = useState(false);
   const [addError, setAddError] = useState<{ message: string; serverIp?: string | null } | null>(null);
   const [editAccount, setEditAccount] = useState<BybitAccountRow | null>(null);
