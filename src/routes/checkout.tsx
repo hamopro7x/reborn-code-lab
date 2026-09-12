@@ -17,7 +17,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Copy, CheckCircle2, Upload, ArrowLeft, Sparkles, ChevronDown } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  CheckCircle2,
+  ChevronDown,
+  CircleHelp,
+  Copy,
+  Headphones,
+  Mail,
+  Phone,
+  ShieldCheck,
+  ShoppingBag,
+  Upload,
+  UserRound,
+  Zap,
+} from "lucide-react";
 
 export const Route = createFileRoute("/checkout")({
   component: CheckoutPage,
@@ -40,41 +55,29 @@ const formSchema = z.object({
 });
 
 const STEPS = [
-  { key: "info", label: "بياناتك" },
+  { key: "cart", label: "المنتج" },
+  { key: "info", label: "البيانات" },
   { key: "payment", label: "الدفع" },
-  { key: "screenshot", label: "إثبات" },
-  { key: "done", label: "تم" },
+  { key: "screenshot", label: "التأكيد" },
 ] as const;
 
-function Stepper({ step }: { step: (typeof STEPS)[number]["key"] }) {
-  const currentIndex = STEPS.findIndex((s) => s.key === step);
+type CheckoutStep = "info" | "payment" | "screenshot" | "done";
+
+function Stepper({ step }: { step: CheckoutStep }) {
+  const displayStep = step === "done" ? "screenshot" : step;
+  const currentIndex = STEPS.findIndex((s) => s.key === displayStep);
   return (
-    <div className="flex items-start justify-between mb-6 sm:mb-8 px-1 sm:px-2">
+    <div className="checkout-steps">
       {STEPS.map((s, i) => {
-        const isActive = s.key === step;
+        const isActive = s.key === displayStep;
         const isPast = currentIndex > i;
-        const isLast = i === STEPS.length - 1;
         return (
-          <div key={s.key} className="flex items-start flex-1">
-            <div className="flex flex-col items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
-              <div
-                className={`size-8 sm:size-9 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold transition-all ${
-                  isActive
-                    ? "bg-primary text-primary-foreground shadow-[0_0_15px_rgba(91,83,240,0.4)]"
-                    : isPast
-                    ? "bg-primary/15 text-primary border border-primary/40"
-                    : "bg-card text-muted-foreground border border-border"
-                }`}
-              >
-                {i + 1}
-              </div>
-              <span className={`text-[10px] sm:text-xs font-medium ${isActive ? "text-primary" : "text-muted-foreground"}`}>
-                {s.label}
-              </span>
-            </div>
-            {!isLast && (
-              <div className={`h-px flex-1 mt-4 mx-1 sm:mx-2 ${isPast ? "bg-primary/40" : "bg-border"}`} />
-            )}
+          <div key={s.key} className="checkout-step">
+            {i > 0 && <span className={`checkout-step-line ${i <= currentIndex ? "is-done" : ""}`} />}
+            <span className={`checkout-step-circle ${isActive ? "is-active" : ""} ${isPast ? "is-done" : ""}`}>
+              {isPast ? <Check aria-hidden="true" /> : i + 1}
+            </span>
+            <span className={`checkout-step-label ${isActive || isPast ? "is-on" : ""}`}>{s.label}</span>
           </div>
         );
       })}
@@ -82,22 +85,23 @@ function Stepper({ step }: { step: (typeof STEPS)[number]["key"] }) {
   );
 }
 
-function OrderSummary({ total, currency, items }: { total: number; currency: any; items: any[] }) {
+function OrderSummary({ total, originalTotal, currency, items }: { total: number; originalTotal: number; currency: any; items: any[] }) {
+  const discount = Math.max(0, originalTotal - total);
   return (
-    <div className="card-surface rounded-2xl p-5 border border-border/60 shadow-lg">
-      <h3 className="font-bold mb-3 text-sm sm:text-base">الملخص</h3>
-      <div className="space-y-2 text-sm">
-        {items.map((i) => (
-          <div key={i.productId} className="flex justify-between gap-2 text-muted-foreground">
-            <span className="truncate">{i.name} × {i.quantity}</span>
-          </div>
-        ))}
-        <div className="border-t border-border pt-3 mt-3 flex justify-between items-center font-black text-base sm:text-lg">
-          <span>الإجمالي</span>
-          <span className="text-gradient">{formatPrice(total, currency)}</span>
+    <section className="checkout-summary" aria-label="ملخص الطلب">
+      <div className="checkout-summary-head">
+        <span className="checkout-summary-icon"><ShoppingBag aria-hidden="true" /></span>
+        <div className="min-w-0">
+          <h2>{items[0]?.name ?? "طلبك"}{items.length > 1 ? ` و${items.length - 1} منتجات أخرى` : ""}</h2>
+          <p>{items.reduce((sum, item) => sum + item.quantity, 0)} منتج · تفعيل بعد تأكيد الدفع</p>
         </div>
       </div>
-    </div>
+      <div className="checkout-price-lines">
+        <div><span>السعر الأصلي</span><b className={discount > 0 ? "is-old" : ""}>{formatPrice(originalTotal, currency)}</b></div>
+        {discount > 0 && <div className="is-discount"><span>الخصم</span><b>− {formatPrice(discount, currency)}</b></div>}
+        <div className="is-total"><span>الإجمالي</span><b>{formatPrice(total, currency)}</b></div>
+      </div>
+    </section>
   );
 }
 
@@ -110,7 +114,7 @@ function CheckoutPage() {
   const signUploadFn = useServerFn(signScreenshotUpload);
   const listPaymentsFn = useServerFn(listPublicPaymentMethods);
   const paymentDetailsFn = useServerFn(getPublicPaymentDetails);
-  const [step, setStep] = useState<(typeof STEPS)[number]["key"]>("info");
+  const [step, setStep] = useState<CheckoutStep>("info");
   const [form, setForm] = useState({ full_name: "", email: "", phone: "", country_code: "EG" });
   const [selectedPayment, setSelectedPayment] = useState<any>(null);
   const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
@@ -138,6 +142,10 @@ function CheckoutPage() {
 
   const rate = rates[currency.code] ?? 1;
   const total = useMemo(() => convertFromEgp(totalEgp, rate, currency.code), [totalEgp, rate, currency.code]);
+  const originalTotal = useMemo(
+    () => convertFromEgp(items.reduce((sum, item) => sum + item.basePriceEgp * item.quantity, 0), rate, currency.code),
+    [items, rate, currency.code],
+  );
 
   function onCountryChange(code: string) {
     setForm({ ...form, country_code: code });
@@ -217,206 +225,206 @@ function CheckoutPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <main className="flex-1 container mx-auto px-4 py-6 sm:py-8 max-w-4xl pb-24 sm:pb-28">
+    <div className="checkout-v4 min-h-screen" dir="rtl">
+      <main className="checkout-shell">
+        <header className="checkout-appbar">
+          <Button variant="ghost" size="icon" onClick={() => history.back()} aria-label="رجوع" className="checkout-back">
+            <ArrowLeft aria-hidden="true" />
+          </Button>
+          <h1>إتمام الطلب</h1>
+          <a href="https://wa.me/201120373986" target="_blank" rel="noreferrer" className="checkout-help">
+            مساعدة <CircleHelp aria-hidden="true" />
+          </a>
+        </header>
+
+        <Stepper step={step} />
+
+        <div className="checkout-content">
         {bannerQ.data?.enabled && (bannerQ.data.title || bannerQ.data.subtitle) && (
-          <div className="mb-5 sm:mb-6 relative overflow-hidden rounded-2xl gradient-primary p-4 sm:p-6 text-primary-foreground shadow-lg animate-slide-up">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.15),transparent_60%)]" />
-            <div className="relative flex items-start gap-3">
-              <div className="size-9 sm:size-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0 backdrop-blur">
-                <Sparkles className="size-5" />
-              </div>
-              <div className="min-w-0">
-                {bannerQ.data.title && <div className="font-black text-base sm:text-lg md:text-xl">{bannerQ.data.title}</div>}
-                {bannerQ.data.subtitle && <div className="text-xs sm:text-sm text-primary-foreground/90 mt-1">{bannerQ.data.subtitle}</div>}
-              </div>
-            </div>
+          <div className="checkout-notice">
+            {bannerQ.data.title && <strong>{bannerQ.data.title}</strong>}
+            {bannerQ.data.subtitle && <span>{bannerQ.data.subtitle}</span>}
           </div>
         )}
 
-        <h1 className="text-2xl sm:text-3xl font-black text-foreground mb-4 sm:mb-6">إتمام الشراء</h1>
-        <Stepper step={step} />
-
         {step === "info" && (
-          <div className="grid lg:grid-cols-3 gap-4 sm:gap-6">
-            <form onSubmit={submitInfo} className="lg:col-span-2 card-surface rounded-2xl p-4 sm:p-6 space-y-4 sm:space-y-5 shadow-lg border border-border/60">
-              <h2 className="font-bold text-base sm:text-lg">بياناتك</h2>
+          <form onSubmit={submitInfo}>
+            <OrderSummary total={total} originalTotal={originalTotal} currency={currency} items={items} />
 
-              <div className="space-y-1.5">
-                <Label className="text-sm text-muted-foreground">الاسم الكامل</Label>
-                <Input
+            <div className="checkout-trust">
+              <div><ShieldCheck aria-hidden="true" /><span>دفع آمن</span></div>
+              <div><Zap aria-hidden="true" /><span>تفعيل سريع</span></div>
+              <div><Headphones aria-hidden="true" /><span>دعم متواصل</span></div>
+            </div>
+
+            <h2 className="checkout-section-title">بياناتك</h2>
+            <p className="checkout-section-subtitle">لتفعيل الاشتراك والتواصل معاك</p>
+
+            <div className="checkout-field">
+              <Label htmlFor="checkout-name">الاسم</Label>
+              <div className="checkout-field-shell">
+                <UserRound aria-hidden="true" />
+                <Input id="checkout-name"
                   value={form.full_name}
                   onChange={(e) => setForm({ ...form, full_name: e.target.value })}
                   required
-                  placeholder="ادخل اسمك الثلاثي"
-                  className="h-12 sm:h-10 rounded-xl bg-input border-input px-4 text-sm"
+                  placeholder="ادخل اسمك"
                 />
               </div>
+            </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-sm text-muted-foreground">البريد الإلكتروني</Label>
-                <Input
+            <div className="checkout-field">
+              <Label htmlFor="checkout-email">البريد الإلكتروني</Label>
+              <div className="checkout-field-shell">
+                <Mail aria-hidden="true" />
+                <Input id="checkout-email"
                   type="email"
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
                   required
                   placeholder="example@mail.com"
-                  className="h-12 sm:h-10 rounded-xl bg-input border-input px-4 text-sm text-left"
                   dir="ltr"
                 />
               </div>
+            </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-sm text-muted-foreground">الدولة</Label>
-                <div className="relative">
-                  <select
+            <div className="checkout-field">
+              <Label htmlFor="checkout-country">الدولة</Label>
+              <div className="checkout-field-shell checkout-select-shell">
+                <select id="checkout-country"
                     value={form.country_code}
                     onChange={(e) => onCountryChange(e.target.value)}
-                    className="w-full h-12 sm:h-10 appearance-none rounded-xl border border-input bg-input px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                   >
                     {(countriesQ.data ?? []).map((c: any) => (
                       <option key={c.code} value={c.code}>{c.flag} {c.name_ar} ({c.dial_code})</option>
                     ))}
                   </select>
-                  <ChevronDown className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
-                </div>
+                <ChevronDown aria-hidden="true" />
               </div>
+            </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-sm text-muted-foreground">رقم الواتساب</Label>
-                <div className="flex gap-2">
-                  <div className="h-12 sm:h-10 min-w-[5.5rem] rounded-xl border border-input bg-input flex items-center justify-center text-sm font-mono text-muted-foreground" dir="ltr">
+            <div className="checkout-field">
+              <Label htmlFor="checkout-phone">رقم الواتساب</Label>
+              <div className="checkout-phone-group">
+                <div className="checkout-field-shell checkout-code" dir="ltr">
                     {countriesQ.data?.find((c: any) => c.code === form.country_code)?.dial_code}
-                  </div>
-                  <Input
+                </div>
+                <div className="checkout-field-shell checkout-phone">
+                  <Phone aria-hidden="true" />
+                  <Input id="checkout-phone"
                     value={form.phone}
                     onChange={(e) => setForm({ ...form, phone: e.target.value })}
                     required
-                    placeholder="1017873279"
-                    className="flex-1 h-12 sm:h-10 rounded-xl bg-input border-input px-4 text-sm text-left"
+                    placeholder="0000000000"
                     dir="ltr"
                   />
                 </div>
               </div>
-
-              <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground w-full h-12 sm:h-11 rounded-xl text-sm font-bold mt-2">
-                متابعة إلى الدفع
-              </Button>
-            </form>
-
-            <div className="lg:col-span-1">
-              <OrderSummary total={total} currency={currency} items={items} />
             </div>
-          </div>
+
+            <div className="checkout-cta-footer">
+              <Button type="submit" className="checkout-cta">
+                متابعة إلى الدفع
+                <ArrowLeft aria-hidden="true" />
+              </Button>
+              <p><ShieldCheck aria-hidden="true" /> بياناتك محمية ومشفّرة بالكامل</p>
+            </div>
+          </form>
         )}
 
         {step === "payment" && (
-          <div className="grid lg:grid-cols-3 gap-4 sm:gap-6">
-            <div className="lg:col-span-2 space-y-3 sm:space-y-4">
-              <div className="card-surface rounded-2xl p-4 sm:p-6 shadow-lg border border-border/60">
-                <h2 className="font-bold text-base sm:text-lg mb-4">اختر طريقة الدفع</h2>
-                <div className="space-y-2 sm:space-y-3">
+          <div>
+              <div className="checkout-summary checkout-payment-card">
+                <h2 className="checkout-section-title">اختر طريقة الدفع</h2>
+                <div className="checkout-payment-list">
                   {(paymentQ.data ?? []).map((pm: any) => (
-                    <button
+                    <Button variant="ghost"
                       key={pm.id}
                       onClick={() => setSelectedPayment(pm)}
-                      className={`w-full text-right card-surface rounded-xl p-4 hover:bg-primary/5 transition-all border ${
-                        selectedPayment?.id === pm.id ? "border-primary ring-1 ring-primary" : "border-border/60"
-                      }`}
+                      className={`checkout-payment-option ${selectedPayment?.id === pm.id ? "is-selected" : ""}`}
                     >
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="font-bold text-sm sm:text-base truncate">{pm.name}</div>
-                          <div className="text-xs text-muted-foreground mt-0.5">{pm.type}</div>
+                      <div>
+                          <strong>{pm.name}</strong>
+                          <span>{pm.type}</span>
                         </div>
                         {selectedPayment?.id === pm.id && <CheckCircle2 className="size-6 text-primary shrink-0" />}
-                      </div>
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </div>
 
               {selectedPayment && (
-                <div className="card-surface rounded-2xl p-4 sm:p-5 border border-primary/40 shadow-lg">
-                  <div className="text-sm text-muted-foreground mb-2">حوّل المبلغ إلى:</div>
-                  <div className="font-mono text-xl sm:text-2xl font-black text-gradient mb-2 flex items-center gap-2 flex-wrap">
+                <div className="checkout-summary checkout-transfer">
+                  <p>حوّل المبلغ إلى:</p>
+                  <div className="checkout-account-number">
                     {paymentDetailsQ.data?.account_number ?? "..."}
                     {paymentDetailsQ.data?.account_number && (
-                      <button
-                        onClick={() => { navigator.clipboard.writeText(paymentDetailsQ.data!.account_number); toast.success("تم النسخ"); }}
+                      <Button variant="ghost" size="icon"
+                        onClick={() => { const accountNumber = paymentDetailsQ.data?.account_number; if (accountNumber) navigator.clipboard.writeText(accountNumber); toast.success("تم النسخ"); }}
                         aria-label="نسخ رقم الحساب"
-                        className="text-primary hover:scale-110 transition-transform"
                       >
-                        <Copy className="size-5" />
-                      </button>
+                        <Copy />
+                      </Button>
                     )}
                   </div>
-                  {paymentDetailsQ.data?.account_name && <div className="text-xs text-muted-foreground">{paymentDetailsQ.data.account_name}</div>}
-                  <div className="font-bold text-sm text-primary-foreground mt-2">بعد التحويل اكد الطلب ورفع صورة الاثبات</div>
-                  {paymentDetailsQ.data?.instructions && <div className="text-xs text-muted-foreground mt-2">{paymentDetailsQ.data.instructions}</div>}
-                  <div className="mt-3 font-black text-base sm:text-lg">المبلغ: <span className="text-gradient">{formatPrice(total, currency)}</span></div>
+                  {paymentDetailsQ.data?.account_name && <small>{paymentDetailsQ.data.account_name}</small>}
+                  <strong>بعد التحويل أكد الطلب وارفع صورة الإثبات</strong>
+                  {paymentDetailsQ.data?.instructions && <small>{paymentDetailsQ.data.instructions}</small>}
+                  <div className="checkout-transfer-total">المبلغ: <b>{formatPrice(total, currency)}</b></div>
                 </div>
               )}
 
-              <div className="flex gap-2 sm:gap-3 pt-2">
-                <Button variant="outline" onClick={() => setStep("info")} className="h-12 sm:h-11 px-4 rounded-xl">
-                  <ArrowLeft className="size-4 ml-1" />رجوع
+              <div className="checkout-actions">
+                <Button variant="outline" onClick={() => setStep("info")}>
+                  رجوع
                 </Button>
-                <Button onClick={createOrder} disabled={!selectedPayment} className="bg-primary hover:bg-primary/90 text-primary-foreground flex-1 h-12 sm:h-11 rounded-xl text-sm font-bold">
+                <Button onClick={createOrder} disabled={!selectedPayment} className="checkout-cta">
                   تأكيد الطلب ورفع صورة التحويل
                 </Button>
               </div>
-            </div>
-
-            <div className="lg:col-span-1">
-              <OrderSummary total={total} currency={currency} items={items} />
-            </div>
           </div>
         )}
 
         {step === "screenshot" && (
-          <div className="card-surface rounded-2xl p-6 sm:p-8 max-w-xl mx-auto text-center shadow-lg border border-border/60">
-            <div className="size-16 rounded-full gradient-primary mx-auto flex items-center justify-center mb-4">
-              <Upload className="size-8 text-primary-foreground" />
+          <div className="checkout-summary checkout-upload-card">
+            <div className="checkout-upload-icon">
+              <Upload />
             </div>
-            <h2 className="font-bold text-lg sm:text-xl mb-2">ارفع صورة إثبات التحويل</h2>
-            <p className="text-sm text-muted-foreground mb-6">تم إنشاء طلبك بكود: <span className="font-mono font-bold text-primary">{orderCode}</span></p>
-            <label className="block cursor-pointer">
+            <h2>ارفع صورة إثبات التحويل</h2>
+            <p>تم إنشاء طلبك بكود: <b>{orderCode}</b></p>
+            <label className="checkout-upload-zone">
               <input type="file" accept="image/*" onChange={(e) => setScreenshotFile(e.target.files?.[0] ?? null)} className="hidden" />
-              <div className="border-2 border-dashed border-primary/40 rounded-2xl p-8 hover:bg-primary/5 transition-all">
                 {screenshotFile ? (
                   <>
-                    <CheckCircle2 className="size-8 text-primary mx-auto mb-2" />
-                    <div className="font-medium text-sm">{screenshotFile.name}</div>
+                    <CheckCircle2 />
+                    <span>{screenshotFile.name}</span>
                   </>
                 ) : (
                   <>
-                    <Upload className="size-8 text-muted-foreground mx-auto mb-2" />
-                    <div className="text-sm">اضغط لاختيار الصورة</div>
+                    <Upload />
+                    <span>اضغط لاختيار الصورة</span>
                   </>
                 )}
-              </div>
             </label>
-            <Button onClick={uploadScreenshot} disabled={!screenshotFile || uploading} className="bg-primary hover:bg-primary/90 text-primary-foreground w-full mt-6 h-12 sm:h-11 rounded-xl text-sm font-bold">
+            <Button onClick={uploadScreenshot} disabled={!screenshotFile || uploading} className="checkout-cta">
               {uploading ? "جاري الرفع..." : "إرسال الطلب"}
             </Button>
           </div>
         )}
 
         {step === "done" && (
-          <div className="card-surface rounded-2xl p-8 text-center max-w-md mx-auto shadow-lg border border-border/60">
-            <CheckCircle2 className="size-16 text-primary mx-auto mb-4" />
-            <h2 className="font-bold text-xl mb-2">تم استلام طلبك</h2>
-            <p className="text-sm text-muted-foreground mb-4">سنتواصل معك قريبًا لتأكيد الطلب.</p>
-            <Link to="/">
-              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground w-full h-12 rounded-xl font-bold">العودة للرئيسية</Button>
+          <div className="checkout-summary checkout-upload-card">
+            <CheckCircle2 className="checkout-done-icon" />
+            <h2>تم استلام طلبك</h2>
+            <p>سنتواصل معك قريبًا لتأكيد الطلب.</p>
+            <Link to="/" className="block">
+              <Button className="checkout-cta">العودة للرئيسية</Button>
             </Link>
           </div>
         )}
+        </div>
       </main>
-      <Footer />
-      <WhatsAppFab className="bottom-6 right-6" showLabel={false} />
+      <WhatsAppFab className="bottom-5 right-5 left-auto" showLabel={false} />
     </div>
   );
 }
