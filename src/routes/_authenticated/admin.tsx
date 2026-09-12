@@ -38,6 +38,7 @@ import {
 import { ShieldAlert } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { ReportsTab } from "@/components/admin/ReportsTab";
+import { ProductsTab } from "@/components/admin/ProductsTab";
 import { AdminBackProvider, useAdminBack, useAdminBackTarget } from "@/components/admin/back-nav";
 import { BybitTab, ApiKeyPanel } from "@/components/admin/BybitTab";
 import { RedotPayPanel } from "@/components/admin/RedotPayPanel";
@@ -56,7 +57,7 @@ import { HandControl } from "@/components/admin/HandControl";
 
 
 type PanelKey =
-  | "overview" | "orders" | "categories" | "customers" | "employees"
+  | "overview" | "orders" | "categories" | "products" | "customers" | "employees"
   | "reviews" | "payments" | "currencies" | "timers" | "settings" | "courses" | "devices" | "reports" | "remote" | "cardtx" | "apikey" | "worksheet" | "sheet";
 
 const panelKeys: PanelKey[] = [
