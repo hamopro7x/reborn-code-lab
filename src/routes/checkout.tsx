@@ -265,6 +265,7 @@ function CheckoutPage() {
                   required
                   placeholder="example@mail.com"
                   dir="ltr"
+                  className="text-right"
                 />
               </div>
             </div>
