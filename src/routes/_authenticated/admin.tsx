@@ -186,7 +186,7 @@ function Admin() {
     {
       label: "الكتالوج",
       items: [
-        
+        { key: "products", label: "المنتجات", icon: Package, adminOnly: true },
         { key: "categories", label: "الأقسام", icon: Layers, adminOnly: true },
         { key: "timers", label: "مؤقتات العروض", icon: Clock },
       ],
@@ -321,6 +321,7 @@ function Admin() {
 
 
             
+            {panel === "products" && canView("products") && <ProductsTab />}
             {panel === "categories" && canView("categories") && <CategoriesTab />}
             {panel === "timers" && canView("timers") && <TimersTab />}
             {panel === "employees" && canView("employees") && <EmployeesTab />}
