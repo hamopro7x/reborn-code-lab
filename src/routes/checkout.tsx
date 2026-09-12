@@ -219,7 +219,7 @@ function CheckoutPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      <main className="flex-1 container mx-auto px-4 py-6 sm:py-8 max-w-4xl">
+      <main className="flex-1 container mx-auto px-4 py-6 sm:py-8 max-w-4xl pb-24 sm:pb-28">
         {bannerQ.data?.enabled && (bannerQ.data.title || bannerQ.data.subtitle) && (
           <div className="mb-5 sm:mb-6 relative overflow-hidden rounded-2xl gradient-primary p-4 sm:p-6 text-primary-foreground shadow-lg animate-slide-up">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.15),transparent_60%)]" />
