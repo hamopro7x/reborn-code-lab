@@ -16,14 +16,14 @@ export function WhatsAppFab({
       target="_blank"
       rel="noreferrer"
       className={cn(
-        "fixed bottom-6 left-6 z-40 rounded-full flex items-center justify-center gap-2 bg-[#25D366] text-white shadow-lg animate-glow-pulse hover:scale-105 transition-transform font-bold",
-        showLabel ? "h-14 pl-4 pr-5" : "size-12",
+        "fixed bottom-6 left-6 z-40 rounded-full flex items-center justify-center gap-1.5 bg-[#25D366] text-white shadow-lg animate-glow-pulse hover:scale-105 transition-transform font-bold",
+        showLabel ? "h-11 pl-3 pr-4" : "size-10",
         className
       )}
       aria-label="واتساب"
     >
-      <MessageCircle className={showLabel ? "size-6" : "size-5"} />
-      {showLabel && <span className="text-sm">واتساب</span>}
+      <MessageCircle className="size-5" />
+      {showLabel && <span className="text-xs">واتساب</span>}
     </a>
   );
 }
