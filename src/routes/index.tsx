@@ -242,7 +242,7 @@ function Home() {
             </h2>
 
             {/* ثابت — العميل يحركه يدويًا بالسحب فقط */}
-            <div className="overflow-x-auto scrollbar-hide touch-pan-x" aria-label="أقسام المتجر">
+            <div className="overflow-x-auto scrollbar-hide" aria-label="أقسام المتجر" style={{ touchAction: "pan-x pan-y" }}>
               <div className="flex w-max gap-4 pb-3 md:gap-6">
                 {categoriesQ.isLoading &&
                   Array.from({ length: 6 }).map((_, i) => (
