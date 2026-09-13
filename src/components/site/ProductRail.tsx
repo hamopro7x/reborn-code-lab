@@ -57,6 +57,7 @@ export function ProductRail({
         ref={ref}
         onScroll={sync}
         className="flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory scroll-smooth"
+        style={{ touchAction: "pan-x pan-y" }}
       >
         {children.map((child, i) => (
           <li key={i} className={`shrink-0 snap-start min-w-0 ${itemClassName}`}>
