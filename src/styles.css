@@ -210,10 +210,10 @@
 .checkout-section-title { margin: 26px 0 3px; color: var(--checkout-text); font-size: 15.5px; font-weight: 800; }
 .checkout-section-subtitle { margin-bottom: 16px; color: var(--checkout-muted); font-size: 11.5px; }
 .checkout-field { margin-bottom: 14px; }
-.checkout-field > label { display: block; margin-bottom: 7px; color: #4a4d59; font-size: 11.5px; font-weight: 700; }
-.checkout-field-shell { min-height: 45px; padding: 0 13px; display: flex; align-items: center; gap: 10px; border: 1.5px solid var(--checkout-field-border); border-radius: 12px; background: var(--checkout-surface); }
+.checkout-field > label { display: block; margin-bottom: 7px; color: var(--checkout-primary); font-size: 11.5px; font-weight: 700; }
+.checkout-field-shell { min-height: 45px; padding: 0 13px; display: flex; align-items: center; gap: 10px; border: 1.5px solid rgb(47 111 237 / 30%); border-radius: 12px; background: var(--checkout-surface); }
 .checkout-field-shell:focus-within { border-color: var(--checkout-primary); box-shadow: 0 0 0 3px rgb(47 111 237 / 9%); }
-.checkout-field-shell > svg { width: 17px; height: 17px; flex: none; color: #9a9dab; }
+.checkout-field-shell > svg { width: 17px; height: 17px; flex: none; color: var(--checkout-primary); }
 .checkout-field-shell input { height: 43px; min-width: 0; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--checkout-text); box-shadow: none; font-size: 13.5px; }
 .checkout-field-shell input:focus-visible { box-shadow: none; }
 .checkout-field-shell input::placeholder { color: var(--checkout-soft); }
