@@ -93,7 +93,7 @@ export function Footer() {
         style={{ gridTemplateColumns: `repeat(${Math.max(cfg.columns.length, 1)}, minmax(0, 1fr))` }}
       >
         {cfg.columns.map((col, i) => {
-          const compact = col.title.includes("منصات");
+          const compact = col.title.includes("منصات") || col.title.includes("تواصل");
           const isCategoriesCol = col.title.includes("أقسام") || col.title.includes("اقسام");
           // نعتمد دائمًا على ما حفظه الأدمن، ولا نستبدله بأقسام الموقع إلا لو العمود فاضي.
           const links =
