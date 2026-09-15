@@ -1,6 +1,32 @@
 // قاعدة بيانات الموقع الحقيقي على Fly، وليست قاعدة Lovable القديمة المتوقفة.
-const SUPABASE_URL = "https://kcdsdaytrnzoiharmyxo.supabase.co";
-const SUPABASE_KEY = "sb_publishable_RTmbXinMhCr9B3oNa6dqqg_iVsKBKG6";
+// هذه قيم احتياطية فقط؛ البرنامج يجلب بيانات الاتصال الحالية من الموقع عند
+// كل تشغيل حتى لا يتوقف لو تغيّرت المفاتيح.
+let SUPABASE_URL = "https://kcdsdaytrnzoiharmyxo.supabase.co";
+let SUPABASE_KEY = "sb_publishable_RTmbXinMhCr9B3oNa6dqqg_iVsKBKG6";
+
+let configLoadedAt = 0;
+async function loadRemoteConfig(force) {
+  if (!force && Date.now() - configLoadedAt < 5 * 60 * 1000) return;
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 8000);
+    const res = await fetch("https://mag-pro1.com/api/public/agent-config", {
+      cache: "no-store",
+      signal: ctrl.signal,
+    });
+    clearTimeout(t);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (typeof data?.url === "string" && data.url.startsWith("https://")) {
+      SUPABASE_URL = data.url.replace(/\/$/, "");
+    }
+    if (typeof data?.key === "string" && data.key.length > 20) {
+      SUPABASE_KEY = data.key;
+    }
+    configLoadedAt = Date.now();
+  } catch {}
+}
+
 
 const RTC_CONFIG = {
   iceServers: [
