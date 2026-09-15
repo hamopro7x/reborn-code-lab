@@ -15,8 +15,18 @@ const ROOT = path.resolve(AGENT_DIR, "..");
 const OUT_DIR = "/tmp/agent-release";
 const NOTES = process.argv[2] || "تحسينات في الاستقرار وسرعة البث.";
 
-const run = (cmd, args, opts = {}) =>
-  execFileSync(cmd, args, { stdio: "inherit", cwd: AGENT_DIR, ...opts });
+const run = (cmd, args, opts = {}) => {
+  // npm/npx are .cmd launchers on Windows, so execFileSync cannot resolve
+  // their extension reliably without going through cmd.exe.
+  if (process.platform === "win32" && (cmd === "npm" || cmd === "npx")) {
+    return execFileSync(process.env.ComSpec || "cmd.exe", ["/d", "/s", "/c", cmd, ...args], {
+      stdio: "inherit",
+      cwd: AGENT_DIR,
+      ...opts,
+    });
+  }
+  return execFileSync(cmd, args, { stdio: "inherit", cwd: AGENT_DIR, ...opts });
+};
 
 // 1) رفع رقم الإصدار (patch)
 const pkgPath = path.join(AGENT_DIR, "package.json");
