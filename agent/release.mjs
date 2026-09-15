@@ -55,9 +55,23 @@ const buf = fs.readFileSync(setupPath);
 const size = buf.byteLength;
 const sha256 = createHash("sha256").update(buf).digest("hex");
 const storagePath = `releases/${setupName}`;
-const url = process.env.SUPABASE_URL;
+// قراءة بيانات المخزن من ملف .env المحلي إن لم تكن موجودة في البيئة.
+const envFile = path.join(ROOT, ".env");
+if (fs.existsSync(envFile)) {
+  for (const line of fs.readFileSync(envFile, "utf8").split(/\r?\n/)) {
+    const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
+    if (!m) continue;
+    const val = m[2].replace(/^["']|["']$/g, "");
+    if (!process.env[m[1]]) process.env[m[1]] = val;
+  }
+}
+const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-if (!url || !key) throw new Error("مفاتيح المخزن غير متاحة");
+if (!url || !key)
+  throw new Error(
+    "مفاتيح المخزن غير متاحة: ضع SUPABASE_URL و SUPABASE_SERVICE_ROLE_KEY في ملف .env بجوار المشروع.",
+  );
+
 const headers = {
   apikey: key,
   authorization: `Bearer ${key}`,
