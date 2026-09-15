@@ -38,8 +38,39 @@ fs.writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
 console.log(`>> إصدار جديد: ${version}`);
 
 // 2) بناء التطبيق
+const restoreVersion = () => {
+  pkg.version = `${maj}.${min}.${patch}`;
+  fs.writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
+};
+
 if (!fs.existsSync(path.join(AGENT_DIR, "node_modules", "electron"))) {
-  run("npm", ["install", "--no-audit", "--no-fund"]);
+  let installed = false;
+  for (let attempt = 1; attempt <= 3 && !installed; attempt += 1) {
+    try {
+      run("npm", [
+        "install",
+        "--no-audit",
+        "--no-fund",
+        "--registry=https://registry.npmjs.org/",
+        "--fetch-retries=5",
+        "--fetch-retry-maxtimeout=120000",
+      ]);
+      installed = true;
+    } catch {
+      console.log(`>> فشل تحميل الحزم (محاولة ${attempt} من 3)، إعادة المحاولة...`);
+    }
+  }
+  if (!installed) {
+    restoreVersion();
+    console.error(
+      "\n>> تعذر تحميل حزم البرنامج من الإنترنت (خطأ شبكة npm).\n" +
+        "   جرّب الآتي ثم أعد تشغيل الأمر:\n" +
+        "   1) تأكد من اتصال الإنترنت وأوقف أي VPN أو بروكسي.\n" +
+        "   2) npm config delete proxy ; npm config delete https-proxy\n" +
+        "   3) npm cache clean --force\n",
+    );
+    process.exit(1);
+  }
 }
 fs.rmSync(OUT_DIR, { recursive: true, force: true });
 fs.mkdirSync(OUT_DIR, { recursive: true });
