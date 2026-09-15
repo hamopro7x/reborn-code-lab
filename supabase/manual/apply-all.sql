@@ -86,3 +86,8 @@ NOTIFY pgrst, 'reload schema';
 --   select count(*) from public.work_pins;
 --   select device, count(*) from public.hero_banners group by device;
 --   select policyname from pg_policies where tablename = 'products';
+
+-- ===== وصول عام آمن لطرق الدفع (بدون كشف أرقام الحسابات بالجملة) =====
+\i payment_methods_public_access.sql
+
+NOTIFY pgrst, 'reload schema';
