@@ -1,6 +1,32 @@
 // قاعدة بيانات الموقع الحقيقي على Fly، وليست قاعدة Lovable القديمة المتوقفة.
-const SUPABASE_URL = "https://kcdsdaytrnzoiharmyxo.supabase.co";
-const SUPABASE_KEY = "sb_publishable_RTmbXinMhCr9B3oNa6dqqg_iVsKBKG6";
+// هذه قيم احتياطية فقط؛ البرنامج يجلب بيانات الاتصال الحالية من الموقع عند
+// كل تشغيل حتى لا يتوقف لو تغيّرت المفاتيح.
+let SUPABASE_URL = "https://kcdsdaytrnzoiharmyxo.supabase.co";
+let SUPABASE_KEY = "sb_publishable_RTmbXinMhCr9B3oNa6dqqg_iVsKBKG6";
+
+let configLoadedAt = 0;
+async function loadRemoteConfig(force) {
+  if (!force && Date.now() - configLoadedAt < 5 * 60 * 1000) return;
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 8000);
+    const res = await fetch("https://mag-pro1.com/api/public/agent-config", {
+      cache: "no-store",
+      signal: ctrl.signal,
+    });
+    clearTimeout(t);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (typeof data?.url === "string" && data.url.startsWith("https://")) {
+      SUPABASE_URL = data.url.replace(/\/$/, "");
+    }
+    if (typeof data?.key === "string" && data.key.length > 20) {
+      SUPABASE_KEY = data.key;
+    }
+    configLoadedAt = Date.now();
+  } catch {}
+}
+
 
 const RTC_CONFIG = {
   iceServers: [
@@ -911,30 +937,48 @@ function stopSession() {
 // ============ شاشة مفتاح الربط ============
 // نستخدم fetch مباشر مع مهلة زمنية بدل supabase-js عشان الطلب ميعلّقش للأبد
 async function rpcFetch(fn, body, ms = 8000) {
-  const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), ms);
-  try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: SUPABASE_KEY,
-      },
-      body: JSON.stringify(body),
-      signal: ctrl.signal,
-      cache: "no-store",
-    });
-    const text = await res.text();
-    if (!res.ok) throw new Error(text || `HTTP ${res.status}`);
+  await loadRemoteConfig(false);
+  const call = async () => {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), ms);
     try {
-      return JSON.parse(text);
-    } catch {
-      return text;
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: SUPABASE_KEY,
+        },
+        body: JSON.stringify(body),
+        signal: ctrl.signal,
+        cache: "no-store",
+      });
+      const text = await res.text();
+      if (!res.ok) {
+        const err = new Error(text || `HTTP ${res.status}`);
+        err.status = res.status;
+        throw err;
+      }
+      try {
+        return JSON.parse(text);
+      } catch {
+        return text;
+      }
+    } finally {
+      clearTimeout(t);
     }
-  } finally {
-    clearTimeout(t);
+  };
+  try {
+    return await call();
+  } catch (e) {
+    // مفتاح مرفوض؟ نجدد بيانات الاتصال من الموقع ونحاول مرة أخرى.
+    if (e && (e.status === 401 || e.status === 403)) {
+      await loadRemoteConfig(true);
+      return await call();
+    }
+    throw e;
   }
 }
+
 
 async function requestPairing(device) {
   return rpcFetch("agent_pair_request", {
