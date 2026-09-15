@@ -217,6 +217,20 @@
 .checkout-field-shell input { height: 43px; min-width: 0; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--checkout-text); box-shadow: none; font-size: 13.5px; }
 .checkout-field-shell input:focus-visible { box-shadow: none; }
 .checkout-field-shell input::placeholder { color: var(--checkout-muted); }
+.checkout-field-shell input:autofill,
+.checkout-field-shell input:-webkit-autofill,
+.checkout-field-shell input:-webkit-autofill:hover,
+.checkout-field-shell input:-webkit-autofill:focus,
+.checkout-field-shell input:-webkit-autofill:active,
+.checkout-select-shell select:-webkit-autofill {
+  -webkit-text-fill-color: var(--checkout-text);
+  caret-color: var(--checkout-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  background-color: transparent !important;
+  box-shadow: 0 0 0 1000px var(--checkout-surface) inset;
+  transition: background-color 9999s ease-out 0s;
+}
 .checkout-select-shell { position: relative; }
 .checkout-select-shell select { width: 100%; height: 43px; appearance: none; border: 0; outline: 0; background: transparent; color: var(--checkout-text); font-size: 13.5px; font-weight: 500; }
 .checkout-select-shell > svg { position: absolute; left: 13px; pointer-events: none; }
