@@ -937,30 +937,48 @@ function stopSession() {
 // ============ شاشة مفتاح الربط ============
 // نستخدم fetch مباشر مع مهلة زمنية بدل supabase-js عشان الطلب ميعلّقش للأبد
 async function rpcFetch(fn, body, ms = 8000) {
-  const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), ms);
-  try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: SUPABASE_KEY,
-      },
-      body: JSON.stringify(body),
-      signal: ctrl.signal,
-      cache: "no-store",
-    });
-    const text = await res.text();
-    if (!res.ok) throw new Error(text || `HTTP ${res.status}`);
+  await loadRemoteConfig(false);
+  const call = async () => {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), ms);
     try {
-      return JSON.parse(text);
-    } catch {
-      return text;
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: SUPABASE_KEY,
+        },
+        body: JSON.stringify(body),
+        signal: ctrl.signal,
+        cache: "no-store",
+      });
+      const text = await res.text();
+      if (!res.ok) {
+        const err = new Error(text || `HTTP ${res.status}`);
+        err.status = res.status;
+        throw err;
+      }
+      try {
+        return JSON.parse(text);
+      } catch {
+        return text;
+      }
+    } finally {
+      clearTimeout(t);
     }
-  } finally {
-    clearTimeout(t);
+  };
+  try {
+    return await call();
+  } catch (e) {
+    // مفتاح مرفوض؟ نجدد بيانات الاتصال من الموقع ونحاول مرة أخرى.
+    if (e && (e.status === 401 || e.status === 403)) {
+      await loadRemoteConfig(true);
+      return await call();
+    }
+    throw e;
   }
 }
+
 
 async function requestPairing(device) {
   return rpcFetch("agent_pair_request", {
