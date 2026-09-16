@@ -1,6 +1,12 @@
 Unicode True
 Name "Mag Pro Connect"
-OutFile "MagProConnect-Setup.exe"
+!ifndef SETUP_OUT
+  !define SETUP_OUT "MagProConnect-Setup.exe"
+!endif
+!ifndef AGENT_SOURCE
+  !define AGENT_SOURCE "win-unpacked\*.*"
+!endif
+OutFile "${SETUP_OUT}"
 InstallDir "$LOCALAPPDATA\Programs\MagProConnect"
 RequestExecutionLevel user
 SilentInstall silent
@@ -41,7 +47,7 @@ Section "Install"
   RMDir /r "$SMPROGRAMS\Mag Pro"
 
   SetOutPath "$INSTDIR"
-  File /r "win-unpacked\*.*"
+  File /r "${AGENT_SOURCE}"
   CreateDirectory "$SMPROGRAMS\Mag Pro Connect"
   CreateShortcut "$SMPROGRAMS\Mag Pro Connect\Mag Pro Connect.lnk" "$INSTDIR\Mag Pro Connect.exe"
   CreateShortcut "$DESKTOP\Mag Pro Connect.lnk" "$INSTDIR\Mag Pro Connect.exe"

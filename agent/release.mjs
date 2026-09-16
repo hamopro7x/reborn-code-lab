@@ -115,16 +115,13 @@ try {
 // 3) بناء المُثبِّت الصامت (NSIS)
 const setupName = `MagProConnect-Setup-${version}.exe`;
 const nsiPath = path.join(AGENT_DIR, "installer.nsi");
-const generatedNsiPath = path.join(OUT_DIR, "installer.generated.nsi");
 const nsisPath = (value) => value.replaceAll("/", "\\");
-const nsi = fs
-  .readFileSync(nsiPath, "utf8")
-  .replace(/OutFile "[^"]*"/, `OutFile "${nsisPath(path.join(OUT_DIR, setupName))}"`)
-  .replace(
-    /File \/r "[^"]*"/,
-    `File /r "${nsisPath(path.join(OUT_DIR, "win-unpacked", "*.*"))}"`,
-  );
-fs.writeFileSync(generatedNsiPath, nsi);
+const setupPath = path.join(OUT_DIR, setupName);
+const unpackedGlob = path.join(OUT_DIR, "win-unpacked", "*.*");
+if (!fs.existsSync(path.join(OUT_DIR, "win-unpacked", "Mag Pro Connect.exe"))) {
+  restoreVersion();
+  throw new Error("لم يتم العثور على ملفات البرنامج المبنية داخل win-unpacked.");
+}
 
 // ويندوز لا يحتوي makensis افتراضياً، ولا يوجد nix عليه. نبحث عن النسخة
 // المثبتة، ثم في مخبأ electron-builder، وأخيراً ننزل NSIS المحمولة تلقائياً.
@@ -185,9 +182,24 @@ if (process.platform === "win32" && !makensis) makensis = await downloadNsis();
 
 try {
   if (makensis) {
-    execFileSync(makensis, [generatedNsiPath], { stdio: "inherit", cwd: AGENT_DIR });
+    execFileSync(
+      makensis,
+      [
+        `/DSETUP_OUT=${nsisPath(setupPath)}`,
+        `/DAGENT_SOURCE=${nsisPath(unpackedGlob)}`,
+        nsiPath,
+      ],
+      { stdio: "inherit", cwd: AGENT_DIR },
+    );
   } else {
-    run("nix", ["run", "nixpkgs#nsis", "--", generatedNsiPath]);
+    run("nix", [
+      "run",
+      "nixpkgs#nsis",
+      "--",
+      `/DSETUP_OUT=${setupPath}`,
+      `/DAGENT_SOURCE=${unpackedGlob}`,
+      nsiPath,
+    ]);
   }
 } catch (err) {
   restoreVersion();
@@ -199,7 +211,6 @@ try {
 
 // 4) رفع الملف لمخزن الموقع. نقسم الملفات الكبيرة لأن بعض خطط التخزين
 // ترفض رفع ملف يتجاوز 50MB، ومسار التنزيل في الموقع يدمج الأجزاء تلقائياً.
-const setupPath = path.join(OUT_DIR, setupName);
 const buf = fs.readFileSync(setupPath);
 const size = buf.byteLength;
 const sha256 = createHash("sha256").update(buf).digest("hex");
