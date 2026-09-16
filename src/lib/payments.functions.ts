@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const listSchema = z.object({
   country_code: z.string().trim().min(2).max(4).optional(),
@@ -52,4 +53,43 @@ export const getPublicPaymentDetails = createServerFn({ method: "POST" })
     const row = Array.isArray(rows) ? rows[0] : rows;
     if (!row) throw new Error("Invalid payment method");
     return row;
+  });
+
+const paymentIconSchema = z.object({
+  fileName: z.string().min(1).max(300),
+  contentType: z.string().startsWith("image/").max(120),
+  size: z.number().int().positive().max(5 * 1024 * 1024),
+});
+
+async function assertAdmin(supabase: any, userId: string) {
+  const { data, error } = await supabase.from("user_roles").select("role").eq("user_id", userId);
+  if (error || !(data ?? []).some((row: any) => row.role === "admin")) throw new Error("غير مصرح");
+}
+
+function safeImageExtension(fileName: string, contentType: string) {
+  const fromName = /\.([A-Za-z0-9]{1,8})$/.exec(fileName)?.[1]?.toLowerCase();
+  return fromName ?? contentType.split("/")[1]?.replace(/[^a-z0-9]/gi, "").toLowerCase() ?? "png";
+}
+
+export const preparePaymentIconUpload = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) => paymentIconSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const path = `payment-methods/${crypto.randomUUID()}.${safeImageExtension(data.fileName, data.contentType)}`;
+    const { data: upload, error } = await supabaseAdmin.storage.from("product-images").createSignedUploadUrl(path);
+    if (error || !upload?.token) throw new Error(error?.message ?? "فشل تجهيز رفع الصورة");
+    return { path, token: upload.token };
+  });
+
+export const getPaymentIconUrl = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) => z.object({ path: z.string().regex(/^payment-methods\/[\w.-]+$/) }).parse(data))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: signed, error } = await supabaseAdmin.storage.from("product-images").createSignedUrl(data.path, 60 * 60 * 24 * 365 * 10);
+    if (error || !signed?.signedUrl) throw new Error(error?.message ?? "فشل إنشاء رابط الصورة");
+    return { url: signed.signedUrl };
   });
