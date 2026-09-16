@@ -198,7 +198,7 @@
 .checkout-summary-head { display: flex; align-items: center; gap: 12px; }
 .checkout-summary-icon { width: 42px; height: 42px; flex: none; display: flex; align-items: center; justify-content: center; border-radius: 11px; color: var(--checkout-surface); background: linear-gradient(135deg, var(--checkout-primary), #7b74f7); }
 .checkout-summary-icon svg { width: 19px; height: 19px; }
-.checkout-summary h2 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--checkout-text); font-size: 13.5px; font-weight: 800; }
+.checkout-summary h2 { overflow: visible; white-space: normal; overflow-wrap: anywhere; color: var(--checkout-text); font-size: 13.5px; line-height: 1.55; font-weight: 800; }
 .checkout-summary-head p { margin-top: 2px; color: var(--checkout-muted); font-size: 11px; }
 .checkout-price-lines { margin-top: 14px; padding-top: 14px; display: flex; flex-direction: column; gap: 8px; border-top: 1px dashed var(--checkout-field-border); }
 .checkout-price-lines > div { display: flex; align-items: center; justify-content: space-between; color: var(--checkout-muted); font-size: 12px; }
