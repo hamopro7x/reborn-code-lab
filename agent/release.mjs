@@ -136,25 +136,30 @@ const searchDirs = [
   path.join(os.homedir(), "OneDrive", "Documents"),
 ];
 const envCandidates = new Set();
+const looksInteresting = (name) =>
+  /^\.env(\..+)?$/i.test(name) ||
+  /(secret|fly|supabase|service[-_ ]?role|key)/i.test(name) &&
+    /\.(txt|env|md|json|cfg|ini|log|csv|pdf|docx?)$/i.test(name);
 for (const dir of searchDirs) {
   for (const name of [".env", ".env.local", "fly-secrets.txt", "secrets.txt"]) {
     envCandidates.add(path.join(dir, name));
   }
   try {
-    for (const name of fs.readdirSync(dir)) {
-      if (/^fly-secrets(?:[-_ ].+)?\.txt$/i.test(name)) {
-        envCandidates.add(path.join(dir, name));
-      }
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (!entry.isFile()) continue;
+      if (looksInteresting(entry.name)) envCandidates.add(path.join(dir, entry.name));
     }
   } catch {
     // المجلد غير موجود أو غير قابل للقراءة — نكمل بباقي المواقع.
   }
 }
+const KEY_NAMES = /(SUPABASE_SERVICE_ROLE_KEY|SERVICE_ROLE_KEY|TARGET_SUPABASE_SERVICE_ROLE_KEY)/;
 for (const envFile of envCandidates) {
   let content;
   try {
-    if (!fs.existsSync(envFile) || !fs.statSync(envFile).isFile()) continue;
-    content = fs.readFileSync(envFile, "utf8");
+    const st = fs.statSync(envFile);
+    if (!st.isFile() || st.size > 4 * 1024 * 1024) continue;
+    content = fs.readFileSync(envFile, "latin1");
   } catch {
     continue;
   }
@@ -164,6 +169,16 @@ for (const envFile of envCandidates) {
     const val = m[2].replace(/^["']|["']$/g, "");
     if (!process.env[m[1]] && val) process.env[m[1]] = val;
   }
+  // بعض الملفات (PDF/Word/نسخ ولصق) لا تكون أسطراً نظيفة، فنبحث في النص كله.
+  const raw = content.replace(/\s+/g, " ");
+  const keyHit = raw.match(
+    new RegExp(`${KEY_NAMES.source}\\s*[=:]\\s*["']?([A-Za-z0-9._\\-]{40,})`),
+  );
+  if (keyHit && !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    process.env.SUPABASE_SERVICE_ROLE_KEY = keyHit[2];
+  }
+  const urlHit = raw.match(/https:\/\/[a-z0-9]{16,}\.supabase\.co/i);
+  if (urlHit && !process.env.SUPABASE_URL) process.env.SUPABASE_URL = urlHit[0];
 }
 const url = (
   process.env.SUPABASE_URL ||
@@ -177,11 +192,26 @@ const key =
   process.env.SERVICE_ROLE_KEY;
 if (!url || !key) {
   console.error(`\n>> المُثبِّت جاهز على: ${setupPath}`);
+  console.error(">> تم البحث في هذه المجلدات:");
+  for (const dir of searchDirs) console.error(`   - ${dir}`);
   throw new Error(
-    "مفتاح الرفع غير موجود على هذا الجهاز. ضع ملف باسم fly-secrets.txt أو .env على سطح المكتب\n" +
-      "أو في مجلد المشروع يحتوي السطر التالي فقط:\n" +
+    "مفتاح الرفع غير موجود على هذا الجهاز. أنشئ ملفاً باسم fly-secrets.txt على سطح المكتب\n" +
+      "يحتوي السطر التالي فقط:\n" +
       "SUPABASE_SERVICE_ROLE_KEY=<مفتاح service role>",
   );
+}
+// نحفظ المفتاح في ملف المشروع (غير مرفوع على GitHub) حتى لا يُبحث عنه مرة أخرى.
+try {
+  const localEnv = path.join(ROOT, ".env");
+  const existing = fs.existsSync(localEnv) ? fs.readFileSync(localEnv, "utf8") : "";
+  if (!/SUPABASE_SERVICE_ROLE_KEY\s*=/.test(existing)) {
+    fs.writeFileSync(
+      localEnv,
+      `${existing}${existing && !existing.endsWith("\n") ? "\n" : ""}SUPABASE_URL=${url}\nSUPABASE_SERVICE_ROLE_KEY=${key}\n`,
+    );
+  }
+} catch {
+  // لا يمنع الرفع.
 }
 
 
