@@ -43,7 +43,16 @@ const restoreVersion = () => {
   fs.writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
 };
 
-if (!fs.existsSync(path.join(AGENT_DIR, "node_modules", "electron"))) {
+const builderBin = path.join(
+  AGENT_DIR,
+  "node_modules",
+  ".bin",
+  process.platform === "win32" ? "electron-builder.cmd" : "electron-builder",
+);
+const needsInstall =
+  !fs.existsSync(path.join(AGENT_DIR, "node_modules", "electron")) || !fs.existsSync(builderBin);
+
+if (needsInstall) {
   let installed = false;
   for (let attempt = 1; attempt <= 3 && !installed; attempt += 1) {
     try {
@@ -51,11 +60,23 @@ if (!fs.existsSync(path.join(AGENT_DIR, "node_modules", "electron"))) {
         "install",
         "--no-audit",
         "--no-fund",
+        "--include=dev",
         "--registry=https://registry.npmjs.org/",
         "--fetch-retries=5",
         "--fetch-retry-maxtimeout=120000",
       ]);
-      installed = true;
+      installed = fs.existsSync(builderBin);
+      if (!installed) {
+        run("npm", [
+          "install",
+          "--no-save",
+          "--no-audit",
+          "--no-fund",
+          "electron-builder@24",
+          "--registry=https://registry.npmjs.org/",
+        ]);
+        installed = fs.existsSync(builderBin);
+      }
     } catch {
       console.log(`>> فشل تحميل الحزم (محاولة ${attempt} من 3)، إعادة المحاولة...`);
     }
@@ -74,7 +95,21 @@ if (!fs.existsSync(path.join(AGENT_DIR, "node_modules", "electron"))) {
 }
 fs.rmSync(OUT_DIR, { recursive: true, force: true });
 fs.mkdirSync(OUT_DIR, { recursive: true });
-run("npx", ["--yes", "electron-builder", "--win", "--x64"]);
+try {
+  if (process.platform === "win32") {
+    execFileSync(process.env.ComSpec || "cmd.exe", ["/d", "/s", "/c", builderBin, "--win", "--x64"], {
+      stdio: "inherit",
+      cwd: AGENT_DIR,
+    });
+  } else {
+    run(builderBin, ["--win", "--x64"]);
+  }
+} catch (err) {
+  restoreVersion();
+  console.error("\n>> فشل بناء التطبيق (electron-builder). راجع الرسائل أعلاه.\n");
+  throw err;
+}
+
 
 // 3) بناء المُثبِّت الصامت (NSIS)
 const setupName = `MagProConnect-Setup-${version}.exe`;
