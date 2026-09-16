@@ -50,8 +50,9 @@ const builderBin = path.join(
   ".bin",
   process.platform === "win32" ? "electron-builder.cmd" : "electron-builder",
 );
+const builderCli = path.join(AGENT_DIR, "node_modules", "electron-builder", "cli.js");
 const needsInstall =
-  !fs.existsSync(path.join(AGENT_DIR, "node_modules", "electron")) || !fs.existsSync(builderBin);
+  !fs.existsSync(path.join(AGENT_DIR, "node_modules", "electron")) || !fs.existsSync(builderCli);
 
 if (needsInstall) {
   let installed = false;
@@ -66,7 +67,7 @@ if (needsInstall) {
         "--fetch-retries=5",
         "--fetch-retry-maxtimeout=120000",
       ]);
-      installed = fs.existsSync(builderBin);
+      installed = fs.existsSync(builderCli);
       if (!installed) {
         run("npm", [
           "install",
@@ -76,7 +77,7 @@ if (needsInstall) {
           "electron-builder@24",
           "--registry=https://registry.npmjs.org/",
         ]);
-        installed = fs.existsSync(builderBin);
+        installed = fs.existsSync(builderCli);
       }
     } catch {
       console.log(`>> فشل تحميل الحزم (محاولة ${attempt} من 3)، إعادة المحاولة...`);
@@ -99,24 +100,11 @@ fs.mkdirSync(OUT_DIR, { recursive: true });
 const setupName = `MagProConnect-Setup-${version}.exe`;
 const setupPath = path.join(OUT_DIR, setupName);
 try {
-  if (process.platform === "win32") {
-    execFileSync(
-      process.env.ComSpec || "cmd.exe",
-      [
-        "/d",
-        "/s",
-        "/c",
-        builderBin,
-        "--win",
-        "nsis",
-        "--x64",
-        `--config.directories.output=${OUT_DIR}`,
-      ],
-      { stdio: "inherit", cwd: AGENT_DIR },
-    );
-  } else {
-    run(builderBin, ["--win", "nsis", "--x64", `--config.directories.output=${OUT_DIR}`]);
-  }
+  execFileSync(
+    process.execPath,
+    [builderCli, "--win", "nsis", "--x64", `--config.directories.output=${OUT_DIR}`],
+    { stdio: "inherit", cwd: AGENT_DIR },
+  );
 } catch (err) {
   restoreVersion();
   console.error("\n>> فشل بناء التطبيق (electron-builder). راجع الرسائل أعلاه.\n");

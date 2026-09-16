@@ -27,4 +27,5 @@
   Delete "$DESKTOP\Mag Pro.lnk"
   Delete "$DESKTOP\MAG PRO Agent.lnk"
   RMDir /r "$SMPROGRAMS\Mag Pro"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "MagProConnect" '$\"$INSTDIR\Mag Pro Connect.exe$\" --hidden'
 !macroend
