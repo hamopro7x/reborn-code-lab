@@ -114,12 +114,18 @@ export function HomeSidebar({
           <ul className="grid grid-cols-2 gap-2">
             {paymentsQ.data!.map((m: any) => {
               const Icon = payIcon(m.type);
+              const customIcon = String(m.icon ?? "").trim();
+              const customImage = /^(https?:\/\/|\/)/i.test(customIcon);
               return (
                 <li
                   key={m.id}
                   className="flex items-center gap-2 rounded-lg bg-card text-card-foreground px-2.5 py-2 min-w-0"
                 >
-                  <Icon className="size-4 shrink-0" />
+                  {customImage
+                    ? <img src={customIcon} alt="" className="size-4 shrink-0 object-contain" />
+                    : customIcon
+                      ? <span className="text-base leading-none shrink-0" aria-hidden="true">{customIcon}</span>
+                      : <Icon className="size-4 shrink-0" />}
                   <span className="text-xs truncate">{m.name}</span>
                 </li>
               );
