@@ -7,12 +7,13 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const AGENT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(AGENT_DIR, "..");
-const OUT_DIR = "/tmp/agent-release";
+const OUT_DIR = path.join(os.tmpdir(), "agent-release");
 const NOTES = process.argv[2] || "تحسينات في الاستقرار وسرعة البث.";
 
 const run = (cmd, args, opts = {}) => {
@@ -114,10 +115,16 @@ try {
 // 3) بناء المُثبِّت الصامت (NSIS)
 const setupName = `MagProConnect-Setup-${version}.exe`;
 const nsiPath = path.join(AGENT_DIR, "installer.nsi");
+const generatedNsiPath = path.join(OUT_DIR, "installer.generated.nsi");
+const nsisPath = (value) => value.replaceAll("/", "\\");
 const nsi = fs
   .readFileSync(nsiPath, "utf8")
-  .replace(/OutFile "[^"]*"/, `OutFile "${OUT_DIR}/${setupName}"`);
-fs.writeFileSync(nsiPath, nsi);
+  .replace(/OutFile "[^"]*"/, `OutFile "${nsisPath(path.join(OUT_DIR, setupName))}"`)
+  .replace(
+    /File \/r "[^"]*"/,
+    `File /r "${nsisPath(path.join(OUT_DIR, "win-unpacked", "*.*"))}"`,
+  );
+fs.writeFileSync(generatedNsiPath, nsi);
 
 // ويندوز لا يحتوي makensis افتراضياً، ولا يوجد nix عليه. نبحث عن النسخة
 // المثبتة، ثم في مخبأ electron-builder، وأخيراً ننزل NSIS المحمولة تلقائياً.
@@ -178,9 +185,9 @@ if (process.platform === "win32" && !makensis) makensis = await downloadNsis();
 
 try {
   if (makensis) {
-    execFileSync(makensis, [nsiPath], { stdio: "inherit", cwd: AGENT_DIR });
+    execFileSync(makensis, [generatedNsiPath], { stdio: "inherit", cwd: AGENT_DIR });
   } else {
-    run("nix", ["run", "nixpkgs#nsis", "--", nsiPath]);
+    run("nix", ["run", "nixpkgs#nsis", "--", generatedNsiPath]);
   }
 } catch (err) {
   restoreVersion();
