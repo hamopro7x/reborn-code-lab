@@ -25,6 +25,20 @@ if (-not $DeployLatest) {
     exit $LASTEXITCODE
 }
 
+# لا تنشر الموقع إن كانت خطوة بناء/رفع برنامج الموظف لم تكتمل. عند النجاح
+# يكتب release.mjs نفس الرقم في package.json وagent-release.ts؛ أي اختلاف
+# يعني أن ملف التثبيت الجديد لم يُرفع، وبالتالي سيظل الموظفون على النسخة القديمة.
+$agentPackage = Get-Content agent/package.json -Raw | ConvertFrom-Json
+$releaseSource = Get-Content src/lib/agent-release.ts -Raw
+$releaseVersionMatch = [regex]::Match($releaseSource, 'version:\s*"([0-9]+\.[0-9]+\.[0-9]+)"')
+if (-not $releaseVersionMatch.Success) {
+    throw "Could not read the uploaded employee-app version. Deployment stopped."
+}
+$expectedAgentVersion = $releaseVersionMatch.Groups[1].Value
+if ($agentPackage.version -ne $expectedAgentVersion) {
+    throw "Employee-app upload did not finish: package is $($agentPackage.version), but the uploaded release is $expectedAgentVersion. Run node agent/release.mjs again."
+}
+
 # امنع نشر أي نسخة أعادت مساري المنتجات القديمين بالخطأ، بدون الاعتماد على rg.
 $legacyProductCode = Get-ChildItem src/routes,src/components -Recurse -File -Include *.ts,*.tsx |
     Select-String -Pattern 'from\(["'']products["'']\)\.(insert|update|delete)','products/\$\{Date\.now\(\)\}.*\.name'
@@ -118,11 +132,13 @@ for ($attempt = 1; $attempt -le 24; $attempt++) {
 
         $buildResponse = Invoke-RestMethod -TimeoutSec 20 -Uri "https://mag-pro1.com/api/public/build-version?deploy=$cacheBust" -Headers $headers
         $liveBuild = $buildResponse.build
+        $agentResponse = Invoke-RestMethod -TimeoutSec 20 -Uri "https://mag-pro1.com/api/public/agent-version?deploy=$cacheBust" -Headers $headers
+        $liveAgentVersion = $agentResponse.version
 
         # قسم المنتجات حُذف، لذلك لا نبحث عن علامته القديمة. نجاح النشر يعني أن
         # رقم النسخة تغيّر فعلًا وأن الملفات الحية لا تحتوي مسار المنتجات القديم.
         $newBuildIsLive = $liveBuild -and (($null -eq $previousBuild) -or ($liveBuild -ne $previousBuild))
-        if (-not $legacyLiveCode -and $newBuildIsLive) {
+        if (-not $legacyLiveCode -and $newBuildIsLive -and $liveAgentVersion -eq $expectedAgentVersion) {
             $verified = $true
             break
         }
@@ -137,7 +153,7 @@ for ($attempt = 1; $attempt -le 24; $attempt++) {
     }
 }
 if (-not $verified) {
-    throw "Fly finished, but mag-pro1.com did not switch to the new verified build. Production was NOT verified."
+    throw "Fly finished, but mag-pro1.com did not expose employee-app version $expectedAgentVersion. Production was NOT verified."
 }
 
 Write-Host "Deploy finished and mag-pro1.com is serving the new build." -ForegroundColor Green
