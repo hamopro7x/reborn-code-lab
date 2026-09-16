@@ -118,10 +118,76 @@ const nsi = fs
   .readFileSync(nsiPath, "utf8")
   .replace(/OutFile "[^"]*"/, `OutFile "${OUT_DIR}/${setupName}"`);
 fs.writeFileSync(nsiPath, nsi);
+
+// ويندوز لا يحتوي makensis افتراضياً، ولا يوجد nix عليه. نبحث عن النسخة
+// المثبتة، ثم في مخبأ electron-builder، وأخيراً ننزل NSIS المحمولة تلقائياً.
+const findMakensis = () => {
+  const candidates = [
+    path.join(process.env["ProgramFiles(x86)"] || "C:\\Program Files (x86)", "NSIS", "makensis.exe"),
+    path.join(process.env.ProgramFiles || "C:\\Program Files", "NSIS", "makensis.exe"),
+  ];
+  const cacheRoot = path.join(
+    process.env.LOCALAPPDATA || path.join(process.env.USERPROFILE || "", "AppData", "Local"),
+    "electron-builder",
+    "Cache",
+    "nsis",
+  );
+  if (fs.existsSync(cacheRoot)) {
+    for (const dir of fs.readdirSync(cacheRoot)) {
+      candidates.push(path.join(cacheRoot, dir, "Bin", "makensis.exe"));
+      candidates.push(path.join(cacheRoot, dir, "makensis.exe"));
+    }
+  }
+  const portable = path.join(OUT_DIR, "nsis-portable");
+  if (fs.existsSync(portable)) {
+    for (const dir of fs.readdirSync(portable)) {
+      candidates.push(path.join(portable, dir, "makensis.exe"));
+      candidates.push(path.join(portable, dir, "Bin", "makensis.exe"));
+    }
+  }
+  return candidates.find((p) => fs.existsSync(p)) || null;
+};
+
+const downloadNsis = async () => {
+  const dest = path.join(OUT_DIR, "nsis-portable");
+  fs.mkdirSync(dest, { recursive: true });
+  const zip = path.join(dest, "nsis.zip");
+  const urls = [
+    "https://downloads.sourceforge.net/project/nsis/NSIS%203/3.10/nsis-3.10.zip",
+    "https://cytranet.dl.sourceforge.net/project/nsis/NSIS%203/3.10/nsis-3.10.zip",
+  ];
+  for (const u of urls) {
+    try {
+      console.log(">> تحميل أداة بناء المُثبِّت (NSIS)...");
+      const res = await fetch(u, { redirect: "follow" });
+      if (!res.ok) continue;
+      fs.writeFileSync(zip, Buffer.from(await res.arrayBuffer()));
+      // tar المدمج في ويندوز 10/11 يفك ملفات zip.
+      execFileSync("tar", ["-xf", zip, "-C", dest], { stdio: "inherit" });
+      fs.rmSync(zip, { force: true });
+      return findMakensis();
+    } catch {
+      /* نجرب الرابط التالي */
+    }
+  }
+  return null;
+};
+
+let makensis = process.platform === "win32" ? findMakensis() : "makensis";
+if (process.platform === "win32" && !makensis) makensis = await downloadNsis();
+
 try {
-  run("makensis", [nsiPath]);
-} catch {
-  run("nix", ["run", "nixpkgs#nsis", "--", nsiPath]);
+  if (makensis) {
+    execFileSync(makensis, [nsiPath], { stdio: "inherit", cwd: AGENT_DIR });
+  } else {
+    run("nix", ["run", "nixpkgs#nsis", "--", nsiPath]);
+  }
+} catch (err) {
+  restoreVersion();
+  console.error(
+    "\n>> فشل بناء المُثبِّت. ثبّت NSIS يدوياً من https://nsis.sourceforge.io ثم أعد الأمر.\n",
+  );
+  throw err;
 }
 
 // 4) رفع الملف لمخزن الموقع. نقسم الملفات الكبيرة لأن بعض خطط التخزين
