@@ -154,6 +154,11 @@ for (const dir of searchDirs) {
   }
 }
 const KEY_NAMES = /(SUPABASE_SERVICE_ROLE_KEY|SERVICE_ROLE_KEY|TARGET_SUPABASE_SERVICE_ROLE_KEY)/;
+// بعض الملفات (شرح/توثيق) تحتوي أسطراً مثل SUPABASE_URL=<ضع الرابط هنا> — نتجاهلها.
+const isUrlName = (n) => /^(SUPABASE_URL|TARGET_SUPABASE_URL|VITE_SUPABASE_URL)$/.test(n);
+const isKeyName = (n) => KEY_NAMES.test(n);
+const validUrl = (v) => /^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/i.test((v || "").trim());
+const validKey = (v) => /^[A-Za-z0-9._-]{40,}$/.test((v || "").trim());
 for (const envFile of envCandidates) {
   let content;
   try {
@@ -166,30 +171,41 @@ for (const envFile of envCandidates) {
   for (const line of content.split(/\r?\n/)) {
     const m = line.match(/^\s*(?:export\s+)?([A-Za-z0-9_]+)\s*=\s*(.*?)\s*$/);
     if (!m) continue;
-    const val = m[2].replace(/^["']|["']$/g, "");
-    if (!process.env[m[1]] && val) process.env[m[1]] = val;
+    const name = m[1];
+    const val = m[2].replace(/^["']|["']$/g, "").trim();
+    if (!val || process.env[name]) continue;
+    if (isUrlName(name) && !validUrl(val)) continue;
+    if (isKeyName(name) && !validKey(val)) continue;
+    process.env[name] = val;
   }
   // بعض الملفات (PDF/Word/نسخ ولصق) لا تكون أسطراً نظيفة، فنبحث في النص كله.
   const raw = content.replace(/\s+/g, " ");
   const keyHit = raw.match(
     new RegExp(`${KEY_NAMES.source}\\s*[=:]\\s*["']?([A-Za-z0-9._\\-]{40,})`),
   );
-  if (keyHit && !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  if (keyHit && !validKey(process.env.SUPABASE_SERVICE_ROLE_KEY)) {
     process.env.SUPABASE_SERVICE_ROLE_KEY = keyHit[2];
   }
   const urlHit = raw.match(/https:\/\/[a-z0-9]{16,}\.supabase\.co/i);
-  if (urlHit && !process.env.SUPABASE_URL) process.env.SUPABASE_URL = urlHit[0];
+  if (urlHit && !validUrl(process.env.SUPABASE_URL)) process.env.SUPABASE_URL = urlHit[0];
 }
-const url = (
-  process.env.SUPABASE_URL ||
-  process.env.TARGET_SUPABASE_URL ||
-  process.env.VITE_SUPABASE_URL ||
-  "https://kcdsdaytrnzoiharmyxo.supabase.co"
-).replace(/\/$/, "");
-const key =
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.TARGET_SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.SERVICE_ROLE_KEY;
+const url = [
+  process.env.SUPABASE_URL,
+  process.env.TARGET_SUPABASE_URL,
+  process.env.VITE_SUPABASE_URL,
+  "https://kcdsdaytrnzoiharmyxo.supabase.co",
+]
+  .find((v) => validUrl(v))
+  .trim()
+  .replace(/\/$/, "");
+const key = [
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
+  process.env.TARGET_SUPABASE_SERVICE_ROLE_KEY,
+  process.env.SERVICE_ROLE_KEY,
+]
+  .filter((v) => validKey(v))
+  .map((v) => v.trim())[0];
+
 if (!url || !key) {
   console.error(`\n>> المُثبِّت جاهز على: ${setupPath}`);
   console.error(">> تم البحث في هذه المجلدات:");
