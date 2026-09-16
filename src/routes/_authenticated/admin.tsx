@@ -1253,7 +1253,24 @@ function PaymentsTab() {
   const [open, setOpen] = useState(false);
 
   async function save() {
-    const op = editing.id ? supabase.from("payment_methods").update({ ...editing, id: undefined }).eq("id", editing.id) : supabase.from("payment_methods").insert(editing);
+    const values = {
+      name: String(editing.name ?? "").trim(),
+      type: String(editing.type ?? "").trim(),
+      country_code: String(editing.country_code ?? "").trim().toUpperCase() || null,
+      account_number: String(editing.account_number ?? "").trim(),
+      account_name: String(editing.account_name ?? "").trim() || null,
+      instructions: String(editing.instructions ?? "").trim() || null,
+      icon: String(editing.icon ?? "").trim() || null,
+      sort_order: Number(editing.sort_order) || 0,
+      active: Boolean(editing.active),
+    };
+    if (!values.name || !values.type || !values.account_number) {
+      toast.error("الاسم والنوع ورقم الحساب مطلوبة");
+      return;
+    }
+    const op = editing.id
+      ? supabase.from("payment_methods").update(values).eq("id", editing.id)
+      : supabase.from("payment_methods").insert(values);
     const { error } = await op;
     if (error) toast.error(error.message); else { toast.success("محفوظ"); setOpen(false); qc.invalidateQueries({ queryKey: ["admin-pm"] }); }
   }
@@ -1263,17 +1280,31 @@ function PaymentsTab() {
     <div>
       <div className="flex justify-between mb-4">
         <h2 className="text-xl font-bold">طرق الدفع</h2>
-        <Button onClick={() => { setEditing({ name: "", type: "", account_number: "", active: true, sort_order: 0 }); setOpen(true); }} className="gradient-primary text-white gap-1"><Plus className="size-4" />جديد</Button>
+        <Button onClick={() => { setEditing({ name: "", type: "", country_code: null, account_number: "", account_name: "", instructions: "", icon: "", active: true, sort_order: 0 }); setOpen(true); }} className="gradient-primary text-white gap-1"><Plus className="size-4" />جديد</Button>
       </div>
       <div className="grid md:grid-cols-2 gap-3">
         {(q.data ?? []).map((p: any) => (
           <div key={p.id} className="card-surface rounded-2xl p-4">
             <div className="flex items-start justify-between">
-              <div>
+              <div className="flex min-w-0 gap-3">
+                <div className="size-11 shrink-0 overflow-hidden rounded-lg border border-border bg-muted flex items-center justify-center">
+                  {p.icon && /^(https?:\/\/|\/)/i.test(p.icon)
+                    ? <img src={p.icon} alt={`أيقونة ${p.name}`} className="size-7 object-contain" />
+                    : p.icon
+                      ? <span className="text-xl">{p.icon}</span>
+                      : <CreditCard className="size-5 text-muted-foreground" />}
+                </div>
+                <div className="min-w-0">
                 <div className="font-bold">{p.name}</div>
                 <div className="text-xs text-muted-foreground">{p.type} {p.country_code && `· ${p.country_code}`}</div>
                 <div className="font-mono text-sm mt-1">{p.account_number}</div>
                 {p.account_name && <div className="text-xs text-muted-foreground">{p.account_name}</div>}
+                {p.instructions && <div className="text-xs text-muted-foreground mt-2 whitespace-pre-wrap break-words">{p.instructions}</div>}
+                <div className="flex items-center gap-2 mt-2 text-[11px] text-muted-foreground">
+                  <Badge variant={p.active ? "default" : "secondary"}>{p.active ? "نشط" : "متوقف"}</Badge>
+                  <span>الترتيب: {p.sort_order}</span>
+                </div>
+                </div>
               </div>
               <div className="flex gap-1">
                 <Button size="icon" variant="ghost" onClick={() => { setEditing(p); setOpen(true); }}><Edit className="size-4" /></Button>
@@ -1294,6 +1325,20 @@ function PaymentsTab() {
               <div><Label>رقم الحساب</Label><Input value={editing.account_number ?? ""} onChange={(e) => setEditing({ ...editing, account_number: e.target.value })} /></div>
               <div><Label>اسم الحساب</Label><Input value={editing.account_name ?? ""} onChange={(e) => setEditing({ ...editing, account_name: e.target.value })} /></div>
               <div><Label>تعليمات</Label><Textarea value={editing.instructions ?? ""} onChange={(e) => setEditing({ ...editing, instructions: e.target.value })} /></div>
+              <div>
+                <Label>رابط صورة الأيقونة أو رمز</Label>
+                <div className="flex items-center gap-2">
+                  <Input dir="ltr" value={editing.icon ?? ""} onChange={(e) => setEditing({ ...editing, icon: e.target.value })} placeholder="https://... أو 💳" />
+                  <div className="size-10 shrink-0 overflow-hidden rounded-lg border border-border bg-muted flex items-center justify-center">
+                    {editing.icon && /^(https?:\/\/|\/)/i.test(editing.icon)
+                      ? <img src={editing.icon} alt="معاينة الأيقونة" className="size-7 object-contain" />
+                      : editing.icon
+                        ? <span className="text-xl">{editing.icon}</span>
+                        : <CreditCard className="size-5 text-muted-foreground" />}
+                  </div>
+                </div>
+              </div>
+              <div><Label>الترتيب</Label><Input type="number" value={editing.sort_order ?? 0} onChange={(e) => setEditing({ ...editing, sort_order: Number(e.target.value) })} /></div>
               <label className="flex items-center gap-2"><Switch checked={editing.active} onCheckedChange={(v) => setEditing({ ...editing, active: v })} /> نشط</label>
             </div>
           )}
