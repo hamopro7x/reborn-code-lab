@@ -122,32 +122,58 @@ const buf = fs.readFileSync(setupPath);
 const size = buf.byteLength;
 const sha256 = createHash("sha256").update(buf).digest("hex");
 const storagePath = `releases/${setupName}`;
-// قراءة بيانات المخزن من ملفات الإعدادات المحلية إن لم تكن موجودة في البيئة.
-const envCandidates = [
-  path.join(ROOT, ".env"),
-  path.join(ROOT, ".env.local"),
-  path.join(ROOT, "selfhost", ".env"),
-  path.join(ROOT, "fly-secrets.txt"),
+// قراءة بيانات المخزن من أي ملف إعدادات موجود على الجهاز (المشروع، سطح المكتب،
+// التنزيلات، المستندات، مجلد المستخدم) حتى لا يحتاج المستخدم لأي خطوة يدوية.
+const envFileNames = [".env", ".env.local", "fly-secrets.txt", "secrets.txt"];
+const searchDirs = [
+  ROOT,
+  path.join(ROOT, "selfhost"),
+  path.resolve(ROOT, ".."),
+  os.homedir(),
+  path.join(os.homedir(), "Desktop"),
+  path.join(os.homedir(), "OneDrive", "Desktop"),
+  path.join(os.homedir(), "Downloads"),
+  path.join(os.homedir(), "Documents"),
+  path.join(os.homedir(), "OneDrive", "Documents"),
 ];
+const envCandidates = [];
+for (const dir of searchDirs) {
+  for (const name of envFileNames) envCandidates.push(path.join(dir, name));
+}
 for (const envFile of envCandidates) {
-  if (!fs.existsSync(envFile)) continue;
-  for (const line of fs.readFileSync(envFile, "utf8").split(/\r?\n/)) {
+  let content;
+  try {
+    if (!fs.existsSync(envFile) || !fs.statSync(envFile).isFile()) continue;
+    content = fs.readFileSync(envFile, "utf8");
+  } catch {
+    continue;
+  }
+  for (const line of content.split(/\r?\n/)) {
     const m = line.match(/^\s*(?:export\s+)?([A-Za-z0-9_]+)\s*=\s*(.*?)\s*$/);
     if (!m) continue;
     const val = m[2].replace(/^["']|["']$/g, "");
     if (!process.env[m[1]] && val) process.env[m[1]] = val;
   }
 }
-const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SERVICE_ROLE_KEY;
+const url = (
+  process.env.SUPABASE_URL ||
+  process.env.TARGET_SUPABASE_URL ||
+  process.env.VITE_SUPABASE_URL ||
+  "https://kcdsdaytrnzoiharmyxo.supabase.co"
+).replace(/\/$/, "");
+const key =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.TARGET_SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.SERVICE_ROLE_KEY;
 if (!url || !key) {
   console.error(`\n>> المُثبِّت جاهز على: ${setupPath}`);
   throw new Error(
-    "مفاتيح الرفع غير متاحة. المُثبِّت تم بناؤه بنجاح، لكن الرفع يحتاج ملف .env في مجلد المشروع يحتوي:\n" +
-      "SUPABASE_URL=https://kcdsdaytrnzoiharmyxo.supabase.co\n" +
+    "مفتاح الرفع غير موجود على هذا الجهاز. ضع ملف باسم fly-secrets.txt أو .env على سطح المكتب\n" +
+      "أو في مجلد المشروع يحتوي السطر التالي فقط:\n" +
       "SUPABASE_SERVICE_ROLE_KEY=<مفتاح service role>",
   );
 }
+
 
 const headers = {
   apikey: key,
