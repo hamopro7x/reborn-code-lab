@@ -24,16 +24,26 @@
     "directories": {
       "output": "/tmp/agent-release"
     },
+    "artifactName": "MagProConnect-Setup-${version}.${ext}",
     "win": {
       "target": [
         {
-          "target": "dir",
+          "target": "nsis",
           "arch": [
             "x64"
           ]
         }
       ],
       "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "runAfterFinish": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Mag Pro Connect",
+      "include": "installer-hooks.nsh"
     }
   }
 }
