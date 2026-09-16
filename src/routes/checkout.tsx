@@ -16,6 +16,9 @@ import { convertFromEgp, formatPrice } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import vodafoneIcon from "@/assets/payment-icons/vodafone.svg.asset.json";
+import binanceIcon from "@/assets/payment-icons/binance.svg.asset.json";
+import bybitIcon from "@/assets/payment-icons/bybit.png.asset.json";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -64,6 +67,23 @@ const STEPS = [
 ] as const;
 
 type CheckoutStep = "info" | "payment" | "screenshot" | "done";
+
+const PAYMENT_ICONS = [
+  { terms: ["vodafone", "فودافون"], src: vodafoneIcon.url },
+  { terms: ["binance", "بينانس"], src: binanceIcon.url },
+  { terms: ["bybit", "بايبت", "باي بيت"], src: bybitIcon.url },
+] as const;
+
+function PaymentMethodIcon({ method }: { method: any }) {
+  const searchableName = `${method?.name ?? ""} ${method?.type ?? ""}`.toLowerCase();
+  const match = PAYMENT_ICONS.find(({ terms }) => terms.some((term) => searchableName.includes(term)));
+
+  return (
+    <span className="checkout-payment-icon-shell" aria-hidden="true">
+      {match ? <img src={match.src} alt="" /> : <CreditCard className="checkout-payment-icon" />}
+    </span>
+  );
+}
 
 function Stepper({ step }: { step: CheckoutStep }) {
   const displayStep = step === "done" ? "screenshot" : step;
@@ -331,7 +351,7 @@ function CheckoutPage() {
                         className="checkout-payment-option"
                         aria-pressed={selectedPayment?.id === pm.id}
                       >
-                        <CreditCard className="checkout-payment-icon" aria-hidden="true" />
+                        <PaymentMethodIcon method={pm} />
                         <div>
                             <strong>{pm.name}</strong>
                             <span>{pm.type}</span>
