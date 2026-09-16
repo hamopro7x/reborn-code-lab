@@ -244,7 +244,7 @@
 .checkout-cta-footer { margin: 24px -20px -20px; padding: 16px 20px 20px; border-top: 1px solid var(--checkout-border); background: var(--checkout-surface); }
 .checkout-cta { width: 100%; min-height: 44px; border-radius: 8px; background: var(--checkout-primary); color: var(--checkout-on-primary); font-size: 14px; font-weight: 700; box-shadow: none; }
 .checkout-cta:hover { background: var(--checkout-primary-strong); }
-.checkout-cta-footer p { margin-top: 12px; display: flex; align-items: center; justify-content: center; gap: 6px; color: var(--checkout-muted); font-size: 10.5px; }
+.checkout-cta-footer p { margin-top: 12px; display: flex; align-items: center; justify-content: center; gap: 6px; color: var(--checkout-muted); font-size: 12px; }
 .checkout-cta-footer p svg { width: 12px; height: 12px; }
 .checkout-payment-card { margin-bottom: 16px; }
 .checkout-payment-card .checkout-section-title { margin-top: 0; }
