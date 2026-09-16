@@ -77,10 +77,18 @@ const PAYMENT_ICONS = [
 function PaymentMethodIcon({ method }: { method: any }) {
   const searchableName = `${method?.name ?? ""} ${method?.type ?? ""}`.toLowerCase();
   const match = PAYMENT_ICONS.find(({ terms }) => terms.some((term) => searchableName.includes(term)));
+  const customIcon = String(method?.icon ?? "").trim();
+  const customImage = /^(https?:\/\/|\/)/i.test(customIcon);
 
   return (
     <span className="checkout-payment-icon-shell" aria-hidden="true">
-      {match ? <img src={match.src} alt="" /> : <CreditCard className="checkout-payment-icon" />}
+      {customImage
+        ? <img src={customIcon} alt="" />
+        : customIcon
+          ? <span className="text-xl leading-none">{customIcon}</span>
+          : match
+            ? <img src={match.src} alt="" />
+            : <CreditCard className="checkout-payment-icon" />}
     </span>
   );
 }
