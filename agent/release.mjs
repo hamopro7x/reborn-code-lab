@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // نشر تلقائي كامل لبرنامج الموظف:
-// 1) رفع رقم الإصدار  2) بناء التطبيق  3) بناء المُثبِّت الصامت
+// 1) رفع رقم الإصدار  2) بناء التطبيق والمُثبِّت
 // 4) رفع الملف لمخزن الموقع  5) تحديث src/lib/agent-release.ts
 //
 // الاستخدام:  node agent/release.mjs "ملاحظات التحديث"
@@ -96,14 +96,26 @@ if (needsInstall) {
 }
 fs.rmSync(OUT_DIR, { recursive: true, force: true });
 fs.mkdirSync(OUT_DIR, { recursive: true });
+const setupName = `MagProConnect-Setup-${version}.exe`;
+const setupPath = path.join(OUT_DIR, setupName);
 try {
   if (process.platform === "win32") {
-    execFileSync(process.env.ComSpec || "cmd.exe", ["/d", "/s", "/c", builderBin, "--win", "--x64"], {
-      stdio: "inherit",
-      cwd: AGENT_DIR,
-    });
+    execFileSync(
+      process.env.ComSpec || "cmd.exe",
+      [
+        "/d",
+        "/s",
+        "/c",
+        builderBin,
+        "--win",
+        "nsis",
+        "--x64",
+        `--config.directories.output=${OUT_DIR}`,
+      ],
+      { stdio: "inherit", cwd: AGENT_DIR },
+    );
   } else {
-    run(builderBin, ["--win", "--x64"]);
+    run(builderBin, ["--win", "nsis", "--x64", `--config.directories.output=${OUT_DIR}`]);
   }
 } catch (err) {
   restoreVersion();
@@ -111,122 +123,12 @@ try {
   throw err;
 }
 
-
-// 3) بناء المُثبِّت الصامت (NSIS)
-const setupName = `MagProConnect-Setup-${version}.exe`;
-const nsiPath = path.join(AGENT_DIR, "installer.nsi");
-const nsisPath = (value) => value.replaceAll("/", "\\");
-const setupPath = path.join(OUT_DIR, setupName);
-const unpackedGlob = path.join(OUT_DIR, "win-unpacked", "*.*");
-if (!fs.existsSync(path.join(OUT_DIR, "win-unpacked", "Mag Pro Connect.exe"))) {
+if (!fs.existsSync(setupPath)) {
   restoreVersion();
-  throw new Error("لم يتم العثور على ملفات البرنامج المبنية داخل win-unpacked.");
+  throw new Error(`لم يتم إنشاء ملف التثبيت المتوقع: ${setupPath}`);
 }
 
-// ويندوز لا يحتوي makensis افتراضياً، ولا يوجد nix عليه. نبحث عن النسخة
-// المثبتة، ثم في مخبأ electron-builder، وأخيراً ننزل NSIS المحمولة تلقائياً.
-const findMakensis = () => {
-  const candidates = [
-    path.join(process.env["ProgramFiles(x86)"] || "C:\\Program Files (x86)", "NSIS", "makensis.exe"),
-    path.join(process.env.ProgramFiles || "C:\\Program Files", "NSIS", "makensis.exe"),
-  ];
-  const cacheRoot = path.join(
-    process.env.LOCALAPPDATA || path.join(process.env.USERPROFILE || "", "AppData", "Local"),
-    "electron-builder",
-    "Cache",
-    "nsis",
-  );
-  if (fs.existsSync(cacheRoot)) {
-    for (const dir of fs.readdirSync(cacheRoot)) {
-      candidates.push(path.join(cacheRoot, dir, "Bin", "makensis.exe"));
-      candidates.push(path.join(cacheRoot, dir, "makensis.exe"));
-    }
-  }
-  const portable = path.join(OUT_DIR, "nsis-portable");
-  if (fs.existsSync(portable)) {
-    for (const dir of fs.readdirSync(portable)) {
-      candidates.push(path.join(portable, dir, "makensis.exe"));
-      candidates.push(path.join(portable, dir, "Bin", "makensis.exe"));
-    }
-  }
-  return candidates.find((p) => fs.existsSync(p)) || null;
-};
-
-const extractZip = (zip, dest) => {
-  try {
-    // tar المدمج في ويندوز 10/11 يفك ملفات zip.
-    execFileSync("tar", ["-xf", zip, "-C", dest], { stdio: "inherit" });
-    return;
-  } catch {
-    /* نجرب PowerShell */
-  }
-  execFileSync(
-    "powershell",
-    ["-NoProfile", "-Command", `Expand-Archive -LiteralPath '${zip}' -DestinationPath '${dest}' -Force`],
-    { stdio: "inherit" },
-  );
-};
-
-const downloadNsis = async () => {
-  const dest = path.join(OUT_DIR, "nsis-portable");
-  fs.mkdirSync(dest, { recursive: true });
-  const zip = path.join(dest, "nsis.zip");
-  const urls = [
-    // مرايا electron-builder (سريعة وثابتة) ثم SourceForge كخطة بديلة
-    "https://github.com/electron-userland/electron-builder-binaries/releases/download/nsis-3.0.4.1/nsis-3.0.4.1.7z",
-    "https://downloads.sourceforge.net/project/nsis/NSIS%203/3.10/nsis-3.10.zip",
-    "https://cytranet.dl.sourceforge.net/project/nsis/NSIS%203/3.10/nsis-3.10.zip",
-    "https://phoenixnap.dl.sourceforge.net/project/nsis/NSIS%203/3.10/nsis-3.10.zip",
-  ];
-  for (const u of urls) {
-    if (u.endsWith(".7z")) continue; // نحتاج 7zip لفكها — نتجاهلها إن لم تتوفر
-    try {
-      console.log(`>> تحميل أداة بناء المُثبِّت (NSIS) من ${new URL(u).host} ...`);
-      const res = await fetch(u, { redirect: "follow" });
-      if (!res.ok) continue;
-      const buf = Buffer.from(await res.arrayBuffer());
-      // بعض المرايا ترجع صفحة HTML بدل الملف — نتأكد من توقيع ZIP
-      if (buf.length < 1_000_000 || buf[0] !== 0x50 || buf[1] !== 0x4b) continue;
-      fs.writeFileSync(zip, buf);
-      extractZip(zip, dest);
-      fs.rmSync(zip, { force: true });
-      const found = findMakensis();
-      if (found) return found;
-    } catch {
-      /* نجرب الرابط التالي */
-    }
-  }
-  return null;
-};
-
-let makensis = process.platform === "win32" ? findMakensis() : "makensis";
-if (process.platform === "win32" && !makensis) makensis = await downloadNsis();
-if (!makensis) {
-  restoreVersion();
-  throw new Error(
-    "تعذّر العثور على أداة بناء المُثبِّت (NSIS) أو تنزيلها. ثبّتها مرة واحدة من https://nsis.sourceforge.io/Download ثم أعد تشغيل الأمر.",
-  );
-}
-
-try {
-  execFileSync(
-    makensis,
-    [
-      `/DSETUP_OUT=${nsisPath(setupPath)}`,
-      `/DAGENT_SOURCE=${nsisPath(unpackedGlob)}`,
-      nsiPath,
-    ],
-    { stdio: "inherit", cwd: AGENT_DIR },
-  );
-} catch (err) {
-  restoreVersion();
-  console.error(
-    "\n>> فشل بناء المُثبِّت. ثبّت NSIS يدوياً من https://nsis.sourceforge.io ثم أعد الأمر.\n",
-  );
-  throw err;
-}
-
-// 4) رفع الملف لمخزن الموقع. نقسم الملفات الكبيرة لأن بعض خطط التخزين
+// 3) رفع الملف لمخزن الموقع. نقسم الملفات الكبيرة لأن بعض خطط التخزين
 // ترفض رفع ملف يتجاوز 50MB، ومسار التنزيل في الموقع يدمج الأجزاء تلقائياً.
 const buf = fs.readFileSync(setupPath);
 const size = buf.byteLength;
@@ -279,7 +181,7 @@ if (size <= CHUNK_SIZE) {
   }
 }
 
-// 5) تحديث ملف الإصدار في الموقع
+// 4) تحديث ملف الإصدار في الموقع
 const releaseFile = path.join(ROOT, "src/lib/agent-release.ts");
 fs.writeFileSync(
   releaseFile,
