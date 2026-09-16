@@ -124,7 +124,6 @@ const sha256 = createHash("sha256").update(buf).digest("hex");
 const storagePath = `releases/${setupName}`;
 // قراءة بيانات المخزن من أي ملف إعدادات موجود على الجهاز (المشروع، سطح المكتب،
 // التنزيلات، المستندات، مجلد المستخدم) حتى لا يحتاج المستخدم لأي خطوة يدوية.
-const envFileNames = [".env", ".env.local", "fly-secrets.txt", "secrets.txt"];
 const searchDirs = [
   ROOT,
   path.join(ROOT, "selfhost"),
@@ -136,9 +135,20 @@ const searchDirs = [
   path.join(os.homedir(), "Documents"),
   path.join(os.homedir(), "OneDrive", "Documents"),
 ];
-const envCandidates = [];
+const envCandidates = new Set();
 for (const dir of searchDirs) {
-  for (const name of envFileNames) envCandidates.push(path.join(dir, name));
+  for (const name of [".env", ".env.local", "fly-secrets.txt", "secrets.txt"]) {
+    envCandidates.add(path.join(dir, name));
+  }
+  try {
+    for (const name of fs.readdirSync(dir)) {
+      if (/^fly-secrets(?:[-_ ].+)?\.txt$/i.test(name)) {
+        envCandidates.add(path.join(dir, name));
+      }
+    }
+  } catch {
+    // المجلد غير موجود أو غير قابل للقراءة — نكمل بباقي المواقع.
+  }
 }
 for (const envFile of envCandidates) {
   let content;
