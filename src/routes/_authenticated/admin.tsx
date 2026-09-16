@@ -53,6 +53,7 @@ import { HeroBannerManager } from "@/components/admin/HeroBannerManager";
 import { FooterManager } from "@/components/admin/FooterManager";
 import { ensureSlug } from "@/lib/slug";
 import { HandControl } from "@/components/admin/HandControl";
+import { getPaymentIconUrl, preparePaymentIconUpload } from "@/lib/payments.functions";
 
 
 
@@ -1248,9 +1249,28 @@ function CategoriesTab() {
 // ============ PAYMENT METHODS ============
 function PaymentsTab() {
   const qc = useQueryClient();
+  const prepareIconUpload = useServerFn(preparePaymentIconUpload);
+  const getIconUrl = useServerFn(getPaymentIconUrl);
   const q = useQuery({ queryKey: ["admin-pm"], queryFn: async () => (await supabase.from("payment_methods").select("*").order("sort_order")).data ?? [] });
   const [editing, setEditing] = useState<any>(null);
   const [open, setOpen] = useState(false);
+  const [uploadingIcon, setUploadingIcon] = useState(false);
+
+  async function uploadIcon(file: File) {
+    setUploadingIcon(true);
+    try {
+      const prepared = await prepareIconUpload({ data: { fileName: file.name, contentType: file.type || "image/png", size: file.size } });
+      const { error } = await supabase.storage.from("product-images").uploadToSignedUrl(prepared.path, prepared.token, file, { contentType: file.type || "image/png" });
+      if (error) throw error;
+      const { url } = await getIconUrl({ data: { path: prepared.path } });
+      setEditing((current: any) => ({ ...current, icon: url }));
+      toast.success("تم رفع الأيقونة");
+    } catch (error: any) {
+      toast.error(error?.message ?? "فشل رفع الأيقونة");
+    } finally {
+      setUploadingIcon(false);
+    }
+  }
 
   async function save() {
     const values = {
@@ -1326,9 +1346,23 @@ function PaymentsTab() {
               <div><Label>اسم الحساب</Label><Input value={editing.account_name ?? ""} onChange={(e) => setEditing({ ...editing, account_name: e.target.value })} /></div>
               <div><Label>تعليمات</Label><Textarea value={editing.instructions ?? ""} onChange={(e) => setEditing({ ...editing, instructions: e.target.value })} /></div>
               <div>
-                <Label>رابط صورة الأيقونة أو رمز</Label>
+                <Label>صورة الأيقونة</Label>
                 <div className="flex items-center gap-2">
-                  <Input dir="ltr" value={editing.icon ?? ""} onChange={(e) => setEditing({ ...editing, icon: e.target.value })} placeholder="https://... أو 💳" />
+                  <label className="flex h-10 flex-1 cursor-pointer items-center justify-center gap-2 rounded-md border border-input bg-background px-3 text-sm hover:bg-accent">
+                    <Upload className="size-4" />
+                    {uploadingIcon ? "جاري رفع الصورة..." : editing.icon ? "تغيير صورة الأيقونة" : "اختيار صورة الأيقونة"}
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                      className="hidden"
+                      disabled={uploadingIcon}
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        if (file) void uploadIcon(file);
+                        event.currentTarget.value = "";
+                      }}
+                    />
+                  </label>
                   <div className="size-10 shrink-0 overflow-hidden rounded-lg border border-border bg-muted flex items-center justify-center">
                     {editing.icon && /^(https?:\/\/|\/)/i.test(editing.icon)
                       ? <img src={editing.icon} alt="معاينة الأيقونة" className="size-7 object-contain" />
@@ -1337,6 +1371,7 @@ function PaymentsTab() {
                         : <CreditCard className="size-5 text-muted-foreground" />}
                   </div>
                 </div>
+                {editing.icon && <Button type="button" size="sm" variant="ghost" className="mt-1 text-destructive" onClick={() => setEditing({ ...editing, icon: null })}>حذف الصورة</Button>}
               </div>
               <div><Label>الترتيب</Label><Input type="number" value={editing.sort_order ?? 0} onChange={(e) => setEditing({ ...editing, sort_order: Number(e.target.value) })} /></div>
               <label className="flex items-center gap-2"><Switch checked={editing.active} onCheckedChange={(v) => setEditing({ ...editing, active: v })} /> نشط</label>
