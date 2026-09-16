@@ -152,24 +152,46 @@ const findMakensis = () => {
   return candidates.find((p) => fs.existsSync(p)) || null;
 };
 
+const extractZip = (zip, dest) => {
+  try {
+    // tar المدمج في ويندوز 10/11 يفك ملفات zip.
+    execFileSync("tar", ["-xf", zip, "-C", dest], { stdio: "inherit" });
+    return;
+  } catch {
+    /* نجرب PowerShell */
+  }
+  execFileSync(
+    "powershell",
+    ["-NoProfile", "-Command", `Expand-Archive -LiteralPath '${zip}' -DestinationPath '${dest}' -Force`],
+    { stdio: "inherit" },
+  );
+};
+
 const downloadNsis = async () => {
   const dest = path.join(OUT_DIR, "nsis-portable");
   fs.mkdirSync(dest, { recursive: true });
   const zip = path.join(dest, "nsis.zip");
   const urls = [
+    // مرايا electron-builder (سريعة وثابتة) ثم SourceForge كخطة بديلة
+    "https://github.com/electron-userland/electron-builder-binaries/releases/download/nsis-3.0.4.1/nsis-3.0.4.1.7z",
     "https://downloads.sourceforge.net/project/nsis/NSIS%203/3.10/nsis-3.10.zip",
     "https://cytranet.dl.sourceforge.net/project/nsis/NSIS%203/3.10/nsis-3.10.zip",
+    "https://phoenixnap.dl.sourceforge.net/project/nsis/NSIS%203/3.10/nsis-3.10.zip",
   ];
   for (const u of urls) {
+    if (u.endsWith(".7z")) continue; // نحتاج 7zip لفكها — نتجاهلها إن لم تتوفر
     try {
-      console.log(">> تحميل أداة بناء المُثبِّت (NSIS)...");
+      console.log(`>> تحميل أداة بناء المُثبِّت (NSIS) من ${new URL(u).host} ...`);
       const res = await fetch(u, { redirect: "follow" });
       if (!res.ok) continue;
-      fs.writeFileSync(zip, Buffer.from(await res.arrayBuffer()));
-      // tar المدمج في ويندوز 10/11 يفك ملفات zip.
-      execFileSync("tar", ["-xf", zip, "-C", dest], { stdio: "inherit" });
+      const buf = Buffer.from(await res.arrayBuffer());
+      // بعض المرايا ترجع صفحة HTML بدل الملف — نتأكد من توقيع ZIP
+      if (buf.length < 1_000_000 || buf[0] !== 0x50 || buf[1] !== 0x4b) continue;
+      fs.writeFileSync(zip, buf);
+      extractZip(zip, dest);
       fs.rmSync(zip, { force: true });
-      return findMakensis();
+      const found = findMakensis();
+      if (found) return found;
     } catch {
       /* نجرب الرابط التالي */
     }
@@ -179,28 +201,23 @@ const downloadNsis = async () => {
 
 let makensis = process.platform === "win32" ? findMakensis() : "makensis";
 if (process.platform === "win32" && !makensis) makensis = await downloadNsis();
+if (!makensis) {
+  restoreVersion();
+  throw new Error(
+    "تعذّر العثور على أداة بناء المُثبِّت (NSIS) أو تنزيلها. ثبّتها مرة واحدة من https://nsis.sourceforge.io/Download ثم أعد تشغيل الأمر.",
+  );
+}
 
 try {
-  if (makensis) {
-    execFileSync(
-      makensis,
-      [
-        `/DSETUP_OUT=${nsisPath(setupPath)}`,
-        `/DAGENT_SOURCE=${nsisPath(unpackedGlob)}`,
-        nsiPath,
-      ],
-      { stdio: "inherit", cwd: AGENT_DIR },
-    );
-  } else {
-    run("nix", [
-      "run",
-      "nixpkgs#nsis",
-      "--",
-      `/DSETUP_OUT=${setupPath}`,
-      `/DAGENT_SOURCE=${unpackedGlob}`,
+  execFileSync(
+    makensis,
+    [
+      `/DSETUP_OUT=${nsisPath(setupPath)}`,
+      `/DAGENT_SOURCE=${nsisPath(unpackedGlob)}`,
       nsiPath,
-    ]);
-  }
+    ],
+    { stdio: "inherit", cwd: AGENT_DIR },
+  );
 } catch (err) {
   restoreVersion();
   console.error(
