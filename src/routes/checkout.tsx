@@ -24,6 +24,8 @@ import {
   ChevronDown,
   CircleHelp,
   Copy,
+  CreditCard,
+  ImageUp,
   Mail,
   Phone,
   ShieldCheck,
@@ -40,6 +42,8 @@ export const Route = createFileRoute("/checkout")({
       { name: "description", content: "أكمل بيانات طلبك واختر وسيلة الدفع المناسبة لك لاستلام اشتراكك الرقمي فورًا بعد التأكيد." },
       { property: "og:title", content: "إتمام الشراء | متجر الاشتراكات الرقمية" },
       { property: "og:description", content: "أكمل بيانات طلبك واختر وسيلة الدفع المناسبة لك لاستلام اشتراكك الرقمي فورًا بعد التأكيد." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { name: "robots", content: "noindex, nofollow" },
     ],
   }),
@@ -88,7 +92,7 @@ function OrderSummary({ total, originalTotal, currency, items }: { total: number
   return (
     <section className="checkout-summary" aria-label="ملخص الطلب">
       <div className="checkout-summary-head">
-        <span className="checkout-summary-icon"><ShoppingBag aria-hidden="true" /></span>
+        <ShoppingBag className="checkout-summary-icon" aria-hidden="true" />
         <div className="min-w-0">
           <h2>{items[0]?.name ?? "طلبك"}{items.length > 1 ? ` و${items.length - 1} منتجات أخرى` : ""}</h2>
           <p>{items.reduce((sum, item) => sum + item.quantity, 0)} منتج · تفعيل بعد تأكيد الدفع</p>
@@ -317,45 +321,51 @@ function CheckoutPage() {
 
         {step === "payment" && (
           <div>
-              <div className="checkout-summary checkout-payment-card">
-                <h2 className="checkout-section-title">اختر طريقة الدفع</h2>
+              <section className="checkout-payment-card" aria-labelledby="payment-heading">
+                <h2 id="payment-heading" className="checkout-section-title">اختر طريقة الدفع</h2>
                 <div className="checkout-payment-list">
                   {(paymentQ.data ?? []).map((pm: any) => (
-                    <Button variant="ghost"
-                      key={pm.id}
-                      onClick={() => setSelectedPayment(pm)}
-                      className={`checkout-payment-option ${selectedPayment?.id === pm.id ? "is-selected" : ""}`}
-                    >
-                      <div>
-                          <strong>{pm.name}</strong>
-                          <span>{pm.type}</span>
+                    <div key={pm.id} className={`checkout-payment-item ${selectedPayment?.id === pm.id ? "is-selected" : ""}`}>
+                      <Button variant="ghost"
+                        onClick={() => setSelectedPayment(pm)}
+                        className="checkout-payment-option"
+                        aria-pressed={selectedPayment?.id === pm.id}
+                      >
+                        <CreditCard className="checkout-payment-icon" aria-hidden="true" />
+                        <div>
+                            <strong>{pm.name}</strong>
+                            <span>{pm.type}</span>
                         </div>
-                        {selectedPayment?.id === pm.id && <CheckCircle2 className="size-6 text-primary shrink-0" />}
-                    </Button>
+                        <span className="checkout-radio" aria-hidden="true" />
+                      </Button>
+                      {selectedPayment?.id === pm.id && (
+                        <div className="checkout-transfer">
+                          <div className="checkout-pay-to-row">
+                            <div className="min-w-0">
+                              <p>حوّل إلى {pm.name}</p>
+                              <div className="checkout-account-number" dir="ltr">
+                                {paymentDetailsQ.data?.account_number ?? "..."}
+                              </div>
+                            </div>
+                            {paymentDetailsQ.data?.account_number && (
+                              <Button variant="ghost"
+                                onClick={() => { const accountNumber = paymentDetailsQ.data?.account_number; if (accountNumber) navigator.clipboard.writeText(accountNumber); toast.success("تم النسخ"); }}
+                                aria-label="نسخ رقم الحساب"
+                                className="checkout-copy"
+                              >
+                                <Copy /> نسخ
+                              </Button>
+                            )}
+                          </div>
+                          {paymentDetailsQ.data?.account_name && <small>{paymentDetailsQ.data.account_name}</small>}
+                          <p>{paymentDetailsQ.data?.instructions || "حوّل المبلغ ثم أكّد الطلب وارفع صورة التحويل في الخطوة التالية."}</p>
+                          <div className="checkout-transfer-total">المبلغ المطلوب <b>{formatPrice(total, currency)}</b></div>
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </div>
-              </div>
-
-              {selectedPayment && (
-                <div className="checkout-summary checkout-transfer">
-                  <p>حوّل المبلغ إلى:</p>
-                  <div className="checkout-account-number">
-                    {paymentDetailsQ.data?.account_number ?? "..."}
-                    {paymentDetailsQ.data?.account_number && (
-                      <Button variant="ghost" size="icon"
-                        onClick={() => { const accountNumber = paymentDetailsQ.data?.account_number; if (accountNumber) navigator.clipboard.writeText(accountNumber); toast.success("تم النسخ"); }}
-                        aria-label="نسخ رقم الحساب"
-                      >
-                        <Copy />
-                      </Button>
-                    )}
-                  </div>
-                  {paymentDetailsQ.data?.account_name && <small>{paymentDetailsQ.data.account_name}</small>}
-                  <strong>بعد التحويل أكد الطلب وارفع صورة الإثبات</strong>
-                  {paymentDetailsQ.data?.instructions && <small>{paymentDetailsQ.data.instructions}</small>}
-                  <div className="checkout-transfer-total">المبلغ: <b>{formatPrice(total, currency)}</b></div>
-                </div>
-              )}
+              </section>
 
               <div className="checkout-actions">
                 <Button variant="outline" onClick={() => setStep("info")}>
@@ -369,10 +379,8 @@ function CheckoutPage() {
         )}
 
         {step === "screenshot" && (
-          <div className="checkout-summary checkout-upload-card">
-            <div className="checkout-upload-icon">
-              <Upload />
-            </div>
+          <section className="checkout-upload-card">
+            <ImageUp className="checkout-upload-icon" aria-hidden="true" />
             <h2>ارفع صورة إثبات التحويل</h2>
             <p>تم إنشاء طلبك بكود: <b>{orderCode}</b></p>
             <label className="checkout-upload-zone">
@@ -389,10 +397,13 @@ function CheckoutPage() {
                   </>
                 )}
             </label>
-            <Button onClick={uploadScreenshot} disabled={!screenshotFile || uploading} className="checkout-cta">
-              {uploading ? "جاري الرفع..." : "إرسال الطلب"}
-            </Button>
-          </div>
+            <div className="checkout-upload-actions">
+              <Button variant="outline" onClick={() => setStep("payment")}>رجوع</Button>
+              <Button onClick={uploadScreenshot} disabled={!screenshotFile || uploading} className="checkout-cta">
+                {uploading ? "جاري الرفع..." : "إرسال الطلب"}
+              </Button>
+            </div>
+          </section>
         )}
 
         {step === "done" && (
