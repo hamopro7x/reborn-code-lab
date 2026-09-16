@@ -122,22 +122,32 @@ const buf = fs.readFileSync(setupPath);
 const size = buf.byteLength;
 const sha256 = createHash("sha256").update(buf).digest("hex");
 const storagePath = `releases/${setupName}`;
-// قراءة بيانات المخزن من ملف .env المحلي إن لم تكن موجودة في البيئة.
-const envFile = path.join(ROOT, ".env");
-if (fs.existsSync(envFile)) {
+// قراءة بيانات المخزن من ملفات الإعدادات المحلية إن لم تكن موجودة في البيئة.
+const envCandidates = [
+  path.join(ROOT, ".env"),
+  path.join(ROOT, ".env.local"),
+  path.join(ROOT, "selfhost", ".env"),
+  path.join(ROOT, "fly-secrets.txt"),
+];
+for (const envFile of envCandidates) {
+  if (!fs.existsSync(envFile)) continue;
   for (const line of fs.readFileSync(envFile, "utf8").split(/\r?\n/)) {
-    const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
+    const m = line.match(/^\s*(?:export\s+)?([A-Za-z0-9_]+)\s*=\s*(.*?)\s*$/);
     if (!m) continue;
     const val = m[2].replace(/^["']|["']$/g, "");
-    if (!process.env[m[1]]) process.env[m[1]] = val;
+    if (!process.env[m[1]] && val) process.env[m[1]] = val;
   }
 }
 const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-if (!url || !key)
+const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SERVICE_ROLE_KEY;
+if (!url || !key) {
+  console.error(`\n>> المُثبِّت جاهز على: ${setupPath}`);
   throw new Error(
-    "مفاتيح المخزن غير متاحة: ضع SUPABASE_URL و SUPABASE_SERVICE_ROLE_KEY في ملف .env بجوار المشروع.",
+    "مفاتيح الرفع غير متاحة. المُثبِّت تم بناؤه بنجاح، لكن الرفع يحتاج ملف .env في مجلد المشروع يحتوي:\n" +
+      "SUPABASE_URL=https://kcdsdaytrnzoiharmyxo.supabase.co\n" +
+      "SUPABASE_SERVICE_ROLE_KEY=<مفتاح service role>",
   );
+}
 
 const headers = {
   apikey: key,
