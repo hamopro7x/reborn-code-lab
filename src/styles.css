@@ -204,7 +204,7 @@
 .checkout-summary-icon { width: 20px; height: 20px; flex: none; color: var(--checkout-primary-strong); }
 .checkout-summary h2 { overflow: visible; white-space: normal; overflow-wrap: anywhere; color: var(--checkout-text); font-size: 14px; line-height: 1.6; font-weight: 600; }
 .checkout-summary-head p { margin-top: 2px; color: var(--checkout-muted); font-size: 12px; }
-.checkout-price-lines { margin-top: 14px; padding-top: 14px; display: flex; flex-direction: column; gap: 8px; border-top: 1px dashed var(--checkout-field-border); }
+.checkout-price-lines { margin-top: 14px; padding-top: 14px; display: flex; flex-direction: column; gap: 8px; border-top: 1px dashed var(--checkout-border); }
 .checkout-price-lines > div { display: flex; align-items: center; justify-content: space-between; color: var(--checkout-muted); font-size: 12px; }
 .checkout-price-lines b { color: var(--checkout-text); font-weight: 700; }
 .checkout-price-lines b.is-old { color: var(--checkout-soft); text-decoration: line-through; }
