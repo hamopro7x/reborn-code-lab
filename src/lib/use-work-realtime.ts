@@ -111,6 +111,11 @@ export function useWorkRealtime(opts: {
         { event: "*", schema: "public", table: "work_manual_txns" },
         () => schedule("manual"),
       )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "work_shifts" },
+        () => schedule("shifts", "txns"),
+      )
       .subscribe();
 
     return () => {
