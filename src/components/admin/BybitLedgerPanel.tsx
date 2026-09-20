@@ -299,10 +299,10 @@ export function BybitLedgerPanel() {
     queryKey: ["bybit-ledger", group, status, page],
     queryFn: () => listFn({ data: { group, status, page, pageSize } }),
     placeholderData: (prev) => prev,
-    staleTime: 5_000,
+    staleTime: 2_000,
     // التحديث اللحظي (Realtime) يحدّث السجل فور أي تغيير؛ هذا الفاصل مجرد
     // احتياطي عند انقطاع الاتصال اللحظي. كل ثانيتين كان يُثقل الصفحة.
-    refetchInterval: 15_000,
+    refetchInterval: 5_000,
     refetchIntervalInBackground: false,
   });
 
@@ -315,8 +315,8 @@ export function BybitLedgerPanel() {
   const totalsQ = useQuery({
     queryKey: ["bybit-spend-totals"],
     queryFn: () => totalsFn({ data: undefined as any }),
-    staleTime: 5_000,
-    refetchInterval: 15_000,
+    staleTime: 2_000,
+    refetchInterval: 5_000,
     refetchIntervalInBackground: false,
   });
 
