@@ -14,7 +14,7 @@ const LOCK_KEY = "bybit-auto-sync-at";
  * hit sync on the visa page manually. A shared localStorage timestamp keeps
  * several open tabs from syncing at the same time.
  */
-export function useLedgerAutoSync(enabled = true, intervalMs = 60_000) {
+export function useLedgerAutoSync(enabled = true, intervalMs = 20_000) {
   const qc = useQueryClient();
   const syncFn = useServerFn(syncAllBybitCardTxns);
   const running = useRef(false);
@@ -26,7 +26,7 @@ export function useLedgerAutoSync(enabled = true, intervalMs = 60_000) {
     const claim = () => {
       try {
         const last = Number(localStorage.getItem(LOCK_KEY) ?? 0);
-        if (Date.now() - last < intervalMs - 5_000) return false;
+        if (Date.now() - last < intervalMs - 3_000) return false;
         localStorage.setItem(LOCK_KEY, String(Date.now()));
       } catch {
         /* storage unavailable — just sync */

@@ -29,7 +29,10 @@ export function useWorkRealtime(opts: {
 
     const shiftMode = !!shiftId;
 
-    const keysFor = (group: "txns" | "p2p" | "transfers" | "manual"): QueryKey[] => {
+    const keysFor = (group: "txns" | "p2p" | "transfers" | "manual" | "shifts"): QueryKey[] => {
+      if (group === "shifts") {
+        return [["my-work-state"], ["emp-work-state"], ["admin-employee-shifts"], ["work-shifts"]];
+      }
       if (group === "txns") {
         return shiftMode
           ? [["shift-txns", shiftId]]
@@ -62,17 +65,18 @@ export function useWorkRealtime(opts: {
     const flush = () => {
       timerRef.current = null;
       const groups = Array.from(pendingRef.current) as Array<
-        "txns" | "p2p" | "transfers" | "manual"
+        "txns" | "p2p" | "transfers" | "manual" | "shifts"
       >;
       pendingRef.current.clear();
       for (const g of groups) {
         for (const key of keysFor(g)) void qc.invalidateQueries({ queryKey: key });
       }
     };
-    const schedule = (...groups: Array<"txns" | "p2p" | "transfers" | "manual">) => {
+    const schedule = (...groups: Array<"txns" | "p2p" | "transfers" | "manual" | "shifts">) => {
       groups.forEach((g) => pendingRef.current.add(g));
       if (timerRef.current) return;
-      timerRef.current = setTimeout(flush, 400);
+      // تقليل زمن التجميع حتى تظهر المعاملة الجديدة فورًا تقريبًا.
+      timerRef.current = setTimeout(flush, 120);
     };
 
     const channel = supabase
@@ -106,6 +110,11 @@ export function useWorkRealtime(opts: {
         "postgres_changes",
         { event: "*", schema: "public", table: "work_manual_txns" },
         () => schedule("manual"),
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "work_shifts" },
+        () => schedule("shifts", "txns"),
       )
       .subscribe();
 
