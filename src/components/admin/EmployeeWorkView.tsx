@@ -1155,7 +1155,7 @@ function ManualSection({
     enabled: !blank,
     // التحديث اللحظي يتولى تحديث هذه القائمة، فلا داعي لإعادة جلبها من
     // الصفر مع كل فتح للقسم — كان ذلك أحد أسباب بطء ظهور البيانات.
-    staleTime: 15_000,
+    staleTime: 3_000,
   });
 
   const all = blank ? [] : ((q.data as any)?.rows ?? []);
