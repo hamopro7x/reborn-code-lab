@@ -29,7 +29,10 @@ export function useWorkRealtime(opts: {
 
     const shiftMode = !!shiftId;
 
-    const keysFor = (group: "txns" | "p2p" | "transfers" | "manual"): QueryKey[] => {
+    const keysFor = (group: "txns" | "p2p" | "transfers" | "manual" | "shifts"): QueryKey[] => {
+      if (group === "shifts") {
+        return [["my-work-state"], ["emp-work-state"], ["admin-employee-shifts"], ["work-shifts"]];
+      }
       if (group === "txns") {
         return shiftMode
           ? [["shift-txns", shiftId]]
