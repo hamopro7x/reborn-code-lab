@@ -65,17 +65,18 @@ export function useWorkRealtime(opts: {
     const flush = () => {
       timerRef.current = null;
       const groups = Array.from(pendingRef.current) as Array<
-        "txns" | "p2p" | "transfers" | "manual"
+        "txns" | "p2p" | "transfers" | "manual" | "shifts"
       >;
       pendingRef.current.clear();
       for (const g of groups) {
         for (const key of keysFor(g)) void qc.invalidateQueries({ queryKey: key });
       }
     };
-    const schedule = (...groups: Array<"txns" | "p2p" | "transfers" | "manual">) => {
+    const schedule = (...groups: Array<"txns" | "p2p" | "transfers" | "manual" | "shifts">) => {
       groups.forEach((g) => pendingRef.current.add(g));
       if (timerRef.current) return;
-      timerRef.current = setTimeout(flush, 400);
+      // تقليل زمن التجميع حتى تظهر المعاملة الجديدة فورًا تقريبًا.
+      timerRef.current = setTimeout(flush, 120);
     };
 
     const channel = supabase
