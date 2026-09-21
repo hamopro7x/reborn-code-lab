@@ -28,7 +28,7 @@ function CoinCell({ coin }: { coin: string }) {
   return (
     <span className="inline-flex items-center gap-2">
       {c === "USDT" ? (
-        <img src={usdtOfficial.url} alt="USDT" className="size-5 shrink-0 rounded-full" loading="lazy" />
+        <img src={USDT_LOGO} alt="USDT" className="size-5 shrink-0 rounded-full" loading="lazy" />
       ) : (
         <span className="grid size-5 shrink-0 place-items-center rounded-full bg-muted text-[9px] font-black">
           {c.slice(0, 2)}
