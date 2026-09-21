@@ -6,7 +6,9 @@ import { ChevronDown } from "lucide-react";
 import { getBybitCardBrands, getBybitLedger, getBybitSpendTotals } from "@/lib/bybit.functions";
 import { formatDateTime } from "@/lib/format";
 import { useLedgerAutoSync } from "@/lib/use-ledger-sync";
-import usdtOfficial from "@/assets/usdt-official.png.asset.json";
+
+/** Official USDT token logo from TrustWallet (works on Fly and Lovable). */
+const USDT_LOGO = "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xdAC17F958D2ee523a2206206994597C13D831ec7/logo.png";
 
 /** Same stat tile as the source visa account cards. */
 function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
@@ -26,7 +28,7 @@ function CoinCell({ coin }: { coin: string }) {
   return (
     <span className="inline-flex items-center gap-2">
       {c === "USDT" ? (
-        <img src={usdtOfficial.url} alt="USDT" className="size-5 shrink-0 rounded-full" loading="lazy" />
+        <img src={USDT_LOGO} alt="USDT" className="size-5 shrink-0 rounded-full" loading="lazy" />
       ) : (
         <span className="grid size-5 shrink-0 place-items-center rounded-full bg-muted text-[9px] font-black">
           {c.slice(0, 2)}

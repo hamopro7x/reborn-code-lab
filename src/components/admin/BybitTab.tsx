@@ -1,8 +1,10 @@
 import { Fragment, useEffect, useState, useRef } from "react";
 import { usePersistentState } from "@/lib/persistent-state";
 import tonAsset from "@/assets/ton.png.asset.json";
-import usdtOfficial from "@/assets/usdt-official.png.asset.json";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+
+/** Official USDT token logo from TrustWallet (works on Fly and Lovable). */
+const USDT_LOGO = "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xdAC17F958D2ee523a2206206994597C13D831ec7/logo.png";
 import { useServerFn } from "@tanstack/react-start";
 import {
   getBybitOverview, getBybitCardTxns, syncAllBybitCardTxns, getBybitOnChain, getBybitInternal, getBybitP2P,
@@ -270,7 +272,7 @@ function CoinBalanceCard({ coin }: { coin: CoinRow }) {
 
           {isUsdt ? (
             <img
-              src={usdtOfficial.url}
+              src={USDT_LOGO}
               alt="USDT"
               className="size-[38px] shrink-0 rounded-full object-cover"
             />
