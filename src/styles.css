@@ -256,9 +256,12 @@
 .cart-v4-order-summary b { color: var(--checkout-text); font-weight: 700; }
 .cart-v4-order-summary .is-total { margin-top: 6px; padding-top: 12px; border-top: 1px solid var(--checkout-border); font-size: 13px; }
 .cart-v4-order-summary .is-total b { color: var(--checkout-primary-strong); font-size: 18px; }
-.cart-v4-bottom-bar { position: fixed; z-index: 20; bottom: 0; left: 50%; width: 100%; max-width: 440px; padding: 14px 20px calc(14px + env(safe-area-inset-bottom)); border-top: 1px solid var(--checkout-border); background: var(--checkout-surface); transform: translateX(-50%); }
-.cart-v4-checkout { width: 100%; min-height: 44px; border-radius: 8px; background: var(--checkout-primary); color: var(--checkout-on-primary); font-size: 14px; font-weight: 700; }
+.cart-v4-bottom-bar { position: fixed; z-index: 20; bottom: 0; left: 50%; width: 100%; max-width: 440px; padding: 14px 20px calc(14px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 10px; border-top: 1px solid var(--checkout-border); background: var(--checkout-surface); transform: translateX(-50%); }
+.cart-v4-checkout { flex: 1; min-height: 44px; border-radius: 8px; background: var(--checkout-primary); color: var(--checkout-on-primary); font-size: 14px; font-weight: 700; }
 .cart-v4-checkout:hover { background: var(--checkout-primary-strong); }
+.cart-v4-add { flex: 1; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-radius: 8px; border: 1px solid var(--checkout-border); background: var(--checkout-card); color: var(--checkout-text); font-size: 13px; font-weight: 600; text-align: center; }
+.cart-v4-add:hover { background: var(--checkout-card-hover); }
+.cart-v4-add svg, .cart-v4-add .lucide { width: 16px; height: 16px; color: var(--checkout-primary-strong); }
 .cart-v4-empty { margin: 20px; padding: 48px 20px; display: grid; justify-items: center; gap: 16px; border: 1px solid var(--checkout-border); border-radius: 8px; background: var(--checkout-card); color: var(--checkout-muted); text-align: center; }
 .cart-v4-empty > svg { width: 28px; height: 28px; }
 .cart-v4-empty .cart-v4-checkout { padding-inline: 24px; }
