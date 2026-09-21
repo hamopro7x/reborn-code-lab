@@ -145,7 +145,9 @@ function CartPage() {
 
         <div className="cart-v4-title">
           <h1>سلة التسوق</h1>
-          <span>{count} {count === 1 ? "منتج في السلة" : "منتجات في السلة"}</span>
+          <span>
+            {items.length} {items.length === 1 ? "منتج" : "منتجات"} · {count} {count === 1 ? "حساب" : "حسابات"}
+          </span>
         </div>
 
         {items.length === 0 ? (
