@@ -199,7 +199,7 @@ function CartPage() {
           </>
         )}
       </main>
-      <WhatsAppFab />
+      <WhatsAppFab className="bottom-[92px]" />
     </div>
   );
 }
