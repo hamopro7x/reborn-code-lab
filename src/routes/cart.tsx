@@ -193,6 +193,7 @@ function CartPage() {
             </section>
 
             <footer className="cart-v4-bottom-bar">
+              <Link to="/shop" className="cart-v4-add"><span>إضافة منتج آخر</span></Link>
               <Button onClick={() => navigate({ to: "/checkout" })} className="cart-v4-checkout">إتمام الشراء</Button>
             </footer>
           </>
