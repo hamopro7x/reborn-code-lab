@@ -272,7 +272,7 @@ function CoinBalanceCard({ coin }: { coin: CoinRow }) {
 
           {isUsdt ? (
             <img
-              src={usdtOfficial.url}
+              src={USDT_LOGO}
               alt="USDT"
               className="size-[38px] shrink-0 rounded-full object-cover"
             />
