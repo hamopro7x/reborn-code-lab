@@ -1,14 +1,13 @@
+import { useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Header } from "@/components/site/Header";
-import { Footer } from "@/components/site/Footer";
 import { WhatsAppFab } from "@/components/site/WhatsAppFab";
-import { useCart } from "@/lib/cart";
+import { useCart, type CartItem } from "@/lib/cart";
 import { useCurrency } from "@/lib/currency-context";
 import { convertFromEgp, formatPrice } from "@/lib/format";
 import { Button } from "@/components/ui/button";
-import { Trash2, Plus, Minus, ShoppingBag, FileText, ShieldCheck } from "lucide-react";
+import { ChevronLeft, ChevronRight, Minus, Plus, ShoppingBag } from "lucide-react";
 
 export const Route = createFileRoute("/cart")({
   component: CartPage,
@@ -19,20 +18,103 @@ export const Route = createFileRoute("/cart")({
       { property: "og:title", content: "سلة التسوق | متجر الاشتراكات الرقمية" },
       { property: "og:description", content: "راجع المنتجات الرقمية في سلتك، عدّل الكميات، وتابع لإتمام الشراء بأمان وبعملتك المحلية." },
       { property: "og:type", content: "website" },
-      { property: "og:url", content: "https://mag-pro1.com/cart" },
-      { name: "twitter:title", content: "سلة التسوق | متجر الاشتراكات الرقمية" },
-      { name: "twitter:description", content: "راجع المنتجات الرقمية في سلتك، عدّل الكميات، وتابع لإتمام الشراء بأمان وبعملتك المحلية." },
+      { name: "twitter:card", content: "summary" },
       { name: "robots", content: "noindex, nofollow" },
     ],
   }),
 });
 
+type ProductDetails = {
+  description?: string | null;
+  short_description?: string | null;
+  warranty_days?: number | null;
+  warranty_text?: string | null;
+  refund_text?: string | null;
+};
+
+function CartProductCard({
+  item,
+  details,
+  active,
+  position,
+  onSelect,
+  onQuantity,
+  formatAmount,
+}: {
+  item: CartItem;
+  details?: ProductDetails;
+  active: boolean;
+  position: "left" | "right" | "hidden";
+  onSelect: () => void;
+  onQuantity: (quantity: number) => void;
+  formatAmount: (amount: number) => string;
+}) {
+  const original = item.basePriceEgp * item.quantity;
+  const total = original * (1 - item.discountPercent / 100);
+  const discount = Math.max(0, original - total);
+  const features = String(details?.description ?? "")
+    .split("\n")
+    .map((line) => line.trim().replace(/^[-•*]\s*/, ""))
+    .filter(Boolean);
+
+  return (
+    <article
+      className={`cart-v4-product ${active ? "is-active" : `is-${position}`}`}
+      aria-hidden={!active}
+      onClick={!active && position !== "hidden" ? onSelect : undefined}
+    >
+      <div className="cart-v4-product-head">
+        <div className="cart-v4-image">
+          {item.image ? <img src={item.image} alt={item.name} /> : <ShoppingBag aria-hidden="true" />}
+        </div>
+        <div className="cart-v4-product-info">
+          <h2>{item.name}</h2>
+          <div className="cart-v4-quantity">
+            <span>عدد الحسابات</span>
+            <div className="cart-v4-quantity-controls" dir="ltr">
+              <span className="cart-v4-count">{item.quantity}</span>
+              <span className="cart-v4-equals">=</span>
+              <Button type="button" variant="ghost" size="icon" onClick={() => onQuantity(item.quantity + 1)} aria-label="زيادة الكمية">
+                <Plus aria-hidden="true" />
+              </Button>
+              <Button type="button" variant="ghost" size="icon" onClick={() => onQuantity(item.quantity - 1)} aria-label="تقليل الكمية">
+                <Minus aria-hidden="true" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="cart-v4-details">
+        <h3>تفاصيل المنتج</h3>
+        {details?.short_description && <p>{details.short_description}</p>}
+        {features.length > 0 && (
+          <ul>
+            {features.map((feature, index) => <li key={`${feature}-${index}`}>{feature}</li>)}
+          </ul>
+        )}
+        {(details?.warranty_text?.trim() || Number(details?.warranty_days) > 0) && (
+          <p><strong>الضمان:</strong> {details?.warranty_text?.trim() || `${details?.warranty_days} يوم`}</p>
+        )}
+        {details?.refund_text?.trim() && <p><strong>الاسترداد:</strong> {details.refund_text}</p>}
+      </div>
+
+      <div className="cart-v4-price-lines">
+        <div><span>السعر الأصلي</span><b>{formatAmount(original)}</b></div>
+        <div className="is-discount"><span>الخصم</span><b>− {formatAmount(discount)}</b></div>
+        <div className="is-total"><span>اجمالي المبلغ بعد الخصم</span><b>{formatAmount(total)}</b></div>
+      </div>
+    </article>
+  );
+}
+
 function CartPage() {
-  const { items, remove, updateQty, totalEgp, count } = useCart();
+  const { items, updateQty, totalEgp, count } = useCart();
   const { currency, rates } = useCurrency();
   const navigate = useNavigate();
+  const [activeIndex, setActiveIndex] = useState(0);
   const rate = rates[currency.code] ?? 1;
-  const ids = items.map((i) => i.productId).sort();
+  const ids = items.map((item) => item.productId).sort();
   const detailsQ = useQuery({
     queryKey: ["cart-product-details", ids],
     enabled: ids.length > 0,
@@ -40,135 +122,82 @@ function CartPage() {
     queryFn: async () => {
       const { data } = await supabase
         .from("products")
-        .select("id, description, short_description, warranty_days, warranty_text, refund_text, category:categories(name,icon)")
+        .select("id, description, short_description, warranty_days, warranty_text, refund_text")
         .in("id", ids);
-      const map: Record<string, any> = {};
-      (data ?? []).forEach((p: any) => { map[p.id] = p; });
-      return map;
+      return Object.fromEntries((data ?? []).map((product: any) => [product.id, product])) as Record<string, ProductDetails>;
     },
   });
 
+  const safeIndex = items.length > 0 ? Math.min(activeIndex, items.length - 1) : 0;
+  const move = (direction: number) => setActiveIndex((current) => (current + direction + items.length) % items.length);
+  const formatAmount = (amount: number) => formatPrice(convertFromEgp(amount, rate, currency.code), currency);
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-5xl">
-        <h1 className="text-4xl font-black text-foreground mb-8">سلة التسوق</h1>
+    <div className="cart-v4" dir="rtl">
+      <main className="cart-v4-shell">
+        <header className="cart-v4-appbar">
+          <Link to="/" className="cart-v4-brand" aria-label="العودة إلى الرئيسية">
+            <img src="/favicon.png" alt="شعار MG Pro" />
+            <span><strong>MG Pro</strong><small>الاشتراكات الرقمية</small></span>
+          </Link>
+          <ShoppingBag aria-hidden="true" />
+        </header>
+
+        <div className="cart-v4-title">
+          <h1>سلة التسوق</h1>
+          <span>{count} {count === 1 ? "منتج في السلة" : "منتجات في السلة"}</span>
+        </div>
+
         {items.length === 0 ? (
-          <div className="card-surface rounded-3xl p-16 text-center">
-            <ShoppingBag className="size-16 mx-auto text-muted-foreground mb-4" />
-            <p className="text-lg mb-6">السلة فارغة</p>
-            <Link to="/shop"><Button className="gradient-primary">تصفح المتجر</Button></Link>
-          </div>
+          <section className="cart-v4-empty">
+            <ShoppingBag aria-hidden="true" />
+            <p>السلة فارغة</p>
+            <Link to="/shop"><Button className="cart-v4-checkout">تصفح المتجر</Button></Link>
+          </section>
         ) : (
-          <div className="grid md:grid-cols-3 gap-6">
-            <div className="md:col-span-2 space-y-3">
-              {items.map((i) => {
-                 const d = detailsQ.data?.[i.productId];
-                 return (
-                   <div key={i.productId} className="card-surface rounded-2xl overflow-hidden">
-                   <div className="p-4 flex items-start gap-4" dir="rtl">
-                     <div className="size-20 rounded-xl bg-primary/10 flex items-center justify-center overflow-hidden shrink-0 order-1">
-                       {i.image ? <img src={i.image} alt={i.name} className="w-full h-full object-cover" /> : null}
-                     </div>
-                     <div className="flex-1 min-w-0 order-2 text-right">
-                       <div className="font-bold text-sm md:text-base truncate">{i.name}</div>
-                       <div className="flex items-center justify-start gap-2 mt-4">
-                         <span className="text-xs md:text-sm text-muted-foreground">عدد الحسابات</span>
-                         <button onClick={() => updateQty(i.productId, i.quantity - 1)} aria-label="تقليل الكمية" className="size-7 rounded-full card-surface hover:bg-primary/10 flex items-center justify-center"><Minus className="size-3" /></button>
-                         <button onClick={() => updateQty(i.productId, i.quantity + 1)} aria-label="زيادة الكمية" className="size-7 rounded-full card-surface hover:bg-primary/10 flex items-center justify-center"><Plus className="size-3" /></button>
-                         <span className="text-sm">=</span>
-                         <span className="text-base font-black">{i.quantity}</span>
-                       </div>
-                     </div>
-
-                    <button onClick={() => remove(i.productId)} className="order-3 shrink-0 flex items-center gap-2 text-xs md:text-sm text-foreground/80 hover:text-destructive">
-                      <span>حذف المنتج</span>
-                      <Trash2 className="size-5 text-destructive" />
-                    </button>
-                  </div>
-
-                  <div
-                    className="border-t-2 px-5 py-6 md:px-8 md:py-7 bg-[var(--details-bg)]"
-                    style={{ borderTopColor: "var(--details-divider)" }}
-                    dir="rtl"
-                  >
-                    <h3 className="text-base md:text-lg font-black text-[var(--details-text)] mb-6">تفاصيل المنتج :-</h3>
-                    {detailsQ.isLoading && !d ? (
-                      <p className="text-sm text-muted-foreground">جاري تحميل التفاصيل...</p>
-                    ) : !d ? (
-                      <p className="text-sm text-muted-foreground">لا توجد تفاصيل إضافية.</p>
-                    ) : (
-                      <div className="space-y-7">
-
-                        {(d.short_description || d.description) && (
-                          <section>
-                            <div className="flex items-center justify-start gap-2 mb-3">
-                              <FileText className="size-5 text-[var(--details-text)] shrink-0" />
-                              <h4 className="text-base md:text-lg font-black text-[var(--details-heading)]">المميزات</h4>
-                            </div>
-                            {d.short_description && (
-                              <p className="text-sm md:text-[15px] text-[var(--details-text)]/70 text-right leading-[2] whitespace-pre-line break-words mb-2">{d.short_description}</p>
-                            )}
-                            {d.description && (
-                              <ul className="space-y-1.5">
-                                {String(d.description)
-                                  .split("\n")
-                                  .map((line: string) => line.trim())
-                                  .filter((line: string) => line.length > 0)
-                                  .map((line: string, idx: number) => (
-                                    <li key={idx} className="flex items-start justify-start gap-2 text-sm md:text-[15px] text-[var(--details-text)] leading-[2]">
-                                      <span className="mt-[0.9em] size-1.5 rounded-full bg-[var(--details-text)] shrink-0" />
-                                      <span className="text-right break-words">{line.replace(/^[-•*]\s*/, "")}</span>
-                                    </li>
-                                  ))}
-                              </ul>
-                            )}
-                          </section>
-                        )}
-
-                        {(d.warranty_text?.trim() || d.warranty_days > 0) && (
-                          <section>
-                            <div className="flex items-center justify-start gap-2 mb-3">
-                              <ShieldCheck className="size-5 text-[var(--details-text)] shrink-0" />
-                              <h4 className="text-base md:text-lg font-black text-[var(--details-heading)]">الضمان</h4>
-                            </div>
-                            <p className="text-sm md:text-[15px] text-[var(--details-text)] text-right leading-[2] whitespace-pre-line break-words">{d.warranty_text?.trim() || `ضمان ${d.warranty_days} يوم`}</p>
-                          </section>
-                        )}
-
-                        {d.refund_text?.trim() && (
-                          <section>
-                            <div className="flex items-center justify-start gap-2 mb-3">
-                              <ShieldCheck className="size-5 text-[var(--details-text)] shrink-0" />
-                              <h4 className="text-base md:text-lg font-black text-[var(--details-heading)]">الاسترداد</h4>
-                            </div>
-                            <p className="text-sm md:text-[15px] text-[var(--details-text)] text-right leading-[2] whitespace-pre-line break-words">{d.refund_text}</p>
-                          </section>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-
-                  </div>
+          <>
+            <section className="cart-v4-stack" aria-label="المنتجات في السلة">
+              {items.length > 1 && (
+                <Button type="button" variant="ghost" size="icon" className="cart-v4-nav is-prev" onClick={() => move(-1)} aria-label="المنتج السابق">
+                  <ChevronRight aria-hidden="true" />
+                </Button>
+              )}
+              {items.map((item, index) => {
+                const previous = (safeIndex - 1 + items.length) % items.length;
+                const next = (safeIndex + 1) % items.length;
+                const position = index === previous ? "right" : index === next ? "left" : "hidden";
+                return (
+                  <CartProductCard
+                    key={item.productId}
+                    item={item}
+                    details={detailsQ.data?.[item.productId]}
+                    active={index === safeIndex}
+                    position={position}
+                    onSelect={() => setActiveIndex(index)}
+                    onQuantity={(quantity) => updateQty(item.productId, quantity)}
+                    formatAmount={formatAmount}
+                  />
                 );
               })}
-            </div>
-            <div>
-              <div className="card-surface rounded-2xl p-6 sticky top-24">
-                <h2 className="font-bold text-lg mb-4">ملخص الطلب</h2>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between"><span className="text-muted-foreground">عدد المنتجات</span><span>{count}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">الإجمالي</span><span className="font-black text-lg text-gradient">{formatPrice(convertFromEgp(totalEgp, rate, currency.code), currency)}</span></div>
-                </div>
-                <Button onClick={() => navigate({ to: "/checkout" })} className="gradient-primary w-full mt-6 h-11">إتمام الشراء</Button>
-              </div>
-            </div>
-          </div>
+              {items.length > 1 && (
+                <Button type="button" variant="ghost" size="icon" className="cart-v4-nav is-next" onClick={() => move(1)} aria-label="المنتج التالي">
+                  <ChevronLeft aria-hidden="true" />
+                </Button>
+              )}
+            </section>
+
+            <section className="cart-v4-order-summary" aria-label="ملخص الطلب">
+              <h2>ملخص الطلب</h2>
+              <div><span>عدد المنتجات</span><b>{count}</b></div>
+              <div className="is-total"><span>{items.length === 1 ? "المبلغ" : "اجمالي مبلغ المنتجات"}</span><b>{formatAmount(totalEgp)}</b></div>
+            </section>
+
+            <footer className="cart-v4-bottom-bar">
+              <Button onClick={() => navigate({ to: "/checkout" })} className="cart-v4-checkout">إتمام الشراء</Button>
+            </footer>
+          </>
         )}
       </main>
-      <Footer />
       <WhatsAppFab />
     </div>
   );
