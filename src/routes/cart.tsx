@@ -102,7 +102,7 @@ function CartProductCard({
       <div className="cart-v4-price-lines">
         <div><span>السعر الأصلي</span><b>{formatAmount(original)}</b></div>
         <div className="is-discount"><span>الخصم</span><b>− {formatAmount(discount)}</b></div>
-        <div className="is-total"><span>اجمالي المبلغ بعد الخصم</span><b>{formatAmount(total)}</b></div>
+        <div className="is-total"><span>سعر المنتج بعد الخصم</span><b>{formatAmount(total)}</b></div>
       </div>
     </article>
   );
@@ -145,7 +145,9 @@ function CartPage() {
 
         <div className="cart-v4-title">
           <h1>سلة التسوق</h1>
-          <span>{count} {count === 1 ? "منتج في السلة" : "منتجات في السلة"}</span>
+          <span>
+            {items.length} {items.length === 1 ? "منتج" : "منتجات"} · {count} {count === 1 ? "حساب" : "حسابات"}
+          </span>
         </div>
 
         {items.length === 0 ? (
@@ -188,8 +190,9 @@ function CartPage() {
 
             <section className="cart-v4-order-summary" aria-label="ملخص الطلب">
               <h2>ملخص الطلب</h2>
-              <div><span>عدد المنتجات</span><b>{count}</b></div>
-              <div className="is-total"><span>{items.length === 1 ? "المبلغ" : "اجمالي مبلغ المنتجات"}</span><b>{formatAmount(totalEgp)}</b></div>
+              <div><span>عدد المنتجات</span><b>{items.length}</b></div>
+              <div><span>عدد الحسابات</span><b>{count}</b></div>
+              <div className="is-total"><span>{items.length === 1 ? "سعر المنتج بعد الخصم" : "اجمالي مبلغ المنتجات"}</span><b>{formatAmount(totalEgp)}</b></div>
             </section>
 
             <footer className="cart-v4-bottom-bar">
