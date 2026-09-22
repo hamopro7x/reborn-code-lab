@@ -140,12 +140,11 @@ function CartPage() {
             <img src="/favicon.png" alt="شعار MG Pro" />
             <span><strong>MG Pro</strong><small>الاشتراكات الرقمية</small></span>
           </Link>
-          <ShoppingBag aria-hidden="true" />
+          <div className="cart-v4-appbar-title">
+            <ShoppingBag aria-hidden="true" />
+            <h1>سلة التسوق</h1>
+          </div>
         </header>
-
-        <div className="cart-v4-title">
-          <h1>سلة التسوق</h1>
-        </div>
 
         {items.length === 0 ? (
           <section className="cart-v4-empty">
