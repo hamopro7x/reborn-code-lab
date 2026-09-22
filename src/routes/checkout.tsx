@@ -348,7 +348,7 @@ function CheckoutPage() {
         )}
 
         {step === "payment" && (
-          <div>
+          <div className="checkout-payment-step">
               <section className="checkout-payment-card" aria-labelledby="payment-heading">
                 <h2 id="payment-heading" className="checkout-section-title">اختر طريقة الدفع</h2>
                 <div className="checkout-payment-list">
@@ -362,7 +362,7 @@ function CheckoutPage() {
                         <PaymentMethodIcon method={pm} />
                         <div>
                             <strong>{pm.name}</strong>
-                            <span>{pm.type}</span>
+                             {selectedPayment?.id !== pm.id && <span>{pm.type}</span>}
                         </div>
                         <span className="checkout-radio" aria-hidden="true" />
                       </Button>
@@ -385,9 +385,11 @@ function CheckoutPage() {
                               </Button>
                             )}
                           </div>
-                          {paymentDetailsQ.data?.account_name && <small>{paymentDetailsQ.data.account_name}</small>}
-                          <p>{paymentDetailsQ.data?.instructions || "حوّل المبلغ ثم أكّد الطلب وارفع صورة التحويل في الخطوة التالية."}</p>
-                          <div className="checkout-transfer-total">المبلغ المطلوب <b>{formatPrice(total, currency)}</b></div>
+                           {paymentDetailsQ.data?.account_name && (
+                             <small className="checkout-recipient"><UserRound aria-hidden="true" /> اسم صاحب الحساب: {paymentDetailsQ.data.account_name}</small>
+                           )}
+                           {paymentDetailsQ.data?.instructions && <p>{paymentDetailsQ.data.instructions}</p>}
+                           <div className="checkout-transfer-total"><span>المبلغ المطلوب تحويله</span><b>{formatPrice(total, currency)}</b></div>
                         </div>
                       )}
                     </div>
@@ -400,7 +402,8 @@ function CheckoutPage() {
                   رجوع
                 </Button>
                 <Button onClick={createOrder} disabled={!selectedPayment} className="checkout-cta">
-                  تأكيد الطلب ورفع صورة التحويل
+                  تأكيد طلب الدفع
+                  <ArrowLeft aria-hidden="true" />
                 </Button>
               </div>
           </div>
