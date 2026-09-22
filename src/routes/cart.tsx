@@ -69,19 +69,6 @@ function CartProductCard({
         </div>
         <div className="cart-v4-product-info">
           <h2>{item.name}</h2>
-          <div className="cart-v4-quantity">
-            <span>عدد الحسابات</span>
-            <div className="cart-v4-quantity-controls" dir="ltr">
-              <span className="cart-v4-count">{item.quantity}</span>
-              <span className="cart-v4-equals">=</span>
-              <Button type="button" variant="ghost" size="icon" onClick={() => onQuantity(item.quantity + 1)} aria-label="زيادة الكمية">
-                <Plus aria-hidden="true" />
-              </Button>
-              <Button type="button" variant="ghost" size="icon" onClick={() => onQuantity(item.quantity - 1)} aria-label="تقليل الكمية">
-                <Minus aria-hidden="true" />
-              </Button>
-            </div>
-          </div>
         </div>
       </div>
 
