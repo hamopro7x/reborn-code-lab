@@ -109,7 +109,7 @@ function CartProductCard({
 }
 
 function CartPage() {
-  const { items, updateQty, totalEgp, count } = useCart();
+  const { items, updateQty, totalEgp } = useCart();
   const { currency, rates } = useCurrency();
   const navigate = useNavigate();
   const [activeIndex, setActiveIndex] = useState(0);
@@ -145,9 +145,6 @@ function CartPage() {
 
         <div className="cart-v4-title">
           <h1>سلة التسوق</h1>
-          <span>
-            {items.length} {items.length === 1 ? "منتج" : "منتجات"} · {count} {count === 1 ? "حساب" : "حسابات"}
-          </span>
         </div>
 
         {items.length === 0 ? (
@@ -191,7 +188,6 @@ function CartPage() {
             <section className="cart-v4-order-summary" aria-label="ملخص الطلب">
               <h2>ملخص الطلب</h2>
               <div><span>عدد المنتجات</span><b>{items.length}</b></div>
-              <div><span>عدد الحسابات</span><b>{count}</b></div>
               <div className="is-total"><span>{items.length === 1 ? "سعر المنتج بعد الخصم" : "اجمالي مبلغ المنتجات"}</span><b>{formatAmount(totalEgp)}</b></div>
             </section>
 
