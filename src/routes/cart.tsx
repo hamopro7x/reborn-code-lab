@@ -141,8 +141,8 @@ function CartPage() {
             <span><strong>MG Pro</strong><small>الاشتراكات الرقمية</small></span>
           </Link>
           <div className="cart-v4-appbar-title">
-            <ShoppingBag aria-hidden="true" />
             <h1>سلة التسوق</h1>
+            <ShoppingBag aria-hidden="true" />
           </div>
         </header>
 
