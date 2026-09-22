@@ -338,12 +338,28 @@
 .checkout-cta:hover { background: var(--checkout-primary-strong); }
 .checkout-cta-footer p { margin-top: 12px; display: flex; align-items: center; justify-content: center; gap: 6px; color: var(--checkout-muted); font-size: 12px; }
 .checkout-cta-footer p svg { width: 12px; height: 12px; }
-.checkout-payment-step { min-height: calc(100dvh - 154px); display: flex; flex-direction: column; }
+.checkout-payment-step {
+  --checkout-bg: #0A0E13;
+  --checkout-surface: #121922;
+  --checkout-card: #121922;
+  --checkout-card-hover: #161F29;
+  --checkout-text: #F2F5F7;
+  --checkout-muted: #8A97A4;
+  --checkout-soft: #5C6875;
+  --checkout-border: #212B36;
+  --checkout-primary: #1FE3A6;
+  --checkout-primary-strong: #14B389;
+  --checkout-primary-soft: rgba(31, 227, 166, 0.14);
+  --checkout-on-primary: #04150F;
+  min-height: calc(100dvh - 154px);
+  display: flex;
+  flex-direction: column;
+}
 .checkout-payment-card { margin-bottom: 22px; }
 .checkout-payment-card .checkout-section-title { margin-top: 0; font-size: 19px; font-weight: 800; }
 .checkout-payment-list { display: grid; gap: 10px; margin-top: 20px; }
 .checkout-payment-item { overflow: hidden; border: 1px solid var(--checkout-border); border-radius: 8px; background: var(--checkout-card); transition: border-color 150ms ease-out, background 150ms ease-out; }
-.checkout-payment-item.is-selected { border-color: var(--checkout-primary); background: var(--checkout-primary-soft); }
+.checkout-payment-item.is-selected { border-color: var(--checkout-primary); background: linear-gradient(180deg, rgba(31, 227, 166, 0.07), rgba(31, 227, 166, 0.02)); }
 .checkout-payment-option { width: 100%; min-height: 72px; padding: 14px 16px; justify-content: flex-start; gap: 12px; border-radius: 0; color: var(--checkout-text); }
 .checkout-payment-option:hover { background: var(--checkout-card-hover); }
 .checkout-payment-icon-shell { width: 42px; height: 42px; flex: none; display: grid; place-items: center; overflow: hidden; border: 1px solid var(--checkout-border); border-radius: 8px; background: var(--checkout-surface); }
