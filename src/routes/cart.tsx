@@ -7,7 +7,7 @@ import { useCart, type CartItem } from "@/lib/cart";
 import { useCurrency } from "@/lib/currency-context";
 import { convertFromEgp, formatPrice } from "@/lib/format";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, ShoppingBag } from "lucide-react";
+import { ChevronLeft, ChevronRight, Minus, Plus, ShoppingBag } from "lucide-react";
 
 export const Route = createFileRoute("/cart")({
   component: CartPage,
@@ -38,6 +38,7 @@ function CartProductCard({
   active,
   position,
   onSelect,
+  onQuantity,
   formatAmount,
 }: {
   item: CartItem;
@@ -45,6 +46,7 @@ function CartProductCard({
   active: boolean;
   position: "left" | "right" | "hidden";
   onSelect: () => void;
+  onQuantity: (quantity: number) => void;
   formatAmount: (amount: number) => string;
 }) {
   const original = item.basePriceEgp * item.quantity;
@@ -67,6 +69,19 @@ function CartProductCard({
         </div>
         <div className="cart-v4-product-info">
           <h2>{item.name}</h2>
+          <div className="cart-v4-quantity">
+            <span>عدد الحسابات</span>
+            <div className="cart-v4-quantity-controls" dir="ltr">
+              <span className="cart-v4-count">{item.quantity}</span>
+              <span className="cart-v4-equals">=</span>
+              <Button type="button" variant="ghost" size="icon" onClick={() => onQuantity(item.quantity + 1)} aria-label="زيادة الكمية">
+                <Plus aria-hidden="true" />
+              </Button>
+              <Button type="button" variant="ghost" size="icon" onClick={() => onQuantity(item.quantity - 1)} aria-label="تقليل الكمية">
+                <Minus aria-hidden="true" />
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -94,7 +109,7 @@ function CartProductCard({
 }
 
 function CartPage() {
-  const { items, totalEgp, count } = useCart();
+  const { items, updateQty, totalEgp, count } = useCart();
   const { currency, rates } = useCurrency();
   const navigate = useNavigate();
   const [activeIndex, setActiveIndex] = useState(0);
@@ -161,6 +176,7 @@ function CartPage() {
                     active={index === safeIndex}
                     position={position}
                     onSelect={() => setActiveIndex(index)}
+                    onQuantity={(quantity) => updateQty(item.productId, quantity)}
                     formatAmount={formatAmount}
                   />
                 );
