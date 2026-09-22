@@ -74,9 +74,18 @@ const PAYMENT_ICONS = [
   { terms: ["bybit", "بايبت", "باي بيت"], src: bybitIcon.url },
 ] as const;
 
-function PaymentMethodIcon({ method }: { method: any }) {
+function getPaymentIconMatch(method: any) {
   const searchableName = `${method?.name ?? ""} ${method?.type ?? ""}`.toLowerCase();
-  const match = PAYMENT_ICONS.find(({ terms }) => terms.some((term) => searchableName.includes(term)));
+  return PAYMENT_ICONS.find(({ terms }) => terms.some((term) => searchableName.includes(term)));
+}
+
+function isBinanceMethod(method: any) {
+  const searchableName = `${method?.name ?? ""} ${method?.type ?? ""}`.toLowerCase();
+  return searchableName.includes("binance") || searchableName.includes("بينانس");
+}
+
+function PaymentMethodIcon({ method }: { method: any }) {
+  const match = getPaymentIconMatch(method);
   const customIcon = String(method?.icon ?? "").trim();
   const customImage = /^(https?:\/\/|\/)/i.test(customIcon);
 
@@ -180,6 +189,12 @@ function CheckoutPage() {
       const cur = currencies.find((cc) => cc.code === c.currency_code);
       if (cur) setCurrency(cur);
     }
+  }
+
+  function copyText(value: string) {
+    if (!value) return;
+    navigator.clipboard.writeText(value);
+    toast.success("تم النسخ");
   }
 
   async function submitInfo(e: React.FormEvent) {
@@ -368,26 +383,62 @@ function CheckoutPage() {
                       </Button>
                       {selectedPayment?.id === pm.id && (
                         <div className="checkout-transfer">
-                          <div className="checkout-pay-to-row">
-                            <div className="min-w-0">
-                              <p>حوّل إلى {pm.name}</p>
-                              <div className="checkout-account-number" dir="ltr">
-                                {paymentDetailsQ.data?.account_number ?? "..."}
+                          {isBinanceMethod(pm) ? (
+                            <div className="checkout-binance-network-box">
+                              <div className="checkout-binance-field">
+                                <span className="checkout-field-label">عنوان الشبكة</span>
+                                <span className="checkout-field-value" dir="ltr">{paymentDetailsQ.data?.account_number ?? "..."}</span>
+                                {paymentDetailsQ.data?.account_number && (
+                                  <Button variant="ghost"
+                                    onClick={() => copyText(paymentDetailsQ.data.account_number)}
+                                    aria-label="نسخ عنوان الشبكة"
+                                    className="checkout-copy checkout-small-copy"
+                                  >
+                                    نسخ
+                                  </Button>
+                                )}
                               </div>
+                              {paymentDetailsQ.data?.account_name && (
+                                <div className="checkout-binance-field checkout-network-name-field">
+                                  <span className="checkout-network-name-icon" aria-hidden="true">
+                                    {(() => {
+                                      const customIcon = String(pm?.icon ?? "").trim();
+                                      const customImage = /^(https?:\/\/|\/)/i.test(customIcon);
+                                      const match = getPaymentIconMatch(pm);
+                                      if (customImage) return <img src={customIcon} alt="" />;
+                                      if (match) return <img src={match.src} alt="" />;
+                                      return "BN";
+                                    })()}
+                                  </span>
+                                  <span className="checkout-field-label">اسم الشبكة</span>
+                                  <span className="checkout-field-value">{paymentDetailsQ.data.account_name}</span>
+                                </div>
+                              )}
                             </div>
-                            {paymentDetailsQ.data?.account_number && (
-                              <Button variant="ghost"
-                                onClick={() => { const accountNumber = paymentDetailsQ.data?.account_number; if (accountNumber) navigator.clipboard.writeText(accountNumber); toast.success("تم النسخ"); }}
-                                aria-label="نسخ رقم الحساب"
-                                className="checkout-copy"
-                              >
-                                <Copy /> نسخ
-                              </Button>
-                            )}
-                          </div>
-                           {paymentDetailsQ.data?.account_name && (
-                             <small className="checkout-recipient"><UserRound aria-hidden="true" /> اسم صاحب الحساب: {paymentDetailsQ.data.account_name}</small>
-                           )}
+                          ) : (
+                            <>
+                              <div className="checkout-pay-to-row">
+                                <div className="min-w-0">
+                                  <p>حوّل إلى {pm.name}</p>
+                                  <div className="checkout-account-number" dir="ltr">
+                                    {paymentDetailsQ.data?.account_number ?? "..."}
+                                  </div>
+                                </div>
+                                {paymentDetailsQ.data?.account_number && (
+                                  <Button variant="ghost"
+                                    onClick={() => copyText(paymentDetailsQ.data.account_number)}
+                                    aria-label="نسخ رقم الحساب"
+                                    className="checkout-copy"
+                                  >
+                                    <Copy /> نسخ
+                                  </Button>
+                                )}
+                              </div>
+                              {paymentDetailsQ.data?.account_name && (
+                                <small className="checkout-recipient"><UserRound aria-hidden="true" /> اسم صاحب الحساب: {paymentDetailsQ.data.account_name}</small>
+                              )}
+                            </>
+                          )}
                            {paymentDetailsQ.data?.instructions && <p>{paymentDetailsQ.data.instructions}</p>}
                            <div className="checkout-transfer-total"><span>المبلغ المطلوب تحويله</span><b>{formatPrice(total, currency)}</b></div>
                         </div>
