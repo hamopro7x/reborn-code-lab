@@ -38,7 +38,6 @@ function CartProductCard({
   active,
   position,
   onSelect,
-  onQuantity,
   formatAmount,
 }: {
   item: CartItem;
@@ -46,7 +45,6 @@ function CartProductCard({
   active: boolean;
   position: "left" | "right" | "hidden";
   onSelect: () => void;
-  onQuantity: (quantity: number) => void;
   formatAmount: (amount: number) => string;
 }) {
   const original = item.basePriceEgp * item.quantity;
@@ -96,7 +94,7 @@ function CartProductCard({
 }
 
 function CartPage() {
-  const { items, updateQty, totalEgp, count } = useCart();
+  const { items, totalEgp, count } = useCart();
   const { currency, rates } = useCurrency();
   const navigate = useNavigate();
   const [activeIndex, setActiveIndex] = useState(0);
@@ -163,7 +161,6 @@ function CartPage() {
                     active={index === safeIndex}
                     position={position}
                     onSelect={() => setActiveIndex(index)}
-                    onQuantity={(quantity) => updateQty(item.productId, quantity)}
                     formatAmount={formatAmount}
                   />
                 );
