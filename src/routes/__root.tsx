@@ -69,7 +69,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "viewport", content: "width=412, initial-scale=1, viewport-fit=cover" },
       { title: "متجر الاشتراكات الرقمية | Digital Subscriptions Store" },
       { name: "description", content: "متجر الاشتراكات الرقمية: ألعاب، أدوات ذكاء اصطناعي، قوالب تصميم وكانفا بأسعار تنافسية وضمان حقيقي." },
       { property: "og:title", content: "متجر الاشتراكات الرقمية | Digital Subscriptions Store" },
