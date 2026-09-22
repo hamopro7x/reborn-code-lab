@@ -212,7 +212,7 @@
 .cart-v4-brand strong { color: var(--checkout-text); font-size: 14px; font-weight: 700; }
 .cart-v4-brand small { color: var(--checkout-primary-strong); font-size: 12px; }
 .cart-v4-stack { position: relative; height: 432px; margin: 16px 0 0; }
-.cart-v4-product { position: absolute; inset: 0 8px; padding: 12px; display: flex; flex-direction: column; overflow-y: auto; border: 1px solid var(--checkout-border); border-radius: 8px; background: var(--checkout-card); transition: transform 180ms ease-out, opacity 180ms ease-out; }
+.cart-v4-product { position: absolute; inset: 0 20px; padding: 12px; display: flex; flex-direction: column; overflow-y: auto; border: 1px solid var(--checkout-border); border-radius: 8px; background: var(--checkout-card); transition: transform 180ms ease-out, opacity 180ms ease-out; }
 .cart-v4-product.is-active { z-index: 3; transform: translateX(0); opacity: 1; }
 .cart-v4-product.is-left { z-index: 1; transform: translateX(-28%); opacity: .55; cursor: pointer; }
 .cart-v4-product.is-right { z-index: 1; transform: translateX(28%); opacity: .55; cursor: pointer; }
