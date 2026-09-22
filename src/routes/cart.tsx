@@ -100,7 +100,7 @@ function CartProductCard({
       </div>
 
       <div className="cart-v4-price-lines">
-        <div><span>السعر الأصلي</span><b>{formatAmount(original)}</b></div>
+        <div className="is-original"><span>السعر الأصلي</span><b>{formatAmount(original)}</b></div>
         <div className="is-discount"><span>الخصم</span><b>− {formatAmount(discount)}</b></div>
         <div className="is-total"><span>سعر المنتج بعد الخصم</span><b>{formatAmount(total)}</b></div>
       </div>
