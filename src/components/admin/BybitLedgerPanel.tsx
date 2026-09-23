@@ -2,7 +2,7 @@ import { Fragment, useState } from "react";
 import { useUiState } from "@/lib/ui-state";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, CircleDollarSign } from "lucide-react";
 import { getBybitCardBrands, getBybitLedger, getBybitSpendTotals } from "@/lib/bybit.functions";
 import { formatDateTime } from "@/lib/format";
 import { useLedgerAutoSync } from "@/lib/use-ledger-sync";
@@ -15,7 +15,10 @@ function Stat({ label, value, hint }: { label: string; value: string; hint?: str
   return (
     <div className="rounded-2xl border border-border/60 bg-background/60 p-4">
       <div className="text-xs text-muted-foreground mb-1">{label}</div>
-      <div className="text-2xl font-black">{value}</div>
+      <div className="flex items-center gap-2 text-2xl font-black" dir="ltr">
+        <CircleDollarSign className="size-5 shrink-0 text-emerald-400" aria-hidden="true" />
+        <span>{value}</span>
+      </div>
       {hint ? <div className="text-[11px] text-muted-foreground mt-1">{hint}</div> : null}
     </div>
   );
