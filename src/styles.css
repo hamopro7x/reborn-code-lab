@@ -411,6 +411,8 @@
 .checkout-transfer-total span { color: var(--checkout-muted); }
 .checkout-transfer-total b { color: var(--checkout-primary); font-size: 18px; font-weight: 800; direction: ltr; }
 .checkout-binance-network-box { padding: 12px; display: flex; flex-direction: column; gap: 10px; border: 1px solid var(--checkout-border-soft); border-radius: 12px; background: var(--checkout-bg-soft); }
+.checkout-binance-field-group { display: flex; flex-direction: column; align-items: stretch; gap: 7px; }
+.checkout-binance-field-group > .checkout-field-label { padding-inline: 2px; text-align: right; }
 .checkout-binance-field { min-height: 42px; padding: 8px 10px; display: flex; align-items: center; gap: 8px; border: 1px solid var(--checkout-border-soft); border-radius: 8px; background: var(--checkout-surface); }
 .checkout-field-label { flex: none; color: var(--checkout-soft); font-size: 10.5px; font-weight: 600; white-space: nowrap; }
 .checkout-field-value { flex: 1; min-width: 0; overflow: hidden; color: var(--checkout-text); font-size: 12px; font-weight: 700; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
