@@ -444,7 +444,7 @@
 }
 .payment-method-switches label { margin: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .payment-method-switches button { order: 2; }
-.payment-method-dialog > button[data-radix-dialog-close] { left: 16px; right: auto; top: 16px; }
+.payment-method-dialog > button:last-child { left: 16px; right: auto; top: 16px; }
 
 @media (max-width: 520px) {
   .payment-method-dialog { padding: 18px 14px; }
