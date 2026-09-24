@@ -40,3 +40,5 @@ as $$
 $$;
 revoke all on function public.payment_method_details(uuid) from public;
 grant execute on function public.payment_method_details(uuid) to anon, authenticated;
+
+notify pgrst, 'reload schema';
