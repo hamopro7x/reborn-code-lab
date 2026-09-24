@@ -6,7 +6,6 @@ import { useUiState, useScrollRestore } from "@/lib/ui-state";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
-import { WhatsAppFab } from "@/components/site/WhatsAppFab";
 import { ProductCard } from "@/components/site/ProductCard";
 
 export const Route = createFileRoute("/category/$slug")({
@@ -83,7 +82,6 @@ function CategoryPage() {
         )}
       </main>
       <Footer />
-      <WhatsAppFab />
     </div>
   );
 }

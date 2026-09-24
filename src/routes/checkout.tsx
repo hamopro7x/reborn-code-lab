@@ -10,7 +10,6 @@ import { listPublicPaymentMethods, getPublicPaymentDetails } from "@/lib/payment
 import { getCachedFingerprint } from "@/lib/device-session";
 import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
-import { WhatsAppFab } from "@/components/site/WhatsAppFab";
 import { useCart } from "@/lib/cart";
 import { useCurrency } from "@/lib/currency-context";
 import { convertFromEgp, formatPrice } from "@/lib/format";
@@ -493,7 +492,6 @@ function CheckoutPage() {
         )}
         </div>
       </main>
-      <WhatsAppFab className="bottom-5 right-5 left-auto" showLabel={false} />
     </div>
   );
 }

@@ -4,7 +4,6 @@ import { useServerFn } from "@tanstack/react-start";
 import { getOrderByCode } from "@/lib/orders.functions";
 import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
-import { WhatsAppFab } from "@/components/site/WhatsAppFab";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, Copy, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -141,7 +140,6 @@ function OrderPage() {
         )}
       </main>
       <Footer />
-      <WhatsAppFab />
     </div>
   );
 }
