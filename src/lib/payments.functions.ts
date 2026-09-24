@@ -28,7 +28,7 @@ export const listPublicPaymentMethods = createServerFn({ method: "POST" })
     const supabase = await publicClient();
     let query = supabase
       .from("payment_methods_public")
-      .select("id, name, type, icon, country_code, sort_order")
+      .select("id, name, type, icon, country_code, sort_order, display_type")
       .order("sort_order");
     if (data.country_code) {
       query = query.or(`country_code.eq.${data.country_code},country_code.is.null`);

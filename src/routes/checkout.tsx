@@ -79,11 +79,6 @@ function getPaymentIconMatch(method: any) {
   return PAYMENT_ICONS.find(({ terms }) => terms.some((term) => searchableName.includes(term)));
 }
 
-function isBinanceMethod(method: any) {
-  const searchableName = `${method?.name ?? ""} ${method?.type ?? ""}`.toLowerCase();
-  return searchableName.includes("binance") || searchableName.includes("بينانس");
-}
-
 function PaymentMethodIcon({ method }: { method: any }) {
   const match = getPaymentIconMatch(method);
   const customIcon = String(method?.icon ?? "").trim();
@@ -383,24 +378,24 @@ function CheckoutPage() {
                       </Button>
                       {selectedPayment?.id === pm.id && (
                         <div className="checkout-transfer">
-                          {isBinanceMethod(pm) ? (
+                          {paymentDetailsQ.data?.display_type === "crypto" ? (
                             <div className="checkout-binance-network-box">
                               <div className="checkout-binance-field">
-                                <span className="checkout-field-label">عنوان الشبكة</span>
+                                <span className="checkout-field-label">{paymentDetailsQ.data?.account_label || "عنوان الشبكة"}</span>
                                 <span className="checkout-field-value" dir="ltr">{paymentDetailsQ.data?.account_number ?? "..."}</span>
                                 {paymentDetailsQ.data?.account_number && (
                                   <Button variant="ghost"
                                     onClick={() => copyText(paymentDetailsQ.data.account_number)}
-                                    aria-label="نسخ عنوان الشبكة"
+                                    aria-label={`نسخ ${paymentDetailsQ.data?.account_label || "العنوان"}`}
                                     className="checkout-copy checkout-small-copy"
                                   >
                                     نسخ
                                   </Button>
                                 )}
                               </div>
-                              {paymentDetailsQ.data?.account_name && (
+                              {paymentDetailsQ.data?.show_account_name && paymentDetailsQ.data?.account_name && (
                                 <div className="checkout-binance-field checkout-network-name-field">
-                                  <span className="checkout-field-label">اسم الشبكة</span>
+                                  <span className="checkout-field-label">{paymentDetailsQ.data?.account_name_label || "اسم الشبكة"}</span>
                                   <span className="checkout-field-value">{paymentDetailsQ.data.account_name}</span>
                                 </div>
                               )}
@@ -409,7 +404,7 @@ function CheckoutPage() {
                             <>
                               <div className="checkout-pay-to-row">
                                 <div className="min-w-0">
-                                  <p>حوّل إلى {pm.name}</p>
+                                  <p>{paymentDetailsQ.data?.account_label || "رقم الحساب"}</p>
                                   <div className="checkout-account-number" dir="ltr">
                                     {paymentDetailsQ.data?.account_number ?? "..."}
                                   </div>
@@ -424,13 +419,13 @@ function CheckoutPage() {
                                   </Button>
                                 )}
                               </div>
-                              {paymentDetailsQ.data?.account_name && (
-                                <small className="checkout-recipient"><UserRound aria-hidden="true" /> اسم صاحب الحساب: {paymentDetailsQ.data.account_name}</small>
+                              {paymentDetailsQ.data?.show_account_name && paymentDetailsQ.data?.account_name && (
+                                <small className="checkout-recipient"><UserRound aria-hidden="true" /> {paymentDetailsQ.data?.account_name_label || "اسم صاحب الحساب"}: {paymentDetailsQ.data.account_name}</small>
                               )}
                             </>
                           )}
-                           {paymentDetailsQ.data?.instructions && <p>{paymentDetailsQ.data.instructions}</p>}
-                           <div className="checkout-transfer-total"><span>المبلغ المطلوب تحويله</span><b>{formatPrice(total, currency)}</b></div>
+                           {paymentDetailsQ.data?.show_instructions && paymentDetailsQ.data?.instructions && <p>{paymentDetailsQ.data.instructions}</p>}
+                           {paymentDetailsQ.data?.show_amount && <div className="checkout-transfer-total"><span>المبلغ المطلوب دفعه</span><b>{formatPrice(total, currency)}</b></div>}
                         </div>
                       )}
                     </div>

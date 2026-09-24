@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
@@ -1255,6 +1256,12 @@ function PaymentsTab() {
   const [editing, setEditing] = useState<any>(null);
   const [open, setOpen] = useState(false);
   const [uploadingIcon, setUploadingIcon] = useState(false);
+  const displayTypeNames: Record<string, string> = {
+    local_transfer: "تحويل محلي",
+    wallet: "محفظة إلكترونية",
+    bank_transfer: "تحويل بنكي",
+    crypto: "عملات رقمية",
+  };
 
   async function uploadIcon(file: File) {
     setUploadingIcon(true);
@@ -1276,21 +1283,27 @@ function PaymentsTab() {
     const values = {
       name: String(editing.name ?? "").trim(),
       type: String(editing.type ?? "").trim(),
+      display_type: String(editing.display_type ?? "local_transfer"),
       country_code: String(editing.country_code ?? "").trim().toUpperCase() || null,
-      account_number: String(editing.account_number ?? "").trim(),
+      account_number: String(editing.account_number ?? "").trim() || null,
       account_name: String(editing.account_name ?? "").trim() || null,
+      account_label: String(editing.account_label ?? "").trim() || "رقم الحساب",
+      account_name_label: String(editing.account_name_label ?? "").trim() || "اسم صاحب الحساب",
       instructions: String(editing.instructions ?? "").trim() || null,
+      show_account_name: Boolean(editing.show_account_name),
+      show_instructions: Boolean(editing.show_instructions),
+      show_amount: Boolean(editing.show_amount),
       icon: String(editing.icon ?? "").trim() || null,
       sort_order: Number(editing.sort_order) || 0,
       active: Boolean(editing.active),
     };
-    if (!values.name || !values.type || !values.account_number) {
-      toast.error("الاسم والنوع ورقم الحساب مطلوبة");
+    if (!values.name || !values.type) {
+      toast.error("الاسم والنوع مطلوبان");
       return;
     }
     const op = editing.id
-      ? supabase.from("payment_methods").update(values).eq("id", editing.id)
-      : supabase.from("payment_methods").insert(values);
+      ? supabase.from("payment_methods").update(values as any).eq("id", editing.id)
+      : supabase.from("payment_methods").insert(values as any);
     const { error } = await op;
     if (error) toast.error(error.message); else { toast.success("محفوظ"); setOpen(false); qc.invalidateQueries({ queryKey: ["admin-pm"] }); }
   }
@@ -1300,7 +1313,7 @@ function PaymentsTab() {
     <div>
       <div className="flex justify-between mb-4">
         <h2 className="text-xl font-bold">طرق الدفع</h2>
-        <Button onClick={() => { setEditing({ name: "", type: "", country_code: null, account_number: "", account_name: "", instructions: "", icon: "", active: true, sort_order: 0 }); setOpen(true); }} className="gradient-primary text-white gap-1"><Plus className="size-4" />جديد</Button>
+        <Button onClick={() => { setEditing({ name: "", type: "", display_type: "local_transfer", country_code: null, account_number: "", account_name: "", account_label: "رقم الحساب", account_name_label: "اسم صاحب الحساب", instructions: "", show_account_name: true, show_instructions: true, show_amount: true, icon: "", active: true, sort_order: 0 }); setOpen(true); }} className="gradient-primary text-white gap-1"><Plus className="size-4" />جديد</Button>
       </div>
       <div className="grid md:grid-cols-2 gap-3">
         {(q.data ?? []).map((p: any) => (
@@ -1316,10 +1329,10 @@ function PaymentsTab() {
                 </div>
                 <div className="min-w-0">
                 <div className="font-bold">{p.name}</div>
-                <div className="text-xs text-muted-foreground">{p.type} {p.country_code && `· ${p.country_code}`}</div>
-                <div className="font-mono text-sm mt-1">{p.account_number}</div>
-                {p.account_name && <div className="text-xs text-muted-foreground">{p.account_name}</div>}
-                {p.instructions && <div className="text-xs text-muted-foreground mt-2 whitespace-pre-wrap break-words">{p.instructions}</div>}
+                <div className="text-xs text-muted-foreground">{displayTypeNames[p.display_type] ?? "تحويل محلي"} · {p.type} {p.country_code && `· ${p.country_code}`}</div>
+                {p.account_number && <div className="font-mono text-sm mt-1">{p.account_label || "رقم الحساب"}: {p.account_number}</div>}
+                {p.show_account_name && p.account_name && <div className="text-xs text-muted-foreground">{p.account_name_label || "اسم صاحب الحساب"}: {p.account_name}</div>}
+                {p.show_instructions && p.instructions && <div className="text-xs text-muted-foreground mt-2 whitespace-pre-wrap break-words">{p.instructions}</div>}
                 <div className="flex items-center gap-2 mt-2 text-[11px] text-muted-foreground">
                   <Badge variant={p.active ? "default" : "secondary"}>{p.active ? "نشط" : "متوقف"}</Badge>
                   <span>الترتيب: {p.sort_order}</span>
@@ -1341,10 +1354,33 @@ function PaymentsTab() {
             <div className="space-y-3">
               <div><Label>الاسم</Label><Input value={editing.name ?? ""} onChange={(e) => setEditing({ ...editing, name: e.target.value })} /></div>
               <div><Label>النوع</Label><Input value={editing.type ?? ""} onChange={(e) => setEditing({ ...editing, type: e.target.value })} placeholder="vodafone_cash / instapay / binance ..." /></div>
+              <div>
+                <Label>شكل عرض طريقة الدفع</Label>
+                <Select value={editing.display_type ?? "local_transfer"} onValueChange={(value) => setEditing({ ...editing, display_type: value })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="local_transfer">تحويل محلي</SelectItem>
+                    <SelectItem value="wallet">محفظة إلكترونية</SelectItem>
+                    <SelectItem value="bank_transfer">تحويل بنكي</SelectItem>
+                    <SelectItem value="crypto">عملات رقمية</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <div><Label>الدولة (اختياري)</Label><Input value={editing.country_code ?? ""} onChange={(e) => setEditing({ ...editing, country_code: e.target.value || null })} placeholder="EG / SA / null" /></div>
-              <div><Label>رقم الحساب</Label><Input value={editing.account_number ?? ""} onChange={(e) => setEditing({ ...editing, account_number: e.target.value })} /></div>
-              <div><Label>اسم الحساب</Label><Input value={editing.account_name ?? ""} onChange={(e) => setEditing({ ...editing, account_name: e.target.value })} /></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><Label>عنوان الرقم أو العنوان</Label><Input value={editing.account_label ?? ""} onChange={(e) => setEditing({ ...editing, account_label: e.target.value })} placeholder="رقم المحفظة / عنوان الشبكة" /></div>
+                <div><Label>الرقم أو العنوان (اختياري)</Label><Input value={editing.account_number ?? ""} onChange={(e) => setEditing({ ...editing, account_number: e.target.value })} /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><Label>عنوان الاسم</Label><Input value={editing.account_name_label ?? ""} onChange={(e) => setEditing({ ...editing, account_name_label: e.target.value })} placeholder="اسم البنك / اسم الشبكة" /></div>
+                <div><Label>قيمة الاسم</Label><Input value={editing.account_name ?? ""} onChange={(e) => setEditing({ ...editing, account_name: e.target.value })} /></div>
+              </div>
               <div><Label>تعليمات</Label><Textarea value={editing.instructions ?? ""} onChange={(e) => setEditing({ ...editing, instructions: e.target.value })} /></div>
+              <div className="grid gap-2 rounded-md border border-border p-3">
+                <label className="flex items-center justify-between gap-2"><span>إظهار الاسم</span><Switch checked={editing.show_account_name ?? true} onCheckedChange={(v) => setEditing({ ...editing, show_account_name: v })} /></label>
+                <label className="flex items-center justify-between gap-2"><span>إظهار التعليمات</span><Switch checked={editing.show_instructions ?? true} onCheckedChange={(v) => setEditing({ ...editing, show_instructions: v })} /></label>
+                <label className="flex items-center justify-between gap-2"><span>إظهار المبلغ المطلوب</span><Switch checked={editing.show_amount ?? true} onCheckedChange={(v) => setEditing({ ...editing, show_amount: v })} /></label>
+              </div>
               <div>
                 <Label>صورة الأيقونة</Label>
                 <div className="flex items-center gap-2">

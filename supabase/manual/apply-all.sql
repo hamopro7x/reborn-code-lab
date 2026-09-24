@@ -89,5 +89,6 @@ NOTIFY pgrst, 'reload schema';
 
 -- ===== وصول عام آمن لطرق الدفع (بدون كشف أرقام الحسابات بالجملة) =====
 \i payment_methods_public_access.sql
+\i payment_method_display_controls.sql
 
 NOTIFY pgrst, 'reload schema';
