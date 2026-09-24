@@ -406,6 +406,51 @@
 .checkout-upload-actions { display: grid; grid-template-columns: 82px 1fr; gap: 10px; }
 .checkout-upload-actions > button { min-height: 44px; border-radius: 8px; }
 
+/* Payment method editor — scoped to this dialog only. */
+.payment-method-dialog {
+  width: min(456px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+  gap: 0;
+  overflow-y: auto;
+  border-color: color-mix(in oklab, var(--border) 72%, transparent);
+  border-radius: 8px;
+  background: var(--background);
+  padding: 22px;
+  color: var(--foreground);
+}
+.payment-method-dialog-header { margin-bottom: 18px; text-align: right; }
+.payment-method-dialog-header h2 { font-size: 18px; font-weight: 800; }
+.payment-method-form { display: grid; gap: 14px; }
+.payment-method-form label { display: block; margin-bottom: 6px; text-align: right; font-size: 13px; font-weight: 700; }
+.payment-method-form input,
+.payment-method-form textarea,
+.payment-method-form button[role="combobox"] {
+  border-color: color-mix(in oklab, var(--border) 82%, transparent);
+  border-radius: 10px;
+  background: color-mix(in oklab, var(--background) 94%, var(--foreground) 6%);
+  text-align: right;
+}
+.payment-method-form input,
+.payment-method-form button[role="combobox"] { min-height: 42px; }
+.payment-method-form textarea { min-height: 88px; resize: vertical; }
+.payment-method-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.payment-method-switches {
+  display: grid;
+  gap: 12px;
+  border: 1px solid color-mix(in oklab, var(--border) 82%, transparent);
+  border-radius: 10px;
+  padding: 13px 12px;
+  background: color-mix(in oklab, var(--background) 94%, var(--foreground) 6%);
+}
+.payment-method-switches label { margin: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.payment-method-switches button { order: 2; }
+.payment-method-dialog > button:last-child { left: 16px; right: auto; top: 16px; }
+
+@media (max-width: 520px) {
+  .payment-method-dialog { padding: 18px 14px; }
+  .payment-method-pair { grid-template-columns: 1fr; }
+}
+
 @media (min-width: 640px) {
   .checkout-v4 { padding: 40px 16px 60px; }
   .checkout-shell { min-height: auto; border: 1px solid var(--checkout-border); border-radius: 8px; overflow: hidden; }
