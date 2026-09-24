@@ -369,12 +369,12 @@ function CheckoutPage() {
                         className="checkout-payment-option"
                         aria-pressed={selectedPayment?.id === pm.id}
                       >
+                        <span className="checkout-radio" aria-hidden="true"><span /></span>
                         <PaymentMethodIcon method={pm} />
                         <div>
                             <strong>{pm.name}</strong>
                              {selectedPayment?.id !== pm.id && <span>{pm.type}</span>}
                         </div>
-                        <span className="checkout-radio" aria-hidden="true" />
                       </Button>
                       {selectedPayment?.id === pm.id && (
                         <div className="checkout-transfer">
@@ -425,7 +425,7 @@ function CheckoutPage() {
                             </>
                           )}
                            {paymentDetailsQ.data?.show_instructions !== false && paymentDetailsQ.data?.instructions && <p>{paymentDetailsQ.data.instructions}</p>}
-                           {paymentDetailsQ.data?.show_amount !== false && <div className="checkout-transfer-total"><span>المبلغ المطلوب دفعه</span><b>{formatPrice(total, currency)}</b></div>}
+                           {paymentDetailsQ.data?.show_amount !== false && <div className="checkout-transfer-total"><span>المبلغ المطلوب تحويله</span><b>{formatPrice(total, currency)}</b></div>}
                         </div>
                       )}
                     </div>
