@@ -1,3 +1,4 @@
+import { useUiState } from "@/lib/ui-state";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
@@ -526,7 +527,7 @@ function CustomersTab() {
 // ============ REVIEWS ============
 function ReviewsTab() {
   const qc = useQueryClient();
-  const [filter, setFilter] = useState<"pending" | "approved" | "all">("pending");
+  const [filter, setFilter] = useUiState<"pending" | "approved" | "all">("orders", "filter", "pending");
   const q = useQuery({
     queryKey: ["admin-reviews", filter],
     queryFn: async () => {
