@@ -393,7 +393,7 @@ function CheckoutPage() {
                                   </Button>
                                 )}
                               </div>
-                              {paymentDetailsQ.data?.show_account_name && paymentDetailsQ.data?.account_name && (
+                              {paymentDetailsQ.data?.show_account_name !== false && paymentDetailsQ.data?.account_name && (
                                 <div className="checkout-binance-field checkout-network-name-field">
                                   <span className="checkout-field-label">{paymentDetailsQ.data?.account_name_label || "اسم الشبكة"}</span>
                                   <span className="checkout-field-value">{paymentDetailsQ.data.account_name}</span>
@@ -419,13 +419,13 @@ function CheckoutPage() {
                                   </Button>
                                 )}
                               </div>
-                              {paymentDetailsQ.data?.show_account_name && paymentDetailsQ.data?.account_name && (
+                              {paymentDetailsQ.data?.show_account_name !== false && paymentDetailsQ.data?.account_name && (
                                 <small className="checkout-recipient"><UserRound aria-hidden="true" /> {paymentDetailsQ.data?.account_name_label || "اسم صاحب الحساب"}: {paymentDetailsQ.data.account_name}</small>
                               )}
                             </>
                           )}
-                           {paymentDetailsQ.data?.show_instructions && paymentDetailsQ.data?.instructions && <p>{paymentDetailsQ.data.instructions}</p>}
-                           {paymentDetailsQ.data?.show_amount && <div className="checkout-transfer-total"><span>المبلغ المطلوب دفعه</span><b>{formatPrice(total, currency)}</b></div>}
+                           {paymentDetailsQ.data?.show_instructions !== false && paymentDetailsQ.data?.instructions && <p>{paymentDetailsQ.data.instructions}</p>}
+                           {paymentDetailsQ.data?.show_amount !== false && <div className="checkout-transfer-total"><span>المبلغ المطلوب دفعه</span><b>{formatPrice(total, currency)}</b></div>}
                         </div>
                       )}
                     </div>

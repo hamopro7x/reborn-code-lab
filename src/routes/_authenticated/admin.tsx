@@ -1331,8 +1331,8 @@ function PaymentsTab() {
                 <div className="font-bold">{p.name}</div>
                 <div className="text-xs text-muted-foreground">{displayTypeNames[p.display_type] ?? "تحويل محلي"} · {p.type} {p.country_code && `· ${p.country_code}`}</div>
                 {p.account_number && <div className="font-mono text-sm mt-1">{p.account_label || "رقم الحساب"}: {p.account_number}</div>}
-                {p.show_account_name && p.account_name && <div className="text-xs text-muted-foreground">{p.account_name_label || "اسم صاحب الحساب"}: {p.account_name}</div>}
-                {p.show_instructions && p.instructions && <div className="text-xs text-muted-foreground mt-2 whitespace-pre-wrap break-words">{p.instructions}</div>}
+                {p.show_account_name !== false && p.account_name && <div className="text-xs text-muted-foreground">{p.account_name_label || "اسم صاحب الحساب"}: {p.account_name}</div>}
+                {p.show_instructions !== false && p.instructions && <div className="text-xs text-muted-foreground mt-2 whitespace-pre-wrap break-words">{p.instructions}</div>}
                 <div className="flex items-center gap-2 mt-2 text-[11px] text-muted-foreground">
                   <Badge variant={p.active ? "default" : "secondary"}>{p.active ? "نشط" : "متوقف"}</Badge>
                   <span>الترتيب: {p.sort_order}</span>

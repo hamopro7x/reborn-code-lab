@@ -9,6 +9,10 @@ alter table public.payment_methods
   add column if not exists show_instructions boolean not null default true,
   add column if not exists show_amount boolean not null default true;
 
+update public.payment_methods
+set display_type = 'crypto', account_label = 'عنوان الشبكة', account_name_label = 'اسم الشبكة'
+where lower(type) in ('binance', 'bybit');
+
 drop view if exists public.payment_methods_public;
 create view public.payment_methods_public as
 select id, name, type, icon, country_code, sort_order, display_type
