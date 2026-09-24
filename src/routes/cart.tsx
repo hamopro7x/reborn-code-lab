@@ -2,7 +2,6 @@ import { useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { WhatsAppFab } from "@/components/site/WhatsAppFab";
 import { useCart, type CartItem } from "@/lib/cart";
 import { useCurrency } from "@/lib/currency-context";
 import { convertFromEgp, formatPrice } from "@/lib/format";
@@ -197,7 +196,6 @@ function CartPage() {
           </>
         )}
       </main>
-      <WhatsAppFab className="bottom-[92px]" />
     </div>
   );
 }

@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
-import { WhatsAppFab } from "@/components/site/WhatsAppFab";
 import { Button } from "@/components/ui/button";
 import { useCurrency } from "@/lib/currency-context";
 import { convertFromEgp, formatPrice, computeDiscountedPrice } from "@/lib/format";
@@ -205,7 +204,6 @@ function PageShell({ children }: { children: React.ReactNode }) {
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8">{children}</main>
       <Footer />
-      <WhatsAppFab />
     </div>
   );
 }

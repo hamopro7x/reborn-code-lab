@@ -6,7 +6,6 @@ import { listOrdersByDevice } from "@/lib/orders.functions";
 import { getCachedFingerprint } from "@/lib/device-session";
 import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
-import { WhatsAppFab } from "@/components/site/WhatsAppFab";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Package } from "lucide-react";
@@ -83,7 +82,6 @@ function TrackPage() {
         )}
       </main>
       <Footer />
-      <WhatsAppFab />
     </div>
   );
 }

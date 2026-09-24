@@ -6,7 +6,6 @@ import { useUiState, useScrollRestore } from "@/lib/ui-state";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
-import { WhatsAppFab } from "@/components/site/WhatsAppFab";
 import { ProductCard } from "@/components/site/ProductCard";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
@@ -79,7 +78,6 @@ function Shop() {
         )}
       </main>
       <Footer />
-      <WhatsAppFab />
     </div>
   );
 }
