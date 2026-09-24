@@ -1290,9 +1290,9 @@ function PaymentsTab() {
       account_label: String(editing.account_label ?? "").trim() || "رقم الحساب",
       account_name_label: String(editing.account_name_label ?? "").trim() || "اسم صاحب الحساب",
       instructions: String(editing.instructions ?? "").trim() || null,
-      show_account_name: Boolean(editing.show_account_name),
-      show_instructions: Boolean(editing.show_instructions),
-      show_amount: Boolean(editing.show_amount),
+      show_account_name: editing.show_account_name !== false,
+      show_instructions: editing.show_instructions !== false,
+      show_amount: editing.show_amount !== false,
       icon: String(editing.icon ?? "").trim() || null,
       sort_order: Number(editing.sort_order) || 0,
       active: Boolean(editing.active),
@@ -1305,7 +1305,10 @@ function PaymentsTab() {
       ? supabase.from("payment_methods").update(values as any).eq("id", editing.id)
       : supabase.from("payment_methods").insert(values as any);
     const { error } = await op;
-    if (error) toast.error(error.message); else { toast.success("محفوظ"); setOpen(false); qc.invalidateQueries({ queryKey: ["admin-pm"] }); }
+    if (error) {
+      const missingPaymentControls = /account_label|account_name_label|display_type|show_account_name|show_instructions|show_amount/i.test(error.message);
+      toast.error(missingPaymentControls ? "تحديث حقول طرق الدفع لم يُطبّق على قاعدة البيانات بعد" : error.message);
+    } else { toast.success("محفوظ"); setOpen(false); qc.invalidateQueries({ queryKey: ["admin-pm"] }); }
   }
   async function del(id: string) { if (!confirm("حذف؟")) return; await supabase.from("payment_methods").delete().eq("id", id); qc.invalidateQueries({ queryKey: ["admin-pm"] }); }
 
@@ -1348,10 +1351,10 @@ function PaymentsTab() {
         ))}
       </div>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>طريقة دفع</DialogTitle></DialogHeader>
+        <DialogContent className="payment-method-dialog" dir="rtl">
+          <DialogHeader className="payment-method-dialog-header"><DialogTitle>طريقة دفع</DialogTitle></DialogHeader>
           {editing && (
-            <div className="space-y-3">
+            <div className="payment-method-form">
               <div><Label>الاسم</Label><Input value={editing.name ?? ""} onChange={(e) => setEditing({ ...editing, name: e.target.value })} /></div>
               <div><Label>النوع</Label><Input value={editing.type ?? ""} onChange={(e) => setEditing({ ...editing, type: e.target.value })} placeholder="vodafone_cash / instapay / binance ..." /></div>
               <div>
@@ -1367,19 +1370,19 @@ function PaymentsTab() {
                 </Select>
               </div>
               <div><Label>الدولة (اختياري)</Label><Input value={editing.country_code ?? ""} onChange={(e) => setEditing({ ...editing, country_code: e.target.value || null })} placeholder="EG / SA / null" /></div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="payment-method-pair">
                 <div><Label>عنوان الرقم أو العنوان</Label><Input value={editing.account_label ?? ""} onChange={(e) => setEditing({ ...editing, account_label: e.target.value })} placeholder="رقم المحفظة / عنوان الشبكة" /></div>
                 <div><Label>الرقم أو العنوان (اختياري)</Label><Input value={editing.account_number ?? ""} onChange={(e) => setEditing({ ...editing, account_number: e.target.value })} /></div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="payment-method-pair">
                 <div><Label>عنوان الاسم</Label><Input value={editing.account_name_label ?? ""} onChange={(e) => setEditing({ ...editing, account_name_label: e.target.value })} placeholder="اسم البنك / اسم الشبكة" /></div>
                 <div><Label>قيمة الاسم</Label><Input value={editing.account_name ?? ""} onChange={(e) => setEditing({ ...editing, account_name: e.target.value })} /></div>
               </div>
               <div><Label>تعليمات</Label><Textarea value={editing.instructions ?? ""} onChange={(e) => setEditing({ ...editing, instructions: e.target.value })} /></div>
-              <div className="grid gap-2 rounded-md border border-border p-3">
-                <label className="flex items-center justify-between gap-2"><span>إظهار الاسم</span><Switch checked={editing.show_account_name ?? true} onCheckedChange={(v) => setEditing({ ...editing, show_account_name: v })} /></label>
-                <label className="flex items-center justify-between gap-2"><span>إظهار التعليمات</span><Switch checked={editing.show_instructions ?? true} onCheckedChange={(v) => setEditing({ ...editing, show_instructions: v })} /></label>
-                <label className="flex items-center justify-between gap-2"><span>إظهار المبلغ المطلوب</span><Switch checked={editing.show_amount ?? true} onCheckedChange={(v) => setEditing({ ...editing, show_amount: v })} /></label>
+              <div className="payment-method-switches">
+                <label><span>إظهار الاسم</span><Switch checked={editing.show_account_name ?? true} onCheckedChange={(v) => setEditing({ ...editing, show_account_name: v })} /></label>
+                <label><span>إظهار التعليمات</span><Switch checked={editing.show_instructions ?? true} onCheckedChange={(v) => setEditing({ ...editing, show_instructions: v })} /></label>
+                <label><span>إظهار المبلغ المطلوب</span><Switch checked={editing.show_amount ?? true} onCheckedChange={(v) => setEditing({ ...editing, show_amount: v })} /></label>
               </div>
               <div>
                 <Label>صورة الأيقونة</Label>
