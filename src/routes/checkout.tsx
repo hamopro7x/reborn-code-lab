@@ -166,7 +166,7 @@ function CheckoutPage() {
   });
   const paymentDetailsQ = useQuery({
     queryKey: ["payment-details", selectedPayment?.id],
-    queryFn: async () => await paymentDetailsFn({ data: { id: selectedPayment.id } }),
+    queryFn: async (): Promise<any> => await paymentDetailsFn({ data: { id: selectedPayment.id } }),
     enabled: !!selectedPayment?.id,
   });
 
