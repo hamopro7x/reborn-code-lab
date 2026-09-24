@@ -369,11 +369,9 @@ function CheckoutPage() {
                         className="checkout-payment-option"
                         aria-pressed={selectedPayment?.id === pm.id}
                       >
-                        <span className="checkout-radio" aria-hidden="true"><span /></span>
                         <PaymentMethodIcon method={pm} />
                         <div>
-                            <strong>{pm.name}</strong>
-                             {selectedPayment?.id !== pm.id && <span>{pm.type}</span>}
+                          <strong>{pm.name}</strong>
                         </div>
                       </Button>
                       {selectedPayment?.id === pm.id && (
