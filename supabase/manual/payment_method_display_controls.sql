@@ -5,6 +5,7 @@ alter table public.payment_methods
     check (display_type in ('local_transfer', 'wallet', 'bank_transfer', 'crypto')),
   add column if not exists account_label text not null default 'رقم الحساب',
   add column if not exists account_name_label text not null default 'اسم صاحب الحساب',
+  add column if not exists network_icon text,
   add column if not exists show_account_name boolean not null default true,
   add column if not exists show_instructions boolean not null default true,
   add column if not exists show_amount boolean not null default true;
@@ -25,13 +26,14 @@ create function public.payment_method_details(p_id uuid)
 returns table (
   id uuid, name text, type text, account_number text, account_name text,
   instructions text, display_type text, account_label text,
+  network_icon text,
   account_name_label text, show_account_name boolean,
   show_instructions boolean, show_amount boolean
 )
 language sql stable security definer set search_path = public
 as $$
   select pm.id, pm.name, pm.type, pm.account_number, pm.account_name, pm.instructions,
-    pm.display_type, pm.account_label, pm.account_name_label,
+    pm.display_type, pm.account_label, pm.network_icon, pm.account_name_label,
     pm.show_account_name, pm.show_instructions, pm.show_amount
   from public.payment_methods pm
   where pm.id = p_id and pm.active = true
