@@ -394,6 +394,11 @@ function CheckoutPage() {
                               </div>
                               {paymentDetailsQ.data?.show_account_name !== false && paymentDetailsQ.data?.account_name && (
                                 <div className="checkout-binance-field checkout-network-name-field">
+                                  {paymentDetailsQ.data?.network_icon && (
+                                    <span className="checkout-network-icon" aria-hidden="true">
+                                      <img src={paymentDetailsQ.data.network_icon} alt="" />
+                                    </span>
+                                  )}
                                   <span className="checkout-field-label">{paymentDetailsQ.data?.account_name_label || "اسم الشبكة"}</span>
                                   <span className="checkout-field-value">{paymentDetailsQ.data.account_name}</span>
                                 </div>

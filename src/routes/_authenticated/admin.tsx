@@ -1264,15 +1264,15 @@ function PaymentsTab() {
     crypto: "عملات رقمية",
   };
 
-  async function uploadIcon(file: File) {
+  async function uploadIcon(file: File, field: "icon" | "network_icon" = "icon") {
     setUploadingIcon(true);
     try {
       const prepared = await prepareIconUpload({ data: { fileName: file.name, contentType: file.type || "image/png", size: file.size } });
       const { error } = await supabase.storage.from("product-images").uploadToSignedUrl(prepared.path, prepared.token, file, { contentType: file.type || "image/png" });
       if (error) throw error;
       const { url } = await getIconUrl({ data: { path: prepared.path } });
-      setEditing((current: any) => ({ ...current, icon: url }));
-      toast.success("تم رفع الأيقونة");
+      setEditing((current: any) => ({ ...current, [field]: url }));
+      toast.success(field === "network_icon" ? "تم رفع صورة الشبكة" : "تم رفع الأيقونة");
     } catch (error: any) {
       toast.error(error?.message ?? "فشل رفع الأيقونة");
     } finally {
@@ -1295,6 +1295,7 @@ function PaymentsTab() {
       show_instructions: editing.show_instructions !== false,
       show_amount: editing.show_amount !== false,
       icon: String(editing.icon ?? "").trim() || null,
+      network_icon: editing.display_type === "crypto" ? String(editing.network_icon ?? "").trim() || null : null,
       sort_order: Number(editing.sort_order) || 0,
       active: Boolean(editing.active),
     };
@@ -1307,7 +1308,7 @@ function PaymentsTab() {
       : supabase.from("payment_methods").insert(values as any);
     const { error } = await op;
     if (error) {
-      const missingPaymentControls = /account_label|account_name_label|display_type|show_account_name|show_instructions|show_amount/i.test(error.message);
+      const missingPaymentControls = /account_label|account_name_label|display_type|show_account_name|show_instructions|show_amount|network_icon/i.test(error.message);
       toast.error(missingPaymentControls ? "تحديث حقول طرق الدفع لم يُطبّق على قاعدة البيانات بعد" : error.message);
     } else { toast.success("محفوظ"); setOpen(false); qc.invalidateQueries({ queryKey: ["admin-pm"] }); }
   }
@@ -1317,7 +1318,7 @@ function PaymentsTab() {
     <div>
       <div className="flex justify-between mb-4">
         <h2 className="text-xl font-bold">طرق الدفع</h2>
-        <Button onClick={() => { setEditing({ name: "", type: "", display_type: "local_transfer", country_code: null, account_number: "", account_name: "", account_label: "رقم الحساب", account_name_label: "اسم صاحب الحساب", instructions: "", show_account_name: true, show_instructions: true, show_amount: true, icon: "", active: true, sort_order: 0 }); setOpen(true); }} className="gradient-primary text-white gap-1"><Plus className="size-4" />جديد</Button>
+        <Button onClick={() => { setEditing({ name: "", type: "", display_type: "local_transfer", country_code: null, account_number: "", account_name: "", account_label: "رقم الحساب", account_name_label: "اسم صاحب الحساب", instructions: "", show_account_name: true, show_instructions: true, show_amount: true, icon: "", network_icon: "", active: true, sort_order: 0 }); setOpen(true); }} className="gradient-primary text-white gap-1"><Plus className="size-4" />جديد</Button>
       </div>
       <div className="grid md:grid-cols-2 gap-3">
         {(q.data ?? []).map((p: any) => (
@@ -1413,6 +1414,34 @@ function PaymentsTab() {
                 </div>
                 {editing.icon && <Button type="button" size="sm" variant="ghost" className="mt-1 text-destructive" onClick={() => setEditing({ ...editing, icon: null })}>حذف الصورة</Button>}
               </div>
+              {editing.display_type === "crypto" && (
+                <div>
+                  <Label>صورة الشبكة</Label>
+                  <div className="flex items-center gap-2">
+                    <label className="flex h-10 flex-1 cursor-pointer items-center justify-center gap-2 rounded-md border border-input bg-background px-3 text-sm hover:bg-accent">
+                      <Upload className="size-4" />
+                      {uploadingIcon ? "جاري رفع الصورة..." : editing.network_icon ? "تغيير صورة الشبكة" : "اختيار صورة الشبكة"}
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                        className="hidden"
+                        disabled={uploadingIcon}
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          if (file) void uploadIcon(file, "network_icon");
+                          event.currentTarget.value = "";
+                        }}
+                      />
+                    </label>
+                    <div className="size-10 shrink-0 overflow-hidden rounded-full border border-border bg-muted flex items-center justify-center">
+                      {editing.network_icon
+                        ? <img src={editing.network_icon} alt="معاينة صورة الشبكة" className="size-8 object-contain" />
+                        : <Coins className="size-5 text-muted-foreground" />}
+                    </div>
+                  </div>
+                  {editing.network_icon && <Button type="button" size="sm" variant="ghost" className="mt-1 text-destructive" onClick={() => setEditing({ ...editing, network_icon: null })}>حذف صورة الشبكة</Button>}
+                </div>
+              )}
               <div><Label>الترتيب</Label><Input type="number" value={editing.sort_order ?? 0} onChange={(e) => setEditing({ ...editing, sort_order: Number(e.target.value) })} /></div>
               <label className="flex items-center gap-2"><Switch checked={editing.active} onCheckedChange={(v) => setEditing({ ...editing, active: v })} /> نشط</label>
             </div>
