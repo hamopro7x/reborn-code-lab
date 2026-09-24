@@ -8,4 +8,5 @@
 - [Design rules](mem://design/design-rules) — Full anti-generic-AI design constraints, pre-ship checklist
 - [Mobile keyword signal](mem://preferences/mobile-first-signal) — Message starting with "موبايل" means mobile-only work
 - [Store category rail](mem://design/store-category-rail) — Homepage categories use a horizontal gaming-cover rail on desktop and mobile
+- [Flexible payment methods](mem://features/payment-methods) — Full admin control; checkout must not assume every payment method is cryptocurrency
 
