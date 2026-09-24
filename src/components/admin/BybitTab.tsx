@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useState, useRef } from "react";
+import { useUiState } from "@/lib/ui-state";
 import { usePersistentState } from "@/lib/persistent-state";
 import tonAsset from "@/assets/ton.png.asset.json";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
@@ -813,7 +814,7 @@ function BybitAccountView({ isAdmin, accountId, accountName, onBack }: { isAdmin
   // (إضافة/حذف حساب، مفاتيح API، التحويل، تعديل البطاقات وبيانات الحساب)
   // محكومة بـ isAdmin في مكانها.
   const show = (_k: "balance" | "spend" | "txns" | "onchain" | "internal" | "cards" | "account" | "docs") => true;
-  const [tab, setTab] = useState<"card" | "onchain" | "internal" | "p2p">("card");
+  const [tab, setTab] = useUiState<"card" | "onchain" | "internal" | "p2p">("bybit", "tab", "card");
   useEffect(() => {
     const saved = typeof window !== "undefined" ? window.localStorage.getItem(TAB_KEY) : null;
     if (saved === "card" || saved === "onchain" || saved === "internal" || saved === "p2p") setTab(saved);

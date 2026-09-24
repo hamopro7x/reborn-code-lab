@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useMemo } from "react";
+import { useUiState } from "@/lib/ui-state";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { createPublicOrder, attachOrderScreenshot, signScreenshotUpload } from "@/lib/orders.functions";
@@ -148,12 +149,12 @@ function CheckoutPage() {
   const signUploadFn = useServerFn(signScreenshotUpload);
   const listPaymentsFn = useServerFn(listPublicPaymentMethods);
   const paymentDetailsFn = useServerFn(getPublicPaymentDetails);
-  const [step, setStep] = useState<CheckoutStep>("info");
-  const [form, setForm] = useState({ full_name: "", email: "", phone: "", country_code: "EG" });
-  const [selectedPayment, setSelectedPayment] = useState<any>(null);
+  const [step, setStep] = useUiState<CheckoutStep>("checkout", "step", "info");
+  const [form, setForm] = useUiState("checkout", "form", { full_name: "", email: "", phone: "", country_code: "EG" });
+  const [selectedPayment, setSelectedPayment] = useUiState<any>("checkout", "payment", null);
   const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [orderCode, setOrderCode] = useState<string>("");
+  const [orderCode, setOrderCode] = useUiState<string>("checkout", "order", "");
 
   const countriesQ = useQuery({
     queryKey: ["countries"],
