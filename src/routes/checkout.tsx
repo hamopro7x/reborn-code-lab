@@ -400,16 +400,6 @@ function CheckoutPage() {
                               </div>
                               {paymentDetailsQ.data?.account_name && (
                                 <div className="checkout-binance-field checkout-network-name-field">
-                                  <span className="checkout-network-name-icon" aria-hidden="true">
-                                    {(() => {
-                                      const customIcon = String(pm?.icon ?? "").trim();
-                                      const customImage = /^(https?:\/\/|\/)/i.test(customIcon);
-                                      const match = getPaymentIconMatch(pm);
-                                      if (customImage) return <img src={customIcon} alt="" />;
-                                      if (match) return <img src={match.src} alt="" />;
-                                      return "BN";
-                                    })()}
-                                  </span>
                                   <span className="checkout-field-label">اسم الشبكة</span>
                                   <span className="checkout-field-value">{paymentDetailsQ.data.account_name}</span>
                                 </div>
