@@ -41,7 +41,7 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ error, reset }: import("@tanstack/react-router").ErrorComponentProps) {
+function ErrorComponent({ error, reset }: import("@tanstack/react-router").ErrorComponentProps<Error>) {
   const router = useRouter();
   useEffect(() => { reportLovableError(error, { boundary: "root" }); }, [error]);
   // لوحة الأدمن/الموظف لها سمة رمادية — نطبّقها هنا أيضاً حتى لا تظهر
