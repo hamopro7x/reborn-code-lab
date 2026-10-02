@@ -70,47 +70,78 @@ if (Test-Path .env) {
     }
 }
 
-Write-Host "Setting the new database connection on Fly..." -ForegroundColor Cyan
-$secretArgs = @(
-    'SUPABASE_URL=https://kcdsdaytrnzoiharmyxo.supabase.co',
-    'SUPABASE_PROJECT_ID=kcdsdaytrnzoiharmyxo',
-    'SUPABASE_PUBLISHABLE_KEY=sb_publishable_RTmbXinMhCr9B3oNa6dqqg_iVsKBKG6',
-    'SUPABASE_ANON_KEY=sb_publishable_RTmbXinMhCr9B3oNa6dqqg_iVsKBKG6'
-)
-if ($serviceRoleKey) {
-    $secretArgs += "SUPABASE_SERVICE_ROLE_KEY=$serviceRoleKey"
-} else {
-    Write-Warning "No local .env service key found; keeping the SUPABASE_SERVICE_ROLE_KEY already stored on Fly."
-    $existingSecrets = & $Fly secrets list -a m-hamo
-    if (-not ($existingSecrets -match 'SUPABASE_SERVICE_ROLE_KEY')) {
-        throw "SUPABASE_SERVICE_ROLE_KEY is missing both locally and on Fly. Deployment stopped."
-    }
+# بعض أجهزة ويندوز (Smart App Control / Application Control) تمنع تشغيل flyctl.exe.
+# في هذه الحالة ننشر عبر GitHub Actions بدل تشغيل Fly من الجهاز.
+$flyUsable = $true
+try {
+    & $Fly version *> $null
+    if ($LASTEXITCODE -ne 0) { $flyUsable = $false }
+} catch {
+    $flyUsable = $false
 }
-& $Fly secrets set -a m-hamo @secretArgs
-Assert-LastCommandSucceeded "fly secrets set"
 
-Write-Host "Deploying to Fly.io..." -ForegroundColor Green
-& $Fly deploy -a m-hamo --config fly.toml --no-cache --strategy immediate `
-  --build-arg VITE_SUPABASE_URL=https://kcdsdaytrnzoiharmyxo.supabase.co `
-  --build-arg VITE_SUPABASE_PROJECT_ID=kcdsdaytrnzoiharmyxo `
-  --build-arg VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_RTmbXinMhCr9B3oNa6dqqg_iVsKBKG6
-if ($LASTEXITCODE -ne 0) {
-    Write-Warning "The default Fly builder failed. Retrying without Depot..."
-    & $Fly deploy -a m-hamo --config fly.toml --no-cache --strategy immediate --depot=false `
+$maxAttempts = 24
+if ($flyUsable) {
+    Write-Host "Setting the new database connection on Fly..." -ForegroundColor Cyan
+    $secretArgs = @(
+        'SUPABASE_URL=https://kcdsdaytrnzoiharmyxo.supabase.co',
+        'SUPABASE_PROJECT_ID=kcdsdaytrnzoiharmyxo',
+        'SUPABASE_PUBLISHABLE_KEY=sb_publishable_RTmbXinMhCr9B3oNa6dqqg_iVsKBKG6',
+        'SUPABASE_ANON_KEY=sb_publishable_RTmbXinMhCr9B3oNa6dqqg_iVsKBKG6'
+    )
+    if ($serviceRoleKey) {
+        $secretArgs += "SUPABASE_SERVICE_ROLE_KEY=$serviceRoleKey"
+    } else {
+        Write-Warning "No local .env service key found; keeping the SUPABASE_SERVICE_ROLE_KEY already stored on Fly."
+        $existingSecrets = & $Fly secrets list -a m-hamo
+        if (-not ($existingSecrets -match 'SUPABASE_SERVICE_ROLE_KEY')) {
+            throw "SUPABASE_SERVICE_ROLE_KEY is missing both locally and on Fly. Deployment stopped."
+        }
+    }
+    & $Fly secrets set -a m-hamo @secretArgs
+    Assert-LastCommandSucceeded "fly secrets set"
+
+    Write-Host "Deploying to Fly.io..." -ForegroundColor Green
+    & $Fly deploy -a m-hamo --config fly.toml --no-cache --strategy immediate `
       --build-arg VITE_SUPABASE_URL=https://kcdsdaytrnzoiharmyxo.supabase.co `
       --build-arg VITE_SUPABASE_PROJECT_ID=kcdsdaytrnzoiharmyxo `
       --build-arg VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_RTmbXinMhCr9B3oNa6dqqg_iVsKBKG6
-}
-Assert-LastCommandSucceeded "fly deploy (including the non-Depot retry)"
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning "The default Fly builder failed. Retrying without Depot..."
+        & $Fly deploy -a m-hamo --config fly.toml --no-cache --strategy immediate --depot=false `
+          --build-arg VITE_SUPABASE_URL=https://kcdsdaytrnzoiharmyxo.supabase.co `
+          --build-arg VITE_SUPABASE_PROJECT_ID=kcdsdaytrnzoiharmyxo `
+          --build-arg VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_RTmbXinMhCr9B3oNa6dqqg_iVsKBKG6
+    }
+    Assert-LastCommandSucceeded "fly deploy (including the non-Depot retry)"
 
-# لا تعتمد على رسالة Fly وحدها: انتظر حتى تستقر النسخة الجديدة وتصبح سليمة.
-Write-Host "Waiting for the new Fly release to become healthy..." -ForegroundColor Cyan
-& $Fly status -a m-hamo
-Assert-LastCommandSucceeded "fly status"
+    # لا تعتمد على رسالة Fly وحدها: انتظر حتى تستقر النسخة الجديدة وتصبح سليمة.
+    Write-Host "Waiting for the new Fly release to become healthy..." -ForegroundColor Cyan
+    & $Fly status -a m-hamo
+    Assert-LastCommandSucceeded "fly status"
+} else {
+    Write-Warning "Windows blocked flyctl on this computer. Deploying through GitHub instead..."
+    git add src/lib/agent-release.ts agent/package.json
+    git diff --cached --quiet
+    if ($LASTEXITCODE -ne 0) {
+        git commit -m "Release employee app $expectedAgentVersion"
+        Assert-LastCommandSucceeded "git commit"
+    }
+    git push origin HEAD:main
+    Assert-LastCommandSucceeded "git push"
+    $deployTag = "deploy-" + (Get-Date -Format "yyyyMMdd-HHmmss")
+    git tag $deployTag
+    Assert-LastCommandSucceeded "git tag"
+    git push origin $deployTag
+    Assert-LastCommandSucceeded "git push tag"
+    Write-Host "GitHub is now building and deploying ($deployTag). This usually takes 5-10 minutes..." -ForegroundColor Cyan
+    Write-Host "Progress: https://github.com/hamopro7x/reborn-code-lab/actions" -ForegroundColor Cyan
+    $maxAttempts = 180
+}
 
 Write-Host "Verifying the production bundle..." -ForegroundColor Cyan
 $verified = $false
-for ($attempt = 1; $attempt -le 24; $attempt++) {
+for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
     $cacheBust = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
     $headers = @{ "Cache-Control" = "no-cache, no-store, max-age=0"; "Pragma" = "no-cache" }
     try {
@@ -147,10 +178,10 @@ for ($attempt = 1; $attempt -le 24; $attempt++) {
     } catch {
         # أثناء strategy=immediate قد يرفض النطاق الاتصال لثوانٍ بينما تُستبدل
         # الأجهزة. لا تجعل هذا الانقطاع المؤقت ينهي النشر قبل اكتماله.
-        Write-Warning "Production is temporarily unavailable while Fly switches machines (attempt $attempt/24)."
+        Write-Warning "Production is temporarily unavailable while Fly switches machines (attempt $attempt/$maxAttempts)."
     }
-    if ($attempt -lt 24) {
-        Write-Warning "Production has not switched to the new build yet (attempt $attempt/24). Retrying in 5 seconds..."
+    if ($attempt -lt $maxAttempts) {
+        Write-Warning "Production has not switched to the new build yet (attempt $attempt/$maxAttempts). Retrying in 5 seconds..."
         Start-Sleep -Seconds 5
     }
 }

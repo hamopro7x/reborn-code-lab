@@ -1,0 +1,27 @@
+name: Deploy to Fly
+
+# Runs only when deploy.ps1 pushes a deploy-* tag (or manually), never on every edit.
+on:
+  push:
+    tags:
+      - "deploy-*"
+  workflow_dispatch:
+
+concurrency:
+  group: fly-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Deploy
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          flyctl deploy -a m-hamo --config fly.toml --remote-only --no-cache --strategy immediate \
+            --build-arg VITE_SUPABASE_URL=https://kcdsdaytrnzoiharmyxo.supabase.co \
+            --build-arg VITE_SUPABASE_PROJECT_ID=kcdsdaytrnzoiharmyxo \
+            --build-arg VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_RTmbXinMhCr9B3oNa6dqqg_iVsKBKG6
