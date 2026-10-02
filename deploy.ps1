@@ -121,6 +121,8 @@ if ($flyUsable) {
     Assert-LastCommandSucceeded "fly status"
 } else {
     Write-Warning "Windows blocked flyctl on this computer. Deploying through GitHub instead..."
+    if (-not (git config user.email)) { git config user.email "hamopro7x@users.noreply.github.com" }
+    if (-not (git config user.name)) { git config user.name "hamopro7x" }
     git add src/lib/agent-release.ts agent/package.json
     git diff --cached --quiet
     if ($LASTEXITCODE -ne 0) {
