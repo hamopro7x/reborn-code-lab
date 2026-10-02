@@ -26,7 +26,7 @@ import { BybitLedgerPanel } from "@/components/admin/BybitLedgerPanel";
 
 
 
-import { RefreshCw, CreditCard, Layers, ArrowUp, ArrowDown, ChevronDown, Loader2, Trash2, Plus, Download, Copy, Pencil, ChevronLeft, Wallet, ArrowDownUp, Search, BarChart3, Clock, PieChart } from "lucide-react";
+import { RefreshCw, CreditCard, Layers, ArrowUp, ArrowDown, ChevronDown, Loader2, Trash2, Plus, Download, Copy, Pencil, ChevronLeft, Wallet, ArrowDownUp, Search, BarChart3, Clock, PieChart, Lock } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -1110,6 +1110,8 @@ function RealChip() {
 
 function BybitCardArt({ c, onDelete, canDelete = true, onEdit }: { c: any; onDelete?: () => void; canDelete?: boolean; onEdit?: () => void }) {
   const name = c.name || `بطاقة ${c.brand || "Visa"}`;
+  const normalizedStatus = String(c.status ?? "active").trim().toLowerCase();
+  const isFrozen = ["frozen", "freeze", "blocked", "inactive", "مجمّدة", "مجمدة"].includes(normalizedStatus);
   const raw = String(c.fullNumber || "").replace(/\D/g, "");
   const brand = detectBrand(raw) || c.brand || "Visa";
   const theme = brandTheme(brand);
@@ -1149,7 +1151,10 @@ function BybitCardArt({ c, onDelete, canDelete = true, onEdit }: { c: any; onDel
     <div className="relative w-full max-w-[260px]">
       {/* controls above the card */}
       <div className="mb-1.5 flex items-center justify-end gap-1.5">
-        <span className="rounded-md bg-[#f7a600] px-1.5 py-0.5 text-[9px] font-black text-black">Active</span>
+        <span className={isFrozen ? "inline-flex items-center gap-1 rounded-md bg-destructive/15 px-2 py-1 text-[10px] font-black text-destructive" : "rounded-md bg-[#f7a600] px-2 py-1 text-[10px] font-black text-black"}>
+          {isFrozen ? <Lock className="size-3" aria-hidden="true" /> : null}
+          {isFrozen ? "مجمّدة" : "نشطة"}
+        </span>
         <button
           type="button"
           onClick={handleDownload}
@@ -1182,10 +1187,20 @@ function BybitCardArt({ c, onDelete, canDelete = true, onEdit }: { c: any; onDel
       <div
         ref={cardRef}
         dir="ltr"
+        aria-disabled={isFrozen}
         style={{ backgroundImage: theme.bg, borderColor: theme.border }}
-        className="relative aspect-[85.6/53.98] w-full overflow-hidden rounded-[12px] border shadow-[0_10px_24px_-10px_rgba(0,0,0,0.9)]"
+        className={`relative aspect-[85.6/53.98] w-full overflow-hidden rounded-[12px] border shadow-[0_10px_24px_-10px_rgba(0,0,0,0.9)] ${isFrozen ? "pointer-events-none select-none" : ""}`}
       >
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_80%_at_85%_0%,rgba(255,255,255,0.08),transparent_60%)]" />
+
+        {isFrozen ? (
+          <div className="absolute inset-0 z-20 grid place-items-center bg-background/80" aria-label="البطاقة مجمّدة">
+            <div className="flex flex-col items-center gap-2 text-foreground">
+              <Lock className="size-7" aria-hidden="true" />
+              <span className="text-xs font-black">البطاقة مجمّدة</span>
+            </div>
+          </div>
+        ) : null}
 
         {/* top row */}
         <div className="absolute inset-x-[5%] top-[6%] flex items-start justify-between">
@@ -1453,6 +1468,18 @@ function AddCardDialog({ open, onClose, onSubmit, busy, card }: {
               </button>
               <button type="button" onClick={() => setForm((s) => ({ ...s, kind: "physical" }))} className={pick(form.kind === "physical")}>
                 فعلية
+              </button>
+            </div>
+          </div>
+
+          <div className="grid gap-2">
+            <label className="text-sm text-muted-foreground">حالة البطاقة</label>
+            <div className="flex gap-3">
+              <button type="button" onClick={() => setForm((s) => ({ ...s, status: "active" }))} className={pick(form.status === "active")}>
+                نشطة
+              </button>
+              <button type="button" onClick={() => setForm((s) => ({ ...s, status: "frozen" }))} className={pick(form.status === "frozen")}>
+                مجمّدة
               </button>
             </div>
           </div>
