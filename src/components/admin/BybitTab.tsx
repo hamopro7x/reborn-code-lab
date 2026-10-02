@@ -910,7 +910,7 @@ function BybitAccountView({ isAdmin, accountId, accountName, onBack }: { isAdmin
       </div>
       {cardsOpen ? (
         <>
-          <CardsPanel q={cards} isAdmin={isAdmin} onAdd={() => setAddCardOpen(true)} onDelete={(id) => deleteCard.mutate({ id })} onEdit={(c) => setEditCard(c)} />
+          <CardsPanel q={cards} isAdmin={isAdmin} onAdd={() => setAddCardOpen(true)} onDelete={(id) => deleteCard.mutate({ id })} onEdit={(c) => setEditCard(c)} onToggleFreeze={(c, frozen) => updateCard.mutate({ id: c.id, pan4: c.pan4 ?? "", brand: c.brand ?? "Visa", currency: c.currency ?? "USD", status: frozen ? "frozen" : "active", name: c.name ?? "", fullNumber: c.fullNumber ?? "", cvv: c.cvv ?? "", expiry: c.expiry ?? "" })} />
           {show("account") && <AccountInfoCard isAdmin={isAdmin} accountId={accountId} />}
           <BybitDocsCard isAdmin={isAdmin} accountId={accountId} />
           <AddCardDialog
@@ -1108,7 +1108,7 @@ function RealChip() {
   );
 }
 
-function BybitCardArt({ c, onDelete, canDelete = true, onEdit }: { c: any; onDelete?: () => void; canDelete?: boolean; onEdit?: () => void }) {
+function BybitCardArt({ c, onDelete, canDelete = true, onEdit, onToggleFreeze }: { c: any; onDelete?: () => void; canDelete?: boolean; onEdit?: () => void; onToggleFreeze?: (frozen: boolean) => void }) {
   const name = c.name || `بطاقة ${c.brand || "Visa"}`;
   const normalizedStatus = String(c.status ?? "active").trim().toLowerCase();
   const isFrozen = ["frozen", "freeze", "blocked", "inactive", "مجمّدة", "مجمدة"].includes(normalizedStatus);
@@ -1151,10 +1151,16 @@ function BybitCardArt({ c, onDelete, canDelete = true, onEdit }: { c: any; onDel
     <div className="relative w-full max-w-[260px]">
       {/* controls above the card */}
       <div className="mb-1.5 flex items-center justify-end gap-1.5">
-        <span className={isFrozen ? "inline-flex items-center gap-1 rounded-md bg-destructive/15 px-2 py-1 text-[10px] font-black text-destructive" : "rounded-md bg-[#f7a600] px-2 py-1 text-[10px] font-black text-black"}>
-          {isFrozen ? <Lock className="size-3" aria-hidden="true" /> : null}
+        <button
+          type="button"
+          disabled={!onToggleFreeze}
+          onClick={() => onToggleFreeze?.(!isFrozen)}
+          title={onToggleFreeze ? (isFrozen ? "إلغاء التجميد" : "تجميد البطاقة") : undefined}
+          className={`${isFrozen ? "inline-flex items-center gap-1 rounded-md bg-destructive/15 px-2 py-1 text-[10px] font-black text-destructive" : "inline-flex items-center gap-1 rounded-md bg-[#f7a600] px-2 py-1 text-[10px] font-black text-black"} ${onToggleFreeze ? "cursor-pointer hover:opacity-80" : "cursor-default"}`}
+        >
+          <Lock className={isFrozen ? "size-3" : "hidden"} aria-hidden="true" />
           {isFrozen ? "مجمّدة" : "نشطة"}
-        </span>
+        </button>
         <button
           type="button"
           onClick={handleDownload}
@@ -1276,7 +1282,7 @@ function BybitCardArt({ c, onDelete, canDelete = true, onEdit }: { c: any; onDel
   );
 }
 
-function CardsPanel({ q, isAdmin, onAdd, onDelete, onEdit }: { q: any; isAdmin: boolean; onAdd: () => void; onDelete: (id: string) => void; onEdit?: (c: any) => void }) {
+function CardsPanel({ q, isAdmin, onAdd, onDelete, onEdit, onToggleFreeze }: { q: any; isAdmin: boolean; onAdd: () => void; onDelete: (id: string) => void; onEdit?: (c: any) => void; onToggleFreeze?: (c: any, frozen: boolean) => void }) {
   const list = ((q.data as any)?.cards ?? []) as any[];
   return (
     <div className="rounded-3xl border border-border/60 bg-card/70 p-4">
@@ -1297,7 +1303,7 @@ function CardsPanel({ q, isAdmin, onAdd, onDelete, onEdit }: { q: any; isAdmin: 
       ) : (
         <div className="grid gap-3 grid-cols-2">
           {list.map((c) => (
-            <BybitCardArt key={c.id || c.pan4} c={c} canDelete={isAdmin} onDelete={() => c.id && onDelete(c.id)} onEdit={isAdmin && c.id ? () => onEdit?.(c) : undefined} />
+            <BybitCardArt key={c.id || c.pan4} c={c} canDelete={isAdmin} onDelete={() => c.id && onDelete(c.id)} onEdit={isAdmin && c.id ? () => onEdit?.(c) : undefined} onToggleFreeze={isAdmin && c.id && onToggleFreeze ? (frozen) => onToggleFreeze(c, frozen) : undefined} />
           ))}
         </div>
       )}
