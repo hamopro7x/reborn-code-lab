@@ -386,6 +386,15 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
     },
     onError: (e: any) => toast.error(e?.message || "فشل حفظ البيانات"),
   });
+  const freezeAccount = useMutation({
+    mutationFn: (data: { id: string; frozen: boolean }) => updateFn({ data }),
+    onSuccess: (_r, v) => {
+      toast.success(v.frozen ? "تم تجميد الحساب" : "تم فك التجميد");
+      qc.invalidateQueries({ queryKey: ["bybit-accounts"] });
+    },
+    onError: (e: any) =>
+      toast.error(/frozen/i.test(e?.message ?? "") ? "شغّل كود تجميد الحسابات في قاعدة البيانات الأول" : e?.message || "فشل التجميد"),
+  });
 
 
   const current = list.find((a) => a.id === selected) ?? null;
@@ -451,6 +460,7 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
               onOpen={() => setSelected(a.id)}
               onDelete={() => removeAccount.mutate({ id: a.id })}
               onEdit={() => setEditAccount(a)}
+              onToggleFreeze={() => freezeAccount.mutate({ id: a.id, frozen: !(a as any).frozen })}
             />
           ))}
         </div>
@@ -479,8 +489,9 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
 }
 
 function AccountSummaryCard({
-  account, index, isAdmin, onOpen, onDelete, onEdit,
+  account, index, isAdmin, onOpen, onDelete, onEdit, onToggleFreeze,
 }: {
+  onToggleFreeze?: () => void;
   account: BybitAccountRow;
   index: number;
   isAdmin: boolean;
@@ -500,6 +511,8 @@ function AccountSummaryCard({
   const d = (q.data as any) ?? {};
   const coins = visibleCoins((d.coins ?? []) as CoinRow[]);
   const cashback = Number(account.monthlyCashback ?? 0);
+  const frozen = Boolean((account as any).frozen);
+  const locked = frozen && !isAdmin;
   const visaNo = account.sortOrder && account.sortOrder > 0 ? account.sortOrder : index + 1;
 
   return (
@@ -530,6 +543,9 @@ function AccountSummaryCard({
                       title="نسخ UID"
                     >
                       <Copy className="size-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className={`size-8 rounded-lg ${frozen ? "bg-destructive/15 text-destructive" : "text-muted-foreground hover:text-foreground"}`} onClick={onToggleFreeze} title={frozen ? "فك التجميد" : "تجميد الحساب"}>
+                      <Lock className="size-3.5" />
                     </Button>
                     <Button variant="ghost" size="icon" className="size-8 rounded-lg text-muted-foreground hover:text-foreground" onClick={onEdit} title="تعديل">
                       <Pencil className="size-3.5" />
@@ -619,11 +635,12 @@ function AccountSummaryCard({
         ) : (
           <button
             type="button"
-            onClick={onOpen}
-            className="mt-auto flex w-full shrink-0 items-center justify-center gap-2 rounded-2xl border border-teal-400/35 bg-[linear-gradient(135deg,oklch(0.32_0.08_190),oklch(0.22_0.06_190))] px-4 py-3 text-sm font-bold text-teal-100 shadow-[0_0_20px_-10px_oklch(0.7_0.15_190_/_0.8)] transition-all hover:border-teal-300/60 hover:brightness-125 hover:shadow-[0_0_28px_-8px_oklch(0.72_0.16_190_/_0.9)]"
+            onClick={locked ? undefined : onOpen}
+            disabled={locked}
+            className="mt-auto flex w-full disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:brightness-100 shrink-0 items-center justify-center gap-2 rounded-2xl border border-teal-400/35 bg-[linear-gradient(135deg,oklch(0.32_0.08_190),oklch(0.22_0.06_190))] px-4 py-3 text-sm font-bold text-teal-100 shadow-[0_0_20px_-10px_oklch(0.7_0.15_190_/_0.8)] transition-all hover:border-teal-300/60 hover:brightness-125 hover:shadow-[0_0_28px_-8px_oklch(0.72_0.16_190_/_0.9)]"
           >
-            <BarChart3 className="size-4 text-teal-300" />
-            عرض بيانات الحساب
+            {frozen ? <Lock className="size-4 text-destructive" /> : <BarChart3 className="size-4 text-teal-300" />}
+            {frozen ? (isAdmin ? "عرض بيانات الحساب (مجمّد)" : "الحساب مجمّد") : "عرض بيانات الحساب"}
           </button>
         )}
       </div>
