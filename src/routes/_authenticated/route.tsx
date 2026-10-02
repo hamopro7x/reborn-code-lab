@@ -49,7 +49,7 @@ export const Route = createFileRoute("/_authenticated")({
 });
 
 // شاشة خطأ داخل لوحة الأدمن/الموظف بنفس الألوان الرمادية + رسالة الخطأ الحقيقية.
-function StaffError({ error, reset }: { error: Error; reset: () => void }) {
+function StaffError({ error, reset }: import("@tanstack/react-router").ErrorComponentProps) {
   useAdminTheme();
   const [recovering, setRecovering] = useState(false);
 
