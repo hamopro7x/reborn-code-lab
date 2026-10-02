@@ -146,6 +146,18 @@ $verified = $false
 for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
     $cacheBust = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
     $headers = @{ "Cache-Control" = "no-cache, no-store, max-age=0"; "Pragma" = "no-cache" }
+    # في وضع GitHub: لو عملية النشر فشلت هناك، أوقف فورًا بدل الانتظار 15 دقيقة.
+    if ((-not $flyUsable) -and ($attempt % 6 -eq 0)) {
+        $runFailed = $false
+        try {
+            $runs = Invoke-RestMethod -TimeoutSec 20 -Uri "https://api.github.com/repos/hamopro7x/reborn-code-lab/actions/runs?per_page=10"
+            $run = $runs.workflow_runs | Where-Object { $_.head_branch -eq $deployTag } | Select-Object -First 1
+            if ($run -and $run.status -eq "completed" -and $run.conclusion -ne "success") { $runFailed = $true }
+        } catch { }
+        if ($runFailed) {
+            throw "GitHub deploy failed ($deployTag). Most likely the FLY_API_TOKEN secret is missing or wrong: https://github.com/hamopro7x/reborn-code-lab/settings/secrets/actions  Details: $($run.html_url)"
+        }
+    }
     try {
         $html = (Invoke-WebRequest -UseBasicParsing -TimeoutSec 20 -Uri "https://mag-pro1.com/admin?panel=products&deploy=$cacheBust" -Headers $headers).Content
         $assetMatches = [regex]::Matches($html, '(?:src|href)="([^"]+\.js[^"]*)"')
