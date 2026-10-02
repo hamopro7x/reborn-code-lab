@@ -6,6 +6,8 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$Fly = Join-Path $HOME ".fly\bin\flyctl.exe"
+if (-not (Test-Path $Fly)) { $Fly = "flyctl" }
 Set-Location $PSScriptRoot
 
 function Assert-LastCommandSucceeded([string]$Step) {
@@ -79,22 +81,22 @@ if ($serviceRoleKey) {
     $secretArgs += "SUPABASE_SERVICE_ROLE_KEY=$serviceRoleKey"
 } else {
     Write-Warning "No local .env service key found; keeping the SUPABASE_SERVICE_ROLE_KEY already stored on Fly."
-    $existingSecrets = fly secrets list -a m-hamo
+    $existingSecrets = & $Fly secrets list -a m-hamo
     if (-not ($existingSecrets -match 'SUPABASE_SERVICE_ROLE_KEY')) {
         throw "SUPABASE_SERVICE_ROLE_KEY is missing both locally and on Fly. Deployment stopped."
     }
 }
-fly secrets set -a m-hamo @secretArgs
+& $Fly secrets set -a m-hamo @secretArgs
 Assert-LastCommandSucceeded "fly secrets set"
 
 Write-Host "Deploying to Fly.io..." -ForegroundColor Green
-fly deploy -a m-hamo --config fly.toml --no-cache --strategy immediate `
+& $Fly deploy -a m-hamo --config fly.toml --no-cache --strategy immediate `
   --build-arg VITE_SUPABASE_URL=https://kcdsdaytrnzoiharmyxo.supabase.co `
   --build-arg VITE_SUPABASE_PROJECT_ID=kcdsdaytrnzoiharmyxo `
   --build-arg VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_RTmbXinMhCr9B3oNa6dqqg_iVsKBKG6
 if ($LASTEXITCODE -ne 0) {
     Write-Warning "The default Fly builder failed. Retrying without Depot..."
-    fly deploy -a m-hamo --config fly.toml --no-cache --strategy immediate --depot=false `
+    & $Fly deploy -a m-hamo --config fly.toml --no-cache --strategy immediate --depot=false `
       --build-arg VITE_SUPABASE_URL=https://kcdsdaytrnzoiharmyxo.supabase.co `
       --build-arg VITE_SUPABASE_PROJECT_ID=kcdsdaytrnzoiharmyxo `
       --build-arg VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_RTmbXinMhCr9B3oNa6dqqg_iVsKBKG6
@@ -103,7 +105,7 @@ Assert-LastCommandSucceeded "fly deploy (including the non-Depot retry)"
 
 # لا تعتمد على رسالة Fly وحدها: انتظر حتى تستقر النسخة الجديدة وتصبح سليمة.
 Write-Host "Waiting for the new Fly release to become healthy..." -ForegroundColor Cyan
-fly status -a m-hamo
+& $Fly status -a m-hamo
 Assert-LastCommandSucceeded "fly status"
 
 Write-Host "Verifying the production bundle..." -ForegroundColor Cyan
