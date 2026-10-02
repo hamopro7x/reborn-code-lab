@@ -1,6 +1,3 @@
-$Fly = Join-Path $HOME ".fly\bin\flyctl.exe"
-if (-not (Test-Path $Fly)) { $Fly = "flyctl" }
-
 # deploy.ps1 - deploy latest updates to Fly.io
 # Run from the project folder:  .\deploy.ps1
 
@@ -9,6 +6,8 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$Fly = Join-Path $HOME ".fly\bin\flyctl.exe"
+if (-not (Test-Path $Fly)) { $Fly = "flyctl" }
 Set-Location $PSScriptRoot
 
 function Assert-LastCommandSucceeded([string]$Step) {
