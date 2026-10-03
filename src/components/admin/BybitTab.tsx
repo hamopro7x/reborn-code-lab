@@ -307,6 +307,7 @@ type BybitAccountRow = {
   sortOrder?: number;
   monthlyCashback?: number;
   frozen?: boolean;
+  frozenUntil?: string | null;
 };
 
 export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
