@@ -544,10 +544,8 @@ function AccountSummaryCard({
   const visaNo = account.sortOrder && account.sortOrder > 0 ? account.sortOrder : index + 1;
 
   if (frozen) {
-    const primaryCoin = coins[0] ?? { coin: "USDT", balance: 0, usd: 0 };
-
     return (
-      <article className="relative flex h-[320px] min-h-[320px] w-full flex-col overflow-hidden rounded-[24px] border border-teal-500/30 bg-[oklch(0.075_0.018_178)] p-4 sm:p-5 max-sm:rounded-[22px] max-sm:px-3.5 max-sm:pb-4 max-sm:pt-[18px]">
+      <article className="relative flex h-[320px] min-h-[320px] w-full flex-col overflow-hidden rounded-[24px] border border-teal-400/25 bg-[oklch(0.16_0.03_190)] p-4 sm:p-5 shadow-[0_0_0_1px_oklch(0.7_0.13_190_/_0.08),0_18px_50px_-24px_oklch(0.6_0.15_190_/_0.45)] max-sm:rounded-[22px] max-sm:px-3.5 max-sm:pb-4 max-sm:pt-[18px]">
         <div aria-hidden className="pointer-events-none absolute inset-x-[-4%] top-[102px] h-[75px] w-[108%] -rotate-[4deg] rounded-[50%] border-t-2 border-teal-400/20" />
         <div aria-hidden className="pointer-events-none absolute inset-x-[-4%] top-[120px] h-[75px] w-[108%] -rotate-[3deg] rounded-[50%] border-t-2 border-teal-400/15" />
 
@@ -619,33 +617,30 @@ function AccountSummaryCard({
             <p className="mt-1 whitespace-nowrap text-[12px] font-bold text-muted-foreground max-sm:whitespace-normal max-sm:text-xs">لا يمكنك إجراء أي معاملة حتى يتم إلغاء التجميد</p>
           </div>
 
-          <div dir="ltr" className="grid h-[96px] grid-cols-[1fr_52px] grid-rows-[1fr_auto] items-center rounded-[24px] border-4 border-teal-950 bg-background px-[17px] py-[18px] max-sm:row-start-2 max-sm:h-[100px] max-sm:w-full max-sm:max-w-[290px] max-sm:justify-self-center max-sm:rounded-[20px] max-sm:px-3.5 max-sm:py-3">
+          <div dir="ltr" className="h-[96px] min-h-[96px] max-h-[96px] w-full max-w-[190px] shrink-0 max-sm:row-start-2 max-sm:h-[100px] max-sm:w-full max-sm:max-w-[290px] max-sm:justify-self-center">
             {q.isLoading ? (
-              <Loader2 className="col-span-2 m-auto size-5 animate-spin" />
+              <div className="relative h-full w-full rounded-[18px] p-[3px] bg-[radial-gradient(120%_120%_at_50%_0%,oklch(0.55_0.13_170/0.28),transparent_70%)]">
+                <div className="grid h-full w-full place-items-center rounded-[15px] bg-[oklch(0.055_0.008_190)] shadow-[0_0_28px_-10px_oklch(0.6_0.14_170/0.35)]">
+                  <Loader2 className="size-5 animate-spin" />
+                </div>
+              </div>
             ) : d.failed ? (
-              <span className="col-span-2 text-center text-xs text-destructive">تعذر جلب الرصيد</span>
+              <span className="col-span-2 grid h-full place-items-center text-xs text-destructive">تعذر جلب الرصيد</span>
             ) : (
-              <>
-                <div className="text-[24px] font-black leading-none tabular-nums text-foreground max-sm:text-[27px]">
-                  {primaryCoin.balance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </div>
-                {String(primaryCoin.coin).toUpperCase() === "USDT" ? (
-                  <img src={USDT_LOGO} alt="USDT" className="size-[40px] shrink-0 rounded-full object-cover max-sm:size-[42px]" />
-                ) : (
-                  <span className="grid size-[40px] place-items-center rounded-full bg-muted max-sm:size-[42px]"><CoinLogo coin={primaryCoin.coin} /></span>
-                )}
-                <div className="col-start-1 mt-1 text-[13px] font-medium text-teal-400">
-                  USD {primaryCoin.usd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-muted-foreground">≈</span>
-                </div>
-              </>
+              <div className="h-full w-full overflow-hidden">
+                {coins.map((c) => (
+                  <CoinBalanceCard key={c.coin} coin={c} />
+                ))}
+              </div>
             )}
           </div>
         </section>
 
         <button
           type="button"
-          disabled
-          className="relative z-10 mt-auto flex h-[44px] w-full shrink-0 cursor-not-allowed items-center justify-center gap-3 rounded-2xl border border-teal-500/50 bg-teal-900/55 text-sm font-bold text-teal-100 max-sm:mt-3.5 max-sm:h-[52px] max-sm:text-sm"
+          disabled={!isAdmin}
+          onClick={isAdmin ? onOpen : undefined}
+          className={`relative z-10 mt-auto flex h-[44px] w-full shrink-0 items-center justify-center gap-3 rounded-2xl border border-teal-500/50 bg-teal-900/55 text-sm font-bold text-teal-100 transition-all hover:border-teal-300/60 hover:brightness-125 max-sm:mt-3.5 max-sm:h-[52px] max-sm:text-sm ${isAdmin ? "cursor-pointer" : "cursor-not-allowed"}`}
         >
           <BarChart3 className="size-[22px] text-teal-300" />
           <span>عرض بيانات الحساب</span>
