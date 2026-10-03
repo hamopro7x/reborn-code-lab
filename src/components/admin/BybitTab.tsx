@@ -552,18 +552,18 @@ function AccountSummaryCard({
         <div aria-hidden className="pointer-events-none absolute inset-x-[-4%] top-[120px] h-[75px] w-[108%] -rotate-[3deg] rounded-[50%] border-t-2 border-teal-400/15" />
 
         <header dir="ltr" className="relative z-10 grid min-h-[84px] grid-cols-[88px_150px_minmax(0,1fr)] items-center gap-1 max-sm:min-h-[150px] max-sm:grid-cols-[88px_155px] max-sm:items-start">
-          <div className="relative grid size-[104px] place-items-center justify-self-start rounded-full border-[3px] border-teal-300 bg-[oklch(0.11_0.035_180)] text-[43px] font-black tabular-nums text-teal-300 max-sm:size-[76px] max-sm:text-[34px]">
+          <div className="relative grid size-[76px] place-items-center justify-self-start rounded-full border-[3px] border-teal-300 bg-[oklch(0.11_0.035_180)] text-[30px] font-black tabular-nums text-teal-300 max-sm:size-[76px] max-sm:text-[34px]">
             <span aria-hidden className="absolute -inset-[9px] rounded-full border border-dashed border-teal-300/70" />
             <span aria-hidden className="absolute -inset-1 rounded-full border border-teal-300/40" />
             {visaNo}
           </div>
 
-          <div dir="rtl" className="min-h-[92px] w-[190px] border-l border-dashed border-teal-300/45 pl-[13px] text-right max-sm:min-h-[78px] max-sm:w-[155px] max-sm:pl-2">
-            <div className="flex items-center justify-start gap-2 whitespace-nowrap text-[17px] font-bold text-foreground/80 max-sm:text-[13px]">
+          <div dir="rtl" className="min-h-[64px] w-[150px] border-l border-dashed border-teal-300/45 pl-[13px] text-right max-sm:min-h-[78px] max-sm:w-[155px] max-sm:pl-2">
+            <div className="flex items-center justify-start gap-2 whitespace-nowrap text-[13px] font-bold text-foreground/80 max-sm:text-[13px]">
               <Clock className="size-6 shrink-0 text-teal-300 max-sm:size-5" />
               <span>استرداد بنسبة</span>
             </div>
-            <strong dir="ltr" className="mt-1 block text-center text-[36px] font-black leading-none text-teal-300 max-sm:text-[30px]">
+            <strong dir="ltr" className="mt-1 block text-center text-[24px] font-black leading-none text-teal-300 max-sm:text-[30px]">
               {cashback.toLocaleString("en-US", { maximumFractionDigits: 2 })}%
             </strong>
           </div>
