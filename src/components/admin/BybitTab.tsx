@@ -614,7 +614,7 @@ function AccountSummaryCard({
         </div>
 
         {/* Balances — bottom right aligned, lowered and slightly larger */}
-        <div className={`ml-auto mt-auto h-[96px] min-h-[96px] max-h-[96px] w-full max-w-[190px] shrink-0 overflow-hidden ${frozen ? "relative z-30 pointer-events-none" : ""}`}>
+        <div className={`ml-auto mt-auto h-[96px] min-h-[96px] max-h-[96px] w-full max-w-[190px] shrink-0 overflow-hidden ${frozen ? "absolute bottom-0 right-0 z-30 pointer-events-none" : ""}`}>
           {q.isLoading ? (
             <div className="relative h-full w-full rounded-[18px] p-[3px] bg-[radial-gradient(120%_120%_at_50%_0%,oklch(0.55_0.13_170/0.28),transparent_70%)]">
               <div className="grid h-full w-full place-items-center rounded-[15px] bg-[oklch(0.055_0.008_190)] shadow-[0_0_28px_-10px_oklch(0.6_0.14_170/0.35)]">
@@ -647,8 +647,8 @@ function AccountSummaryCard({
         )}
       </div>
       {frozen && (
-        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-4 border border-destructive/40 bg-background/85 px-4 pb-14 pt-4 text-center backdrop-blur-md" role="status" aria-label="الحساب مجمّد">
-          <Lock className="size-20 fill-destructive text-destructive" strokeWidth={1.8} aria-hidden="true" />
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-start gap-2 border border-destructive/40 bg-background/85 px-4 pt-4 text-center backdrop-blur-md" role="status" aria-label="الحساب مجمّد">
+          <Lock className="size-14 fill-destructive text-destructive" strokeWidth={1.8} aria-hidden="true" />
           <strong className="text-2xl font-black text-destructive">الحساب مجمّد</strong>
           <p className="text-sm text-muted-foreground">لا يمكن إجراء أي عمليات حتى يتم إلغاء التجميد</p>
           {isAdmin && (
