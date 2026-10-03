@@ -360,7 +360,7 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
     mutationFn: (data: { apiKey: string; apiSecret: string; name: string; force?: boolean }) => addFn({ data }),
     onSuccess: (res: any) => {
       if (res?.ok === false) {
-        setAddError({ message: res.error || "تعذّر ربط الحساب", serverIp: res.serverIp ?? null });
+        setAddError({ message: res.error || "تعذر ربط الحساب", serverIp: res.serverIp ?? null });
         return;
       }
       setAddError(null);
@@ -368,7 +368,7 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
       setAddOpen(false);
       qc.invalidateQueries({ queryKey: ["bybit-accounts"] });
     },
-    onError: (e: any) => setAddError({ message: e?.message || "تعذّر ربط الحساب" }),
+    onError: (e: any) => setAddError({ message: e?.message || "تعذر ربط الحساب" }),
   });
   const removeAccount = useMutation({
     mutationFn: (data: { id: string }) => removeFn({ data }),
@@ -394,7 +394,7 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
       qc.invalidateQueries({ queryKey: ["bybit-accounts"] });
     },
     onError: (e: any) =>
-      toast.error(/frozen/i.test(e?.message ?? "") ? "شغّل كود تجميد الحسابات في قاعدة البيانات الأول" : e?.message || "فشل التجميد"),
+      toast.error(/frozen/i.test(e?.message ?? "") ? "شغل كود تجميد الحسابات في قاعدة البيانات الأول" : e?.message || "فشل التجميد"),
   });
 
 
@@ -448,7 +448,7 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
         <div className="relative z-10 flex justify-center p-10"><Loader2 className="size-6 animate-spin" /></div>
       ) : !list.length ? (
         <div className="relative z-10 rounded-3xl border border-border/60 bg-card/60 p-8 text-center text-sm text-muted-foreground">
-          لا توجد حسابات مربوطة بعد{isAdmin ? " — أضف حساباً بمفتاح API (قراءة فقط)." : "."}
+          لا توجد حسابات مربوطة بعد{isAdmin ? " — أضف حسابا بمفتاح API (قراءة فقط)." : "."}
         </div>
       ) : (
         <div className="relative z-10 grid auto-rows-[320px] grid-cols-1 gap-4 xl:grid-cols-2">
@@ -632,7 +632,7 @@ function AccountSummaryCard({
 
         {d.failed ? (
           <div className="shrink-0 rounded-xl border border-destructive/40 bg-destructive/10 p-2 text-[11px] text-destructive-foreground line-clamp-2">
-            تعذّر جلب البيانات: {String(d.failed)}
+            تعذر جلب البيانات: {String(d.failed)}
           </div>
         ) : (
           <button
@@ -642,14 +642,17 @@ function AccountSummaryCard({
             className="mt-auto flex w-full disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:brightness-100 shrink-0 items-center justify-center gap-2 rounded-2xl border border-teal-400/35 bg-[linear-gradient(135deg,oklch(0.32_0.08_190),oklch(0.22_0.06_190))] px-4 py-3 text-sm font-bold text-teal-100 shadow-[0_0_20px_-10px_oklch(0.7_0.15_190_/_0.8)] transition-all hover:border-teal-300/60 hover:brightness-125 hover:shadow-[0_0_28px_-8px_oklch(0.72_0.16_190_/_0.9)]"
           >
             {frozen ? <Lock className="size-4 text-destructive" /> : <BarChart3 className="size-4 text-teal-300" />}
-            {frozen ? "الحساب مجمّد" : "عرض بيانات الحساب"}
+            {frozen ? "الحساب مجمد" : "عرض بيانات الحساب"}
           </button>
         )}
       </div>
       {frozen && (
-        <div className="absolute inset-0 z-20 flex flex-col items-center justify-start gap-2 border border-destructive/40 bg-background/85 px-4 pt-4 text-center backdrop-blur-md" role="status" aria-label="الحساب مجمّد">
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-start gap-2 border border-destructive/40 bg-background/85 px-4 pt-4 text-center backdrop-blur-md" role="status" aria-label="الحساب مجمد">
           <Lock className="size-14 fill-destructive text-destructive" strokeWidth={1.8} aria-hidden="true" />
-          <strong className="text-2xl font-black text-destructive">الحساب مجمّد</strong>
+          <strong className="text-2xl font-black text-destructive">الحساب مجمد</strong>
+          <span className="rounded-full border border-teal-400/30 bg-teal-400/10 px-3 py-1 text-xs font-bold text-teal-300 tabular-nums" dir="ltr">
+            الكرت رقم {visaNo}
+          </span>
           <p className="text-sm text-muted-foreground">لا يمكن إجراء أي عمليات حتى يتم إلغاء التجميد</p>
           {isAdmin && (
             <Button variant="outline" className="min-h-11 border-border bg-card/70 px-8 text-base font-bold" onClick={onToggleFreeze} disabled={freezePending}>
@@ -727,7 +730,7 @@ function AddAccountDialog({
           <Field label="API Secret" error={errors.apiSecret}>
             <Input dir="ltr" placeholder="API Secret" type="password" value={apiSecret} onChange={(e) => setApiSecret(e.target.value)} />
           </Field>
-          <p className="text-[11px] text-muted-foreground">لو سِبت الاسم فاضي هيتجاب أوتوماتيك من Bybit بعد التحقق من المفتاح.</p>
+          <p className="text-[11px] text-muted-foreground">لو سبت الاسم فاضي هيتجاب أوتوماتيك من Bybit بعد التحقق من المفتاح.</p>
           {error && (
             <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 space-y-2 text-[11px] text-destructive">
               <div>{error.message}</div>
@@ -737,7 +740,7 @@ function AddAccountDialog({
                 </div>
               )}
               <div className="text-muted-foreground">
-                تقدر تحفظ الحساب برضه وتصلّح صلاحيات المفتاح من Bybit بعدين.
+                تقدر تحفظ الحساب برضه وتصلح صلاحيات المفتاح من Bybit بعدين.
               </div>
               <Button
                 variant="outline"
@@ -967,7 +970,7 @@ function BybitAccountView({ isAdmin, accountId, accountName, onBack }: { isAdmin
       )}
       {failed && (
         <div className="rounded-2xl border border-destructive/40 bg-destructive/10 p-4 text-xs text-destructive-foreground">
-          تعذّر جلب البيانات من Bybit: {failed}
+          تعذر جلب البيانات من Bybit: {failed}
         </div>
       )}
       {!failed && partialErrors.length > 0 && (
@@ -1190,7 +1193,7 @@ function BybitCardArt({ c, onDelete, canDelete = true, onEdit, onToggleFreeze }:
           className={`${isFrozen ? "inline-flex items-center gap-1 rounded-md bg-destructive/15 px-2 py-1 text-[10px] font-black text-destructive" : "inline-flex items-center gap-1 rounded-md bg-[#f7a600] px-2 py-1 text-[10px] font-black text-black"} ${onToggleFreeze ? "cursor-pointer hover:opacity-80" : "cursor-default"}`}
         >
           <Lock className={isFrozen ? "size-3" : "hidden"} aria-hidden="true" />
-          {isFrozen ? "مجمّدة" : "نشطة"}
+          {isFrozen ? "مجمدة" : "نشطة"}
         </button>
         <button
           type="button"
@@ -1231,10 +1234,10 @@ function BybitCardArt({ c, onDelete, canDelete = true, onEdit, onToggleFreeze }:
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_80%_at_85%_0%,rgba(255,255,255,0.08),transparent_60%)]" />
 
         {isFrozen ? (
-          <div className="absolute inset-0 z-20 grid place-items-center bg-background/80" aria-label="البطاقة مجمّدة">
+          <div className="absolute inset-0 z-20 grid place-items-center bg-background/80" aria-label="البطاقة مجمدة">
             <div className="flex flex-col items-center gap-2 text-foreground">
               <Lock className="size-7" aria-hidden="true" />
-              <span className="text-xs font-black">البطاقة مجمّدة</span>
+              <span className="text-xs font-black">البطاقة مجمدة</span>
             </div>
           </div>
         ) : null}
@@ -1516,14 +1519,14 @@ function AddCardDialog({ open, onClose, onSubmit, busy, card }: {
                 نشطة
               </button>
               <button type="button" onClick={() => setForm((s) => ({ ...s, status: "frozen" }))} className={pick(form.status === "frozen")}>
-                مجمّدة
+                مجمدة
               </button>
             </div>
           </div>
 
           <div className="grid gap-2">
             <label className="text-sm text-muted-foreground">الأيقونة</label>
-            <p className="text-[11px] text-muted-foreground/70">يتم التعرف على النوع تلقائيًا من رقم البطاقة، ويمكنك تغييره يدويًا.</p>
+            <p className="text-[11px] text-muted-foreground/70">يتم التعرف على النوع تلقائيا من رقم البطاقة، ويمكنك تغييره يدويا.</p>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {CARD_BRANDS.map((b) => (
                 <button
@@ -1587,7 +1590,7 @@ function P2PTable({ q }: { q: any }) {
         <Chip active={side === "all"} onClick={() => setSide("all")}>الجميع</Chip>
       </div>
       {q.isLoading ? (
-        <Empty text="جارٍ التحميل…" />
+        <Empty text="جار التحميل…" />
       ) : q.data?.failed ? (
         <div className="p-6 text-center text-xs text-destructive" dir="ltr">{String(q.data.failed)}</div>
       ) : !shown.length ? (
@@ -1675,7 +1678,7 @@ function CardTableInner({
         </div>
       </div>
       {q.isLoading ? (
-        <Empty text="جارٍ التحميل…" />
+        <Empty text="جار التحميل…" />
       ) : !shown.length ? (
         <Empty text="لا توجد معاملات" />
       ) : (
@@ -1789,9 +1792,9 @@ function CardTableInner({
 type FieldDef = [string, string];
 
 const CORE_FIELDS: FieldDef[] = [
-  ["txnId", "معرّف المعاملة"],
-  ["orderId", "معرّف الطلب / المرجع"],
-  ["paymentId", "معرّف الدفع"],
+  ["txnId", "معرف المعاملة"],
+  ["orderId", "معرف الطلب / المرجع"],
+  ["paymentId", "معرف الدفع"],
   ["authCode", "كود التفويض"],
   ["stage", "مرحلة المعاملة"],
   ["eventCode", "كود الحدث"],
@@ -1811,7 +1814,7 @@ const AMOUNT_FIELDS: FieldDef[] = [
   ["tax", "الضريبة"],
   ["shipping", "الشحن"],
   ["paidWithCrypto", "المدفوع بالعملة الرقمية"],
-  ["paidWithFiat", "المدفوع نقدًا"],
+  ["paidWithFiat", "المدفوع نقدا"],
   ["protectionEligibility", "أهلية الحماية"],
 ];
 
@@ -1832,8 +1835,8 @@ const MERCHANT_FIELDS: FieldDef[] = [
   ["merchantWebsite", "الموقع الإلكتروني"],
   ["merchantEmail", "البريد الإلكتروني"],
   ["merchantDescription", "وصف التاجر"],
-  ["terminalId", "معرّف الطرفية"],
-  ["storeId", "معرّف المتجر"],
+  ["terminalId", "معرف الطرفية"],
+  ["storeId", "معرف المتجر"],
 ];
 
 
@@ -1978,7 +1981,7 @@ function AssetTable({
         </div>
       </div>
       {q.isLoading ? (
-        <Empty text="جارٍ التحميل…" />
+        <Empty text="جار التحميل…" />
       ) : !rows.length ? (
         <Empty text="لا توجد سجلات" />
       ) : (
@@ -2059,13 +2062,13 @@ function AssetTable({
 }
 
 const ASSET_DETAIL_LABELS: Array<[string, string]> = [
-  ["id", "المعرّف"],
+  ["id", "المعرف"],
   ["coin", "العملة"],
   ["chain", "نوع السلسلة"],
   ["amount", "الكمية"],
   ["fee", "الرسوم"],
   ["address", "العنوان"],
-  ["txId", "معرّف المعاملة"],
+  ["txId", "معرف المعاملة"],
   ["status", "الحالة"],
 ];
 
@@ -2168,7 +2171,7 @@ export function ApiKeyPanel({ onSaved }: { configured?: boolean; onSaved?: () =>
           </div>
           <div className="flex items-center justify-between gap-3">
             <p className="text-[11px] text-muted-foreground leading-5">
-              أنشئ المفتاح من Bybit → API Management بصلاحيات قراءة فقط (Wallet / Assets / Card). كل مفتاح يضيف حسابًا جديدًا مستقلًا.
+              أنشئ المفتاح من Bybit → API Management بصلاحيات قراءة فقط (Wallet / Assets / Card). كل مفتاح يضيف حسابا جديدا مستقلا.
             </p>
             <Button className="rounded-xl" onClick={connect} disabled={busy}>
               {busy ? <Loader2 className="size-4 animate-spin ml-1" /> : null}
