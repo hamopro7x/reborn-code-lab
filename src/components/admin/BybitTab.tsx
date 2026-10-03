@@ -642,7 +642,11 @@ function AccountSummaryCard({
           onClick={isAdmin ? onOpen : undefined}
           className={`relative z-10 mt-auto flex h-[44px] w-full shrink-0 items-center justify-center gap-3 rounded-2xl border border-teal-500/50 bg-teal-900/55 text-sm font-bold text-teal-100 transition-all hover:border-teal-300/60 hover:brightness-125 max-sm:mt-3.5 max-sm:h-[52px] max-sm:text-sm ${isAdmin ? "cursor-pointer" : "cursor-not-allowed"}`}
         >
-          <BarChart3 className="size-[22px] text-teal-300" />
+          {isAdmin ? (
+            <BarChart3 className="size-[22px] text-teal-300" />
+          ) : (
+            <Lock className="size-[18px] text-destructive" />
+          )}
           <span>عرض بيانات الحساب</span>
         </button>
       </article>
