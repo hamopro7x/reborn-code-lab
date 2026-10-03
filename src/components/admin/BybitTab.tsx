@@ -1234,7 +1234,7 @@ function BybitCardArt({ c, onDelete, canDelete = true, onEdit, onToggleFreeze }:
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_80%_at_85%_0%,rgba(255,255,255,0.08),transparent_60%)]" />
 
         {isFrozen ? (
-          <div className="absolute inset-0 z-20 grid place-items-center bg-background/80" aria-label="البطاقة مجمّدة">
+          <div className="absolute inset-0 z-20 grid place-items-center bg-background/80" aria-label="البطاقة مجمدة">
             <div className="flex flex-col items-center gap-2 text-foreground">
               <Lock className="size-7" aria-hidden="true" />
               <span className="text-xs font-black">البطاقة مجمدة</span>
@@ -1526,7 +1526,7 @@ function AddCardDialog({ open, onClose, onSubmit, busy, card }: {
 
           <div className="grid gap-2">
             <label className="text-sm text-muted-foreground">الأيقونة</label>
-            <p className="text-[11px] text-muted-foreground/70">يتم التعرف على النوع تلقائيًا من رقم البطاقة، ويمكنك تغييره يدويًا.</p>
+            <p className="text-[11px] text-muted-foreground/70">يتم التعرف على النوع تلقائيا من رقم البطاقة، ويمكنك تغييره يدويا.</p>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {CARD_BRANDS.map((b) => (
                 <button
@@ -2171,7 +2171,7 @@ export function ApiKeyPanel({ onSaved }: { configured?: boolean; onSaved?: () =>
           </div>
           <div className="flex items-center justify-between gap-3">
             <p className="text-[11px] text-muted-foreground leading-5">
-              أنشئ المفتاح من Bybit → API Management بصلاحيات قراءة فقط (Wallet / Assets / Card). كل مفتاح يضيف حسابًا جديدًا مستقلًا.
+              أنشئ المفتاح من Bybit → API Management بصلاحيات قراءة فقط (Wallet / Assets / Card). كل مفتاح يضيف حسابا جديدا مستقلا.
             </p>
             <Button className="rounded-xl" onClick={connect} disabled={busy}>
               {busy ? <Loader2 className="size-4 animate-spin ml-1" /> : null}
