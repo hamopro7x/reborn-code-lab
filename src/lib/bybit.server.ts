@@ -1236,7 +1236,7 @@ export async function syncCardTxns(accountId?: string): Promise<{ added: number;
 export async function syncAllCardTxns(): Promise<{ added: number; accounts: number }> {
   // One full sync at a time, at most once every 30s: several admin screens used
   // to launch a full multi-account sync each, which overloaded the server.
-  return heavyOnce("sync:all", 30_000, async () => {
+  return heavyOnce("sync:all", 8_000, async () => {
     // Purge first, before any provider network calls. This guarantees that merely
     // opening the central ledger removes closed-cycle rows immediately even when
     // Bybit is slow or unavailable.
@@ -2068,7 +2068,7 @@ export async function syncAccountLedger(accountId: string): Promise<number> {
 /** Runs the ledger sync for every linked account. */
 export async function syncAllLedger(): Promise<{ saved: number; accounts: number }> {
   // Shared, sequential and rate-limited for the same reason as syncAllCardTxns.
-  return heavyOnce("ledger:all", 30_000, async () => {
+  return heavyOnce("ledger:all", 8_000, async () => {
     const accounts = await listAccounts();
     let saved = 0;
     for (const a of accounts) {

@@ -73,4 +73,30 @@ try {
   process.exit(1);
 }
 
+// سر داخلي لمزامنة Bybit في الخلفية لو مش مضبوط كسر على Fly.
+if (!process.env["SYNC_HOOK_SECRET"]) {
+  const { randomBytes } = await import("node:crypto");
+  process.env["SYNC_HOOK_SECRET"] = randomBytes(32).toString("hex");
+}
+
 await import("../.output/server/index.mjs");
+
+// مزامنة دائمة على السيرفر: المعاملات تدخل المركز العام وشفت الموظف
+// حتى لو مفيش حد فاتح صفحة المعاملات.
+const SYNC_EVERY_MS = Number(process.env["SYNC_INTERVAL_MS"] || 10_000);
+const syncUrl = `http://127.0.0.1:${process.env["PORT"]}/api/public/hooks/bybit-ledger-sync`;
+const tick = async () => {
+  try {
+    await fetch(syncUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-sync-secret": process.env["SYNC_HOOK_SECRET"] },
+      body: "{}",
+      signal: AbortSignal.timeout(120_000),
+    });
+  } catch (e) {
+    console.error("[fly-start] background bybit sync failed:", e?.message ?? e);
+  } finally {
+    setTimeout(tick, SYNC_EVERY_MS);
+  }
+};
+setTimeout(tick, 15_000);
