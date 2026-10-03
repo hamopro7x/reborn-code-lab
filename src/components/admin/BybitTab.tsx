@@ -544,8 +544,6 @@ function AccountSummaryCard({
   const visaNo = account.sortOrder && account.sortOrder > 0 ? account.sortOrder : index + 1;
 
   if (frozen) {
-    const primaryCoin = coins[0] ?? { coin: "USDT", balance: 0, usd: 0 };
-
     return (
       <article className="relative flex h-[320px] min-h-[320px] w-full flex-col overflow-hidden rounded-[24px] border border-teal-400/25 bg-[oklch(0.16_0.03_190)] p-4 sm:p-5 shadow-[0_0_0_1px_oklch(0.7_0.13_190_/_0.08),0_18px_50px_-24px_oklch(0.6_0.15_190_/_0.45)] max-sm:rounded-[22px] max-sm:px-3.5 max-sm:pb-4 max-sm:pt-[18px]">
         <div aria-hidden className="pointer-events-none absolute inset-x-[-4%] top-[102px] h-[75px] w-[108%] -rotate-[4deg] rounded-[50%] border-t-2 border-teal-400/20" />
