@@ -556,7 +556,7 @@ function AccountSummaryCard({
 
       <div className="relative flex min-h-0 flex-1 flex-col gap-3">
         {/* Top row — identity on right (RTL), gauge on left (visual) */}
-        <div className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+        <div className={`grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-3 ${frozen ? "relative z-30" : ""}`}>
           {/* right cluster (visually): identity + action icons */}
           <div className="flex items-start justify-start gap-2 sm:gap-3">
             <div className="min-w-0 text-right pt-1">
@@ -602,7 +602,7 @@ function AccountSummaryCard({
           </div>
 
           {/* left cluster: gauge on the left, cashback on the right (matches image-280) */}
-          <div dir="ltr" className={`flex items-center gap-2 sm:gap-3 ${frozen ? "relative z-30" : ""}`}>
+          <div dir="ltr" className="flex items-center gap-2 sm:gap-3">
             <div className="flex items-center shrink-0">
               <div className="relative grid size-[80px] sm:size-[92px] place-items-center">
                 {/* outer tick ring */}
@@ -673,19 +673,21 @@ function AccountSummaryCard({
         )}
       </div>
       {frozen && (
-        <div className="absolute inset-0 z-20 flex flex-col items-center justify-start gap-2 border border-destructive/40 bg-background/85 px-4 pt-4 text-center backdrop-blur-md" role="status" aria-label="الحساب مجمد">
+        <div className="pointer-events-none absolute inset-0 z-20 border border-destructive/40 bg-background/45 text-center" role="status" aria-label="الحساب مجمد">
           <div className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full border border-destructive/40 bg-destructive/10 px-3 py-1 text-xs font-bold text-destructive" dir="rtl">
             <Clock className="size-3.5" />
             {timeLeft !== null ? <span dir="ltr" className="tabular-nums">{formatLeft(timeLeft)}</span> : <span>بدون وقت</span>}
           </div>
-          <Lock className="size-14 fill-destructive text-destructive" strokeWidth={1.8} aria-hidden="true" />
-          <strong className="text-2xl font-black text-destructive">الحساب مجمد</strong>
-          <p className="text-sm text-muted-foreground">لا يمكن إجراء أي عمليات حتى يتم إلغاء التجميد</p>
-          {isAdmin && (
-            <Button variant="outline" className="min-h-11 border-border bg-card/70 px-8 text-base font-bold" onClick={onToggleFreeze} disabled={freezePending}>
-              {freezePending ? "جاري إلغاء التجميد…" : "إلغاء التجميد"}
-            </Button>
-          )}
+          <div className="absolute inset-x-4 top-[92px] flex flex-col items-center gap-1.5">
+            <Lock className="size-12 fill-destructive text-destructive" strokeWidth={1.8} aria-hidden="true" />
+            <strong className="text-2xl font-black text-destructive">الحساب مجمد</strong>
+            <p className="text-sm text-muted-foreground">لا يمكن إجراء أي عمليات حتى يتم إلغاء التجميد</p>
+            {isAdmin && (
+              <Button variant="outline" className="pointer-events-auto min-h-11 border-border bg-card/70 px-8 text-base font-bold" onClick={onToggleFreeze} disabled={freezePending}>
+                {freezePending ? "جاري إلغاء التجميد…" : "إلغاء التجميد"}
+              </Button>
+            )}
+          </div>
         </div>
       )}
     </div>
