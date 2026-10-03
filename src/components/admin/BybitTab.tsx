@@ -606,7 +606,7 @@ function AccountSummaryCard({
                 {timeLeft !== null ? formatLeft(timeLeft) : "بدون وقت"}
                 <Clock className="size-3.5" />
               </span>
-              <span className="flex h-[58px] w-[52px] items-center justify-center text-destructive" aria-hidden="true">
+              <span className="flex h-[40px] w-[36px] items-center justify-center text-destructive" aria-hidden="true">
                 <svg viewBox="0 0 64 72" className="size-full overflow-visible">
                   <path d="M17 30V22C17 10.4 23.7 4 32 4s15 6.4 15 18v8" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" />
                   <rect x="8" y="27" width="48" height="39" rx="9" fill="currentColor" />
@@ -615,8 +615,8 @@ function AccountSummaryCard({
                 </svg>
               </span>
             </div>
-            <h3 className="m-0 text-[36px] font-black leading-tight text-destructive max-sm:text-[30px]">الحساب مجمد</h3>
-            <p className="mt-2 whitespace-nowrap text-[17px] font-bold text-muted-foreground max-sm:whitespace-normal max-sm:text-xs">لا يمكنك إجراء أي معاملة حتى يتم إلغاء التجميد</p>
+            <h3 className="m-0 text-[24px] font-black leading-tight text-destructive max-sm:text-[30px]">الحساب مجمد</h3>
+            <p className="mt-1 whitespace-nowrap text-[12px] font-bold text-muted-foreground max-sm:whitespace-normal max-sm:text-xs">لا يمكنك إجراء أي معاملة حتى يتم إلغاء التجميد</p>
           </div>
 
           <div dir="ltr" className="grid h-[96px] grid-cols-[1fr_52px] grid-rows-[1fr_auto] items-center rounded-[24px] border-4 border-teal-950 bg-background px-[17px] py-[18px] max-sm:row-start-2 max-sm:h-[100px] max-sm:w-full max-sm:max-w-[290px] max-sm:justify-self-center max-sm:rounded-[20px] max-sm:px-3.5 max-sm:py-3">
@@ -626,13 +626,13 @@ function AccountSummaryCard({
               <span className="col-span-2 text-center text-xs text-destructive">تعذر جلب الرصيد</span>
             ) : (
               <>
-                <div className="text-[31px] font-black leading-none tabular-nums text-foreground max-sm:text-[27px]">
+                <div className="text-[24px] font-black leading-none tabular-nums text-foreground max-sm:text-[27px]">
                   {primaryCoin.balance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
                 {String(primaryCoin.coin).toUpperCase() === "USDT" ? (
-                  <img src={USDT_LOGO} alt="USDT" className="size-[49px] shrink-0 rounded-full object-cover max-sm:size-[42px]" />
+                  <img src={USDT_LOGO} alt="USDT" className="size-[40px] shrink-0 rounded-full object-cover max-sm:size-[42px]" />
                 ) : (
-                  <span className="grid size-[49px] place-items-center rounded-full bg-muted max-sm:size-[42px]"><CoinLogo coin={primaryCoin.coin} /></span>
+                  <span className="grid size-[40px] place-items-center rounded-full bg-muted max-sm:size-[42px]"><CoinLogo coin={primaryCoin.coin} /></span>
                 )}
                 <div className="col-start-1 mt-1 text-[13px] font-medium text-teal-400">
                   USD {primaryCoin.usd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-muted-foreground">≈</span>
@@ -645,7 +645,7 @@ function AccountSummaryCard({
         <button
           type="button"
           disabled
-          className="relative z-10 mt-auto flex h-[60px] w-full shrink-0 cursor-not-allowed items-center justify-center gap-3 rounded-[30px] border border-teal-500/50 bg-teal-900/55 text-[17px] font-bold text-teal-100 max-sm:mt-3.5 max-sm:h-[52px] max-sm:text-sm"
+          className="relative z-10 mt-auto flex h-[44px] w-full shrink-0 cursor-not-allowed items-center justify-center gap-3 rounded-2xl border border-teal-500/50 bg-teal-900/55 text-sm font-bold text-teal-100 max-sm:mt-3.5 max-sm:h-[52px] max-sm:text-sm"
         >
           <BarChart3 className="size-[22px] text-teal-300" />
           <span>عرض بيانات الحساب</span>
