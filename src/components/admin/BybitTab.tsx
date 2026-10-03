@@ -547,11 +547,11 @@ function AccountSummaryCard({
     const primaryCoin = coins[0] ?? { coin: "USDT", balance: 0, usd: 0 };
 
     return (
-      <article className="relative flex min-h-[410px] w-full max-w-[790px] flex-col overflow-hidden rounded-[30px] border-2 border-teal-500/30 bg-[oklch(0.075_0.018_178)] px-[26px] pb-6 pt-7 max-sm:min-h-0 max-sm:rounded-[22px] max-sm:px-3.5 max-sm:pb-4 max-sm:pt-[18px] xl:col-span-2">
+      <article className="relative flex h-[320px] min-h-[320px] w-full flex-col overflow-hidden rounded-[24px] border border-teal-500/30 bg-[oklch(0.075_0.018_178)] p-4 sm:p-5 max-sm:rounded-[22px] max-sm:px-3.5 max-sm:pb-4 max-sm:pt-[18px]">
         <div aria-hidden className="pointer-events-none absolute inset-x-[-4%] top-[102px] h-[75px] w-[108%] -rotate-[4deg] rounded-[50%] border-t-2 border-teal-400/20" />
         <div aria-hidden className="pointer-events-none absolute inset-x-[-4%] top-[120px] h-[75px] w-[108%] -rotate-[3deg] rounded-[50%] border-t-2 border-teal-400/15" />
 
-        <header dir="ltr" className="relative z-10 grid min-h-[105px] grid-cols-[112px_190px_minmax(0,1fr)] items-center gap-1 max-sm:min-h-[150px] max-sm:grid-cols-[88px_155px] max-sm:items-start">
+        <header dir="ltr" className="relative z-10 grid min-h-[84px] grid-cols-[88px_150px_minmax(0,1fr)] items-center gap-1 max-sm:min-h-[150px] max-sm:grid-cols-[88px_155px] max-sm:items-start">
           <div className="relative grid size-[104px] place-items-center justify-self-start rounded-full border-[3px] border-teal-300 bg-[oklch(0.11_0.035_180)] text-[43px] font-black tabular-nums text-teal-300 max-sm:size-[76px] max-sm:text-[34px]">
             <span aria-hidden className="absolute -inset-[9px] rounded-full border border-dashed border-teal-300/70" />
             <span aria-hidden className="absolute -inset-1 rounded-full border border-teal-300/40" />
@@ -599,7 +599,7 @@ function AccountSummaryCard({
           </div>
         </header>
 
-        <section dir="ltr" className="relative z-10 grid min-h-[185px] grid-cols-[minmax(0,1fr)_245px] items-center gap-[18px] pt-3 max-sm:grid-cols-1 max-sm:gap-3 max-sm:pt-2">
+        <section dir="ltr" className="relative z-10 grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_190px] items-center gap-[18px] pt-1 max-sm:grid-cols-1 max-sm:gap-3 max-sm:pt-2">
           <div dir="rtl" className="px-2 text-center max-sm:px-0">
             <div dir="rtl" className="mb-1.5 flex items-center justify-center gap-2.5">
               <span dir="ltr" className="inline-flex items-center gap-1 rounded-[8px] border border-destructive/80 px-2 py-1 text-xs font-bold text-destructive">
@@ -619,7 +619,7 @@ function AccountSummaryCard({
             <p className="mt-2 whitespace-nowrap text-[17px] font-bold text-muted-foreground max-sm:whitespace-normal max-sm:text-xs">لا يمكنك إجراء أي معاملة حتى يتم إلغاء التجميد</p>
           </div>
 
-          <div dir="ltr" className="grid h-[122px] grid-cols-[1fr_52px] grid-rows-[1fr_auto] items-center rounded-[24px] border-4 border-teal-950 bg-background px-[17px] py-[18px] max-sm:row-start-2 max-sm:h-[100px] max-sm:w-full max-sm:max-w-[290px] max-sm:justify-self-center max-sm:rounded-[20px] max-sm:px-3.5 max-sm:py-3">
+          <div dir="ltr" className="grid h-[96px] grid-cols-[1fr_52px] grid-rows-[1fr_auto] items-center rounded-[24px] border-4 border-teal-950 bg-background px-[17px] py-[18px] max-sm:row-start-2 max-sm:h-[100px] max-sm:w-full max-sm:max-w-[290px] max-sm:justify-self-center max-sm:rounded-[20px] max-sm:px-3.5 max-sm:py-3">
             {q.isLoading ? (
               <Loader2 className="col-span-2 m-auto size-5 animate-spin" />
             ) : d.failed ? (
