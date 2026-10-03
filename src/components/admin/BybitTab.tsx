@@ -454,7 +454,7 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
           لا توجد حسابات مربوطة بعد{isAdmin ? " — أضف حسابا بمفتاح API (قراءة فقط)." : "."}
         </div>
       ) : (
-        <div className="relative z-10 grid auto-rows-[320px] grid-cols-1 gap-4 xl:grid-cols-2">
+        <div className="relative z-10 grid auto-rows-auto grid-cols-1 items-start gap-4 xl:grid-cols-2">
           {list.map((a, i) => (
             <AccountSummaryCard
               key={a.id}
@@ -544,7 +544,7 @@ function AccountSummaryCard({
   const visaNo = account.sortOrder && account.sortOrder > 0 ? account.sortOrder : index + 1;
 
   return (
-    <div className="relative flex h-[320px] min-h-[320px] max-h-[320px] flex-col overflow-hidden rounded-[24px] border border-teal-400/25 bg-[oklch(0.16_0.03_190)] p-4 sm:p-5 shadow-[0_0_0_1px_oklch(0.7_0.13_190_/_0.08),0_18px_50px_-24px_oklch(0.6_0.15_190_/_0.45)] transition-shadow hover:shadow-[0_0_0_1px_oklch(0.7_0.13_190_/_0.2),0_22px_60px_-20px_oklch(0.65_0.16_190_/_0.6)]">
+    <div className={`relative flex flex-col overflow-hidden rounded-[24px] border border-teal-400/25 bg-[oklch(0.16_0.03_190)] p-4 sm:p-5 shadow-[0_0_0_1px_oklch(0.7_0.13_190_/_0.08),0_18px_50px_-24px_oklch(0.6_0.15_190_/_0.45)] transition-shadow hover:shadow-[0_0_0_1px_oklch(0.7_0.13_190_/_0.2),0_22px_60px_-20px_oklch(0.65_0.16_190_/_0.6)] ${frozen ? "h-[400px] min-h-[400px]" : "h-[320px] min-h-[320px]"}`}>
       {/* Decorative glow + wave */}
       <div aria-hidden className="pointer-events-none absolute inset-0">
         <div className="absolute -top-20 right-1/4 h-56 w-56 rounded-full bg-teal-400/10 blur-3xl" />
@@ -640,7 +640,7 @@ function AccountSummaryCard({
         </div>
 
         {/* Balances — bottom right aligned, lowered and slightly larger */}
-        <div className={`ml-auto mt-auto h-[96px] min-h-[96px] max-h-[96px] w-full max-w-[190px] shrink-0 overflow-hidden ${frozen ? "absolute bottom-0 right-0 z-30 pointer-events-none" : ""}`}>
+        <div className={`ml-auto mt-auto h-[96px] min-h-[96px] max-h-[96px] w-full max-w-[190px] shrink-0 overflow-hidden ${frozen ? "absolute bottom-0 right-0 z-30 h-[116px] min-h-[116px] max-h-[116px] max-w-[234px] pointer-events-none" : ""}`}>
           {q.isLoading ? (
             <div className="relative h-full w-full rounded-[18px] p-[3px] bg-[radial-gradient(120%_120%_at_50%_0%,oklch(0.55_0.13_170/0.28),transparent_70%)]">
               <div className="grid h-full w-full place-items-center rounded-[15px] bg-[oklch(0.055_0.008_190)] shadow-[0_0_28px_-10px_oklch(0.6_0.14_170/0.35)]">
@@ -665,7 +665,7 @@ function AccountSummaryCard({
             type="button"
             onClick={frozen ? undefined : onOpen}
             disabled={frozen}
-            className="mt-auto flex w-full shrink-0 items-center justify-center gap-2 rounded-2xl border border-teal-400/35 bg-[linear-gradient(135deg,oklch(0.32_0.08_190),oklch(0.22_0.06_190))] px-4 py-3 text-sm font-bold text-teal-100 shadow-[0_0_20px_-10px_oklch(0.7_0.15_190_/_0.8)] transition-all hover:border-teal-300/60 hover:brightness-125 hover:shadow-[0_0_28px_-8px_oklch(0.72_0.16_190_/_0.9)] disabled:cursor-not-allowed"
+            className={`mt-auto flex w-full shrink-0 items-center justify-center gap-2 rounded-2xl border border-teal-400/35 bg-[linear-gradient(135deg,oklch(0.32_0.08_190),oklch(0.22_0.06_190))] px-4 py-3 text-sm font-bold text-teal-100 shadow-[0_0_20px_-10px_oklch(0.7_0.15_190_/_0.8)] transition-all hover:border-teal-300/60 hover:brightness-125 hover:shadow-[0_0_28px_-8px_oklch(0.72_0.16_190_/_0.9)] disabled:cursor-not-allowed ${frozen ? "h-14 pl-[min(44%,234px)]" : ""}`}
           >
             <BarChart3 className="size-4 text-teal-300" />
             عرض بيانات الحساب
@@ -674,16 +674,16 @@ function AccountSummaryCard({
       </div>
       {frozen && (
         <div className="pointer-events-none absolute inset-0 z-20 text-center" role="status" aria-label="الحساب مجمد">
-          <div className="absolute inset-x-4 top-[104px] flex flex-col items-center gap-1.5">
-            <div className="flex items-center gap-2.5">
-              <Lock className="size-11 fill-destructive text-destructive" strokeWidth={1.8} aria-hidden="true" />
-              <span className="flex items-center gap-1.5 rounded-full border border-destructive/60 bg-destructive/10 px-3 py-1 text-xs font-bold text-destructive" dir="ltr">
-                <Clock className="size-3.5" />
-                {timeLeft !== null ? <span dir="ltr" className="tabular-nums">{formatLeft(timeLeft)}</span> : <span>بدون وقت</span>}
-              </span>
-            </div>
-            <strong className="text-2xl font-black text-destructive">الحساب مجمد</strong>
-            <p className="text-sm font-bold text-destructive/80">لا يمكن اجراء اي معاملة حتى يتم الفك التجميد</p>
+           <div className="absolute inset-x-4 top-[132px] flex flex-col items-center gap-3">
+             <div className="flex items-center gap-4" dir="ltr">
+               <span className="flex items-center gap-1.5 rounded-full border border-destructive/60 bg-destructive/10 px-3 py-1 text-xs font-bold text-destructive" dir="ltr">
+                 <Clock className="size-3.5" />
+                 {timeLeft !== null ? <span className="tabular-nums">{formatLeft(timeLeft)}</span> : <span>بدون وقت</span>}
+               </span>
+               <Lock className="size-12 fill-destructive text-destructive" strokeWidth={1.8} aria-hidden="true" />
+             </div>
+             <strong className="text-2xl font-black text-destructive">الحساب مجمد</strong>
+             <p className="max-w-full text-sm font-bold text-destructive">لا يمكن إجراء أي معاملة حتى يتم فك التجميد</p>
           </div>
         </div>
       )}
