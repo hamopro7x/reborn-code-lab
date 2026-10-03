@@ -665,7 +665,7 @@ function AccountSummaryCard({
             type="button"
             onClick={frozen ? undefined : onOpen}
             disabled={frozen}
-            className={`mt-auto flex w-full shrink-0 items-center justify-center gap-2 rounded-2xl border border-teal-400/35 bg-[linear-gradient(135deg,oklch(0.32_0.08_190),oklch(0.22_0.06_190))] px-4 py-3 text-sm font-bold text-teal-100 shadow-[0_0_20px_-10px_oklch(0.7_0.15_190_/_0.8)] transition-all hover:border-teal-300/60 hover:brightness-125 hover:shadow-[0_0_28px_-8px_oklch(0.72_0.16_190_/_0.9)] disabled:cursor-not-allowed ${frozen ? "h-14 pl-[min(44%,234px)]" : ""}`}
+            className={`mt-auto flex w-full shrink-0 items-center justify-center gap-2 rounded-2xl border border-teal-400/35 bg-[linear-gradient(135deg,oklch(0.32_0.08_190),oklch(0.22_0.06_190))] px-4 py-3 text-sm font-bold text-teal-100 shadow-[0_0_20px_-10px_oklch(0.7_0.15_190_/_0.8)] transition-all hover:border-teal-300/60 hover:brightness-125 hover:shadow-[0_0_28px_-8px_oklch(0.72_0.16_190_/_0.9)] disabled:cursor-not-allowed ${frozen ? "h-14 pr-[min(44%,234px)]" : ""}`}
           >
             <BarChart3 className="size-4 text-teal-300" />
             عرض بيانات الحساب
