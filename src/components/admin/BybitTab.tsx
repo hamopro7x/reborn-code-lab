@@ -576,7 +576,7 @@ function AccountSummaryCard({
           </div>
 
           {/* left cluster: gauge on the left, cashback on the right (matches image-280) */}
-          <div dir="ltr" className="flex items-center gap-2 sm:gap-3">
+          <div dir="ltr" className={`flex items-center gap-2 sm:gap-3 ${frozen ? "relative z-30" : ""}`}>
             <div className="flex items-center shrink-0">
               <div className="relative grid size-[80px] sm:size-[92px] place-items-center">
                 {/* outer tick ring */}
@@ -650,9 +650,6 @@ function AccountSummaryCard({
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-start gap-2 border border-destructive/40 bg-background/85 px-4 pt-4 text-center backdrop-blur-md" role="status" aria-label="الحساب مجمد">
           <Lock className="size-14 fill-destructive text-destructive" strokeWidth={1.8} aria-hidden="true" />
           <strong className="text-2xl font-black text-destructive">الحساب مجمد</strong>
-          <span className="rounded-full border border-teal-400/30 bg-teal-400/10 px-3 py-1 text-xs font-bold text-teal-300 tabular-nums" dir="ltr">
-            الكرت رقم {visaNo}
-          </span>
           <p className="text-sm text-muted-foreground">لا يمكن إجراء أي عمليات حتى يتم إلغاء التجميد</p>
           {isAdmin && (
             <Button variant="outline" className="min-h-11 border-border bg-card/70 px-8 text-base font-bold" onClick={onToggleFreeze} disabled={freezePending}>
