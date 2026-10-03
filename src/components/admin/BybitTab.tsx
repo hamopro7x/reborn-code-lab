@@ -306,6 +306,7 @@ type BybitAccountRow = {
   uid: string | null;
   sortOrder?: number;
   monthlyCashback?: number;
+  frozen?: boolean;
 };
 
 export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
@@ -460,7 +461,8 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
               onOpen={() => setSelected(a.id)}
               onDelete={() => removeAccount.mutate({ id: a.id })}
               onEdit={() => setEditAccount(a)}
-              onToggleFreeze={() => freezeAccount.mutate({ id: a.id, frozen: !(a as any).frozen })}
+              onToggleFreeze={() => freezeAccount.mutate({ id: a.id, frozen: !a.frozen })}
+              freezePending={freezeAccount.isPending && freezeAccount.variables?.id === a.id}
             />
           ))}
         </div>
@@ -489,9 +491,10 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
 }
 
 function AccountSummaryCard({
-  account, index, isAdmin, onOpen, onDelete, onEdit, onToggleFreeze,
+  account, index, isAdmin, onOpen, onDelete, onEdit, onToggleFreeze, freezePending,
 }: {
   onToggleFreeze?: () => void;
+  freezePending?: boolean;
   account: BybitAccountRow;
   index: number;
   isAdmin: boolean;
@@ -511,8 +514,7 @@ function AccountSummaryCard({
   const d = (q.data as any) ?? {};
   const coins = visibleCoins((d.coins ?? []) as CoinRow[]);
   const cashback = Number(account.monthlyCashback ?? 0);
-  const frozen = Boolean((account as any).frozen);
-  const locked = frozen && !isAdmin;
+  const frozen = Boolean(account.frozen);
   const visaNo = account.sortOrder && account.sortOrder > 0 ? account.sortOrder : index + 1;
 
   return (
@@ -544,7 +546,7 @@ function AccountSummaryCard({
                     >
                       <Copy className="size-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" className={`size-8 rounded-lg ${frozen ? "bg-destructive/15 text-destructive" : "text-muted-foreground hover:text-foreground"}`} onClick={onToggleFreeze} title={frozen ? "فك التجميد" : "تجميد الحساب"}>
+                    <Button variant="ghost" size="icon" className={`size-8 rounded-lg ${frozen ? "bg-destructive/15 text-destructive" : "text-muted-foreground hover:text-foreground"}`} onClick={onToggleFreeze} disabled={freezePending} title={frozen ? "فك التجميد" : "تجميد الحساب"}>
                       <Lock className="size-3.5" />
                     </Button>
                     <Button variant="ghost" size="icon" className="size-8 rounded-lg text-muted-foreground hover:text-foreground" onClick={onEdit} title="تعديل">
@@ -612,7 +614,7 @@ function AccountSummaryCard({
         </div>
 
         {/* Balances — bottom right aligned, lowered and slightly larger */}
-        <div className="ml-auto mt-auto h-[96px] min-h-[96px] max-h-[96px] w-full max-w-[190px] shrink-0 overflow-hidden">
+        <div className={`ml-auto mt-auto h-[96px] min-h-[96px] max-h-[96px] w-full max-w-[190px] shrink-0 overflow-hidden ${frozen ? "relative z-30 pointer-events-none" : ""}`}>
           {q.isLoading ? (
             <div className="relative h-full w-full rounded-[18px] p-[3px] bg-[radial-gradient(120%_120%_at_50%_0%,oklch(0.55_0.13_170/0.28),transparent_70%)]">
               <div className="grid h-full w-full place-items-center rounded-[15px] bg-[oklch(0.055_0.008_190)] shadow-[0_0_28px_-10px_oklch(0.6_0.14_170/0.35)]">
@@ -635,15 +637,27 @@ function AccountSummaryCard({
         ) : (
           <button
             type="button"
-            onClick={locked ? undefined : onOpen}
-            disabled={locked}
+            onClick={frozen ? undefined : onOpen}
+            disabled={frozen}
             className="mt-auto flex w-full disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:brightness-100 shrink-0 items-center justify-center gap-2 rounded-2xl border border-teal-400/35 bg-[linear-gradient(135deg,oklch(0.32_0.08_190),oklch(0.22_0.06_190))] px-4 py-3 text-sm font-bold text-teal-100 shadow-[0_0_20px_-10px_oklch(0.7_0.15_190_/_0.8)] transition-all hover:border-teal-300/60 hover:brightness-125 hover:shadow-[0_0_28px_-8px_oklch(0.72_0.16_190_/_0.9)]"
           >
             {frozen ? <Lock className="size-4 text-destructive" /> : <BarChart3 className="size-4 text-teal-300" />}
-            {frozen ? (isAdmin ? "عرض بيانات الحساب (مجمّد)" : "الحساب مجمّد") : "عرض بيانات الحساب"}
+            {frozen ? "الحساب مجمّد" : "عرض بيانات الحساب"}
           </button>
         )}
       </div>
+      {frozen && (
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-4 border border-destructive/40 bg-background/85 px-4 pb-14 pt-4 text-center backdrop-blur-md" role="status" aria-label="الحساب مجمّد">
+          <Lock className="size-20 fill-destructive text-destructive" strokeWidth={1.8} aria-hidden="true" />
+          <strong className="text-2xl font-black text-destructive">الحساب مجمّد</strong>
+          <p className="text-sm text-muted-foreground">لا يمكن إجراء أي عمليات حتى يتم إلغاء التجميد</p>
+          {isAdmin && (
+            <Button variant="outline" className="min-h-11 border-border bg-card/70 px-8 text-base font-bold" onClick={onToggleFreeze} disabled={freezePending}>
+              {freezePending ? "جاري إلغاء التجميد…" : "إلغاء التجميد"}
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
