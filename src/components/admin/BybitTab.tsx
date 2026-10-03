@@ -642,14 +642,17 @@ function AccountSummaryCard({
             className="mt-auto flex w-full disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:brightness-100 shrink-0 items-center justify-center gap-2 rounded-2xl border border-teal-400/35 bg-[linear-gradient(135deg,oklch(0.32_0.08_190),oklch(0.22_0.06_190))] px-4 py-3 text-sm font-bold text-teal-100 shadow-[0_0_20px_-10px_oklch(0.7_0.15_190_/_0.8)] transition-all hover:border-teal-300/60 hover:brightness-125 hover:shadow-[0_0_28px_-8px_oklch(0.72_0.16_190_/_0.9)]"
           >
             {frozen ? <Lock className="size-4 text-destructive" /> : <BarChart3 className="size-4 text-teal-300" />}
-            {frozen ? "الحساب مجمّد" : "عرض بيانات الحساب"}
+            {frozen ? "الحساب مجمد" : "عرض بيانات الحساب"}
           </button>
         )}
       </div>
       {frozen && (
-        <div className="absolute inset-0 z-20 flex flex-col items-center justify-start gap-2 border border-destructive/40 bg-background/85 px-4 pt-4 text-center backdrop-blur-md" role="status" aria-label="الحساب مجمّد">
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-start gap-2 border border-destructive/40 bg-background/85 px-4 pt-4 text-center backdrop-blur-md" role="status" aria-label="الحساب مجمد">
           <Lock className="size-14 fill-destructive text-destructive" strokeWidth={1.8} aria-hidden="true" />
-          <strong className="text-2xl font-black text-destructive">الحساب مجمّد</strong>
+          <strong className="text-2xl font-black text-destructive">الحساب مجمد</strong>
+          <span className="rounded-full border border-teal-400/30 bg-teal-400/10 px-3 py-1 text-xs font-bold text-teal-300 tabular-nums" dir="ltr">
+            الكرت رقم {visaNo}
+          </span>
           <p className="text-sm text-muted-foreground">لا يمكن إجراء أي عمليات حتى يتم إلغاء التجميد</p>
           {isAdmin && (
             <Button variant="outline" className="min-h-11 border-border bg-card/70 px-8 text-base font-bold" onClick={onToggleFreeze} disabled={freezePending}>
