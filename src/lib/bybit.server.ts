@@ -24,6 +24,7 @@ export type BybitAccount = {
   sortOrder: number;
   monthlyCashback: number;
   frozen: boolean;
+  frozenUntil: string | null;
 };
 
 async function admin() {
@@ -67,15 +68,23 @@ export async function listAccounts(): Promise<BybitAccount[]> {
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true });
   // `frozen` is read separately so the list still works before the column exists.
-  const frozenIds = new Set<string>();
+  const frozenIds = new Map<string, string | null>();
   try {
-    const { data: fz, error } = await db.from("bybit_accounts").select("id, frozen").eq("frozen", true);
-    if (!error) for (const r of fz ?? []) frozenIds.add((r as any).id);
+    const { data: fz, error } = await db.from("bybit_accounts").select("id, frozen, frozen_until").eq("frozen", true);
+    if (!error) {
+      const expired: string[] = [];
+      for (const r of (fz ?? []) as any[]) {
+        if (r.frozen_until && new Date(r.frozen_until).getTime() <= Date.now()) expired.push(r.id);
+        else frozenIds.set(r.id, r.frozen_until ?? null);
+      }
+      if (expired.length) await db.from("bybit_accounts").update({ frozen: false, frozen_until: null } as any).in("id", expired);
+    }
   } catch {
     /* column not applied yet */
   }
   return (data ?? []).map((r: any) => ({
     frozen: frozenIds.has(r.id),
+    frozenUntil: frozenIds.get(r.id) ?? null,
     id: r.id,
     name: r.name ?? "Bybit",
     uid: r.uid ?? null,
@@ -87,13 +96,16 @@ export async function listAccounts(): Promise<BybitAccount[]> {
 }
 
 /** Renames an account / updates its monthly cashback percentage / visa number. */
-export async function updateAccount(input: { id: string; name?: string; monthlyCashback?: number; sortOrder?: number; frozen?: boolean }) {
+export async function updateAccount(input: { id: string; name?: string; monthlyCashback?: number; sortOrder?: number; frozen?: boolean; frozenUntil?: string | null }) {
   const db = await admin();
   const patch: Record<string, unknown> = {};
   if (input.name !== undefined) patch.name = input.name;
   if (input.monthlyCashback !== undefined) patch.monthly_cashback = input.monthlyCashback;
   if (input.sortOrder !== undefined) patch.sort_order = input.sortOrder;
-  if (input.frozen !== undefined) patch.frozen = input.frozen;
+  if (input.frozen !== undefined) {
+    patch.frozen = input.frozen;
+    patch.frozen_until = input.frozen ? input.frozenUntil ?? null : null;
+  }
   if (!Object.keys(patch).length) return;
   const { error } = await db.from("bybit_accounts").update(patch).eq("id", input.id);
   if (error) throw new Error(error.message);

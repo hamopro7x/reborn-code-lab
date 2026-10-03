@@ -42,7 +42,7 @@ export const removeBybitAccount = createServerFn({ method: "POST" })
 
 export const updateBybitAccount = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string; name?: string; monthlyCashback?: number; sortOrder?: number; frozen?: boolean }) => {
+  .inputValidator((input: { id: string; name?: string; monthlyCashback?: number; sortOrder?: number; frozen?: boolean; frozenUntil?: string | null }) => {
     const id = requiredId(input, "معرف الحساب مطلوب");
     const name = input?.name !== undefined ? String(input.name).trim().slice(0, 60) : undefined;
     if (name !== undefined && !name) throw new Error("اسم الحساب مطلوب");
@@ -59,7 +59,13 @@ export const updateBybitAccount = createServerFn({ method: "POST" })
       sortOrder = n;
     }
     const frozen = typeof input?.frozen === "boolean" ? input.frozen : undefined;
-    return { id, name, monthlyCashback, sortOrder, frozen };
+    let frozenUntil: string | null = null;
+    if (input?.frozenUntil) {
+      const t = new Date(String(input.frozenUntil));
+      if (Number.isNaN(t.getTime()) || t.getTime() <= Date.now()) throw new Error("وقت انتهاء التجميد لازم يكون في المستقبل");
+      frozenUntil = t.toISOString();
+    }
+    return { id, name, monthlyCashback, sortOrder, frozen, frozenUntil };
   })
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
