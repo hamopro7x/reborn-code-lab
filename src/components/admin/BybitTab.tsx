@@ -543,6 +543,117 @@ function AccountSummaryCard({
   }, [account.frozen, timeLeft, onFreezeExpired]);
   const visaNo = account.sortOrder && account.sortOrder > 0 ? account.sortOrder : index + 1;
 
+  if (frozen) {
+    const primaryCoin = coins[0] ?? { coin: "USDT", balance: 0, usd: 0 };
+
+    return (
+      <article className="relative flex min-h-[410px] w-full max-w-[790px] flex-col overflow-hidden rounded-[30px] border-2 border-teal-500/30 bg-[oklch(0.075_0.018_178)] px-[26px] pb-6 pt-7 max-sm:min-h-0 max-sm:rounded-[22px] max-sm:px-3.5 max-sm:pb-4 max-sm:pt-[18px] xl:col-span-2">
+        <div aria-hidden className="pointer-events-none absolute inset-x-[-4%] top-[102px] h-[75px] w-[108%] -rotate-[4deg] rounded-[50%] border-t-2 border-teal-400/20" />
+        <div aria-hidden className="pointer-events-none absolute inset-x-[-4%] top-[120px] h-[75px] w-[108%] -rotate-[3deg] rounded-[50%] border-t-2 border-teal-400/15" />
+
+        <header dir="ltr" className="relative z-10 grid min-h-[105px] grid-cols-[112px_190px_minmax(0,1fr)] items-center gap-1 max-sm:min-h-[150px] max-sm:grid-cols-[88px_155px] max-sm:items-start">
+          <div className="relative grid size-[104px] place-items-center justify-self-start rounded-full border-[3px] border-teal-300 bg-[oklch(0.11_0.035_180)] text-[43px] font-black tabular-nums text-teal-300 max-sm:size-[76px] max-sm:text-[34px]">
+            <span aria-hidden className="absolute -inset-[9px] rounded-full border border-dashed border-teal-300/70" />
+            <span aria-hidden className="absolute -inset-1 rounded-full border border-teal-300/40" />
+            {visaNo}
+          </div>
+
+          <div dir="rtl" className="min-h-[92px] w-[190px] border-l border-dashed border-teal-300/45 pl-[13px] text-right max-sm:min-h-[78px] max-sm:w-[155px] max-sm:pl-2">
+            <div className="flex items-center justify-start gap-2 whitespace-nowrap text-[17px] font-bold text-foreground/80 max-sm:text-[13px]">
+              <Clock className="size-6 shrink-0 text-teal-300 max-sm:size-5" />
+              <span>استرداد بنسبة</span>
+            </div>
+            <strong dir="ltr" className="mt-1 block text-center text-[36px] font-black leading-none text-teal-300 max-sm:text-[30px]">
+              {cashback.toLocaleString("en-US", { maximumFractionDigits: 2 })}%
+            </strong>
+          </div>
+
+          <div dir="rtl" className="self-start pt-1.5 text-right max-sm:col-span-2 max-sm:flex max-sm:items-center max-sm:justify-between max-sm:gap-2 max-sm:px-0.5 max-sm:pt-0">
+            <div className="flex items-center justify-start gap-1">
+              <div className="whitespace-nowrap text-base font-extrabold max-sm:text-[13px]">حساب {account.name}</div>
+              {isAdmin && (
+                <div className="flex items-center gap-0.5">
+                  <Button variant="ghost" size="icon" className="size-7 text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={onToggleFreeze} disabled={freezePending} title="فك التجميد">
+                    <Lock className="size-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="size-7 text-muted-foreground hover:text-foreground" onClick={onEdit} title="تعديل">
+                    <Pencil className="size-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="size-7 text-destructive hover:bg-destructive/10" onClick={onDelete} title="حذف">
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                </div>
+              )}
+            </div>
+            {account.uid && (
+              <button
+                type="button"
+                className="mt-2 flex items-center justify-start gap-2 text-[13px] text-muted-foreground transition-colors duration-150 hover:text-teal-300 max-sm:mt-0 max-sm:text-[11px]"
+                title="نسخ UID"
+                onClick={() => { navigator.clipboard?.writeText(account.uid ?? ""); toast.success("تم نسخ UID"); }}
+              >
+                <Copy className="size-4" />
+                <span dir="ltr" className="tabular-nums">UID {account.uid}</span>
+              </button>
+            )}
+          </div>
+        </header>
+
+        <section dir="ltr" className="relative z-10 grid min-h-[185px] grid-cols-[minmax(0,1fr)_245px] items-center gap-[18px] pt-3 max-sm:grid-cols-1 max-sm:gap-3 max-sm:pt-2">
+          <div dir="rtl" className="px-2 text-center max-sm:px-0">
+            <div dir="rtl" className="mb-1.5 flex items-center justify-center gap-2.5">
+              <span dir="ltr" className="inline-flex items-center gap-1 rounded-[8px] border border-destructive/80 px-2 py-1 text-xs font-bold text-destructive">
+                {timeLeft !== null ? formatLeft(timeLeft) : "بدون وقت"}
+                <Clock className="size-3.5" />
+              </span>
+              <span className="flex h-[58px] w-[52px] items-center justify-center text-destructive" aria-hidden="true">
+                <svg viewBox="0 0 64 72" className="size-full overflow-visible">
+                  <path d="M17 30V22C17 10.4 23.7 4 32 4s15 6.4 15 18v8" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" />
+                  <rect x="8" y="27" width="48" height="39" rx="9" fill="currentColor" />
+                  <circle cx="32" cy="44" r="5" className="fill-background" />
+                  <path d="M32 48v8" className="stroke-background" strokeWidth="5" strokeLinecap="round" />
+                </svg>
+              </span>
+            </div>
+            <h3 className="m-0 text-[36px] font-black leading-tight text-destructive max-sm:text-[30px]">الحساب مجمد</h3>
+            <p className="mt-2 whitespace-nowrap text-[17px] font-bold text-muted-foreground max-sm:whitespace-normal max-sm:text-xs">لا يمكنك إجراء أي معاملة حتى يتم إلغاء التجميد</p>
+          </div>
+
+          <div dir="ltr" className="grid h-[122px] grid-cols-[1fr_52px] grid-rows-[1fr_auto] items-center rounded-[24px] border-4 border-teal-950 bg-background px-[17px] py-[18px] max-sm:row-start-2 max-sm:h-[100px] max-sm:w-full max-sm:max-w-[290px] max-sm:justify-self-center max-sm:rounded-[20px] max-sm:px-3.5 max-sm:py-3">
+            {q.isLoading ? (
+              <Loader2 className="col-span-2 m-auto size-5 animate-spin" />
+            ) : d.failed ? (
+              <span className="col-span-2 text-center text-xs text-destructive">تعذر جلب الرصيد</span>
+            ) : (
+              <>
+                <div className="text-[31px] font-black leading-none tabular-nums text-foreground max-sm:text-[27px]">
+                  {primaryCoin.balance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+                {String(primaryCoin.coin).toUpperCase() === "USDT" ? (
+                  <img src={USDT_LOGO} alt="USDT" className="size-[49px] shrink-0 rounded-full object-cover max-sm:size-[42px]" />
+                ) : (
+                  <span className="grid size-[49px] place-items-center rounded-full bg-muted max-sm:size-[42px]"><CoinLogo coin={primaryCoin.coin} /></span>
+                )}
+                <div className="col-start-1 mt-1 text-[13px] font-medium text-teal-400">
+                  USD {primaryCoin.usd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-muted-foreground">≈</span>
+                </div>
+              </>
+            )}
+          </div>
+        </section>
+
+        <button
+          type="button"
+          disabled
+          className="relative z-10 mt-auto flex h-[60px] w-full shrink-0 cursor-not-allowed items-center justify-center gap-3 rounded-[30px] border border-teal-500/50 bg-teal-900/55 text-[17px] font-bold text-teal-100 max-sm:mt-3.5 max-sm:h-[52px] max-sm:text-sm"
+        >
+          <BarChart3 className="size-[22px] text-teal-300" />
+          <span>عرض بيانات الحساب</span>
+        </button>
+      </article>
+    );
+  }
+
   return (
     <div className={`relative flex flex-col overflow-hidden rounded-[24px] border border-teal-400/25 bg-[oklch(0.16_0.03_190)] p-4 sm:p-5 shadow-[0_0_0_1px_oklch(0.7_0.13_190_/_0.08),0_18px_50px_-24px_oklch(0.6_0.15_190_/_0.45)] transition-shadow hover:shadow-[0_0_0_1px_oklch(0.7_0.13_190_/_0.2),0_22px_60px_-20px_oklch(0.65_0.16_190_/_0.6)] ${frozen ? "h-[400px] min-h-[400px]" : "h-[320px] min-h-[320px]"}`}>
       {/* Decorative glow + wave */}
