@@ -547,23 +547,23 @@ function AccountSummaryCard({
     const primaryCoin = coins[0] ?? { coin: "USDT", balance: 0, usd: 0 };
 
     return (
-      <article className="relative flex min-h-[410px] w-full max-w-[790px] flex-col overflow-hidden rounded-[30px] border-2 border-teal-500/30 bg-[oklch(0.075_0.018_178)] px-[26px] pb-6 pt-7 max-sm:min-h-0 max-sm:rounded-[22px] max-sm:px-3.5 max-sm:pb-4 max-sm:pt-[18px] xl:col-span-2">
+      <article className="relative flex h-[320px] min-h-[320px] w-full flex-col overflow-hidden rounded-[24px] border border-teal-500/30 bg-[oklch(0.075_0.018_178)] p-4 sm:p-5 max-sm:rounded-[22px] max-sm:px-3.5 max-sm:pb-4 max-sm:pt-[18px]">
         <div aria-hidden className="pointer-events-none absolute inset-x-[-4%] top-[102px] h-[75px] w-[108%] -rotate-[4deg] rounded-[50%] border-t-2 border-teal-400/20" />
         <div aria-hidden className="pointer-events-none absolute inset-x-[-4%] top-[120px] h-[75px] w-[108%] -rotate-[3deg] rounded-[50%] border-t-2 border-teal-400/15" />
 
-        <header dir="ltr" className="relative z-10 grid min-h-[105px] grid-cols-[112px_190px_minmax(0,1fr)] items-center gap-1 max-sm:min-h-[150px] max-sm:grid-cols-[88px_155px] max-sm:items-start">
-          <div className="relative grid size-[104px] place-items-center justify-self-start rounded-full border-[3px] border-teal-300 bg-[oklch(0.11_0.035_180)] text-[43px] font-black tabular-nums text-teal-300 max-sm:size-[76px] max-sm:text-[34px]">
+        <header dir="ltr" className="relative z-10 grid min-h-[84px] grid-cols-[88px_150px_minmax(0,1fr)] items-center gap-1 max-sm:min-h-[150px] max-sm:grid-cols-[88px_155px] max-sm:items-start">
+          <div className="relative grid size-[76px] place-items-center justify-self-start rounded-full border-[3px] border-teal-300 bg-[oklch(0.11_0.035_180)] text-[30px] font-black tabular-nums text-teal-300 max-sm:size-[76px] max-sm:text-[34px]">
             <span aria-hidden className="absolute -inset-[9px] rounded-full border border-dashed border-teal-300/70" />
             <span aria-hidden className="absolute -inset-1 rounded-full border border-teal-300/40" />
             {visaNo}
           </div>
 
-          <div dir="rtl" className="min-h-[92px] w-[190px] border-l border-dashed border-teal-300/45 pl-[13px] text-right max-sm:min-h-[78px] max-sm:w-[155px] max-sm:pl-2">
-            <div className="flex items-center justify-start gap-2 whitespace-nowrap text-[17px] font-bold text-foreground/80 max-sm:text-[13px]">
+          <div dir="rtl" className="min-h-[64px] w-[150px] border-l border-dashed border-teal-300/45 pl-[13px] text-right max-sm:min-h-[78px] max-sm:w-[155px] max-sm:pl-2">
+            <div className="flex items-center justify-start gap-2 whitespace-nowrap text-[13px] font-bold text-foreground/80 max-sm:text-[13px]">
               <Clock className="size-6 shrink-0 text-teal-300 max-sm:size-5" />
               <span>استرداد بنسبة</span>
             </div>
-            <strong dir="ltr" className="mt-1 block text-center text-[36px] font-black leading-none text-teal-300 max-sm:text-[30px]">
+            <strong dir="ltr" className="mt-1 block text-center text-[24px] font-black leading-none text-teal-300 max-sm:text-[30px]">
               {cashback.toLocaleString("en-US", { maximumFractionDigits: 2 })}%
             </strong>
           </div>
@@ -599,14 +599,14 @@ function AccountSummaryCard({
           </div>
         </header>
 
-        <section dir="ltr" className="relative z-10 grid min-h-[185px] grid-cols-[minmax(0,1fr)_245px] items-center gap-[18px] pt-3 max-sm:grid-cols-1 max-sm:gap-3 max-sm:pt-2">
+        <section dir="ltr" className="relative z-10 grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_190px] items-center gap-[18px] pt-1 max-sm:grid-cols-1 max-sm:gap-3 max-sm:pt-2">
           <div dir="rtl" className="px-2 text-center max-sm:px-0">
             <div dir="rtl" className="mb-1.5 flex items-center justify-center gap-2.5">
               <span dir="ltr" className="inline-flex items-center gap-1 rounded-[8px] border border-destructive/80 px-2 py-1 text-xs font-bold text-destructive">
                 {timeLeft !== null ? formatLeft(timeLeft) : "بدون وقت"}
                 <Clock className="size-3.5" />
               </span>
-              <span className="flex h-[58px] w-[52px] items-center justify-center text-destructive" aria-hidden="true">
+              <span className="flex h-[40px] w-[36px] items-center justify-center text-destructive" aria-hidden="true">
                 <svg viewBox="0 0 64 72" className="size-full overflow-visible">
                   <path d="M17 30V22C17 10.4 23.7 4 32 4s15 6.4 15 18v8" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" />
                   <rect x="8" y="27" width="48" height="39" rx="9" fill="currentColor" />
@@ -615,24 +615,24 @@ function AccountSummaryCard({
                 </svg>
               </span>
             </div>
-            <h3 className="m-0 text-[36px] font-black leading-tight text-destructive max-sm:text-[30px]">الحساب مجمد</h3>
-            <p className="mt-2 whitespace-nowrap text-[17px] font-bold text-muted-foreground max-sm:whitespace-normal max-sm:text-xs">لا يمكنك إجراء أي معاملة حتى يتم إلغاء التجميد</p>
+            <h3 className="m-0 text-[24px] font-black leading-tight text-destructive max-sm:text-[30px]">الحساب مجمد</h3>
+            <p className="mt-1 whitespace-nowrap text-[12px] font-bold text-muted-foreground max-sm:whitespace-normal max-sm:text-xs">لا يمكنك إجراء أي معاملة حتى يتم إلغاء التجميد</p>
           </div>
 
-          <div dir="ltr" className="grid h-[122px] grid-cols-[1fr_52px] grid-rows-[1fr_auto] items-center rounded-[24px] border-4 border-teal-950 bg-background px-[17px] py-[18px] max-sm:row-start-2 max-sm:h-[100px] max-sm:w-full max-sm:max-w-[290px] max-sm:justify-self-center max-sm:rounded-[20px] max-sm:px-3.5 max-sm:py-3">
+          <div dir="ltr" className="grid h-[96px] grid-cols-[1fr_52px] grid-rows-[1fr_auto] items-center rounded-[24px] border-4 border-teal-950 bg-background px-[17px] py-[18px] max-sm:row-start-2 max-sm:h-[100px] max-sm:w-full max-sm:max-w-[290px] max-sm:justify-self-center max-sm:rounded-[20px] max-sm:px-3.5 max-sm:py-3">
             {q.isLoading ? (
               <Loader2 className="col-span-2 m-auto size-5 animate-spin" />
             ) : d.failed ? (
               <span className="col-span-2 text-center text-xs text-destructive">تعذر جلب الرصيد</span>
             ) : (
               <>
-                <div className="text-[31px] font-black leading-none tabular-nums text-foreground max-sm:text-[27px]">
+                <div className="text-[24px] font-black leading-none tabular-nums text-foreground max-sm:text-[27px]">
                   {primaryCoin.balance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
                 {String(primaryCoin.coin).toUpperCase() === "USDT" ? (
-                  <img src={USDT_LOGO} alt="USDT" className="size-[49px] shrink-0 rounded-full object-cover max-sm:size-[42px]" />
+                  <img src={USDT_LOGO} alt="USDT" className="size-[40px] shrink-0 rounded-full object-cover max-sm:size-[42px]" />
                 ) : (
-                  <span className="grid size-[49px] place-items-center rounded-full bg-muted max-sm:size-[42px]"><CoinLogo coin={primaryCoin.coin} /></span>
+                  <span className="grid size-[40px] place-items-center rounded-full bg-muted max-sm:size-[42px]"><CoinLogo coin={primaryCoin.coin} /></span>
                 )}
                 <div className="col-start-1 mt-1 text-[13px] font-medium text-teal-400">
                   USD {primaryCoin.usd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-muted-foreground">≈</span>
@@ -645,7 +645,7 @@ function AccountSummaryCard({
         <button
           type="button"
           disabled
-          className="relative z-10 mt-auto flex h-[60px] w-full shrink-0 cursor-not-allowed items-center justify-center gap-3 rounded-[30px] border border-teal-500/50 bg-teal-900/55 text-[17px] font-bold text-teal-100 max-sm:mt-3.5 max-sm:h-[52px] max-sm:text-sm"
+          className="relative z-10 mt-auto flex h-[44px] w-full shrink-0 cursor-not-allowed items-center justify-center gap-3 rounded-2xl border border-teal-500/50 bg-teal-900/55 text-sm font-bold text-teal-100 max-sm:mt-3.5 max-sm:h-[52px] max-sm:text-sm"
         >
           <BarChart3 className="size-[22px] text-teal-300" />
           <span>عرض بيانات الحساب</span>
