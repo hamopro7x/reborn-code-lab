@@ -387,10 +387,12 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
     },
     onError: (e: any) => toast.error(e?.message || "فشل حفظ البيانات"),
   });
+  const [freezeTarget, setFreezeTarget] = useState<any>(null);
   const freezeAccount = useMutation({
-    mutationFn: (data: { id: string; frozen: boolean }) => updateFn({ data }),
+    mutationFn: (data: { id: string; frozen: boolean; frozenUntil?: string | null }) => updateFn({ data }),
     onSuccess: (_r, v) => {
       toast.success(v.frozen ? "تم تجميد الحساب" : "تم فك التجميد");
+      setFreezeTarget(null);
       qc.invalidateQueries({ queryKey: ["bybit-accounts"] });
     },
     onError: (e: any) =>
@@ -461,7 +463,8 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
               onOpen={() => setSelected(a.id)}
               onDelete={() => removeAccount.mutate({ id: a.id })}
               onEdit={() => setEditAccount(a)}
-              onToggleFreeze={() => freezeAccount.mutate({ id: a.id, frozen: !a.frozen })}
+              onToggleFreeze={() => (a.frozen ? freezeAccount.mutate({ id: a.id, frozen: false }) : setFreezeTarget(a))}
+              onFreezeExpired={() => qc.invalidateQueries({ queryKey: ["bybit-accounts"] })}
               freezePending={freezeAccount.isPending && freezeAccount.variables?.id === a.id}
             />
           ))}
@@ -471,6 +474,12 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
 
 
 
+      <FreezeDialog
+        account={freezeTarget}
+        pending={freezeAccount.isPending}
+        onClose={() => setFreezeTarget(null)}
+        onConfirm={(frozenUntil) => freezeTarget && freezeAccount.mutate({ id: freezeTarget.id, frozen: true, frozenUntil })}
+      />
       <AddAccountDialog
         open={addOpen}
         busy={addAccount.isPending}
@@ -491,8 +500,9 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
 }
 
 function AccountSummaryCard({
-  account, index, isAdmin, onOpen, onDelete, onEdit, onToggleFreeze, freezePending,
+  account, index, isAdmin, onOpen, onDelete, onEdit, onToggleFreeze, freezePending, onFreezeExpired,
 }: {
+  onFreezeExpired?: () => void;
   onToggleFreeze?: () => void;
   freezePending?: boolean;
   account: BybitAccountRow;
@@ -514,7 +524,22 @@ function AccountSummaryCard({
   const d = (q.data as any) ?? {};
   const coins = visibleCoins((d.coins ?? []) as CoinRow[]);
   const cashback = Number(account.monthlyCashback ?? 0);
-  const frozen = Boolean(account.frozen);
+  const frozenUntilMs = account.frozenUntil ? new Date(account.frozenUntil).getTime() : null;
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!account.frozen || !frozenUntilMs) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [account.frozen, frozenUntilMs]);
+  const timeLeft = frozenUntilMs ? frozenUntilMs - now : null;
+  const frozen = Boolean(account.frozen) && (timeLeft === null || timeLeft > 0);
+  const expiredRef = useRef(false);
+  useEffect(() => {
+    if (account.frozen && timeLeft !== null && timeLeft <= 0 && !expiredRef.current) {
+      expiredRef.current = true;
+      onFreezeExpired?.();
+    }
+  }, [account.frozen, timeLeft, onFreezeExpired]);
   const visaNo = account.sortOrder && account.sortOrder > 0 ? account.sortOrder : index + 1;
 
   return (
@@ -648,6 +673,10 @@ function AccountSummaryCard({
       </div>
       {frozen && (
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-start gap-2 border border-destructive/40 bg-background/85 px-4 pt-4 text-center backdrop-blur-md" role="status" aria-label="الحساب مجمد">
+          <div className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full border border-destructive/40 bg-destructive/10 px-3 py-1 text-xs font-bold text-destructive" dir="rtl">
+            <Clock className="size-3.5" />
+            {timeLeft !== null ? <span dir="ltr" className="tabular-nums">{formatLeft(timeLeft)}</span> : <span>بدون وقت</span>}
+          </div>
           <Lock className="size-14 fill-destructive text-destructive" strokeWidth={1.8} aria-hidden="true" />
           <strong className="text-2xl font-black text-destructive">الحساب مجمد</strong>
           <p className="text-sm text-muted-foreground">لا يمكن إجراء أي عمليات حتى يتم إلغاء التجميد</p>
@@ -685,6 +714,56 @@ function Field({ label, error, children }: { label: string; error?: string; chil
       {children}
       {error && <p className="text-[11px] text-destructive">{error}</p>}
     </div>
+  );
+}
+
+function formatLeft(ms: number) {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const d = Math.floor(total / 86400);
+  const h = Math.floor((total % 86400) / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const sec = total % 60;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d > 0 ? `${d}d ` : ""}${pad(h)}:${pad(m)}:${pad(sec)}`;
+}
+
+function FreezeDialog({ account, pending, onClose, onConfirm }: { account: any; pending: boolean; onClose: () => void; onConfirm: (frozenUntil: string | null) => void }) {
+  const [mode, setMode] = useState<"timed" | "manual">("timed");
+  const [days, setDays] = useState("0");
+  const [hours, setHours] = useState("1");
+  const [minutes, setMinutes] = useState("0");
+  useEffect(() => { if (account) { setMode("timed"); setDays("0"); setHours("1"); setMinutes("0"); } }, [account]);
+  const totalMs = ((Number(days) || 0) * 86400 + (Number(hours) || 0) * 3600 + (Number(minutes) || 0) * 60) * 1000;
+  const pick = (on: boolean) => `flex-1 rounded-lg border px-3 py-2 text-sm font-bold ${on ? "border-destructive bg-destructive/15 text-destructive" : "border-border text-muted-foreground"}`;
+  const submit = () => {
+    if (mode === "manual") return onConfirm(null);
+    if (totalMs <= 0) return toast.error("حدد مدة التجميد");
+    onConfirm(new Date(Date.now() + totalMs).toISOString());
+  };
+  return (
+    <Dialog open={!!account} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-sm text-right" dir="rtl">
+        <DialogHeader>
+          <DialogTitle>تجميد حساب {account?.name}</DialogTitle>
+        </DialogHeader>
+        <div className="flex gap-2">
+          <button type="button" className={pick(mode === "timed")} onClick={() => setMode("timed")}>لمدة محددة</button>
+          <button type="button" className={pick(mode === "manual")} onClick={() => setMode("manual")}>بدون وقت</button>
+        </div>
+        {mode === "timed" ? (
+          <div className="grid grid-cols-3 gap-2">
+            <Field label="أيام"><Input type="number" min={0} value={days} onChange={(e) => setDays(e.target.value)} /></Field>
+            <Field label="ساعات"><Input type="number" min={0} value={hours} onChange={(e) => setHours(e.target.value)} /></Field>
+            <Field label="دقائق"><Input type="number" min={0} value={minutes} onChange={(e) => setMinutes(e.target.value)} /></Field>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">الحساب هيفضل مجمد لحد ما تفك التجميد بنفسك</p>
+        )}
+        <Button variant="destructive" className="w-full" onClick={submit} disabled={pending}>
+          {pending ? "جاري التجميد…" : "تجميد الحساب"}
+        </Button>
+      </DialogContent>
+    </Dialog>
   );
 }
 
