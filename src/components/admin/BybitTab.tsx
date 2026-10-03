@@ -665,28 +665,25 @@ function AccountSummaryCard({
             type="button"
             onClick={frozen ? undefined : onOpen}
             disabled={frozen}
-            className="mt-auto flex w-full disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:brightness-100 shrink-0 items-center justify-center gap-2 rounded-2xl border border-teal-400/35 bg-[linear-gradient(135deg,oklch(0.32_0.08_190),oklch(0.22_0.06_190))] px-4 py-3 text-sm font-bold text-teal-100 shadow-[0_0_20px_-10px_oklch(0.7_0.15_190_/_0.8)] transition-all hover:border-teal-300/60 hover:brightness-125 hover:shadow-[0_0_28px_-8px_oklch(0.72_0.16_190_/_0.9)]"
+            className="mt-auto flex w-full shrink-0 items-center justify-center gap-2 rounded-2xl border border-teal-400/35 bg-[linear-gradient(135deg,oklch(0.32_0.08_190),oklch(0.22_0.06_190))] px-4 py-3 text-sm font-bold text-teal-100 shadow-[0_0_20px_-10px_oklch(0.7_0.15_190_/_0.8)] transition-all hover:border-teal-300/60 hover:brightness-125 hover:shadow-[0_0_28px_-8px_oklch(0.72_0.16_190_/_0.9)] disabled:cursor-not-allowed"
           >
-            {frozen ? <Lock className="size-4 text-destructive" /> : <BarChart3 className="size-4 text-teal-300" />}
-            {frozen ? "الحساب مجمد" : "عرض بيانات الحساب"}
+            <BarChart3 className="size-4 text-teal-300" />
+            عرض بيانات الحساب
           </button>
         )}
       </div>
       {frozen && (
-        <div className="pointer-events-none absolute inset-0 z-20 border border-destructive/40 bg-background/45 text-center" role="status" aria-label="الحساب مجمد">
-          <div className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full border border-destructive/40 bg-destructive/10 px-3 py-1 text-xs font-bold text-destructive" dir="rtl">
-            <Clock className="size-3.5" />
-            {timeLeft !== null ? <span dir="ltr" className="tabular-nums">{formatLeft(timeLeft)}</span> : <span>بدون وقت</span>}
-          </div>
-          <div className="absolute inset-x-4 top-[92px] flex flex-col items-center gap-1.5">
-            <Lock className="size-12 fill-destructive text-destructive" strokeWidth={1.8} aria-hidden="true" />
+        <div className="pointer-events-none absolute inset-0 z-20 text-center" role="status" aria-label="الحساب مجمد">
+          <div className="absolute inset-x-4 top-[104px] flex flex-col items-center gap-1.5">
+            <div className="flex items-center gap-2.5">
+              <Lock className="size-11 fill-destructive text-destructive" strokeWidth={1.8} aria-hidden="true" />
+              <span className="flex items-center gap-1.5 rounded-full border border-destructive/60 bg-destructive/10 px-3 py-1 text-xs font-bold text-destructive" dir="ltr">
+                <Clock className="size-3.5" />
+                {timeLeft !== null ? <span dir="ltr" className="tabular-nums">{formatLeft(timeLeft)}</span> : <span>بدون وقت</span>}
+              </span>
+            </div>
             <strong className="text-2xl font-black text-destructive">الحساب مجمد</strong>
-            <p className="text-sm text-muted-foreground">لا يمكن إجراء أي عمليات حتى يتم إلغاء التجميد</p>
-            {isAdmin && (
-              <Button variant="outline" className="pointer-events-auto min-h-11 border-border bg-card/70 px-8 text-base font-bold" onClick={onToggleFreeze} disabled={freezePending}>
-                {freezePending ? "جاري إلغاء التجميد…" : "إلغاء التجميد"}
-              </Button>
-            )}
+            <p className="text-sm font-bold text-destructive/80">لا يمكن اجراء اي معاملة حتى يتم الفك التجميد</p>
           </div>
         </div>
       )}
