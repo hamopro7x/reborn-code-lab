@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, Trash2 } from "lucide-react";
+import { Check, Loader2, Trash2 } from "lucide-react";
+import { usePersistentState } from "@/lib/persistent-state";
 import { EmployeePinMenu } from "@/components/admin/EmployeePinMenu";
 import { EmployeeWorkView } from "@/components/admin/EmployeeWorkView";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -172,6 +173,7 @@ function ShiftPickerMenu({
   });
 
   const shifts = q.data ?? [];
+  const [checked, setChecked] = usePersistentState<string[]>("admin-checked-shifts", []);
 
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
@@ -221,6 +223,23 @@ function ShiftPickerMenu({
                   className="grid w-9 shrink-0 place-items-center rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-300 transition hover:bg-rose-500/20"
                 >
                   <Trash2 className="size-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setChecked((prev) =>
+                      prev.includes(sh.id) ? prev.filter((x) => x !== sh.id) : [...prev, sh.id],
+                    )
+                  }
+                  title={checked.includes(sh.id) ? "إلغاء العلامة" : "تمت المراجعة"}
+                  aria-label="علامة مراجعة الشفت"
+                  className={`grid w-9 shrink-0 place-items-center rounded-xl border transition ${
+                    checked.includes(sh.id)
+                      ? "border-emerald-400/50 bg-emerald-500/25 text-emerald-300"
+                      : "border-white/10 bg-white/5 text-white/30 hover:text-white/60"
+                  }`}
+                >
+                  <Check className="size-5" strokeWidth={3} />
                 </button>
                 <button
                   type="button"
