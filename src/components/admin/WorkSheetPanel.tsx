@@ -226,20 +226,20 @@ function ShiftPickerMenu({
                 </button>
                 <button
                   type="button"
-                  onClick={() =>
-                    setChecked((prev) =>
-                      prev.includes(sh.id) ? prev.filter((x) => x !== sh.id) : [...prev, sh.id],
-                    )
-                  }
-                  title={checked.includes(sh.id) ? "إلغاء العلامة" : "تمت المراجعة"}
+                  onClick={() => {
+                    if (checked.includes(sh.id)) return;
+                    setChecked((prev) => (prev.includes(sh.id) ? prev : [...prev, sh.id]));
+                  }}
+                  title="تمت المراجعة"
                   aria-label="علامة مراجعة الشفت"
-                  className={`grid w-9 shrink-0 place-items-center rounded-xl border transition ${
+                  aria-pressed={checked.includes(sh.id)}
+                  className={`grid size-6 shrink-0 self-center place-items-center rounded-full border transition ${
                     checked.includes(sh.id)
-                      ? "border-emerald-400/50 bg-emerald-500/25 text-emerald-300"
-                      : "border-white/10 bg-white/5 text-white/30 hover:text-white/60"
+                      ? "border-emerald-400/60 bg-emerald-500/25 text-emerald-300"
+                      : "border-white/15 bg-white/5 text-white/30 hover:border-white/30 hover:text-white/60"
                   }`}
                 >
-                  <Check className="size-5" strokeWidth={3} />
+                  <Check className="size-3.5" strokeWidth={3} />
                 </button>
                 <button
                   type="button"
