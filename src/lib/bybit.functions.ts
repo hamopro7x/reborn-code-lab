@@ -187,16 +187,11 @@ export const syncAllBybitCardTxns = createServerFn({ method: "POST" })
     const mod = await import("./bybit.server");
     const errs = await import("./bybit-errors");
     try {
-      const ingest = await mod.syncAllCardTxns();
-      // Same reason as above: keep the central ledger + shift in step with the
-      // card archive on every manual/auto sync.
-      let saved = 0;
-      try {
-        saved = (await mod.syncAllLedger()).saved;
-      } catch (e) {
-        console.error("ledger mirror after full card sync failed:", (e as Error)?.message);
-      }
-      return { ok: true as const, ...ingest, saved };
+      // Fast sync (newest rows of every account) so the screen updates in
+      // seconds; the full month walk is scheduled in the background.
+      const recent = await mod.syncAllRecent();
+      mod.runDeepSyncIfDue();
+      return { ok: true as const, added: recent.saved, accounts: recent.accounts, saved: recent.saved };
     } catch (e) {
       const { code, message } = errs.normalizeBybitError(e);
       return { ok: false as const, added: 0, accounts: 0, saved: 0, error: message, errorCode: code };

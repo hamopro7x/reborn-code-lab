@@ -83,7 +83,7 @@ await import("../.output/server/index.mjs");
 
 // مزامنة دائمة على السيرفر: المعاملات تدخل المركز العام وشفت الموظف
 // حتى لو مفيش حد فاتح صفحة المعاملات.
-const SYNC_EVERY_MS = Number(process.env["SYNC_INTERVAL_MS"] || 10_000);
+const SYNC_EVERY_MS = Number(process.env["SYNC_INTERVAL_MS"] || 5_000);
 const syncUrl = `http://127.0.0.1:${process.env["PORT"]}/api/public/hooks/bybit-ledger-sync`;
 const tick = async () => {
   try {
@@ -91,7 +91,7 @@ const tick = async () => {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-sync-secret": process.env["SYNC_HOOK_SECRET"] },
       body: "{}",
-      signal: AbortSignal.timeout(120_000),
+      signal: AbortSignal.timeout(60_000),
     });
   } catch (e) {
     console.error("[fly-start] background bybit sync failed:", e?.message ?? e);

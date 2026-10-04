@@ -29,7 +29,7 @@ export const Route = createFileRoute("/api/public/hooks/bybit-ledger-sync")({
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const now = new Date();
-        const lease = new Date(now.getTime() + 4 * 60_000).toISOString();
+        const lease = new Date(now.getTime() + 60_000).toISOString();
 
         const { data: locked, error: lockError } = await supabaseAdmin
           .from("bybit_sync_state")
@@ -51,9 +51,10 @@ export const Route = createFileRoute("/api/public/hooks/bybit-ledger-sync")({
         const mod = await import("@/lib/bybit.server");
         let result: Record<string, unknown> = {};
         try {
-          const ingest = await mod.syncAllCardTxns();
-          const mirrored = await mod.syncAllLedger();
-          result = { added: ingest.added, saved: mirrored.saved, accounts: mirrored.accounts };
+          // Fast path only: newest page per account, all accounts in parallel.
+          // The heavy month walk runs separately in the background.
+          const recent = await mod.syncAllRecent();
+          result = { saved: recent.saved, accounts: recent.accounts };
         } catch (e) {
           result = { error: e instanceof Error ? e.message : "sync failed" };
         }
@@ -70,6 +71,7 @@ export const Route = createFileRoute("/api/public/hooks/bybit-ledger-sync")({
           .update({ lease_until: null, last_run_at: new Date().toISOString(), last_result: result as never })
           .eq("id", "ledger");
 
+        mod.runDeepSyncIfDue();
         return json({ ok: !("error" in result), ...result });
       },
     },
