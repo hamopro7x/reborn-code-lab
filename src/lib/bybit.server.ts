@@ -2092,22 +2092,129 @@ export async function syncAllLedger(): Promise<{ saved: number; accounts: number
   });
 }
 
-/**
- * Pull the newest movements straight from Bybit before a screen reads the
- * ledger/shift, so «المركز العام» and the employee shift show them as fast as
- * the internal account page. Shared + throttled through heavyOnce; the reader
- * waits at most `maxWaitMs` and then serves whatever is already saved.
+/* ---------- fast "recent" sync (the real-time path) ----------
+ * ROOT CAUSE of the delays: every tick used to re-walk the WHOLE month of card
+ * history (3 query types x up to 20 pages, with pauses) for every account one
+ * after another, then re-mirror each archive and only then link the shift. With
+ * several accounts one tick took minutes, so a new purchase waited for all of it.
+ *
+ * The fast path reads only the newest page of each type per account (all
+ * accounts in parallel), archives + mirrors exactly those rows, and links the
+ * open shift once. The deep month walk still runs, but in the background at
+ * most every few minutes, to catch late status changes on older rows.
  */
-export async function pullFromBybit(maxWaitMs = 0): Promise<void> {
-  const job = (async () => {
+async function fetchRecentCardRows(creds: Creds): Promise<any[]> {
+  const merged = new Map<string, { row: any; sourcePriority: number; updatedAt: number }>();
+  const results = await Promise.allSettled(
+    CARD_QUERY_TYPES.map((type) => callCardPage({ limit: 100, page: 1, type }, creds)),
+  );
+  let ok = 0;
+  let lastError: unknown;
+  results.forEach((res, typeIndex) => {
+    if (res.status !== "fulfilled") {
+      lastError = res.reason;
+      return;
+    }
+    ok++;
+    const rows = Array.isArray(res.value?.data) ? res.value.data : [];
+    for (const r of rows) {
+      const k = cardRowKey(r);
+      const updatedAt = Number(r?.txnUpdate ?? r?.updateTime ?? r?.updatedTime ?? r?.settleTime ?? r?.txnCreate ?? 0);
+      const current = merged.get(k);
+      if (
+        !current ||
+        typeIndex > current.sourcePriority ||
+        (typeIndex === current.sourcePriority && updatedAt > current.updatedAt)
+      ) {
+        merged.set(k, { row: r, sourcePriority: typeIndex, updatedAt });
+      }
+    }
+  });
+  if (!ok && lastError) throw lastError;
+  return [...merged.values()].map(({ row }) => row);
+}
+
+/** Newest movements of ONE account -> archive -> central ledger (no shift link). */
+async function syncAccountRecent(accountId: string): Promise<number> {
+  const creds = await getCreds(accountId);
+  const [cardRes, assets] = await Promise.allSettled([fetchRecentCardRows(creds), assetLedgerRows(accountId)]);
+  const rows: LedgerInsert[] = assets.status === "fulfilled" ? assets.value : [];
+  if (cardRes.status === "fulfilled" && cardRes.value.length) {
+    const mapped = cardRes.value.map(mapCardTxn);
+    await persistCardTxns(mapped, accountId);
+    // Mirror from the stored rows so the ledger shows exactly what the archive holds.
+    const db = await admin();
+    const ids = mapped.map((r) => String(r.id)).filter(Boolean);
+    for (let i = 0; i < ids.length; i += 100) {
+      const { data } = await db
+        .from("bybit_card_txns")
+        .select("txn_id, merchant, amount, currency, status, txn_time, pan4, txn_type, detail")
+        .eq("account_id", accountId)
+        .in("txn_id", ids.slice(i, i + 100));
+      for (const c of data ?? []) rows.push(cardLedgerRow(accountId, c));
+    }
+  }
+  return upsertLedger(rows, false);
+}
+
+async function mapLimit<T>(items: T[], limit: number, fn: (item: T) => Promise<void>) {
+  let next = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (next < items.length) {
+      const item = items[next++];
+      try {
+        await fn(item);
+      } catch {
+        /* حساب واحد يفشل لا يوقف الباقي */
+      }
+    }
+  });
+  await Promise.all(workers);
+}
+
+/** Fast sync of every linked account; links the open shift once at the end. */
+export async function syncAllRecent(): Promise<{ saved: number; accounts: number }> {
+  return heavyOnce("recent:all", 2_000, async () => {
+    const accounts = await listAccounts();
+    let saved = 0;
+    await mapLimit(accounts, 4, async (a) => {
+      if (!(await bybitConfigured(a.id))) return;
+      saved += await syncAccountRecent(a.id);
+    });
+    try {
+      const work = await import("./work-assign.server");
+      await work.autoAssignLedger(await admin());
+    } catch (e) {
+      console.error("work auto-assign skipped:", (e as Error)?.message);
+    }
+    return { saved, accounts: accounts.length };
+  });
+}
+
+const DEEP_EVERY_MS = 5 * 60_000;
+let lastDeepAt = 0;
+
+/** Full month walk, in the background, at most every few minutes. Never awaited by screens. */
+export function runDeepSyncIfDue(force = false): void {
+  if (!force && Date.now() - lastDeepAt < DEEP_EVERY_MS) return;
+  lastDeepAt = Date.now();
+  void heavyOnce("deep:all", 0, async () => {
     try {
       await syncAllCardTxns();
     } catch {
       /* keep going to the ledger */
     }
     await syncAllLedger();
-  })().catch(() => undefined);
-  // لا نُوقف عرض الصفحة: المزامنة تكمل في الخلفية والـRealtime يحدّث الشاشة.
+  }).catch((e) => console.error("deep bybit sync failed:", (e as Error)?.message));
+}
+
+/**
+ * Screens call this before reading: it starts the fast sync without blocking
+ * the response; Realtime refreshes the screen once the new rows land.
+ */
+export async function pullFromBybit(maxWaitMs = 0): Promise<void> {
+  const job = syncAllRecent().catch(() => undefined);
+  runDeepSyncIfDue();
   if (maxWaitMs > 0) await Promise.race([job, new Promise((r) => setTimeout(r, maxWaitMs))]);
 }
 
