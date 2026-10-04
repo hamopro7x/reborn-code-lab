@@ -165,6 +165,7 @@ export const getMyShiftTxns = createServerFn({ method: "POST" })
   }))
   .handler(async ({ data, context }) => {
     await assertAccess(context.supabase, context.userId);
+    if (data.page === 1) await (await import("./bybit.server")).pullFromBybit();
     const mod = await import("./work.server");
     return mod.myShiftRows(context.userId, data.page, 50);
   });
@@ -395,6 +396,7 @@ export const getEmployeeShiftTxns = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
+    if ((data.page ?? 1) === 1) await (await import("./bybit.server")).pullFromBybit();
     const mod = await import("./work.server");
     return mod.adminEmployeeShiftRows(data.userId, data.page ?? 1, 50);
   });

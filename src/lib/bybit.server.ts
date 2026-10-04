@@ -2082,6 +2082,24 @@ export async function syncAllLedger(): Promise<{ saved: number; accounts: number
   });
 }
 
+/**
+ * Pull the newest movements straight from Bybit before a screen reads the
+ * ledger/shift, so «المركز العام» and the employee shift show them as fast as
+ * the internal account page. Shared + throttled through heavyOnce; the reader
+ * waits at most `maxWaitMs` and then serves whatever is already saved.
+ */
+export async function pullFromBybit(maxWaitMs = 7_000): Promise<void> {
+  const job = (async () => {
+    try {
+      await syncAllCardTxns();
+    } catch {
+      /* keep going to the ledger */
+    }
+    await syncAllLedger();
+  })().catch(() => undefined);
+  await Promise.race([job, new Promise((r) => setTimeout(r, maxWaitMs))]);
+}
+
 
 const GROUP_KINDS: Record<string, string[]> = {
   txns: ["card", "refund"],

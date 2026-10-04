@@ -463,6 +463,7 @@ export const getBybitLedger = createServerFn({ method: "POST" })
     const { runCyclePurge } = await import("./monthly-cycle.server");
     await runCyclePurge();
     const mod = await import("./bybit.server");
+    if (data.page === 1) await mod.pullFromBybit();
     return mod.fetchLedgerPage(data);
   });
 
