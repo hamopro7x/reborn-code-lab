@@ -2088,7 +2088,7 @@ export async function syncAllLedger(): Promise<{ saved: number; accounts: number
  * the internal account page. Shared + throttled through heavyOnce; the reader
  * waits at most `maxWaitMs` and then serves whatever is already saved.
  */
-export async function pullFromBybit(maxWaitMs = 7_000): Promise<void> {
+export async function pullFromBybit(maxWaitMs = 0): Promise<void> {
   const job = (async () => {
     try {
       await syncAllCardTxns();
@@ -2097,7 +2097,8 @@ export async function pullFromBybit(maxWaitMs = 7_000): Promise<void> {
     }
     await syncAllLedger();
   })().catch(() => undefined);
-  await Promise.race([job, new Promise((r) => setTimeout(r, maxWaitMs))]);
+  // لا نُوقف عرض الصفحة: المزامنة تكمل في الخلفية والـRealtime يحدّث الشاشة.
+  if (maxWaitMs > 0) await Promise.race([job, new Promise((r) => setTimeout(r, maxWaitMs))]);
 }
 
 
