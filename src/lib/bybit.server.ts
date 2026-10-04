@@ -1878,7 +1878,7 @@ async function changedLedgerRows(db: any, rows: LedgerInsert[]): Promise<LedgerI
   return out;
 }
 
-async function upsertLedger(rows: LedgerInsert[]) {
+async function upsertLedger(rows: LedgerInsert[], assign = true) {
   // Central + internal transactions follow the same monthly cycle as spend:
   // only movements inside the current cycle are mirrored/kept.
   const { currentCycleStart } = await import("./monthly-cycle.server");
@@ -1902,6 +1902,7 @@ async function upsertLedger(rows: LedgerInsert[]) {
 
   // Work-sheet layer: link the freshly mirrored movements to the open shift.
   // Never modifies ledger rows; failures here must not break the sync.
+  if (!assign) return saved;
   try {
     const work = await import("./work-assign.server");
     await work.autoAssignLedger(db);
@@ -1909,6 +1910,102 @@ async function upsertLedger(rows: LedgerInsert[]) {
     console.error("work auto-assign skipped:", (e as Error)?.message);
   }
   return saved;
+}
+
+
+/** One central-ledger row built from one archived card record (single source of truth). */
+function cardLedgerRow(accountId: string, c: any): LedgerInsert {
+  const t = mapStoredRow(c);
+  // This is the exact normalized row shown by the account's internal log.
+  // Do not derive a second status specifically for the central ledger.
+  const status = t.status;
+  const isRefund = status === "refund";
+  const src = (t.detail ?? {}) as Record<string, any>;
+  const { raw: _raw, ...original } = src;
+  // Fee comes straight from the source account's own fee field (totalFees).
+  const rawSrc = (src["raw"] ?? {}) as Record<string, any>;
+  const feeRaw =
+    src["totalFees"] ?? rawSrc["totalFees"] ?? src["feeAmount"] ?? rawSrc["foreignTransactionFee"] ?? null;
+  const feeVal = feeRaw === null || feeRaw === undefined || feeRaw === "" ? 0 : num(feeRaw);
+  return {
+    account_id: accountId,
+    kind: isRefund ? "refund" : "card",
+    direction: isRefund ? "in" : "out",
+    ref_id: String(t.id),
+    title: t.merchant,
+    amount: isRefund ? Math.abs(t.amount) : -Math.abs(t.amount),
+    currency: t.currency,
+    fee: feeVal,
+    status,
+    occurred_at: iso(t.time),
+    // Full original payload (minus the oversized raw blob) so the central
+    // ledger can render exactly the same fields as the source account.
+    detail: sanitize({
+      ...original,
+      pan4: t.pan4 ?? null,
+      totalFees: feeRaw,
+      foreignTransactionFee: src["foreignTransactionFee"] ?? rawSrc["foreignTransactionFee"] ?? null,
+      type: t.type ?? null,
+      merchantName: src["merchantName"] ?? t.merchant ?? null,
+      basicAmount: src["basicAmount"] ?? t.amount,
+      basicCurrency: src["basicCurrency"] ?? t.currency,
+    }),
+  };
+}
+
+/** On-chain, internal transfers and P2P of one account, read live from Bybit. */
+async function assetLedgerRows(accountId: string): Promise<LedgerInsert[]> {
+  const rows: LedgerInsert[] = [];
+  const [onchain, internal, p2p] = await Promise.allSettled([
+    fetchOnChain(accountId),
+    fetchInternal(accountId),
+    fetchP2P(accountId),
+  ]);
+  const pushAssets = (list: AssetRow[], kind: string) => {
+    for (const a of list) {
+      if (!a.id) continue;
+      rows.push({
+        account_id: accountId,
+        kind,
+        direction: a.direction,
+        ref_id: a.id,
+        title: `${a.coin}${a.chain ? ` · ${a.chain}` : ""}`,
+        amount: a.amount,
+        currency: a.coin || "USDT",
+        fee: a.fee,
+        status: a.status,
+        occurred_at: iso(a.time),
+        detail: { address: a.address, chain: a.chain },
+      });
+    }
+  };
+  if (onchain.status === "fulfilled") {
+    pushAssets(onchain.value.deposits, "deposit");
+    pushAssets(onchain.value.withdrawals, "withdraw");
+  }
+  if (internal.status === "fulfilled") {
+    pushAssets(internal.value.deposits, "internal_in");
+    pushAssets(internal.value.withdrawals, "internal_out");
+  }
+  if (p2p.status === "fulfilled") {
+    for (const o of p2p.value) {
+      if (!o.id) continue;
+      rows.push({
+        account_id: accountId,
+        kind: o.side === "sell" ? "p2p_sell" : "p2p_buy",
+        direction: o.side === "sell" ? "out" : "in",
+        ref_id: o.id,
+        title: `P2P ${o.coin}/${o.fiat}${o.counterparty ? ` · ${o.counterparty}` : ""}`,
+        amount: o.side === "sell" ? -Math.abs(o.quantity) : Math.abs(o.quantity),
+        currency: o.coin || "USDT",
+        fee: 0,
+        status: o.status,
+        occurred_at: iso(o.time),
+        detail: { fiatAmount: o.amount, fiat: o.fiat, price: o.price, counterparty: o.counterparty ?? null },
+      });
+    }
+  }
+  return rows;
 }
 
 /** Mirrors every movement type of one account into the central ledger. */
@@ -1967,100 +2064,13 @@ export async function syncAccountLedger(accountId: string): Promise<number> {
       .order("txn_time", { ascending: false })
       .range(from, from + CHUNK - 1);
     const batch = cards ?? [];
-    for (const c of batch) {
-      const t = mapStoredRow(c);
-      // This is the exact normalized row shown by the account's internal log.
-      // Do not derive a second status specifically for the central ledger.
-      const status = t.status;
-      const isRefund = status === "refund";
-      const src = (t.detail ?? {}) as Record<string, any>;
-      const { raw: _raw, ...original } = src;
-      // Fee comes straight from the source account's own fee field (totalFees).
-      const rawSrc = (src["raw"] ?? {}) as Record<string, any>;
-      const feeRaw =
-        src["totalFees"] ?? rawSrc["totalFees"] ?? src["feeAmount"] ?? rawSrc["foreignTransactionFee"] ?? null;
-      const feeVal = feeRaw === null || feeRaw === undefined || feeRaw === "" ? 0 : num(feeRaw);
-      rows.push({
-        account_id: accountId,
-        kind: isRefund ? "refund" : "card",
-        direction: isRefund ? "in" : "out",
-        ref_id: String(t.id),
-        title: t.merchant,
-        amount: isRefund ? Math.abs(t.amount) : -Math.abs(t.amount),
-        currency: t.currency,
-        fee: feeVal,
-        status,
-        occurred_at: iso(t.time),
-        // Full original payload (minus the oversized raw blob) so the central
-        // ledger can render exactly the same fields as the source account.
-        detail: sanitize({
-          ...original,
-          pan4: t.pan4 ?? null,
-          totalFees: feeRaw,
-          foreignTransactionFee: src["foreignTransactionFee"] ?? rawSrc["foreignTransactionFee"] ?? null,
-          type: t.type ?? null,
-          merchantName: src["merchantName"] ?? t.merchant ?? null,
-          basicAmount: src["basicAmount"] ?? t.amount,
-          basicCurrency: src["basicCurrency"] ?? t.currency,
-        }),
-      });
-    }
+    for (const c of batch) rows.push(cardLedgerRow(accountId, c));
     if (batch.length < CHUNK) break;
   }
 
 
   // 2) on-chain + internal transfers + P2P (live from Bybit)
-  const [onchain, internal, p2p] = await Promise.allSettled([
-    fetchOnChain(accountId),
-    fetchInternal(accountId),
-    fetchP2P(accountId),
-  ]);
-
-  const pushAssets = (list: AssetRow[], kind: string) => {
-    for (const a of list) {
-      if (!a.id) continue;
-      rows.push({
-        account_id: accountId,
-        kind,
-        direction: a.direction,
-        ref_id: a.id,
-        title: `${a.coin}${a.chain ? ` · ${a.chain}` : ""}`,
-        amount: a.amount,
-        currency: a.coin || "USDT",
-        fee: a.fee,
-        status: a.status,
-        occurred_at: iso(a.time),
-        detail: { address: a.address, chain: a.chain },
-      });
-    }
-  };
-
-  if (onchain.status === "fulfilled") {
-    pushAssets(onchain.value.deposits, "deposit");
-    pushAssets(onchain.value.withdrawals, "withdraw");
-  }
-  if (internal.status === "fulfilled") {
-    pushAssets(internal.value.deposits, "internal_in");
-    pushAssets(internal.value.withdrawals, "internal_out");
-  }
-  if (p2p.status === "fulfilled") {
-    for (const o of p2p.value) {
-      if (!o.id) continue;
-      rows.push({
-        account_id: accountId,
-        kind: o.side === "sell" ? "p2p_sell" : "p2p_buy",
-        direction: o.side === "sell" ? "out" : "in",
-        ref_id: o.id,
-        title: `P2P ${o.coin}/${o.fiat}${o.counterparty ? ` · ${o.counterparty}` : ""}`,
-        amount: o.side === "sell" ? -Math.abs(o.quantity) : Math.abs(o.quantity),
-        currency: o.coin || "USDT",
-        fee: 0,
-        status: o.status,
-        occurred_at: iso(o.time),
-        detail: { fiatAmount: o.amount, fiat: o.fiat, price: o.price, counterparty: o.counterparty ?? null },
-      });
-    }
-  }
+  rows.push(...(await assetLedgerRows(accountId)));
 
   return upsertLedger(rows);
 }
