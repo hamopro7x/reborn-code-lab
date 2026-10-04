@@ -2106,7 +2106,7 @@ export async function syncAllLedger(): Promise<{ saved: number; accounts: number
 async function fetchRecentCardRows(creds: Creds): Promise<any[]> {
   const merged = new Map<string, { row: any; sourcePriority: number; updatedAt: number }>();
   const results = await Promise.allSettled(
-    CARD_QUERY_TYPES.map((type) => callCardPage({ limit: 100, page: 1, type }, creds)),
+    CARD_QUERY_TYPES.map((type) => callCardPage({ limit: 1, page: 1, type }, creds)),
   );
   let ok = 0;
   let lastError: unknown;
