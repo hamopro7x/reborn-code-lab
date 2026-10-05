@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Check, Loader2, Trash2 } from "lucide-react";
@@ -173,7 +173,39 @@ function ShiftPickerMenu({
   });
 
   const shifts = q.data ?? [];
-  const [checked, setChecked] = usePersistentState<string[]>("admin-checked-shifts", []);
+  // علامات المراجعة دائمة: تُحفظ في localStorage ولا تُمسح عند غلق القائمة أو مغادرة القسم.
+  const CHECKED_KEY = "mp:admin-checked-shifts:v2";
+  const [checked, setCheckedState] = useState<string[]>([]);
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(CHECKED_KEY);
+      const legacy = window.localStorage.getItem("mp:admin-checked-shifts");
+      const merged = new Set<string>([
+        ...(raw ? (JSON.parse(raw) as string[]) : []),
+        ...(legacy ? (JSON.parse(legacy) as string[]) : []),
+      ]);
+      setCheckedState(Array.from(merged));
+    } catch {
+      /* ignore */
+    }
+  }, [open]);
+  const setChecked = (fn: (prev: string[]) => string[]) => {
+    setCheckedState((prev) => {
+      let stored: string[] = [];
+      try {
+        stored = JSON.parse(window.localStorage.getItem(CHECKED_KEY) || "[]") as string[];
+      } catch {
+        /* ignore */
+      }
+      const next = fn(Array.from(new Set([...prev, ...stored])));
+      try {
+        window.localStorage.setItem(CHECKED_KEY, JSON.stringify(next));
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  };
 
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
