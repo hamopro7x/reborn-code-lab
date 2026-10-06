@@ -1,4 +1,4 @@
-import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { ShoppingCart, Globe, Menu, Search, LayoutGrid } from "lucide-react";
@@ -7,6 +7,7 @@ import { useCurrency } from "@/lib/currency-context";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import headerMark from "@/assets/header-mark.png.asset.json";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
@@ -17,24 +18,10 @@ const navLinks = [
   { to: "/track", label: "تتبع طلب" },
 ];
 
-const pillBase =
-  "px-6 py-2 rounded-full text-sm font-bold transition-colors duration-150 whitespace-nowrap";
-const pillActive = "bg-nav-pill text-nav-pill-foreground";
-const pillIdle = "bg-nav-pill/90 text-nav-pill-foreground hover:bg-nav-pill";
-
-function NavLink({ to, label, active }: { to: string; label: string; active: boolean }) {
-  return (
-    <Link to={to} className={`${pillBase} ${active ? pillActive : pillIdle}`}>
-      {label}
-    </Link>
-  );
-}
-
 export function Header() {
   const { count } = useCart();
   const { currency, setCurrency, currencies } = useCurrency();
   const navigate = useNavigate();
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [q, setQ] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
 
@@ -53,50 +40,30 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-header text-card-foreground">
-      <div className="container mx-auto px-4 h-16 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
-        <Link to="/" className="flex items-center gap-2 shrink-0">
+    <header className="store-header sticky top-0 z-50">
+      <div className="store-header-row">
+        <Link to="/" className="store-header-brand" aria-label="MG Pro، الاشتراكات الرقمية">
           <img
-            src="/favicon.png"
-            alt="شعار متجر الاشتراكات الرقمية"
-            width={36}
-            height={36}
-            className="size-9 rounded-lg border border-border"
+            src={headerMark.url}
+            alt=""
+            width={82}
+            height={54}
+            className="store-header-mark"
           />
-          <div className="leading-tight">
-            <div className="font-black text-base">MG Pro</div>
-            <div className="text-xs text-muted-foreground">الاشتراكات الرقمية</div>
+          <div className="store-header-words">
+            <div className="store-header-name">MG <span className="store-header-pro">PRO</span></div>
+            <div className="store-header-tag">الاشتراكات الرقمية</div>
           </div>
         </Link>
 
-        {/* التنقل + البحث */}
-        <div className="flex min-w-0 items-center gap-3">
-          <nav className="hidden lg:flex items-center gap-1 shrink-0">
-            {navLinks.map((l) => (
-              <NavLink key={l.to} to={l.to} label={l.label} active={pathname === l.to} />
-            ))}
-          </nav>
-
-          <form onSubmit={submitSearch} role="search" className="relative min-w-0 flex-1 hidden md:block">
-            <label htmlFor="site-search" className="sr-only">ابحث عن منتج</label>
-            <Search className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-            <Input
-              id="site-search"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="ابحث عن اشتراكك أو لعبتك"
-              className="h-10 pr-9 text-sm bg-card"
-            />
-          </form>
-        </div>
-
-        <div className="flex items-center gap-1.5">
+        <div className="store-header-actions">
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            className="md:hidden"
+            className="store-header-icon"
             aria-label="بحث"
+            title="بحث"
             aria-expanded={searchOpen}
             onClick={() => setSearchOpen((v) => !v)}
           >
@@ -106,9 +73,8 @@ export function Header() {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="gap-1.5" aria-label="اختر العملة">
+              <Button variant="ghost" size="sm" className="store-header-icon" aria-label="اختر العملة" title={`اختر العملة (${currency.code})`}>
                 <Globe className="size-4" />
-                <span className="hidden sm:inline text-xs font-medium">{currency.code}</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -123,18 +89,18 @@ export function Header() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Link to="/cart">
-            <Button variant="ghost" size="sm" className="relative" aria-label="سلة التسوق">
+          <Button asChild variant="ghost" size="sm" className="store-header-icon" aria-label="سلة التسوق" title="سلة التسوق">
+            <Link to="/cart">
               <ShoppingCart className="size-5" />
               {count > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 size-5 rounded-full bg-lime text-lime-foreground text-[10px] font-bold flex items-center justify-center">{count}</span>
+                <span className="store-header-badge">{count}</span>
               )}
-            </Button>
-          </Link>
+            </Link>
+          </Button>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="lg:hidden" aria-label="القائمة">
+              <Button variant="ghost" size="sm" className="store-header-icon" aria-label="القائمة" title="القائمة">
                 <Menu className="size-5" />
               </Button>
             </DropdownMenuTrigger>
@@ -166,7 +132,7 @@ export function Header() {
 
       {/* بحث الموبايل — يظهر عند الضغط على أيقونة البحث */}
       {searchOpen && (
-        <form onSubmit={submitSearch} role="search" className="md:hidden container mx-auto px-4 pb-3">
+        <form onSubmit={submitSearch} role="search" className="mx-auto max-w-xl px-4 pb-3">
           <label htmlFor="site-search-mobile" className="sr-only">ابحث عن منتج</label>
           <div className="relative">
             <Search className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />

@@ -79,8 +79,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "متجر الاشتراكات الرقمية | Digital Subscriptions Store" },
       { name: "twitter:description", content: "متجر الاشتراكات الرقمية: ألعاب، أدوات ذكاء اصطناعي، قوالب تصميم وكانفا بأسعار تنافسية وضمان حقيقي." },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/PwuX3rY87ihAOgrut0T1r7bbc9H3/social-images/social-1784123951698-ChatGPT_Image_15_يوليو_2026،_04_52_32_م.webp" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/PwuX3rY87ihAOgrut0T1r7bbc9H3/social-images/social-1784123951698-ChatGPT_Image_15_يوليو_2026،_04_52_32_م.webp" },
     ],
     scripts: [
       {
@@ -122,6 +120,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "dns-prefetch", href: SUPABASE_ORIGIN },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=IBM+Plex+Sans+Arabic:wght@400;600;700&family=Libre+Baskerville:wght@700&family=Tajawal:wght@400;500;700;900&display=swap" },
+      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Poppins:wght@700&display=swap" },
     ],
 
   }),
