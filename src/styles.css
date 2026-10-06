@@ -57,6 +57,7 @@
   --color-panel-foreground: var(--panel-foreground);
   --color-nav-pill: var(--nav-pill);
   --color-nav-pill-foreground: var(--nav-pill-foreground);
+  --color-header: var(--header);
   --color-category-surface: var(--category-surface);
   --color-category-overlay: var(--category-overlay);
   --font-category: "Libre Baskerville", "IBM Plex Sans Arabic", serif;
