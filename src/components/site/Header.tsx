@@ -44,7 +44,7 @@ export function Header() {
       <div className="store-header-row">
         <Link to="/" className="store-header-brand" aria-label="MG Pro، اشتراكات وألعاب رقمية">
           <img
-            src={headerMark.url}
+            src={`https://id-preview--335637d3-bc9b-407f-9e44-b28bda5c78dc.lovable.app${headerMark.url}`}
             alt=""
             width={82}
             height={54}
