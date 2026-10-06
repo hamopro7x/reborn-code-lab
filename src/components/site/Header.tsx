@@ -53,7 +53,7 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-card text-card-foreground">
+    <header className="sticky top-0 z-50 border-b border-border bg-header text-card-foreground">
       <div className="container mx-auto px-4 h-16 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
         <Link to="/" className="flex items-center gap-2 shrink-0">
           <img
