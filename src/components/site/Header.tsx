@@ -7,7 +7,7 @@ import { useCurrency } from "@/lib/currency-context";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import headerMark from "@/assets/header-mark.png.asset.json";
+import headerMark from "@/assets/mg-metallic-logo.png.asset.json";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
@@ -42,7 +42,7 @@ export function Header() {
   return (
     <header className="store-header sticky top-0 z-50">
       <div className="store-header-row">
-        <Link to="/" className="store-header-brand" aria-label="MG Pro، الاشتراكات الرقمية">
+        <Link to="/" className="store-header-brand" aria-label="MG Pro، اشتراكات وألعاب رقمية">
           <img
             src={headerMark.url}
             alt=""
@@ -52,7 +52,7 @@ export function Header() {
           />
           <div className="store-header-words">
             <div className="store-header-name">MG <span className="store-header-pro">PRO</span></div>
-            <div className="store-header-tag">الاشتراكات الرقمية</div>
+            <div className="store-header-tag">اشتراكات وألعاب رقمية</div>
           </div>
         </Link>
 
