@@ -71,7 +71,7 @@ export function ProductCard({ p, compact = false }: { p: any; compact?: boolean 
               />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-[13px] font-extrabold text-[#f5f6fa] leading-[1.35] text-right line-clamp-2">{p.name}</h3>
+              <h3 className="text-[13px] font-extrabold text-[#f5f6fa] leading-[1.35] text-right line-clamp-2 min-h-[36px]">{p.name}</h3>
             </div>
           </div>
 
@@ -80,7 +80,7 @@ export function ProductCard({ p, compact = false }: { p: any; compact?: boolean 
           {/* features */}
           <div className="flex flex-col gap-[6px]">
             {features.map((text, i) => (
-              <div key={i} className="flex items-start gap-[6px] text-[12.5px] text-[#a7a9b8] leading-[1.5]">
+              <div key={i} className="flex items-center gap-[6px] text-[12.5px] text-[#a7a9b8] leading-[1.5]">
                 <svg
                   viewBox="0 0 24 24"
                   fill="none"
@@ -88,11 +88,11 @@ export function ProductCard({ p, compact = false }: { p: any; compact?: boolean 
                   strokeWidth="2.2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  className="size-[15px] shrink-0 mt-[2px]"
+                  className="size-[15px] shrink-0"
                 >
                   <path d="M20 6L9 17l-5-5" />
                 </svg>
-                <span className="line-clamp-2 break-words">{text}</span>
+                <span className="truncate">{text}</span>
               </div>
             ))}
           </div>
