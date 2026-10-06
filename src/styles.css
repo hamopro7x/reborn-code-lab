@@ -190,7 +190,7 @@
 .store-header .store-header-icon svg { width: 22px; height: 22px; stroke-width: 1.75; }
 .store-header-brand:focus-visible, .store-header .store-header-icon:focus-visible { outline: 2px solid var(--header-highlight); outline-offset: 2px; }
 .store-header-badge { position: absolute; top: 3px; inset-inline-start: 3px; min-width: 18px; height: 18px; padding: 0 5px; display: grid; place-items: center; border-radius: 9px; border: 2px solid var(--header); background: var(--header-badge); color: var(--header-text); font-size: 10.5px; font-weight: 600; line-height: 1; }
-@media (max-width: 380px) {
+@media (max-width: 420px) {
   .store-header-row { padding-inline: 8px; gap: 4px; }
   .store-header-brand { gap: 4px; }
   .store-header-mark { width: 64px; height: 44px; }
