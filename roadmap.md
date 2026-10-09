@@ -1,5 +1,8 @@
 # خطة النقل الكامل إلى VPS
 
+## قائمة شفتات الموظف السابقة
+- [x] نقل زر «شفتات سابقة» لأعلى أقصى اليسار وفتح قائمة اختيار بدل فتح الشفت مباشرة، مع الحفاظ على الشفت الذي أتاحته الإدارة فقط.
+
 - [x] ملفات selfhost (Dockerfile, compose, nginx, sync scripts, migrate-storage)
 - [x] `.dockerignore` لتسريع البناء ومنع تسريب ملفات محلية
 - [x] سكربت تصدير الـschema/migrations للقاعدة الجديدة (`selfhost/migrate-db.sh`)
