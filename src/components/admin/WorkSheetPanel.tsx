@@ -486,7 +486,7 @@ function EmployeeSide() {
             onClick={() => setShow((v) => !v)}
             className={`${CHIP_BASE} ${show ? CHIP_ON : CHIP_OFF}`}
           >
-            {show ? "رجوع لشفتي" : `شفت من الإدارة (${shared.label})`}
+            {show ? "رجوع لشفتي" : "شفتات سابقة"}
           </button>
         </div>
       )}
