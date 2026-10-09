@@ -12,3 +12,4 @@
 
 - Bybit ingestion has two paths: `syncAllRecent` (newest page per account, parallel, every tick) for real-time screens, and a background deep month walk (`runDeepSyncIfDue`, every few minutes). Why: walking full history per tick delayed new transactions by minutes.
 - Store header styling is scoped to `.store-header`, with uploaded logo media referenced through asset pointers; this preserves other page palettes and existing navigation actions.
+- Employee previous-shift selection uses a controlled popover and only the existing admin-shared shift response; this preserves server access restrictions and keeps opening the menu separate from opening a shift.

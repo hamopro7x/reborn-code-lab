@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Check, Eye, EyeOff, Loader2, Trash2 } from "lucide-react";
+import { Check, ChevronDown, Eye, EyeOff, History, Loader2, Trash2 } from "lucide-react";
 import { usePersistentState } from "@/lib/persistent-state";
 import { EmployeePinMenu } from "@/components/admin/EmployeePinMenu";
 import { EmployeeWorkView } from "@/components/admin/EmployeeWorkView";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
 import { listEmployees } from "@/lib/admin.functions";
 import { getEmployeeShiftList, deleteEmployeeShift, getSharedShiftId, setSharedShift, getMySharedShift } from "@/lib/work.functions";
 import employeesBg from "@/assets/employees-bg.png.asset.json";
@@ -468,30 +469,64 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
 
 
 
-/** واجهة الموظف + زرار «شفت من الإدارة» لو الأدمن أظهر له شفت معيّن. */
+/** الموظف يختار الشفت الذي أتاحته الإدارة من قائمة أعلى اليسار. */
 function EmployeeSide() {
   const fn = useServerFn(getMySharedShift);
   const q = useQuery({ queryKey: ["my-shared-shift"], queryFn: () => fn(), refetchInterval: 15_000 });
-  const [show, setShow] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const shared = q.data as Shift | null | undefined;
+  const selectedShift = shared?.id === selectedId ? shared : null;
   useEffect(() => {
-    if (!shared) setShow(false);
-  }, [shared]);
+    if (q.isSuccess && (!shared || shared.id !== selectedId)) setSelectedId(null);
+  }, [q.isSuccess, shared, selectedId]);
   return (
     <div dir="rtl">
       {shared && (
-        <div className="fixed bottom-4 left-4 z-50">
-          <button
-            type="button"
-            onClick={() => setShow((v) => !v)}
-            className={`${CHIP_BASE} ${show ? CHIP_ON : CHIP_OFF}`}
-          >
-            {show ? "رجوع لشفتي" : "شفتات سابقة"}
-          </button>
+        <div className="fixed top-4 left-4 z-50">
+          <Popover open={menuOpen} onOpenChange={setMenuOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="secondary" className="gap-2 border border-border shadow-md">
+                <History />
+                شفتات سابقة
+                <ChevronDown />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent dir="rtl" align="start" side="bottom" className="w-72 max-w-[calc(100vw-2rem)] p-2">
+              <p className="px-2 py-2 text-sm font-semibold">شفتات سابقة</p>
+              <div className="max-h-[60vh] overflow-y-auto">
+                <Button
+                  variant="ghost"
+                  className="h-auto w-full justify-between whitespace-normal py-3 text-right"
+                  onClick={() => {
+                    setSelectedId(shared.id);
+                    setMenuOpen(false);
+                  }}
+                  aria-pressed={selectedId === shared.id}
+                >
+                  <span className="flex flex-col gap-1">
+                    <span>{shared.label ?? "الشفت السابق"}</span>
+                    <span className="text-xs font-normal text-muted-foreground">
+                      {fmtShift(shared.startedAt).day} · {fmtShift(shared.startedAt).date} · {fmtShift(shared.startedAt).time}
+                    </span>
+                  </span>
+                  {selectedId === shared.id && <Check className="text-primary" />}
+                </Button>
+                {selectedShift && (
+                  <Button variant="ghost" className="mt-1 w-full border-t border-border" onClick={() => {
+                    setSelectedId(null);
+                    setMenuOpen(false);
+                  }}>
+                    رجوع لشفتي
+                  </Button>
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
       )}
-      {show && shared ? (
-        <EmployeeWorkView key={shared.id} viewShiftId={shared.id} viewShift={shared} />
+      {selectedShift ? (
+        <EmployeeWorkView key={selectedShift.id} viewShiftId={selectedShift.id} viewShift={selectedShift} />
       ) : (
         <EmployeeWorkView />
       )}
