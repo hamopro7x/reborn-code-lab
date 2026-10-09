@@ -480,7 +480,7 @@ function EmployeeSide() {
   return (
     <div dir="rtl">
       {shared && (
-        <div className="mb-3 flex justify-start">
+        <div className="fixed bottom-4 left-4 z-50">
           <button
             type="button"
             onClick={() => setShow((v) => !v)}
