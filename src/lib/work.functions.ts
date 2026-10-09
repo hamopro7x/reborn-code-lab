@@ -434,7 +434,7 @@ export const getShiftTxns = createServerFn({ method: "POST" })
     shiftSchema.extend({ page: z.number().int().min(1).max(10_000).optional() }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.supabase, context.userId);
+    await assertShiftView(context.supabase, context.userId, data.shiftId);
     const mod = await import("./work.server");
     return mod.shiftRows(data.shiftId, data.page ?? 1, 50);
   });
@@ -443,7 +443,7 @@ export const getShiftManualTxns = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => shiftSchema.parse(input))
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.supabase, context.userId);
+    await assertShiftView(context.supabase, context.userId, data.shiftId);
     const mod = await import("./work.server");
     return mod.shiftManualTxns(data.shiftId);
   });
@@ -454,7 +454,7 @@ export const getShiftTransfers = createServerFn({ method: "POST" })
     shiftSchema.extend({ scope: z.enum(["external", "internal"]) }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.supabase, context.userId);
+    await assertShiftView(context.supabase, context.userId, data.shiftId);
     const mod = await import("./work.server");
     return mod.shiftTransfers(data.shiftId, data.scope);
   });
@@ -463,7 +463,7 @@ export const getShiftP2P = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => shiftSchema.parse(input))
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.supabase, context.userId);
+    await assertShiftView(context.supabase, context.userId, data.shiftId);
     const mod = await import("./work.server");
     return mod.shiftP2P(data.shiftId);
   });
@@ -561,7 +561,7 @@ export const getShiftManualCardTxns = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ shiftId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.supabase, context.userId);
+    await assertShiftView(context.supabase, context.userId, data.shiftId);
     const mod = await import("./work.server");
     return mod.shiftManualCardTxns(data.shiftId);
   });
@@ -610,4 +610,49 @@ export const clearEmployeePin = createServerFn({ method: "POST" })
     await assertAdmin(context.supabase, context.userId);
     const mod = await import("./work.server");
     return mod.clearPin(data.userId);
+  });
+
+/* ---------------- مشاركة شفت معيّن مع الموظف (قراءة فقط) ---------------- */
+async function assertShiftView(sb: any, userId: string, shiftId: string) {
+  try {
+    await assertAdmin(sb, userId);
+    return;
+  } catch {
+    const mod = await import("./work.server");
+    if ((await mod.getSharedShiftFor(userId)) === shiftId) return;
+    throw new Error("Forbidden");
+  }
+}
+
+export const getSharedShiftId = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => empSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    return { shiftId: await mod.getSharedShiftFor(data.userId) };
+  });
+
+export const setSharedShift = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    empSchema.extend({ shiftId: z.string().uuid().nullable() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    await mod.setSharedShiftFor(data.userId, data.shiftId);
+    return { ok: true };
+  });
+
+export const getMySharedShift = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const mod = await import("./work.server");
+    const id = await mod.getSharedShiftFor(context.userId);
+    if (!id) return null;
+    const list = await mod.shiftHistory(context.userId);
+    const idx = list.findIndex((s: any) => s.id === id);
+    if (idx < 0) return null;
+    return { ...list[idx], label: `شفت رقم ${list.length - idx}` };
   });

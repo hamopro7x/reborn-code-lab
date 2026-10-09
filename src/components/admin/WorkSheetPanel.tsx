@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Check, Loader2, Trash2 } from "lucide-react";
+import { Check, Eye, EyeOff, Loader2, Trash2 } from "lucide-react";
 import { usePersistentState } from "@/lib/persistent-state";
 import { EmployeePinMenu } from "@/components/admin/EmployeePinMenu";
 import { EmployeeWorkView } from "@/components/admin/EmployeeWorkView";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { listEmployees } from "@/lib/admin.functions";
-import { getEmployeeShiftList, deleteEmployeeShift } from "@/lib/work.functions";
+import { getEmployeeShiftList, deleteEmployeeShift, getSharedShiftId, setSharedShift, getMySharedShift } from "@/lib/work.functions";
 import employeesBg from "@/assets/employees-bg.png.asset.json";
 
 
@@ -173,6 +173,20 @@ function ShiftPickerMenu({
   });
 
   const shifts = q.data ?? [];
+  const sharedFn = useServerFn(getSharedShiftId);
+  const setSharedFn = useServerFn(setSharedShift);
+  const sharedQ = useQuery({
+    queryKey: ["admin-shared-shift", userId],
+    queryFn: () => sharedFn({ data: { userId: userId! } }),
+    enabled: !!userId && open,
+  });
+  const sharedId = sharedQ.data?.shiftId ?? null;
+  const toggleShare = (id: string) => {
+    if (!userId) return;
+    setSharedFn({ data: { userId, shiftId: sharedId === id ? null : id } })
+      .then(() => void sharedQ.refetch())
+      .catch((e: any) => window.alert(e?.message || "تعذر الحفظ"));
+  };
   // علامات المراجعة دائمة: تُحفظ في localStorage ولا تُمسح عند غلق القائمة أو مغادرة القسم.
   const CHECKED_KEY = "mp:admin-checked-shifts:v2";
   const [checked, setCheckedState] = useState<string[]>([]);
@@ -255,6 +269,20 @@ function ShiftPickerMenu({
                   className="grid w-9 shrink-0 place-items-center rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-300 transition hover:bg-rose-500/20"
                 >
                   <Trash2 className="size-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toggleShare(sh.id)}
+                  title={sharedId === sh.id ? "ظاهر للموظف — اضغط للإخفاء" : "إظهار الشفت للموظف"}
+                  aria-label="إظهار الشفت للموظف"
+                  aria-pressed={sharedId === sh.id}
+                  className={`grid size-6 shrink-0 self-center place-items-center rounded-full border transition ${
+                    sharedId === sh.id
+                      ? "border-blue-400/60 bg-blue-500/25 text-blue-300"
+                      : "border-white/15 bg-white/5 text-white/30 hover:border-white/30 hover:text-white/60"
+                  }`}
+                >
+                  {sharedId === sh.id ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
                 </button>
                 <button
                   type="button"
@@ -361,7 +389,7 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
 
   const [selected, setSelected] = useState<Employee | null>(null);
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
-  if (!isAdmin) return <EmployeeWorkView />;
+  if (!isAdmin) return <EmployeeSide />;
 
   return (
     <div className="min-h-[40vh] -mx-4 md:-mx-6 -mt-4 md:-mt-6" dir="rtl">
@@ -439,3 +467,34 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
 
 
 
+
+/** واجهة الموظف + زرار «شفت من الإدارة» لو الأدمن أظهر له شفت معيّن. */
+function EmployeeSide() {
+  const fn = useServerFn(getMySharedShift);
+  const q = useQuery({ queryKey: ["my-shared-shift"], queryFn: () => fn(), refetchInterval: 15_000 });
+  const [show, setShow] = useState(false);
+  const shared = q.data as Shift | null | undefined;
+  useEffect(() => {
+    if (!shared) setShow(false);
+  }, [shared]);
+  return (
+    <div dir="rtl">
+      {shared && (
+        <div className="mb-3 flex justify-start">
+          <button
+            type="button"
+            onClick={() => setShow((v) => !v)}
+            className={`${CHIP_BASE} ${show ? CHIP_ON : CHIP_OFF}`}
+          >
+            {show ? "رجوع لشفتي" : `شفت من الإدارة (${shared.label})`}
+          </button>
+        </div>
+      )}
+      {show && shared ? (
+        <EmployeeWorkView key={shared.id} viewShiftId={shared.id} viewShift={shared} />
+      ) : (
+        <EmployeeWorkView />
+      )}
+    </div>
+  );
+}
