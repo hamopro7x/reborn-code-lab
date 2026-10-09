@@ -2210,3 +2210,23 @@ export async function verifyPin(userId: string, pin: string) {
   await db.from("work_pins").update({ fail_count: 0, locked_until: null }).eq("user_id", userId);
   return { ok: true as const };
 }
+
+/* شفت تمت مشاركته من الأدمن مع موظف — site_settings.shared_shifts = { userId: shiftId } */
+async function readSharedShifts(): Promise<Record<string, string>> {
+  const db = await admin();
+  const { data } = await db.from("site_settings").select("value").eq("key", "shared_shifts").maybeSingle();
+  return ((data as any)?.value ?? {}) as Record<string, string>;
+}
+export async function getSharedShiftFor(userId: string): Promise<string | null> {
+  return (await readSharedShifts())[userId] ?? null;
+}
+export async function setSharedShiftFor(userId: string, shiftId: string | null) {
+  const db = await admin();
+  const map = await readSharedShifts();
+  if (shiftId) map[userId] = shiftId;
+  else delete map[userId];
+  const { error } = await db
+    .from("site_settings")
+    .upsert({ key: "shared_shifts", value: map as any, updated_at: new Date().toISOString() } as any);
+  if (error) throw new Error(error.message);
+}
