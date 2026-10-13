@@ -192,7 +192,7 @@ function ShiftPickerMenu({
   // علامة المراجعة تُحفظ في قاعدة البيانات — لا تُمسح نهائيًا مهما تغيّر المتصفح أو الجهاز.
   const markFn = useServerFn(markShiftReviewed);
   // العلامات القديمة المحفوظة في المتصفح تُنقل للقاعدة مرة واحدة تلقائيًا.
-  const [migrating, setMigrating] = useState(false);
+  const [marking, setMarking] = useState<Set<string>>(new Set());
   const migratedRef = useRef(false);
   useEffect(() => {
     if (!open || !q.isSuccess || migratedRef.current) return;
@@ -205,10 +205,16 @@ function ShiftPickerMenu({
       }
       const pending = (q.data ?? []).filter((s) => !s.reviewed && ids.has(s.id)).map((s) => s.id);
       if (pending.length) {
-        setMigrating(true);
+        setMarking((prev) => new Set([...prev, ...pending]));
         void Promise.all(pending.map((id) => markFn({ data: { shiftId: id } })))
           .then(() => void q.refetch())
-          .finally(() => setMigrating(false));
+          .finally(() =>
+            setMarking((prev) => {
+              const n = new Set(prev);
+              for (const id of pending) n.delete(id);
+              return n;
+            }),
+          );
       }
     } catch {
       /* ignore */
