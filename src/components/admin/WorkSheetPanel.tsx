@@ -8,7 +8,7 @@ import { EmployeeWorkView } from "@/components/admin/EmployeeWorkView";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { listEmployees } from "@/lib/admin.functions";
-import { getEmployeeShiftList, deleteEmployeeShift, getSharedShiftId, setSharedShift, getMySharedShift } from "@/lib/work.functions";
+import { getEmployeeShiftList, deleteEmployeeShift, getSharedShiftId, setSharedShift, getMySharedShift, markShiftReviewed } from "@/lib/work.functions";
 import employeesBg from "@/assets/employees-bg.png.asset.json";
 
 
@@ -116,6 +116,7 @@ type Shift = {
   endedAt: number | null;
   open: boolean;
   txns: number;
+  reviewed?: boolean;
   label?: string;
 };
 
