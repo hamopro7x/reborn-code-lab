@@ -212,8 +212,10 @@
   .store-header .store-header-icon { width: 30px; height: 34px; }
   .store-header .store-header-icon svg { width: 19px; height: 19px; }
   .store-header-name { font-size: 15px; }
+  .store-header-mono { gap: 4px; }
+  .store-header-mono b { font-size: 8px; letter-spacing: .18em; text-indent: .18em; }
 }
-@media (prefers-reduced-motion: reduce) { .store-header .store-header-icon { transition: none; } .store-header-mark { animation: none; } .store-header-name { animation: none; } .store-header-mg { animation: none; } .store-header-pro { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .store-header .store-header-icon { transition: none; } .store-header-mark { animation: none; } .store-header-name { animation: none; } .store-header-mg { animation: none; } .store-header-pro { animation: none; } .store-header-mono { animation: none; } }
 
 /* Checkout invoice */
 .checkout-v4 {
