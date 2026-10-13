@@ -1805,10 +1805,8 @@ export async function shiftHistory(userId: string, limit = 100) {
 /** تعليم شفت بأنه تمت مراجعته — يُحفظ في قاعدة البيانات ولا يُمسح أبدًا. */
 export async function markShiftReviewed(shiftId: string, reviewedBy: string) {
   const db = await admin();
-  const { error } = await db
-    .from("work_shifts")
-    .update({ reviewed_at: new Date().toISOString(), reviewed_by: reviewedBy })
-    .eq("id", shiftId);
+  const patch = { reviewed_at: new Date().toISOString(), reviewed_by: reviewedBy } as any;
+  const { error } = await db.from("work_shifts").update(patch).eq("id", shiftId);
   if (error) return { ok: false as const, error: error.message };
   return { ok: true as const };
 }
