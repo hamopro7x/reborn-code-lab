@@ -282,14 +282,25 @@ function ShiftPickerMenu({
                 <button
                   type="button"
                   onClick={() => {
-                    if (checked.includes(sh.id)) return;
-                    setChecked((prev) => (prev.includes(sh.id) ? prev : [...prev, sh.id]));
+                    const isOn = sh.reviewed || marking.has(sh.id);
+                    if (isOn) return;
+                    setMarking((prev) => new Set(prev).add(sh.id));
+                    markFn({ data: { shiftId: sh.id } })
+                      .then(() => void q.refetch())
+                      .catch(() => window.alert("تعذر حفظ علامة المراجعة"))
+                      .finally(() =>
+                        setMarking((prev) => {
+                          const n = new Set(prev);
+                          n.delete(sh.id);
+                          return n;
+                        }),
+                      );
                   }}
                   title="تمت المراجعة"
                   aria-label="علامة مراجعة الشفت"
-                  aria-pressed={checked.includes(sh.id)}
+                  aria-pressed={sh.reviewed || marking.has(sh.id)}
                   className={`grid size-6 shrink-0 self-center place-items-center rounded-full border transition ${
-                    checked.includes(sh.id)
+                    sh.reviewed || marking.has(sh.id)
                       ? "border-emerald-400/60 bg-emerald-500/25 text-emerald-300"
                       : "border-white/15 bg-white/5 text-white/30 hover:border-white/30 hover:text-white/60"
                   }`}
