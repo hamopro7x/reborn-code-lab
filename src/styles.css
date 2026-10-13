@@ -179,7 +179,7 @@
   border-bottom: 1px solid var(--header-line);
   font-family: "IBM Plex Sans Arabic", "Segoe UI", sans-serif;
 }
-.store-header-row { display: flex; align-items: center; gap: 6px; height: calc(76px + env(safe-area-inset-top, 0px)); padding: env(safe-area-inset-top, 0px) 14px 0; }
+.store-header-row { display: flex; align-items: center; gap: 6px; height: calc(60px + env(safe-area-inset-top, 0px)); padding: env(safe-area-inset-top, 0px) 14px 0; }
 .store-header-brand { display: flex; align-items: center; gap: 12px; flex: none; }
 .store-header-mark { display: block; height: 38px; width: 58px; object-fit: contain; animation: header-logo-breathe 4.5s ease-in-out infinite; will-change: transform, filter; }
 @keyframes header-logo-breathe {
