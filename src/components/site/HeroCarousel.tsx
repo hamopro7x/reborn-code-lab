@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Construction } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   heroIcon,
@@ -487,6 +487,12 @@ export function HeroCarousel({ banners }: { banners: HeroBanner[] }) {
       }}
       aria-label="عروض مميزة"
     >
+      {/* إعلان «الموقع تحت الإنشاء» — داخل البانر وبخط كبير */}
+      <div className="hero-notice">
+        <Construction className="hero-notice-icon" aria-hidden="true" />
+        <span>الموقع تحت الإنشاء</span>
+      </div>
+
       <HeroBannerView banner={active!} />
 
       {banners.length > 1 && (
