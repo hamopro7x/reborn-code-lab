@@ -43,7 +43,7 @@ export function ProductCard({ p, compact = false }: { p: any; compact?: boolean 
       toast.error("تعذر إضافة المنتج إلى السلة");
       return;
     }
-    toast.success("تمت الإضافة إلى السلة");
+    toast.success("تمت الإضافة إلى السلة", { duration: 1500 });
     navigate({ to: "/cart" });
   };
 

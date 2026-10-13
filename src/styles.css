@@ -187,7 +187,7 @@
   50% { transform: scale(1.045); filter: brightness(1.12) drop-shadow(0 0 7px rgba(148, 163, 255, 0.28)); }
 }
 .store-header-words { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
-.store-header-name { display: flex; align-items: center; gap: 6px; direction: ltr; font: 900 21px/1 "Poppins", "Segoe UI", sans-serif; letter-spacing: .04em; animation: header-name-enter 460ms cubic-bezier(.22,1,.36,1) both; }
+.store-header-name { display: flex; align-items: center; gap: 6px; direction: ltr; font: 900 21px/1 "Poppins", "Segoe UI", sans-serif; letter-spacing: .04em; }
 .store-header-mg { color: var(--header-text); }
 .store-header-pro { background: linear-gradient(90deg, oklch(.6 .25 300), oklch(.62 .2 265)); -webkit-background-clip: text; background-clip: text; color: transparent; }
 @keyframes header-name-enter { from { opacity: 0; transform: translateY(8px); filter: blur(4px); } to { opacity: 1; transform: translateY(0); filter: blur(0); } }
