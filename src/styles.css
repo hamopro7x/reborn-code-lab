@@ -179,7 +179,7 @@
 }
 .store-header-row { display: flex; align-items: center; gap: 6px; height: calc(76px + env(safe-area-inset-top, 0px)); padding: env(safe-area-inset-top, 0px) 14px 0; }
 .store-header-brand { display: flex; align-items: center; gap: 12px; flex: none; }
-.store-header-mark { display: block; height: 46px; width: 70px; object-fit: contain; }
+.store-header-mark { display: block; height: 38px; width: 58px; object-fit: contain; }
 .store-header-words { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .store-header-name { display: flex; align-items: center; gap: 8px; direction: ltr; font: 700 20px/1 "Poppins", "Segoe UI", sans-serif; animation: header-copy-enter 280ms ease-out both; }
 .store-header-pro { padding: 4px 8px; border-radius: 999px; background: var(--header-pro-fill); color: var(--header-text); font: 700 12px/1 "Poppins", sans-serif; }
@@ -194,7 +194,7 @@
 @media (max-width: 420px) {
   .store-header-row { padding-inline: 8px; gap: 4px; }
   .store-header-brand { gap: 4px; }
-  .store-header-mark { width: 56px; height: 38px; }
+  .store-header-mark { width: 46px; height: 31px; }
   .store-header .store-header-icon { width: 32px; }
   .store-header-name { font-size: 16px; }
 }
