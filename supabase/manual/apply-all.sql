@@ -87,6 +87,19 @@ NOTIFY pgrst, 'reload schema';
 --   select device, count(*) from public.hero_banners group by device;
 --   select policyname from pg_policies where tablename = 'products';
 
+-- 4) علامة مراجعة الشفت تُحفظ في قاعدة البيانات (وليس المتصفح) فلا تُمسح أبدًا
+ALTER TABLE public.work_shifts
+  ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ;
+
+ALTER TABLE public.work_shifts
+  ADD COLUMN IF NOT EXISTS reviewed_by UUID;
+
+CREATE INDEX IF NOT EXISTS work_shifts_reviewed_idx
+  ON public.work_shifts (reviewed_at)
+  WHERE reviewed_at IS NOT NULL;
+
+GRANT ALL ON public.work_shifts TO service_role;
+
 -- ===== وصول عام آمن لطرق الدفع (بدون كشف أرقام الحسابات بالجملة) =====
 \i payment_methods_public_access.sql
 \i payment_method_display_controls.sql
