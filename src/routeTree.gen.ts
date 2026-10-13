@@ -39,6 +39,7 @@ import { Route as ApiPublicAgentVersionRouteImport } from './routes/api/public/a
 import { Route as ApiPublicBuildVersionRouteImport } from './routes/api/public/build-version'
 import { Route as ApiPublicCardTransactionsRouteImport } from './routes/api/public/card-transactions'
 import { Route as ApiPublicIceServersRouteImport } from './routes/api/public/ice-servers'
+import { Route as ApiPublicTiktokWorkerRouteImport } from './routes/api/public/tiktok-worker'
 import { Route as ApiPublicHooksBybitLedgerSyncRouteImport } from './routes/api/public/hooks/bybit-ledger-sync'
 import { Route as ApiPublicV1ProductsRouteImport } from './routes/api/public/v1.products'
 
@@ -196,6 +197,11 @@ const ApiPublicIceServersRoute = ApiPublicIceServersRouteImport.update({
   path: '/api/public/ice-servers',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicTiktokWorkerRoute = ApiPublicTiktokWorkerRouteImport.update({
+  id: '/api/public/tiktok-worker',
+  path: '/api/public/tiktok-worker',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHooksBybitLedgerSyncRoute =
   ApiPublicHooksBybitLedgerSyncRouteImport.update({
     id: '/api/public/hooks/bybit-ledger-sync',
@@ -238,6 +244,7 @@ export interface FileRoutesByFullPath {
   '/api/public/build-version': typeof ApiPublicBuildVersionRoute
   '/api/public/card-transactions': typeof ApiPublicCardTransactionsRoute
   '/api/public/ice-servers': typeof ApiPublicIceServersRoute
+  '/api/public/tiktok-worker': typeof ApiPublicTiktokWorkerRoute
   '/api/public/hooks/bybit-ledger-sync': typeof ApiPublicHooksBybitLedgerSyncRoute
   '/api/public/v1/products': typeof ApiPublicV1ProductsRoute
 }
@@ -271,6 +278,7 @@ export interface FileRoutesByTo {
   '/api/public/build-version': typeof ApiPublicBuildVersionRoute
   '/api/public/card-transactions': typeof ApiPublicCardTransactionsRoute
   '/api/public/ice-servers': typeof ApiPublicIceServersRoute
+  '/api/public/tiktok-worker': typeof ApiPublicTiktokWorkerRoute
   '/api/public/hooks/bybit-ledger-sync': typeof ApiPublicHooksBybitLedgerSyncRoute
   '/api/public/v1/products': typeof ApiPublicV1ProductsRoute
 }
@@ -306,6 +314,7 @@ export interface FileRoutesById {
   '/api/public/build-version': typeof ApiPublicBuildVersionRoute
   '/api/public/card-transactions': typeof ApiPublicCardTransactionsRoute
   '/api/public/ice-servers': typeof ApiPublicIceServersRoute
+  '/api/public/tiktok-worker': typeof ApiPublicTiktokWorkerRoute
   '/api/public/hooks/bybit-ledger-sync': typeof ApiPublicHooksBybitLedgerSyncRoute
   '/api/public/v1/products': typeof ApiPublicV1ProductsRoute
 }
@@ -341,6 +350,7 @@ export interface FileRouteTypes {
     | '/api/public/build-version'
     | '/api/public/card-transactions'
     | '/api/public/ice-servers'
+    | '/api/public/tiktok-worker'
     | '/api/public/hooks/bybit-ledger-sync'
     | '/api/public/v1/products'
   fileRoutesByTo: FileRoutesByTo
@@ -374,6 +384,7 @@ export interface FileRouteTypes {
     | '/api/public/build-version'
     | '/api/public/card-transactions'
     | '/api/public/ice-servers'
+    | '/api/public/tiktok-worker'
     | '/api/public/hooks/bybit-ledger-sync'
     | '/api/public/v1/products'
   id:
@@ -408,6 +419,7 @@ export interface FileRouteTypes {
     | '/api/public/build-version'
     | '/api/public/card-transactions'
     | '/api/public/ice-servers'
+    | '/api/public/tiktok-worker'
     | '/api/public/hooks/bybit-ledger-sync'
     | '/api/public/v1/products'
   fileRoutesById: FileRoutesById
@@ -441,6 +453,7 @@ export interface RootRouteChildren {
   ApiPublicBuildVersionRoute: typeof ApiPublicBuildVersionRoute
   ApiPublicCardTransactionsRoute: typeof ApiPublicCardTransactionsRoute
   ApiPublicIceServersRoute: typeof ApiPublicIceServersRoute
+  ApiPublicTiktokWorkerRoute: typeof ApiPublicTiktokWorkerRoute
   ApiPublicHooksBybitLedgerSyncRoute: typeof ApiPublicHooksBybitLedgerSyncRoute
   ApiPublicV1ProductsRoute: typeof ApiPublicV1ProductsRoute
 }
@@ -657,6 +670,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicIceServersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/tiktok-worker': {
+      id: '/api/public/tiktok-worker'
+      path: '/api/public/tiktok-worker'
+      fullPath: '/api/public/tiktok-worker'
+      preLoaderRoute: typeof ApiPublicTiktokWorkerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/bybit-ledger-sync': {
       id: '/api/public/hooks/bybit-ledger-sync'
       path: '/api/public/hooks/bybit-ledger-sync'
@@ -717,6 +737,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicBuildVersionRoute: ApiPublicBuildVersionRoute,
   ApiPublicCardTransactionsRoute: ApiPublicCardTransactionsRoute,
   ApiPublicIceServersRoute: ApiPublicIceServersRoute,
+  ApiPublicTiktokWorkerRoute: ApiPublicTiktokWorkerRoute,
   ApiPublicHooksBybitLedgerSyncRoute: ApiPublicHooksBybitLedgerSyncRoute,
   ApiPublicV1ProductsRoute: ApiPublicV1ProductsRoute,
 }

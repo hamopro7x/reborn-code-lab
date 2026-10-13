@@ -1,4 +1,5 @@
 import { useUiState } from "@/lib/ui-state";
+import { TikTokAutoPanel } from "@/components/admin/TikTokAutoPanel";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
@@ -61,7 +62,7 @@ import { getPaymentIconUrl, preparePaymentIconUpload } from "@/lib/payments.func
 
 type PanelKey =
   | "overview" | "orders" | "categories" | "products" | "customers" | "employees"
-  | "reviews" | "payments" | "currencies" | "timers" | "settings" | "courses" | "devices" | "reports" | "remote" | "cardtx" | "apikey" | "worksheet" | "sheet";
+  | "reviews" | "payments" | "currencies" | "timers" | "settings" | "courses" | "devices" | "reports" | "remote" | "cardtx" | "apikey" | "worksheet" | "sheet" | "tiktok";
 
 const panelKeys: PanelKey[] = [
   "overview", "orders", "categories", "customers", "employees",
@@ -204,6 +205,7 @@ function Admin() {
         { key: "payments", label: "طرق الدفع", icon: CreditCard, adminOnly: true },
         { key: "currencies", label: "العملات", icon: Coins, adminOnly: true },
         { key: "apikey", label: "مفاتيح API (Bybit)", icon: KeyRound, adminOnly: true },
+        { key: "tiktok", label: "شحن تيك توك", icon: Coins, adminOnly: true },
         { key: "settings", label: "الإعدادات", icon: Settings2, adminOnly: true },
       ],
     },
@@ -333,6 +335,7 @@ function Admin() {
             {panel === "remote" && canView("remote") && <DeviceMonitorGrid screensOnly />}
             {panel === "payments" && canView("payments") && <PaymentsTab />}
             {panel === "currencies" && canView("currencies") && <CurrenciesTab />}
+            {panel === "tiktok" && adminOnly && <TikTokAutoPanel />}
             {panel === "apikey" && adminOnly && (
               <div className="space-y-4 text-right" dir="rtl">
                 <div className="rounded-2xl border border-border/60 bg-card/50 p-4">
