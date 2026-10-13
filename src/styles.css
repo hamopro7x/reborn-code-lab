@@ -206,7 +206,7 @@
   .store-header-name { font-size: 16px; }
   .store-header-tag { font-size: 10px; }
 }
-@media (prefers-reduced-motion: reduce) { .store-header .store-header-icon { transition: none; } .store-header-name, .store-header-tag { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .store-header .store-header-icon { transition: none; } .store-header-name, .store-header-tag { animation: none; } .store-header-mg { animation: none; } .store-header-pro { animation: none; } }
 
 /* Checkout invoice */
 .checkout-v4 {
