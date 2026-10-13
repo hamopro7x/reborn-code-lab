@@ -190,6 +190,11 @@
 .store-header-name { display: flex; align-items: center; gap: 6px; direction: ltr; font: 900 21px/1 "Poppins", "Segoe UI", sans-serif; letter-spacing: .04em; }
 .store-header-mg { color: var(--header-text); }
 .store-header-pro { background: linear-gradient(90deg, oklch(.6 .25 300), oklch(.62 .2 265)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.store-header-mono { display: flex; align-items: center; gap: 6px; width: 100%; direction: ltr; animation: header-mono-enter 620ms 120ms ease-out both; }
+.store-header-mono i { height: 1px; flex: 1 1 0; background: linear-gradient(90deg, transparent, var(--header-highlight)); }
+.store-header-mono i:last-child { background: linear-gradient(270deg, transparent, var(--header-highlight)); }
+.store-header-mono b { font: 700 10px/1 "Poppins", "Segoe UI", sans-serif; letter-spacing: .22em; text-indent: .22em; color: var(--header-muted); }
+@keyframes header-mono-enter { from { opacity: 0; transform: scaleX(.5); } to { opacity: 1; transform: scaleX(1); } }
 @keyframes header-name-enter { from { opacity: 0; transform: translateY(8px); filter: blur(4px); } to { opacity: 1; transform: translateY(0); filter: blur(0); } }
 @keyframes header-glint { 0%, 60% { background-position: 100% 0; } 86%, 100% { background-position: 0% 0; } }
 @keyframes header-badge-pop { from { opacity: 0; transform: scale(.55) translateY(3px); } to { opacity: 1; transform: scale(1) translateY(0); } }
