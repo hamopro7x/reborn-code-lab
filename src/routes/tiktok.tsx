@@ -65,6 +65,20 @@ function TikTokPage() {
     },
   });
 
+  const unit: any = (packs as any[]).find((p) => p.slug === "tiktok-coin-unit");
+  const gridPacks: any[] = (packs as any[]).filter((p) => p.slug !== "tiktok-coin-unit");
+  const [coins, setCoins] = useState("");
+  const coinsNum = Math.floor(Number(coins) || 0);
+  const coinsValid = coinsNum >= 10 && coinsNum <= 100000;
+  const buyCustom = () => {
+    if (!unit || !coinsValid) return;
+    add({
+      productId: unit.id, slug: unit.slug, name: unit.name, image: unit.main_image,
+      basePriceEgp: Number(unit.base_price_egp), discountPercent: unit.discount_percent ?? 0,
+      warrantyDays: unit.warranty_days ?? 0,
+    }, coinsNum);
+    navigate({ to: "/checkout" });
+  };
   const pack: any = packs.find((p: any) => p.id === selected);
   const cheapestPerUnit = packs.length
     ? packs.reduce((best: any, p: any) => (p.discount_percent ?? 0) > (best.discount_percent ?? 0) ? p : best, packs[0])?.id
@@ -105,11 +119,11 @@ function TikTokPage() {
           </h2>
           {isLoading ? (
             <p className="text-sm text-muted-foreground">جارِ التحميل…</p>
-          ) : packs.length === 0 ? (
+          ) : gridPacks.length === 0 ? (
             <p className="text-sm text-muted-foreground">الباقات هتتضاف قريبًا.</p>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-              {packs.map((p: any) => {
+              {gridPacks.map((p: any) => {
                 const final = convertFromEgp(computeDiscountedPrice(p.base_price_egp, p.discount_percent ?? 0), rate, currency.code);
                 const orig = convertFromEgp(p.base_price_egp, rate, currency.code);
                 const active = p.id === selected;
@@ -142,6 +156,14 @@ function TikTokPage() {
           <Button onClick={buy} disabled={!pack} className="mt-5 w-full h-12 gradient-primary">
             {pack ? `اشحن ${pack.name} الآن` : "اختر باقة للمتابعة"}
           </Button>
+          {unit && (
+            <div className="mt-5 rounded-2xl border border-border p-4 space-y-3">
+              <h3 className="font-bold text-sm">أو اكتب عدد العملات اللي عايزه</h3>
+              <input type="number" inputMode="numeric" min={10} max={100000} value={coins} onChange={(e) => setCoins(e.target.value)} placeholder="مثلاً 1500" className="w-full h-11 rounded-xl border border-border bg-background px-3 text-sm" />
+              <div className="text-sm text-muted-foreground">السعر: <span className="font-black text-foreground">{formatPrice(convertFromEgp(computeDiscountedPrice(unit.base_price_egp, unit.discount_percent ?? 0) * (coinsValid ? coinsNum : 0), rate, currency.code), currency)}</span> <span className="text-xs">(من 10 لحد 100,000 عملة)</span></div>
+              <Button onClick={buyCustom} disabled={!coinsValid} className="w-full h-11 gradient-primary">اشحن {coinsValid ? coinsNum : ""} عملة</Button>
+            </div>
+          )}
           <p className="mt-3 text-xs text-muted-foreground text-center">بعد تأكيد الدفع، تابع حالة تنفيذ الشحن من صفحة «تتبع طلبك».</p>
         </section>
 

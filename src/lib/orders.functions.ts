@@ -3,7 +3,7 @@ import { z } from "zod";
 
 const orderItemSchema = z.object({
   product_id: z.string().uuid(),
-  quantity: z.number().int().min(1).max(999),
+  quantity: z.number().int().min(1).max(100000),
 });
 
 const createOrderSchema = z.object({
