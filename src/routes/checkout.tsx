@@ -41,9 +41,9 @@ export const Route = createFileRoute("/checkout")({
   component: CheckoutPage,
   head: () => ({
     meta: [
-      { title: "إتمام الشراء | متجر الاشتراكات الرقمية" },
+      { title: "إتمام الشراء | Mg Pro" },
       { name: "description", content: "أكمل بيانات طلبك واختر وسيلة الدفع المناسبة لك لاستلام اشتراكك الرقمي فورًا بعد التأكيد." },
-      { property: "og:title", content: "إتمام الشراء | متجر الاشتراكات الرقمية" },
+      { property: "og:title", content: "إتمام الشراء | Mg Pro" },
       { property: "og:description", content: "أكمل بيانات طلبك واختر وسيلة الدفع المناسبة لك لاستلام اشتراكك الرقمي فورًا بعد التأكيد." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -262,6 +262,7 @@ function CheckoutPage() {
 
   return (
     <div className="checkout-v4 min-h-screen" dir="rtl">
+      <Header />
       <main className="checkout-shell">
         <header className="checkout-appbar">
           <Button variant="ghost" size="icon" onClick={() => history.back()} aria-label="رجوع" className="checkout-back">
