@@ -7,8 +7,7 @@ import { useCurrency } from "@/lib/currency-context";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import headerMarkAsset from "@/assets/mg-metallic-logo-3d.png.asset.json";
-const headerMark = headerMarkAsset.url;
+import headerMark from "@/assets/mg-metallic-logo-3d.png";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
