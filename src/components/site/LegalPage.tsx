@@ -3,7 +3,7 @@ import { Footer } from "@/components/site/Footer";
 
 export type LegalSection = { title: string; body?: string[]; items?: string[]; needsReview?: boolean };
 
-export function LegalPage({ title, updated, intro, sections }: { title: string; updated: string; intro: string; sections: LegalSection[] }) {
+export function LegalPage({ title, updated, intro, sections, email }: { title: string; updated: string; intro: string; sections: LegalSection[]; email?: string }) {
   return (
     <div dir="rtl" className="flex min-h-screen flex-col">
       <Header />
@@ -42,6 +42,12 @@ export function LegalPage({ title, updated, intro, sections }: { title: string; 
             <div className="rounded-xl border border-primary/40 bg-card p-5">
               <p className="mb-1 font-bold">لديك سؤال حول هذه الصفحة؟</p>
               <p className="text-muted-foreground">فريق الدعم جاهز لمساعدتك عبر واتساب من خلال الروابط الموجودة أسفل الموقع.</p>
+              {email && (
+                <p className="mt-2 text-muted-foreground">
+                  أو راسلنا على البريد الرسمي:{" "}
+                  <a href={`mailto:${email}`} className="font-bold text-primary underline underline-offset-4" dir="ltr">{email}</a>
+                </p>
+              )}
             </div>
           </div>
         </div>
