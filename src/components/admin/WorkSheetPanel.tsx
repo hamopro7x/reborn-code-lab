@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Check, ChevronDown, Eye, EyeOff, History, Loader2, Trash2 } from "lucide-react";
@@ -8,7 +8,7 @@ import { EmployeeWorkView } from "@/components/admin/EmployeeWorkView";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { listEmployees } from "@/lib/admin.functions";
-import { getEmployeeShiftList, deleteEmployeeShift, getSharedShiftId, setSharedShift, getMySharedShift } from "@/lib/work.functions";
+import { getEmployeeShiftList, deleteEmployeeShift, getSharedShiftId, setSharedShift, getMySharedShift, markShiftReviewed } from "@/lib/work.functions";
 import employeesBg from "@/assets/employees-bg.png.asset.json";
 
 
@@ -116,6 +116,7 @@ type Shift = {
   endedAt: number | null;
   open: boolean;
   txns: number;
+  reviewed?: boolean;
   label?: string;
 };
 
@@ -188,39 +189,38 @@ function ShiftPickerMenu({
       .then(() => void sharedQ.refetch())
       .catch((e: any) => window.alert(e?.message || "تعذر الحفظ"));
   };
-  // علامات المراجعة دائمة: تُحفظ في localStorage ولا تُمسح عند غلق القائمة أو مغادرة القسم.
-  const CHECKED_KEY = "mp:admin-checked-shifts:v2";
-  const [checked, setCheckedState] = useState<string[]>([]);
+  // علامة المراجعة تُحفظ في قاعدة البيانات — لا تُمسح نهائيًا مهما تغيّر المتصفح أو الجهاز.
+  const markFn = useServerFn(markShiftReviewed);
+  // العلامات القديمة المحفوظة في المتصفح تُنقل للقاعدة مرة واحدة تلقائيًا.
+  const [marking, setMarking] = useState<Set<string>>(new Set());
+  const migratedRef = useRef(false);
   useEffect(() => {
+    if (!open || !q.isSuccess || migratedRef.current) return;
+    migratedRef.current = true;
     try {
-      const raw = window.localStorage.getItem(CHECKED_KEY);
-      const legacy = window.localStorage.getItem("mp:admin-checked-shifts");
-      const merged = new Set<string>([
-        ...(raw ? (JSON.parse(raw) as string[]) : []),
-        ...(legacy ? (JSON.parse(legacy) as string[]) : []),
-      ]);
-      setCheckedState(Array.from(merged));
+      const ids = new Set<string>();
+      for (const key of ["mp:admin-checked-shifts:v2", "mp:admin-checked-shifts"]) {
+        const raw = window.localStorage.getItem(key);
+        if (raw) for (const id of JSON.parse(raw) as string[]) ids.add(id);
+      }
+      const pending = (q.data ?? []).filter((s) => !s.reviewed && ids.has(s.id)).map((s) => s.id);
+      if (pending.length) {
+        setMarking((prev) => new Set([...prev, ...pending]));
+        void Promise.all(pending.map((id) => markFn({ data: { shiftId: id } })))
+          .then(() => void q.refetch())
+          .finally(() =>
+            setMarking((prev) => {
+              const n = new Set(prev);
+              for (const id of pending) n.delete(id);
+              return n;
+            }),
+          );
+      }
     } catch {
       /* ignore */
     }
-  }, [open]);
-  const setChecked = (fn: (prev: string[]) => string[]) => {
-    setCheckedState((prev) => {
-      let stored: string[] = [];
-      try {
-        stored = JSON.parse(window.localStorage.getItem(CHECKED_KEY) || "[]") as string[];
-      } catch {
-        /* ignore */
-      }
-      const next = fn(Array.from(new Set([...prev, ...stored])));
-      try {
-        window.localStorage.setItem(CHECKED_KEY, JSON.stringify(next));
-      } catch {
-        /* ignore */
-      }
-      return next;
-    });
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, q.isSuccess]);
 
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
@@ -288,14 +288,25 @@ function ShiftPickerMenu({
                 <button
                   type="button"
                   onClick={() => {
-                    if (checked.includes(sh.id)) return;
-                    setChecked((prev) => (prev.includes(sh.id) ? prev : [...prev, sh.id]));
+                    const isOn = sh.reviewed || marking.has(sh.id);
+                    if (isOn) return;
+                    setMarking((prev) => new Set(prev).add(sh.id));
+                    markFn({ data: { shiftId: sh.id } })
+                      .then(() => void q.refetch())
+                      .catch(() => window.alert("تعذر حفظ علامة المراجعة"))
+                      .finally(() =>
+                        setMarking((prev) => {
+                          const n = new Set(prev);
+                          n.delete(sh.id);
+                          return n;
+                        }),
+                      );
                   }}
                   title="تمت المراجعة"
                   aria-label="علامة مراجعة الشفت"
-                  aria-pressed={checked.includes(sh.id)}
+                  aria-pressed={sh.reviewed || marking.has(sh.id)}
                   className={`grid size-6 shrink-0 self-center place-items-center rounded-full border transition ${
-                    checked.includes(sh.id)
+                    sh.reviewed || marking.has(sh.id)
                       ? "border-emerald-400/60 bg-emerald-500/25 text-emerald-300"
                       : "border-white/15 bg-white/5 text-white/30 hover:border-white/30 hover:text-white/60"
                   }`}

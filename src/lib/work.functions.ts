@@ -428,6 +428,16 @@ export const getEmployeeShiftList = createServerFn({ method: "POST" })
     return mod.shiftHistory(data.userId);
   });
 
+/** علامة مراجعة الشفت — تُحفظ في قاعدة البيانات فلا تختفي نهائيًا. */
+export const markShiftReviewed = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => shiftSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    return mod.markShiftReviewed(data.shiftId, context.userId);
+  });
+
 export const getShiftTxns = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
