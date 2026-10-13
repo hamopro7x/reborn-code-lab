@@ -115,6 +115,10 @@ export function Footer() {
         })}
       </div>
       <div className="border-t border-border py-4 text-center text-xs text-muted-foreground">
+        <nav aria-label="روابط قانونية" className="mb-2 flex justify-center gap-4">
+          <Link to="/terms-of-service" className="hover:text-foreground">شروط الخدمة</Link>
+          <Link to="/privacy-policy" className="hover:text-foreground">سياسة الخصوصية</Link>
+        </nav>
         © {new Date().getFullYear()} {cfg.bottom_text}
       </div>
     </footer>
