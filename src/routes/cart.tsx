@@ -6,15 +6,16 @@ import { useCart, type CartItem } from "@/lib/cart";
 import { useCurrency } from "@/lib/currency-context";
 import { convertFromEgp, formatPrice } from "@/lib/format";
 import { Button } from "@/components/ui/button";
+import { Header } from "@/components/site/Header";
 import { ChevronLeft, ChevronRight, Minus, Plus, ShoppingBag } from "lucide-react";
 
 export const Route = createFileRoute("/cart")({
   component: CartPage,
   head: () => ({
     meta: [
-      { title: "سلة التسوق | متجر الاشتراكات الرقمية" },
+      { title: "سلة التسوق | Mg Pro" },
       { name: "description", content: "راجع المنتجات الرقمية في سلتك، عدّل الكميات، وتابع لإتمام الشراء بأمان وبعملتك المحلية." },
-      { property: "og:title", content: "سلة التسوق | متجر الاشتراكات الرقمية" },
+      { property: "og:title", content: "سلة التسوق | Mg Pro" },
       { property: "og:description", content: "راجع المنتجات الرقمية في سلتك، عدّل الكميات، وتابع لإتمام الشراء بأمان وبعملتك المحلية." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -133,17 +134,14 @@ function CartPage() {
 
   return (
     <div className="cart-v4" dir="rtl">
+      <Header />
       <main className="cart-v4-shell">
-        <header className="cart-v4-appbar">
-          <Link to="/" className="cart-v4-brand" aria-label="العودة إلى الرئيسية">
-            <img src="/favicon.png" alt="شعار MG Pro" />
-            <span><strong>MG Pro</strong><small>الاشتراكات الرقمية</small></span>
-          </Link>
+        <div className="cart-v4-appbar">
           <div className="cart-v4-appbar-title">
             <h1>سلة التسوق</h1>
             <ShoppingBag aria-hidden="true" />
           </div>
-        </header>
+        </div>
 
         {items.length === 0 ? (
           <section className="cart-v4-empty">
