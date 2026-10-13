@@ -189,39 +189,32 @@ function ShiftPickerMenu({
       .then(() => void sharedQ.refetch())
       .catch((e: any) => window.alert(e?.message || "تعذر الحفظ"));
   };
-  // علامات المراجعة دائمة: تُحفظ في localStorage ولا تُمسح عند غلق القائمة أو مغادرة القسم.
-  const CHECKED_KEY = "mp:admin-checked-shifts:v2";
-  const [checked, setCheckedState] = useState<string[]>([]);
+  // علامة المراجعة تُحفظ في قاعدة البيانات — لا تُمسح نهائيًا مهما تغيّر المتصفح أو الجهاز.
+  const markFn = useServerFn(markShiftReviewed);
+  // العلامات القديمة المحفوظة في المتصفح تُنقل للقاعدة مرة واحدة تلقائيًا.
+  const [migrating, setMigrating] = useState(false);
+  const migratedRef = useRef(false);
   useEffect(() => {
+    if (!open || !q.isSuccess || migratedRef.current) return;
+    migratedRef.current = true;
     try {
-      const raw = window.localStorage.getItem(CHECKED_KEY);
-      const legacy = window.localStorage.getItem("mp:admin-checked-shifts");
-      const merged = new Set<string>([
-        ...(raw ? (JSON.parse(raw) as string[]) : []),
-        ...(legacy ? (JSON.parse(legacy) as string[]) : []),
-      ]);
-      setCheckedState(Array.from(merged));
+      const ids = new Set<string>();
+      for (const key of ["mp:admin-checked-shifts:v2", "mp:admin-checked-shifts"]) {
+        const raw = window.localStorage.getItem(key);
+        if (raw) for (const id of JSON.parse(raw) as string[]) ids.add(id);
+      }
+      const pending = (q.data ?? []).filter((s) => !s.reviewed && ids.has(s.id)).map((s) => s.id);
+      if (pending.length) {
+        setMigrating(true);
+        void Promise.all(pending.map((id) => markFn({ data: { shiftId: id } })))
+          .then(() => void q.refetch())
+          .finally(() => setMigrating(false));
+      }
     } catch {
       /* ignore */
     }
-  }, [open]);
-  const setChecked = (fn: (prev: string[]) => string[]) => {
-    setCheckedState((prev) => {
-      let stored: string[] = [];
-      try {
-        stored = JSON.parse(window.localStorage.getItem(CHECKED_KEY) || "[]") as string[];
-      } catch {
-        /* ignore */
-      }
-      const next = fn(Array.from(new Set([...prev, ...stored])));
-      try {
-        window.localStorage.setItem(CHECKED_KEY, JSON.stringify(next));
-      } catch {
-        /* ignore */
-      }
-      return next;
-    });
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, q.isSuccess]);
 
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
