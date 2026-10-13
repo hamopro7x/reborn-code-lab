@@ -181,7 +181,11 @@
 }
 .store-header-row { display: flex; align-items: center; gap: 6px; height: calc(76px + env(safe-area-inset-top, 0px)); padding: env(safe-area-inset-top, 0px) 14px 0; }
 .store-header-brand { display: flex; align-items: center; gap: 12px; flex: none; }
-.store-header-mark { display: block; height: 38px; width: 58px; object-fit: contain; }
+.store-header-mark { display: block; height: 38px; width: 58px; object-fit: contain; animation: header-logo-breathe 4.5s ease-in-out infinite; will-change: transform, filter; }
+@keyframes header-logo-breathe {
+  0%, 100% { transform: scale(1); filter: brightness(1) drop-shadow(0 0 0 transparent); }
+  50% { transform: scale(1.045); filter: brightness(1.12) drop-shadow(0 0 7px rgba(148, 163, 255, 0.28)); }
+}
 .store-header-words { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
 .store-header-name { display: flex; align-items: center; gap: 6px; direction: ltr; font: 900 21px/1 "Poppins", "Segoe UI", sans-serif; letter-spacing: .04em; animation: header-name-enter 460ms cubic-bezier(.22,1,.36,1) both; }
 .store-header-mg { color: var(--header-text); }
@@ -203,7 +207,7 @@
   .store-header .store-header-icon { width: 32px; }
   .store-header-name { font-size: 16px; }
 }
-@media (prefers-reduced-motion: reduce) { .store-header .store-header-icon { transition: none; } .store-header-name { animation: none; } .store-header-mg { animation: none; } .store-header-pro { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .store-header .store-header-icon { transition: none; } .store-header-mark { animation: none; } .store-header-name { animation: none; } .store-header-mg { animation: none; } .store-header-pro { animation: none; } }
 
 /* Checkout invoice */
 .checkout-v4 {
