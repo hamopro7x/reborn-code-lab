@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { ShoppingCart, Globe, Menu, Search, LayoutGrid } from "lucide-react";
+import { ShoppingCart, Globe, Menu, Search, LayoutGrid, Construction } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { useCurrency } from "@/lib/currency-context";
 import { supabase } from "@/integrations/supabase/client";
@@ -129,6 +129,14 @@ export function Header() {
           </DropdownMenu>
         </div>
       </div>
+
+      {/* إعلان «الموقع تحت الإنشاء» — جزء من الهيدر فيظهر في كل صفحات المتجر */}
+      <div className="store-header-notice">
+        <Construction className="store-header-notice-icon" aria-hidden="true" />
+        <span>الموقع تحت الإنشاء</span>
+      </div>
+
+
 
       {/* بحث الموبايل — يظهر عند الضغط على أيقونة البحث */}
       {searchOpen && (
