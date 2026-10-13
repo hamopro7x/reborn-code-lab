@@ -1771,7 +1771,7 @@ export async function shiftHistory(userId: string, limit = 100) {
   const db = await admin();
   const { data } = await db
     .from("work_shifts")
-    .select("id,started_at,ended_at,ended_reason")
+    .select("id,started_at,ended_at,ended_reason,reviewed_at")
     .eq("user_id", userId)
     .order("started_at", { ascending: false })
     .limit(Math.min(Math.max(limit, 1), 200));
