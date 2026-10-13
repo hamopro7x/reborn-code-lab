@@ -1798,7 +1798,19 @@ export async function shiftHistory(userId: string, limit = 100) {
     endedReason: (s.ended_reason ?? null) as string | null,
     open: !s.ended_at,
     txns: tally.get(String(s.id)) ?? 0,
+    reviewed: !!s.reviewed_at,
   }));
+}
+
+/** تعليم شفت بأنه تمت مراجعته — يُحفظ في قاعدة البيانات ولا يُمسح أبدًا. */
+export async function markShiftReviewed(shiftId: string, reviewedBy: string) {
+  const db = await admin();
+  const { error } = await db
+    .from("work_shifts")
+    .update({ reviewed_at: new Date().toISOString(), reviewed_by: reviewedBy })
+    .eq("id", shiftId);
+  if (error) return { ok: false as const, error: error.message };
+  return { ok: true as const };
 }
 
 /** يتحقق أن الشفت يخص الموظف المطلوب (حماية ضد خلط بيانات الموظفين). */
