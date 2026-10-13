@@ -183,7 +183,7 @@
 .store-header-brand { display: flex; align-items: center; gap: 12px; flex: none; }
 .store-header-mark { display: block; height: 38px; width: 58px; object-fit: contain; }
 .store-header-words { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
-.store-header-name { display: flex; align-items: center; gap: 6px; direction: ltr; font: 900 21px/1 "Poppins", "Segoe UI", sans-serif; letter-spacing: .04em; text-transform: uppercase; animation: header-name-enter 460ms cubic-bezier(.22,1,.36,1) both; }
+.store-header-name { display: flex; align-items: center; gap: 6px; direction: ltr; font: 900 21px/1 "Poppins", "Segoe UI", sans-serif; letter-spacing: .04em; animation: header-name-enter 460ms cubic-bezier(.22,1,.36,1) both; }
 .store-header-mg { color: var(--header-text); }
 .store-header-pro { background: linear-gradient(90deg, oklch(.6 .25 300), oklch(.62 .2 265)); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .store-header-tag { color: oklch(.62 .02 265); font: 500 10.5px/1.3 "Tajawal", "IBM Plex Sans Arabic", sans-serif; white-space: nowrap; animation: header-tag-enter 520ms cubic-bezier(.22,1,.36,1) 220ms both; }
