@@ -201,11 +201,12 @@
 .store-header-brand:focus-visible, .store-header .store-header-icon:focus-visible { outline: 2px solid var(--header-highlight); outline-offset: 2px; }
 .store-header-badge { position: absolute; top: 3px; inset-inline-start: 3px; min-width: 18px; height: 18px; padding: 0 5px; display: grid; place-items: center; border-radius: 9px; border: 2px solid var(--header); background: var(--header-badge); color: var(--header-text); font-size: 10.5px; font-weight: 600; line-height: 1; }
 @media (max-width: 420px) {
-  .store-header-row { padding-inline: 8px; gap: 4px; }
+  .store-header-row { padding-inline: 8px; gap: 4px; height: calc(50px + env(safe-area-inset-top, 0px)); }
   .store-header-brand { gap: 4px; }
-  .store-header-mark { width: 46px; height: 31px; }
-  .store-header .store-header-icon { width: 32px; }
-  .store-header-name { font-size: 16px; }
+  .store-header-mark { width: 42px; height: 28px; }
+  .store-header .store-header-icon { width: 30px; height: 34px; }
+  .store-header .store-header-icon svg { width: 19px; height: 19px; }
+  .store-header-name { font-size: 15px; }
 }
 @media (prefers-reduced-motion: reduce) { .store-header .store-header-icon { transition: none; } .store-header-mark { animation: none; } .store-header-name { animation: none; } .store-header-mg { animation: none; } .store-header-pro { animation: none; } }
 
