@@ -52,7 +52,6 @@ export function Header() {
           />
           <div className="store-header-words">
             <div className="store-header-name"><span className="store-header-mg">Mg</span> <span className="store-header-pro">Pro</span></div>
-            <div className="store-header-tag">كل ما تبحث عليه في مكان واحد</div>
           </div>
         </Link>
 
