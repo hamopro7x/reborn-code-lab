@@ -42,7 +42,7 @@ export function Header() {
   return (
     <header className="store-header sticky top-0 z-50">
       <div className="store-header-row">
-        <Link to="/" className="store-header-brand" aria-label="MG Pro، اشتراكات وألعاب رقمية">
+        <Link to="/" className="store-header-brand" aria-label="MG Pro، كل ما تبحث عليه في مكان واحد">
           <img
             src={headerMark}
             alt=""
@@ -52,7 +52,7 @@ export function Header() {
           />
           <div className="store-header-words">
             <div className="store-header-name">MG <span className="store-header-pro">PRO</span></div>
-            <div className="store-header-tag">اشتراكات وألعاب رقمية</div>
+            <div className="store-header-tag">كل ما تبحث عليه في مكان واحد</div>
           </div>
         </Link>
 
