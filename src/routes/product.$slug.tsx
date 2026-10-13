@@ -112,7 +112,7 @@ function ProductPage() {
 
   function handleAdd() {
     add({ productId: p.id, slug: p.slug, name: p.name, image: p.main_image, basePriceEgp: Number(p.base_price_egp), discountPercent: Number(p.discount_percent ?? 0), warrantyDays: p.warranty_days ?? 0 });
-    toast.success("تمت الإضافة للسلة");
+    toast.success("تمت الإضافة للسلة", { duration: 1500 });
   }
   function handleBuyNow() {
     handleAdd();
