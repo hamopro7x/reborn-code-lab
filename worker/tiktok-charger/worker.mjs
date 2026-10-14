@@ -69,9 +69,17 @@ async function runJob(job) {
   }
 }
 
+console.log("العامل شغال — بيتصل بـ", BASE);
+let lastState = "";
+const say = (s) => { if (s !== lastState) { console.log(new Date().toLocaleTimeString(), s); lastState = s; } };
 for (;;) {
   try {
-    const { job } = await api({ action: "claim" });
-    if (job) await runJob(job); else await sleep(5000);
-  } catch (e) { console.error(e.message); await sleep(10_000); }
+    const { job, reason } = await api({ action: "claim" });
+    if (job) { say(`طلب جديد: ${job.coins} عملة`); await runJob(job); lastState = ""; }
+    else { say(reason === "disabled" ? "متصل ✅ — الشحن الأوتوماتيك مقفول من لوحة الإدارة" : reason === "limit" ? "متصل ✅ — وصلنا للحد اليومي" : "متصل ✅ — مستني طلبات تيك توك"); await sleep(5000); }
+  } catch (e) {
+    const why = e?.cause?.code || e?.cause?.message || "";
+    say(`مش قادر يوصل للموقع: ${e.message} ${why}`.trim());
+    await sleep(10_000);
+  }
 }
