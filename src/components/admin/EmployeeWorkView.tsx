@@ -168,12 +168,18 @@ const P2P_COLUMNS = [
   "صاحب الطلب",
 ];
 
-/** Shift picker for the current employee only — no employee selection step. */
+/**
+ * Shift picker for the current employee only.
+ * Shows only shifts that have NO P2P order linked yet.
+ * Employee can select multiple shifts; the order links to the newest one.
+ * After linking, selected shifts disappear on refetch.
+ */
 function P2PLinkMenu({ ledgerId, onLinked }: { ledgerId: string; onLinked?: () => void }) {
   const myShiftsFn = useServerFn(getMyShiftsForLink);
   const linkFn = useServerFn(linkP2POrder);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const mine = useQuery({
     queryKey: ["work-my-shifts-link"],
@@ -181,14 +187,35 @@ function P2PLinkMenu({ ledgerId, onLinked }: { ledgerId: string; onLinked?: () =
     enabled: open,
   });
 
+  // Reset selection when popover opens
+  useEffect(() => {
+    if (open) setSelected(new Set());
+  }, [open]);
+
   const myName = (mine.data as any)?.name ?? "";
   const shiftRows = ((mine.data as any)?.shifts ?? []) as any[];
 
-  const link = async (shiftId: string) => {
-    if (busy) return;
+  const toggle = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const linkSelected = async () => {
+    if (busy || selected.size === 0) return;
+    // Pick the newest shift among selected (latest startedAt)
+    const picked = shiftRows
+      .filter((s) => selected.has(s.id))
+      .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
+    if (!picked.length) return;
+    const newestShiftId = picked[0].id;
+
     setBusy(true);
     try {
-      const res: any = await linkFn({ data: { ledgerId, shiftId } });
+      const res: any = await linkFn({ data: { ledgerId, shiftId: newestShiftId } });
       if (res?.ok) toast.success("تم ربط الطلب بالشفت");
       else toast.error(res?.error ?? "هذا الطلب تم ربطه بالفعل.");
       setOpen(false);
@@ -228,10 +255,10 @@ function P2PLinkMenu({ ledgerId, onLinked }: { ledgerId: string; onLinked?: () =
               <table className="data-table w-full text-right">
                 <thead className="data-table-head">
                   <tr>
+                    <th className="w-8 px-2 py-1 text-[10px]">✓</th>
                     <th className="w-10 px-2 py-1 text-[10px]">#</th>
                     <th className="px-2 py-1 text-[10px]">الحالة</th>
                     <th className="px-2 py-1 text-[10px]">الشفت</th>
-                    <th className="w-14 px-2 py-1 text-[10px]">ربط</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -240,37 +267,35 @@ function P2PLinkMenu({ ledgerId, onLinked }: { ledgerId: string; onLinked?: () =
                     const p = (n: number) => String(n).padStart(2, "0");
                     const h24 = d.getHours();
                     const h = ((h24 + 11) % 12) + 1;
+                    const isChecked = selected.has(s.id);
                     return (
-                      <tr key={s.id} className="hover:bg-white/5">
+                      <tr
+                        key={s.id}
+                        className={`cursor-pointer transition ${isChecked ? "bg-white/10" : "hover:bg-white/5"}`}
+                        onClick={() => toggle(s.id)}
+                      >
+                        <td className="px-2 py-0.5 text-center">
+                          <span
+                            className={`inline-flex size-4 items-center justify-center rounded border text-[10px] font-bold transition ${
+                              isChecked
+                                ? "border-emerald-500 bg-emerald-500/20 text-emerald-400"
+                                : "border-muted-foreground/40 text-transparent"
+                            }`}
+                          >
+                            ✓
+                          </span>
+                        </td>
                         <td className="px-2 py-0.5 text-[10px] font-bold tabular-nums">{i + 1}</td>
                         <td className="px-2 py-0.5 text-[10px] font-bold">
                           {s.endedAt ? "منتهي" : "مفتوح"}
                         </td>
                         <td className="px-2 py-0.5 text-[10px] leading-4 text-muted-foreground">
-                          <span className="flex items-center gap-1.5 font-bold text-foreground">
-                            <span
-                              title={s.hasP2P ? "تم ربط طلب P2P بهذا الشفت" : "لم يتم ربط أي طلب بهذا الشفت"}
-                              className={`inline-block size-2 shrink-0 rounded-full ${
-                                s.hasP2P
-                                  ? "bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.8)]"
-                                  : "bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.8)]"
-                              }`}
-                            />
+                          <span className="font-bold text-foreground">
                             {AR_DAYS[d.getDay()]}
                           </span>
                           <span className="block tabular-nums">
                             {`${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} - ${p(h)}:${p(d.getMinutes())} ${h24 < 12 ? "ص" : "م"}`}
                           </span>
-                        </td>
-                        <td className="px-2 py-0.5">
-                          <button
-                            type="button"
-                            disabled={busy}
-                            onClick={() => link(s.id)}
-                            className="rounded-full border border-[oklch(0.82_0.15_85/0.5)] bg-[oklch(0.82_0.15_85/0.12)] px-2 py-0.5 text-[10px] font-bold text-[oklch(0.82_0.15_85)] transition hover:bg-[oklch(0.82_0.15_85/0.22)] disabled:opacity-50"
-                          >
-                            ربط
-                          </button>
                         </td>
                       </tr>
                     );
@@ -278,9 +303,25 @@ function P2PLinkMenu({ ledgerId, onLinked }: { ledgerId: string; onLinked?: () =
                 </tbody>
               </table>
             ) : (
-              <p className="py-4 text-center text-[11px] text-muted-foreground">لا توجد شفتات</p>
+              <p className="py-4 text-center text-[11px] text-muted-foreground">لا توجد شفتات بدون طلبات</p>
             )}
           </div>
+          {shiftRows.length > 0 && (
+            <div className="border-t border-border/30 px-3 py-2 text-center">
+              <button
+                type="button"
+                disabled={busy || selected.size === 0}
+                onClick={linkSelected}
+                className="rounded-full border border-[oklch(0.82_0.15_85/0.5)] bg-[oklch(0.82_0.15_85/0.12)] px-5 py-1 text-[11px] font-bold text-[oklch(0.82_0.15_85)] transition hover:bg-[oklch(0.82_0.15_85/0.22)] disabled:opacity-40"
+              >
+                {busy ? (
+                  <Loader2 className="inline size-3 animate-spin" />
+                ) : (
+                  `ربط (${selected.size})`
+                )}
+              </button>
+            </div>
+          )}
         </div>
       </PopoverContent>
     </Popover>
