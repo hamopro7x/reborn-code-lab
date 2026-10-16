@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle2, Copy, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
-import { TikTokChargePanel } from "@/components/site/TikTokChargePanel";
 
 export const Route = createFileRoute("/order/$code")({
   component: OrderPage,
@@ -77,7 +76,6 @@ function OrderPage() {
       <main className="flex-1 container mx-auto px-4 py-8 max-w-3xl">
         {!o ? <div className="text-center py-16">جاري التحميل...</div> : (
           <div className="animate-slide-up">
-            <TikTokChargePanel code={code} />
             <div className="text-center mb-8">
               <div className="size-16 rounded-full gradient-primary mx-auto flex items-center justify-center mb-4">
                 <CheckCircle2 className="size-8 text-primary-foreground" />
