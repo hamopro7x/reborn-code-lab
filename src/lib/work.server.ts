@@ -535,7 +535,7 @@ export async function myShiftsForLink(userId: string, limit = 40) {
     shiftsOfUser(userId, limit),
     namesFor(db, [userId]),
   ]);
-  // Visual indicator only: does this shift already carry at least one P2P link?
+  // Only return shifts that do NOT already have a P2P order linked.
   const ids = shifts.map((s) => s.id);
   const linked = new Set<string>();
   if (ids.length) {
@@ -548,7 +548,7 @@ export async function myShiftsForLink(userId: string, limit = 40) {
   }
   return {
     name: names.get(userId) ?? "موظف",
-    shifts: shifts.map((s) => ({ ...s, hasP2P: linked.has(s.id) })),
+    shifts: shifts.filter((s) => !linked.has(s.id)),
   };
 }
 
