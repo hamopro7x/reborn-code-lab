@@ -548,7 +548,8 @@ export async function myShiftsForLink(userId: string, limit = 40) {
   }
   return {
     name: names.get(userId) ?? "موظف",
-    shifts: shifts.filter((s) => !linked.has(s.id)),
+    // The currently open shift always stays available (can be linked many times).
+    shifts: shifts.filter((s) => s.endedAt == null || !linked.has(s.id)),
   };
 }
 
