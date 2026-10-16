@@ -120,7 +120,6 @@ export function Footer() {
             <li><Link to="/terms-of-service" className="hover:text-foreground">الشروط والأحكام</Link></li>
             <li><Link to="/privacy-policy" className="hover:text-foreground">سياسة الخصوصية</Link></li>
             <li><Link to="/refund-policy" className="hover:text-foreground">سياسة الاسترداد</Link></li>
-            <li><Link to="/tiktok" className="hover:text-foreground">شحن عملات تيك توك</Link></li>
           </ul>
         </div>
       </div>
