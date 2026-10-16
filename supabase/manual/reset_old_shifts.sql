@@ -15,11 +15,6 @@ DELETE FROM public.work_txn_assignments
 DELETE FROM public.work_manual_card_txns WHERE shift_id IN (SELECT id FROM old_shifts);
 DELETE FROM public.work_manual_txns WHERE shift_id IN (SELECT id FROM old_shifts);
 
-DO $$ BEGIN
-  IF to_regclass('public.work_shift_reviews') IS NOT NULL THEN
-    DELETE FROM public.work_shift_reviews WHERE shift_id IN (SELECT id FROM old_shifts);
-  END IF;
-END $$;
 
 DELETE FROM public.work_shifts WHERE id IN (SELECT id FROM old_shifts);
 
