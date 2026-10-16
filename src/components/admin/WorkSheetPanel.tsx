@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Check, ChevronDown, Eye, EyeOff, History, Loader2, Trash2 } from "lucide-react";
+import { Check, ChevronDown, Eye, EyeOff, History, ListChecks, Loader2, Trash2, X } from "lucide-react";
 import { usePersistentState } from "@/lib/persistent-state";
 import { EmployeePinMenu } from "@/components/admin/EmployeePinMenu";
 import { EmployeeWorkView } from "@/components/admin/EmployeeWorkView";
@@ -193,6 +193,35 @@ function ShiftPickerMenu({
   const markFn = useServerFn(markShiftReviewed);
   // العلامات القديمة المحفوظة في المتصفح تُنقل للقاعدة مرة واحدة تلقائيًا.
   const [marking, setMarking] = useState<Set<string>>(new Set());
+  const [selectMode, setSelectMode] = useState(false);
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const togglePick = (id: string) =>
+    setPicked((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  const deletePicked = async () => {
+    const ids = [...picked];
+    if (!ids.length) return;
+    if (!window.confirm(`حذف ${ids.length} شفت وكل سجلاتهم اليدوية؟`)) return;
+    setBulkBusy(true);
+    try {
+      for (const id of ids) {
+        await del({ data: { shiftId: id } });
+        if (id === selectedId) onDeleted(id);
+      }
+      setPicked(new Set());
+      setSelectMode(false);
+    } catch (e: any) {
+      window.alert(e?.message || "تعذر حذف بعض الشفتات");
+    } finally {
+      setBulkBusy(false);
+      void q.refetch();
+    }
+  };
   const migratedRef = useRef(false);
   useEffect(() => {
     if (!open || !q.isSuccess || migratedRef.current) return;
@@ -238,7 +267,43 @@ function ShiftPickerMenu({
         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-white/90">
           رقم الشفت
         </span>
+        <button
+          type="button"
+          onClick={() => {
+            setSelectMode((v) => !v);
+            setPicked(new Set());
+          }}
+          title={selectMode ? "إلغاء التحديد" : "تحديد أكثر من شفت للحذف"}
+          aria-label="تحديد أكثر من شفت للحذف"
+          aria-pressed={selectMode}
+          className="absolute left-2 top-1/2 grid size-7 -translate-y-1/2 place-items-center rounded-lg bg-white/15 text-white transition hover:bg-white/25"
+        >
+          {selectMode ? <X className="size-4" /> : <ListChecks className="size-4" />}
+        </button>
       </div>
+      {selectMode && (
+        <div className="mb-2 flex items-center justify-between gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2">
+          <span className="text-xs font-bold text-white/80">محدد: {picked.size}</span>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setPicked(picked.size === shifts.length ? new Set() : new Set(shifts.map((s) => s.id)))}
+              className="rounded-lg bg-white/10 px-2 py-1 text-[11px] font-bold text-white hover:bg-white/20"
+            >
+              {picked.size === shifts.length && shifts.length ? "إلغاء الكل" : "تحديد الكل"}
+            </button>
+            <button
+              type="button"
+              disabled={!picked.size || bulkBusy}
+              onClick={() => void deletePicked()}
+              className="inline-flex items-center gap-1 rounded-lg bg-rose-600 px-2 py-1 text-[11px] font-black text-white disabled:opacity-40"
+            >
+              {bulkBusy ? <Loader2 className="size-3 animate-spin" /> : <Trash2 className="size-3" />}
+              حذف المحدد
+            </button>
+          </div>
+        </div>
+      )}
 
       {q.isLoading ? (
         <Loader2 className="mx-auto my-6 size-5 animate-spin text-muted-foreground" />
@@ -315,9 +380,14 @@ function ShiftPickerMenu({
                 </button>
                 <button
                   type="button"
-                  onClick={() => onSelect({ ...sh, label: `شفت رقم ${number}` })}
+                  onClick={() =>
+                    selectMode ? togglePick(sh.id) : onSelect({ ...sh, label: `شفت رقم ${number}` })
+                  }
+                  aria-pressed={selectMode ? picked.has(sh.id) : undefined}
                   className={`flex flex-1 items-stretch gap-2 rounded-xl border px-2 py-2 text-right transition ${
-                    active
+                    selectMode && picked.has(sh.id)
+                      ? "border-rose-500/70 bg-rose-500/10"
+                      : active
                       ? "border-blue-500/40 bg-[oklch(0.13_0_0)] shadow-[0_0_20px_-6px_oklch(0.78_0.24_120/0.5)]"
                       : "border-white/5 bg-[oklch(0.095_0_0)] hover:bg-[oklch(0.11_0_0)]"
                   }`}
