@@ -560,13 +560,17 @@ const P2P_USED_REASON = "p2p_used";
 /**
  * Marks the caller's ENDED shifts as used for P2P linking so they disappear
  * from the link menu. The open shift is never marked.
+ * groupId: معرف مجموعة الربط — يُحفظ على كل الشفتات المستخدمة لنفس الطلب
+ * حتى تظهر كلها بنفس اللون في قايمة شفتات الأدمن.
  */
-export async function markShiftsUsedForP2P(shiftIds: string[], actorId: string) {
+export async function markShiftsUsedForP2P(shiftIds: string[], actorId: string, groupId?: string) {
   if (!shiftIds.length) return;
   const db = await admin();
+  const patch: Record<string, unknown> = { ended_reason: P2P_USED_REASON };
+  if (groupId) patch.link_group = groupId;
   await db
     .from("work_shifts")
-    .update({ ended_reason: P2P_USED_REASON })
+    .update(patch)
     .in("id", shiftIds)
     .eq("user_id", actorId)
     .not("ended_at", "is", null);
@@ -576,8 +580,9 @@ export async function markShiftsUsedForP2P(shiftIds: string[], actorId: string) 
  * Links one P2P ledger row to an employee + one of his shifts.
  * The original ledger row is never touched. Double linking is impossible: the
  * unique (ledger_id) constraint makes the second concurrent insert fail.
+ * groupId: معرف مجموعة الربط — يُحفظ على الشفت المستلم حتى مع المجموعة الملونة.
  */
-export async function linkP2P(ledgerId: string, shiftId: string, actorId: string) {
+export async function linkP2P(ledgerId: string, shiftId: string, actorId: string, groupId?: string) {
   const db = await admin();
 
   const { data: led } = await db
@@ -615,6 +620,10 @@ export async function linkP2P(ledgerId: string, shiftId: string, actorId: string
       return { ok: false as const, error: "هذا الطلب تم ربطه بالفعل." };
     }
     return { ok: false as const, error: error.message };
+  }
+  if (groupId) {
+    // الشفت المستلم جزء من المجموعة — حتى لو مفتوح (المجموعة تتحدث لو اتربط بطلب أحدث).
+    await db.from("work_shifts").update({ link_group: groupId }).eq("id", (shift as any).id);
   }
   return { ok: true as const };
 }
@@ -1791,7 +1800,7 @@ export async function shiftHistory(userId: string, limit = 100) {
   const db = await admin();
   const { data } = await db
     .from("work_shifts")
-    .select("id,started_at,ended_at,ended_reason,reviewed_at")
+    .select("id,started_at,ended_at,ended_reason,reviewed_at,link_group")
     .eq("user_id", userId)
     .order("started_at", { ascending: false })
     .limit(Math.min(Math.max(limit, 1), 200));
@@ -1819,6 +1828,8 @@ export async function shiftHistory(userId: string, limit = 100) {
     open: !s.ended_at,
     txns: tally.get(String(s.id)) ?? 0,
     reviewed: !!s.reviewed_at,
+    // مجموعة الربط — الشفتات اللي اتربطو بنفس طلب P2P تحمل نفس المعرف.
+    linkGroup: (s.link_group ?? null) as string | null,
   }));
 }
 

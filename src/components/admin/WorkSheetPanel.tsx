@@ -11,6 +11,20 @@ import { listEmployees } from "@/lib/admin.functions";
 import { getEmployeeShiftList, deleteEmployeeShift, getSharedShiftId, setSharedShift, getMySharedShift, markShiftReviewed } from "@/lib/work.functions";
 import employeesBg from "@/assets/employees-bg.png.asset.json";
 
+/** ألوان مجموعات ربط P2P — الشفتات اللي اتربطو بنفس الطلب تاخد لون واحد، وكل مجموعة لون مختلف. */
+const GROUP_COLOR_CLASSES = [
+  "border-rose-400/70 bg-rose-500/10",
+  "border-amber-400/70 bg-amber-500/10",
+  "border-emerald-400/70 bg-emerald-500/10",
+  "border-cyan-400/70 bg-cyan-500/10",
+  "border-violet-400/70 bg-violet-500/10",
+  "border-fuchsia-400/70 bg-fuchsia-500/10",
+  "border-lime-400/70 bg-lime-500/10",
+  "border-orange-400/70 bg-orange-500/10",
+  "border-sky-400/70 bg-sky-500/10",
+  "border-pink-400/70 bg-pink-500/10",
+];
+
 
 
 const CHIP_BASE =
@@ -118,6 +132,8 @@ type Shift = {
   txns: number;
   reviewed?: boolean;
   label?: string;
+  /** مجموعة ربط P2P — الشفتات اللي اتربطو بنفس الطلب تحمل نفس المعرف. */
+  linkGroup?: string | null;
 };
 
 /** توقيت موحّد (القاهرة) بأرقام لاتينية حتى تتطابق شاشة الأدمن مع الموظف. */
@@ -175,6 +191,12 @@ function ShiftPickerMenu({
   });
 
   const shifts = q.data ?? [];
+  // كل مجموعة شفتات مرتبطة بطلب P2P واحد تاخد لون ثابت من الألوان بالترتيب.
+  const groupColors = new Map<string, string>();
+  for (const s of shifts) {
+    if (!s.linkGroup || groupColors.has(s.linkGroup)) continue;
+    groupColors.set(s.linkGroup, GROUP_COLOR_CLASSES[groupColors.size % GROUP_COLOR_CLASSES.length]);
+  }
   const sharedFn = useServerFn(getSharedShiftId);
   const setSharedFn = useServerFn(setSharedShift);
   const sharedQ = useQuery({
@@ -389,6 +411,8 @@ function ShiftPickerMenu({
                       ? "border-rose-500/70 bg-rose-500/10"
                       : active
                       ? "border-blue-500/40 bg-[oklch(0.13_0_0)] shadow-[0_0_20px_-6px_oklch(0.78_0.24_120/0.5)]"
+                      : sh.linkGroup && groupColors.has(sh.linkGroup)
+                      ? groupColors.get(sh.linkGroup)
                       : "border-white/5 bg-[oklch(0.095_0_0)] hover:bg-[oklch(0.11_0_0)]"
                   }`}
                 >

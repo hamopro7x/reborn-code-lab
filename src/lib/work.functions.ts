@@ -148,11 +148,15 @@ export const linkP2POrder = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAccess(context.supabase, context.userId);
     const mod = await import("./work.server");
-    const res = await mod.linkP2P(data.ledgerId, data.shiftId, context.userId);
+    // مجموعة الربط: كل الشفتات اللي اتربطو بنفس الطلب ياخدوا نفس المعرف —
+    // بيستخدم لتلوين المجموعة بلون واحد في قايمة شفتات الأدمن.
+    const groupId = crypto.randomUUID();
+    const res = await mod.linkP2P(data.ledgerId, data.shiftId, context.userId, groupId);
     if (res.ok) {
       await mod.markShiftsUsedForP2P(
         Array.from(new Set([data.shiftId, ...(data.usedShiftIds ?? [])])),
         context.userId,
+        groupId,
       );
     }
     return res;
