@@ -1061,18 +1061,8 @@ async function run(device) {
   scheduleSignals(device);
   hbTimer = setInterval(() => void refreshHeartbeat(device), 10_000);
 
-  void heartbeat(device).then((first) => {
-    if (!running) return;
-    if (first === false) {
-      void showPairing(device, "تم حذف تسجيل هذا الجهاز — اطلب كود تسجيل جديد من الإدارة");
-    } else if (first === true) {
-      heartbeatFailures = 0;
-      setStatus("متصل", true);
-    } else {
-      heartbeatFailures = 1;
-      setStatus("جاري استعادة الاتصال…", false);
-    }
-  });
+  // أول نبض يمر بنفس منطق الحماية: رفض واحد لا يمسح تسجيل الجهاز.
+  void refreshHeartbeat(device);
 }
 
 approveBtn.addEventListener("click", async () => {
