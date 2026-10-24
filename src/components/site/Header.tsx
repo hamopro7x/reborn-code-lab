@@ -90,10 +90,10 @@ export function Header() {
           </DropdownMenu>
 
           <Button asChild variant="ghost" size="sm" className="store-header-icon" aria-label="سلة التسوق" title="سلة التسوق">
-            <Link to="/cart">
+            <Link to="/cart" className="store-header-cart">
               <ShoppingCart className="size-5" />
               {count > 0 && (
-                <span className="store-header-badge">{count}</span>
+                <span className="store-header-badge" aria-label={`${count} منتج في السلة`}>{count > 99 ? "99+" : count}</span>
               )}
             </Link>
           </Button>
