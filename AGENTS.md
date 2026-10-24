@@ -18,3 +18,4 @@
 - P2P assignment, selected-ended-shift consumption, and colour grouping use one service-role-only database transaction invoked after server authentication; partial saves must never report success and reused open shifts retain their existing group.
 
 - TikTok coin auto-charge: website only queues jobs and shows QR/status (`tiktok_jobs`, `/api/public/tiktok-worker` with admin-generated token); the browser automation runs in `worker/tiktok-charger` on the VPS and card data lives only in its env. Why: workerd cannot run a browser and card data must never reach the site.
+- Employee agent RPCs try the database directly, then fall back to `/api/public/agent-rpc/$fn` (allowlisted public agent functions only) on network failure; the agent unpairs only after repeated explicit heartbeat rejections. Why: one blocked route or one transient reply previously left every device offline.
