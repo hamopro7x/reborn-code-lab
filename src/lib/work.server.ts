@@ -535,22 +535,41 @@ export async function myShiftsForLink(userId: string, limit = 40) {
     shiftsOfUser(userId, limit),
     namesFor(db, [userId]),
   ]);
-  // Only return shifts that do NOT already have a P2P order linked.
+  // Only return shifts that were NOT already used for a P2P order: either the
+  // order was linked to them, or they were ticked together in a multi-select
+  // link (marked with ended_reason = P2P_USED_REASON).
   const ids = shifts.map((s) => s.id);
   const linked = new Set<string>();
   if (ids.length) {
-    const { data } = await db
-      .from("work_txn_assignments")
-      .select("shift_id")
-      .in("shift_id", ids)
-      .in("kind", P2P_KINDS);
+    const [{ data }, { data: used }] = await Promise.all([
+      db.from("work_txn_assignments").select("shift_id").in("shift_id", ids).in("kind", P2P_KINDS),
+      db.from("work_shifts").select("id").in("id", ids).eq("ended_reason", P2P_USED_REASON),
+    ]);
     for (const r of data ?? []) if ((r as any).shift_id) linked.add(String((r as any).shift_id));
+    for (const r of used ?? []) linked.add(String((r as any).id));
   }
   return {
     name: names.get(userId) ?? "موظف",
     // The currently open shift always stays available (can be linked many times).
     shifts: shifts.filter((s) => s.endedAt == null || !linked.has(s.id)),
   };
+}
+
+const P2P_USED_REASON = "p2p_used";
+
+/**
+ * Marks the caller's ENDED shifts as used for P2P linking so they disappear
+ * from the link menu. The open shift is never marked.
+ */
+export async function markShiftsUsedForP2P(shiftIds: string[], actorId: string) {
+  if (!shiftIds.length) return;
+  const db = await admin();
+  await db
+    .from("work_shifts")
+    .update({ ended_reason: P2P_USED_REASON })
+    .in("id", shiftIds)
+    .eq("user_id", actorId)
+    .not("ended_at", "is", null);
 }
 
 /**
