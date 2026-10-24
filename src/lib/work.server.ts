@@ -514,12 +514,13 @@ export async function staffList() {
 /** Shifts that belong to ONE employee only. */
 export async function shiftsOfUser(userId: string, limit = 40) {
   const db = await admin();
-  const { data } = await db
+  const { data, error } = await db
     .from("work_shifts")
     .select("id,user_id,started_at,ended_at")
     .eq("user_id", userId)
     .order("started_at", { ascending: false })
     .limit(Math.min(Math.max(limit, 1), 100));
+  if (error) throw new Error("تعذر تحميل الشفتات. حاول مرة أخرى.");
   return (data ?? []).map((r: any) => ({
     id: r.id as string,
     userId: r.user_id as string,
@@ -541,10 +542,11 @@ export async function myShiftsForLink(userId: string, limit = 40) {
   const ids = shifts.map((s) => s.id);
   const linked = new Set<string>();
   if (ids.length) {
-    const [{ data }, { data: used }] = await Promise.all([
+    const [{ data, error }, { data: used, error: usedError }] = await Promise.all([
       db.from("work_txn_assignments").select("shift_id").in("shift_id", ids).in("kind", P2P_KINDS),
       db.from("work_shifts").select("id").in("id", ids).eq("ended_reason", P2P_USED_REASON),
     ]);
+    if (error || usedError) throw new Error("تعذر التأكد من الشفتات المتاحة للربط. حاول مرة أخرى.");
     for (const r of data ?? []) if ((r as any).shift_id) linked.add(String((r as any).shift_id));
     for (const r of used ?? []) linked.add(String((r as any).id));
   }
@@ -1749,12 +1751,16 @@ export async function saveMyManualCardTxn(
 /** شفتات موظف واحد + عدد المعاملات الناجحة المرتبطة بكل شفت. */
 export async function shiftHistory(userId: string, limit = 100) {
   const db = await admin();
-  const { data } = await db
-    .from("work_shifts")
-    .select("id,started_at,ended_at,ended_reason,reviewed_at,link_group")
-    .eq("user_id", userId)
-    .order("started_at", { ascending: false })
+  const readShifts = (columns: string) => db.from("work_shifts").select(columns)
+    .eq("user_id", userId).order("started_at", { ascending: false })
     .limit(Math.min(Math.max(limit, 1), 200));
+  let result = await readShifts("id,started_at,ended_at,ended_reason,reviewed_at,link_group");
+  // An unapplied colour-column update must not make actual shift history disappear.
+  if (result.error?.code === "42703" && result.error.message.includes("link_group")) {
+    result = await readShifts("id,started_at,ended_at,ended_reason,reviewed_at");
+  }
+  if (result.error) throw new Error("تعذر تحميل سجل الشفتات. حاول مرة أخرى.");
+  const data = result.data;
 
   const shifts = (data ?? []) as any[];
   const ids = shifts.map((s) => String(s.id));
