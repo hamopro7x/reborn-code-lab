@@ -64,6 +64,7 @@
 }
 
 :root {
+  color-scheme: dark;
   --radius: 0.875rem;
   /* Dark storefront palette from the reference screenshot */
   --background: #0a0f1d;
@@ -125,6 +126,38 @@
 .dark {
   --background: #0a0f1d;
   --foreground: #f2f5fa;
+}
+
+:root.light {
+  color-scheme: light;
+  --background: #f6f8fc;
+  --foreground: #182033;
+  --card: #ffffff;
+  --card-foreground: #182033;
+  --popover: #ffffff;
+  --popover-foreground: #182033;
+  --secondary: #e9edf5;
+  --secondary-foreground: #253152;
+  --muted: #edf1f7;
+  --muted-foreground: #526079;
+  --border: #d4dce9;
+  --input: #d4dce9;
+  --hero: #e9eef8;
+  --hero-foreground: #182033;
+  --panel: #ffffff;
+  --panel-foreground: #182033;
+  --nav-pill: #e0e6f0;
+  --nav-pill-foreground: #182033;
+  --category-surface: #edf1f7;
+  --category-overlay: oklch(0.97 0.008 264 / 0.94);
+  --details-bg: #ffffff;
+  --details-text: #182033;
+  --details-border: #d4dce9;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #182033;
+  --sidebar-accent: #e9edf5;
+  --sidebar-accent-foreground: #253152;
+  --sidebar-border: #d4dce9;
 }
 
 @layer base {

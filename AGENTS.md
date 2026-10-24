@@ -12,6 +12,7 @@
 
 - Bybit ingestion has two paths: `syncAllRecent` (newest page per account, parallel, every tick) for real-time screens, and a background deep month walk (`runDeepSyncIfDue`, every few minutes). Why: walking full history per tick delayed new transactions by minutes.
 - Every storefront page and checkout state uses the shared site Header, with styling scoped to `.store-header` and the logo imported from a bundled asset; this keeps branding consistent without affecting staff areas or relying on external image availability.
+- Storefront appearance is controlled by one root context and semantic CSS token overrides; read the device-local explicit choice after hydration, never infer it from OS settings, and keep staff palette overrides independent.
 - Homepage banners and category rails switch to desktop composition at 1280px; smaller widths share the mobile composition to prevent tablet collisions, while forced banner-editor device previews remain unchanged.
 - Employee previous-shift selection uses a controlled popover and only the existing admin-shared shift response; this preserves server access restrictions and keeps opening the menu separate from opening a shift.
 - P2P assignment, selected-ended-shift consumption, and colour grouping use one service-role-only database transaction invoked after server authentication; partial saves must never report success and reused open shifts retain their existing group.

@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Outlet, Link, createRootRouteWithContext, useRouter, HeadContent, Scripts } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
-import { Toaster } from "sonner";
+import { AppearanceProvider } from "@/lib/appearance-context";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -176,13 +176,14 @@ function RootComponent() {
   }, [router, queryClient]);
   return (
     <QueryClientProvider client={queryClient}>
+      <AppearanceProvider>
       <CurrencyProvider>
         <CartProvider>
           <GlobalRealtime />
           <Outlet />
-          <Toaster position="top-center" richColors theme="dark" />
         </CartProvider>
       </CurrencyProvider>
+      </AppearanceProvider>
     </QueryClientProvider>
   );
 }
