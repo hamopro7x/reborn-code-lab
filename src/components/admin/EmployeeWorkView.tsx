@@ -215,7 +215,9 @@ function P2PLinkMenu({ ledgerId, onLinked }: { ledgerId: string; onLinked?: () =
 
     setBusy(true);
     try {
-      const res: any = await linkFn({ data: { ledgerId, shiftId: newestShiftId } });
+      const res: any = await linkFn({
+        data: { ledgerId, shiftId: newestShiftId, usedShiftIds: picked.map((s) => s.id) },
+      });
       if (res?.ok) toast.success("تم ربط الطلب بالشفت");
       else toast.error(res?.error ?? "هذا الطلب تم ربطه بالفعل.");
       setOpen(false);

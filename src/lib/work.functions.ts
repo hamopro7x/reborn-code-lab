@@ -136,12 +136,26 @@ export const getMyShiftsForLink = createServerFn({ method: "POST" })
 export const linkP2POrder = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
-    z.object({ ledgerId: z.string().uuid(), shiftId: z.string().uuid() }).parse(input),
+    z
+      .object({
+        ledgerId: z.string().uuid(),
+        shiftId: z.string().uuid(),
+        // Every shift the employee ticked; all of them leave the link menu.
+        usedShiftIds: z.array(z.string().uuid()).max(100).optional(),
+      })
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     await assertAccess(context.supabase, context.userId);
     const mod = await import("./work.server");
-    return mod.linkP2P(data.ledgerId, data.shiftId, context.userId);
+    const res = await mod.linkP2P(data.ledgerId, data.shiftId, context.userId);
+    if (res.ok) {
+      await mod.markShiftsUsedForP2P(
+        Array.from(new Set([data.shiftId, ...(data.usedShiftIds ?? [])])),
+        context.userId,
+      );
+    }
+    return res;
   });
 
 
