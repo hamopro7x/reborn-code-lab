@@ -60,11 +60,23 @@
   --color-header: var(--header);
   --color-category-surface: var(--category-surface);
   --color-category-overlay: var(--category-overlay);
+  --color-product-surface: var(--product-surface);
+  --color-product-icon: var(--product-icon);
+  --color-product-border: var(--product-border);
+  --color-product-text: var(--product-text);
+  --color-product-muted: var(--product-muted);
+  --color-product-actions: var(--product-actions);
   --font-category: "Libre Baskerville", "IBM Plex Sans Arabic", serif;
 }
 
 :root {
   color-scheme: dark;
+  --product-surface: #14151c;
+  --product-icon: #1d1e27;
+  --product-border: #24252f;
+  --product-text: #f5f6fa;
+  --product-muted: #a7a9b8;
+  --product-actions: #0f1423;
   --radius: 0.875rem;
   /* Dark storefront palette from the reference screenshot */
   --background: #0a0f1d;
@@ -130,6 +142,12 @@
 
 :root.light {
   color-scheme: light;
+  --product-surface: #ffffff;
+  --product-icon: #edf1f7;
+  --product-border: #d4dce9;
+  --product-text: #182033;
+  --product-muted: #526079;
+  --product-actions: #e9edf5;
   --background: #f6f8fc;
   --foreground: #182033;
   --card: #ffffff;
@@ -469,6 +487,22 @@
   --checkout-primary-strong: #14B389;
   --checkout-primary-soft: rgba(31, 227, 166, 0.14);
   --checkout-on-primary: #04150F;
+}
+:root.light :is(.cart-v4, .checkout-v4, .checkout-v4:has(.checkout-payment-step), .checkout-payment-step) {
+  --checkout-bg: var(--background);
+  --checkout-surface: var(--card);
+  --checkout-card: var(--card);
+  --checkout-card-hover: var(--muted);
+  --checkout-text: var(--foreground);
+  --checkout-muted: var(--muted-foreground);
+  --checkout-soft: var(--muted-foreground);
+  --checkout-border: var(--border);
+  --checkout-border-soft: var(--border);
+  --checkout-primary: #087f63;
+  --checkout-primary-strong: #06674f;
+  --checkout-primary-soft: #e0f5ed;
+  --checkout-on-primary: #ffffff;
+  --checkout-success: #087f63;
 }
 .checkout-shell:has(.checkout-payment-step) { max-width: 480px; background: var(--checkout-bg); }
 .checkout-shell:has(.checkout-payment-step) .checkout-appbar { padding: 12px 15px 8px; }
