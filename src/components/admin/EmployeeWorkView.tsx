@@ -218,8 +218,12 @@ function P2PLinkMenu({ ledgerId, onLinked }: { ledgerId: string; onLinked?: () =
       const res: any = await linkFn({
         data: { ledgerId, shiftId: newestShiftId, usedShiftIds: picked.map((s) => s.id) },
       });
-      if (res?.ok) toast.success("تم ربط الطلب بالشفت");
-      else toast.error(res?.error ?? "هذا الطلب تم ربطه بالفعل.");
+      if (!res?.ok) {
+        toast.error(res?.error ?? "تعذر حفظ الربط.");
+        void mine.refetch();
+        return;
+      }
+      toast.success("تم ربط الطلب بالشفت");
       setOpen(false);
       void mine.refetch();
       onLinked?.();

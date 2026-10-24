@@ -514,12 +514,13 @@ export async function staffList() {
 /** Shifts that belong to ONE employee only. */
 export async function shiftsOfUser(userId: string, limit = 40) {
   const db = await admin();
-  const { data } = await db
+  const { data, error } = await db
     .from("work_shifts")
     .select("id,user_id,started_at,ended_at")
     .eq("user_id", userId)
     .order("started_at", { ascending: false })
     .limit(Math.min(Math.max(limit, 1), 100));
+  if (error) throw new Error("تعذر تحميل الشفتات. حاول مرة أخرى.");
   return (data ?? []).map((r: any) => ({
     id: r.id as string,
     userId: r.user_id as string,
@@ -541,10 +542,11 @@ export async function myShiftsForLink(userId: string, limit = 40) {
   const ids = shifts.map((s) => s.id);
   const linked = new Set<string>();
   if (ids.length) {
-    const [{ data }, { data: used }] = await Promise.all([
+    const [{ data, error }, { data: used, error: usedError }] = await Promise.all([
       db.from("work_txn_assignments").select("shift_id").in("shift_id", ids).in("kind", P2P_KINDS),
       db.from("work_shifts").select("id").in("id", ids).eq("ended_reason", P2P_USED_REASON),
     ]);
+    if (error || usedError) throw new Error("تعذر التأكد من الشفتات المتاحة للربط. حاول مرة أخرى.");
     for (const r of data ?? []) if ((r as any).shift_id) linked.add(String((r as any).shift_id));
     for (const r of used ?? []) linked.add(String((r as any).id));
   }
@@ -557,75 +559,26 @@ export async function myShiftsForLink(userId: string, limit = 40) {
 
 const P2P_USED_REASON = "p2p_used";
 
-/**
- * Marks the caller's ENDED shifts as used for P2P linking so they disappear
- * from the link menu. The open shift is never marked.
- * groupId: معرف مجموعة الربط — يُحفظ على كل الشفتات المستخدمة لنفس الطلب
- * حتى تظهر كلها بنفس اللون في قايمة شفتات الأدمن.
- */
-export async function markShiftsUsedForP2P(shiftIds: string[], actorId: string, groupId?: string) {
-  if (!shiftIds.length) return;
+/** Atomic assignment + consumption + colour grouping; never partial success. */
+export async function linkP2P(ledgerId: string, shiftId: string, actorId: string, usedShiftIds: string[] = []) {
   const db = await admin();
-  const patch: Record<string, unknown> = { ended_reason: P2P_USED_REASON };
-  if (groupId) patch.link_group = groupId;
-  await db
-    .from("work_shifts")
-    .update(patch)
-    .in("id", shiftIds)
-    .eq("user_id", actorId)
-    .not("ended_at", "is", null);
-}
-
-/**
- * Links one P2P ledger row to an employee + one of his shifts.
- * The original ledger row is never touched. Double linking is impossible: the
- * unique (ledger_id) constraint makes the second concurrent insert fail.
- * groupId: معرف مجموعة الربط — يُحفظ على الشفت المستلم حتى مع المجموعة الملونة.
- */
-export async function linkP2P(ledgerId: string, shiftId: string, actorId: string, groupId?: string) {
-  const db = await admin();
-
-  const { data: led } = await db
-    .from("bybit_ledger")
-    .select("id,kind,occurred_at")
-    .eq("id", ledgerId)
-    .maybeSingle();
-  if (!led || !P2P_KINDS.includes(String((led as any).kind))) {
-    return { ok: false as const, error: "هذا الطلب غير متاح للربط." };
-  }
-
-  const { data: shift } = await db
-    .from("work_shifts")
-    .select("id,user_id")
-    .eq("id", shiftId)
-    .maybeSingle();
-  if (!shift) return { ok: false as const, error: "الشفت غير موجود." };
-  // Server-side ownership guard: a caller can only link to HIS own shift,
-  // whatever shift_id the request carries.
-  if (String((shift as any).user_id) !== String(actorId)) {
-    return { ok: false as const, error: "لا يمكنك ربط الطلب بهذا الشفت." };
-  }
-
-  const { error } = await db.from("work_txn_assignments").insert({
-    ledger_id: ledgerId,
-    shift_id: (shift as any).id,
-    user_id: (shift as any).user_id,
-    occurred_at: (led as any).occurred_at,
-    kind: (led as any).kind,
-    assign_mode: "manual",
-    assigned_by: actorId,
+  const { data, error } = await db.rpc("work_link_p2p_atomic", {
+    p_ledger_id: ledgerId,
+    p_shift_id: shiftId,
+    p_actor_id: actorId,
+    p_used_shift_ids: [...new Set([shiftId, ...usedShiftIds])],
   });
   if (error) {
-    if (/duplicate|unique/i.test(error.message)) {
+    if (error.code === "23505") {
       return { ok: false as const, error: "هذا الطلب تم ربطه بالفعل." };
     }
-    return { ok: false as const, error: error.message };
+    console.error("P2P atomic link failed", { code: error.code });
+    return { ok: false as const, error: error.code === "PGRST202" || error.code === "42883"
+      ? "تحديث ربط P2P لسه مش متطبق على قاعدة الموقع. لازم تطبيق تحديث الربط الأول."
+      : "تعذر حفظ الربط بالكامل. لم يتم تأكيد الربط؛ حاول مرة أخرى." };
   }
-  if (groupId) {
-    // الشفت المستلم جزء من المجموعة — حتى لو مفتوح (المجموعة تتحدث لو اتربط بطلب أحدث).
-    await db.from("work_shifts").update({ link_group: groupId }).eq("id", (shift as any).id);
-  }
-  return { ok: true as const };
+  if (data?.ok === true) return { ok: true as const };
+  return { ok: false as const, error: typeof data?.error === "string" ? data.error : "تعذر تأكيد حفظ الربط." };
 }
 
 /** Shift options offered by the "ربط بالشفت" button. */
@@ -1798,12 +1751,16 @@ export async function saveMyManualCardTxn(
 /** شفتات موظف واحد + عدد المعاملات الناجحة المرتبطة بكل شفت. */
 export async function shiftHistory(userId: string, limit = 100) {
   const db = await admin();
-  const { data } = await db
-    .from("work_shifts")
-    .select("id,started_at,ended_at,ended_reason,reviewed_at,link_group")
-    .eq("user_id", userId)
-    .order("started_at", { ascending: false })
+  const readShifts = (columns: string) => db.from("work_shifts").select(columns)
+    .eq("user_id", userId).order("started_at", { ascending: false })
     .limit(Math.min(Math.max(limit, 1), 200));
+  let result = await readShifts("id,started_at,ended_at,ended_reason,reviewed_at,link_group");
+  // An unapplied colour-column update must not make actual shift history disappear.
+  if (result.error?.code === "42703" && result.error.message.includes("link_group")) {
+    result = await readShifts("id,started_at,ended_at,ended_reason,reviewed_at");
+  }
+  if (result.error) throw new Error("تعذر تحميل سجل الشفتات. حاول مرة أخرى.");
+  const data = result.data;
 
   const shifts = (data ?? []) as any[];
   const ids = shifts.map((s) => String(s.id));
