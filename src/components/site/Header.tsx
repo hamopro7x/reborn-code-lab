@@ -1,7 +1,8 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { ShoppingCart, Globe, Menu, Search, LayoutGrid } from "lucide-react";
+import { ShoppingCart, Globe, Menu, Search, LayoutGrid, Sun, Moon } from "lucide-react";
+import { useAppearance } from "@/lib/appearance-context";
 import { useCart } from "@/lib/cart";
 import { useCurrency } from "@/lib/currency-context";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import headerMark from "@/assets/mg-metallic-logo-3d.png";
 import {
-  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuRadioGroup, DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
 
 const navLinks = [
@@ -19,6 +20,7 @@ const navLinks = [
 ];
 
 export function Header() {
+  const { appearance, setAppearance } = useAppearance();
   const { count } = useCart();
   const { currency, setCurrency, currencies } = useCurrency();
   const navigate = useNavigate();
@@ -105,6 +107,12 @@ export function Header() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>المظهر</DropdownMenuLabel>
+              <DropdownMenuRadioGroup value={appearance} onValueChange={(value) => setAppearance(value === "light" ? "light" : "dark")}>
+                <DropdownMenuRadioItem value="dark" className="gap-2"><Moon className="size-4" />الوضع الداكن</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="light" className="gap-2"><Sun className="size-4" />الوضع الفاتح</DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+              <DropdownMenuSeparator />
               {navLinks.map((l) => (
                 <DropdownMenuItem key={l.to} asChild>
                   <Link to={l.to} className="w-full cursor-pointer">{l.label}</Link>

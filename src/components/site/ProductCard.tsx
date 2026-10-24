@@ -53,13 +53,13 @@ export function ProductCard({ p, compact = false }: { p: any; compact?: boolean 
     <div className={cn("flex flex-col items-stretch", compact ? "w-full" : "w-[200px] max-w-full shrink-0")}>
       <div
         onClick={onOpen}
-        className="group cursor-pointer rounded-[20px] border border-[#24252f] bg-[#14151c] overflow-hidden"
+        className="group cursor-pointer rounded-[20px] border border-product-border bg-product-surface overflow-hidden"
         style={{ boxShadow: "0 18px 36px -18px rgba(0,0,0,0.35)" }}
       >
         <div className="px-[14px] pt-4 pb-[14px] flex flex-col">
           {/* header: app icon + name */}
           <div className="flex items-center gap-[6px]">
-            <div className="size-[52px] rounded-[14px] shrink-0 overflow-hidden bg-[#1d1e27] border border-[#2a2b38] flex items-center justify-center">
+            <div className="size-[52px] rounded-[14px] shrink-0 overflow-hidden bg-product-icon border border-product-border flex items-center justify-center">
               <SafeImage
                 src={p.main_image ?? undefined}
                 alt={p.name}
@@ -71,16 +71,16 @@ export function ProductCard({ p, compact = false }: { p: any; compact?: boolean 
               />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-[13px] font-extrabold text-[#f5f6fa] leading-[1.35] text-right line-clamp-2 min-h-[36px]">{p.name}</h3>
+              <h3 className="text-[13px] font-extrabold text-product-text leading-[1.35] text-right line-clamp-2 min-h-[36px]">{p.name}</h3>
             </div>
           </div>
 
-          <div className="w-full h-px my-2 bg-[#24252f]" />
+          <div className="w-full h-px my-2 bg-product-border" />
 
           {/* features */}
           <div className="flex flex-col gap-[6px]">
             {features.map((text, i) => (
-              <div key={i} className="flex items-center gap-[6px] text-[12.5px] text-[#a7a9b8] leading-[1.5]">
+              <div key={i} className="flex items-center gap-[6px] text-[12.5px] text-product-muted leading-[1.5]">
                 <svg
                   viewBox="0 0 24 24"
                   fill="none"
@@ -97,19 +97,19 @@ export function ProductCard({ p, compact = false }: { p: any; compact?: boolean 
             ))}
           </div>
 
-          <div className="h-px bg-[#24252f] mt-[10px] mb-[5px]" />
+          <div className="h-px bg-product-border mt-[10px] mb-[5px]" />
 
           {/* price row */}
           <div className="flex items-end justify-between gap-2 mt-2">
             <div className="flex flex-col gap-[5px] min-w-0">
-              <span className="text-[11.5px] text-[#6f7280]">السعر</span>
+              <span className="text-[11.5px] text-product-muted">السعر</span>
               <div className="flex items-baseline gap-[6px] min-w-0 flex-nowrap translate-y-[4px]">
-                <span dir="ltr" className="inline-flex items-baseline gap-[4px] text-[18px] font-black text-white leading-none whitespace-nowrap">
+                <span dir="ltr" className="inline-flex items-baseline gap-[4px] text-[18px] font-black text-product-text leading-none whitespace-nowrap">
                   <span className="text-[12px] font-extrabold">{currency.symbol}</span>
                   {formatPrice(localized, { ...currency, symbol: "" }).trim()}
                 </span>
                 {hasDiscount && (
-                  <span dir="ltr" className="text-[11px] font-medium text-[#7f879a] line-through whitespace-nowrap">{formatPrice(original, currency)}</span>
+                  <span dir="ltr" className="text-[11px] font-medium text-product-muted line-through whitespace-nowrap">{formatPrice(original, currency)}</span>
                 )}
               </div>
             </div>
@@ -123,7 +123,7 @@ export function ProductCard({ p, compact = false }: { p: any; compact?: boolean 
       </div>
 
       {/* unified action bar */}
-      <div className="mt-2 h-[46px] flex items-stretch overflow-hidden rounded-[13px] border border-white/[0.12] bg-[#0f1423]">
+      <div className="mt-2 h-[46px] flex items-stretch overflow-hidden rounded-[13px] border border-product-border bg-product-actions">
         <button
           type="button"
           onClick={onAdd}
@@ -142,7 +142,7 @@ export function ProductCard({ p, compact = false }: { p: any; compact?: boolean 
           aria-pressed={fav}
           className={cn(
             "w-12 min-w-12 h-[46px] grid place-items-center border-r border-[#14141e]/[0.18] transition-colors",
-            fav ? "text-[#ff4f87] bg-[#ff4f87]/[0.06]" : "text-[#d9deeb] hover:text-[#ff6b9a] hover:bg-white/[0.035]"
+            fav ? "text-[#ff4f87] bg-[#ff4f87]/[0.06]" : "text-product-text hover:text-[#ff6b9a] hover:bg-white/[0.035]"
           )}
         >
           <Heart className="size-[21px]" fill={fav ? "currentColor" : "none"} />
