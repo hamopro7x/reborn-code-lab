@@ -138,11 +138,11 @@ export function HeroBannerView({
   forceDevice?: "desktop" | "mobile";
 }) {
   const desktopWrapCls =
-    forceDevice === "mobile" ? "hidden" : forceDevice === "desktop" ? "block" : "hidden md:block";
-  const mobileWrapCls = forceDevice === "mobile" ? "block" : forceDevice === "desktop" ? "hidden" : "md:hidden";
-  const overlayMobileCls = forceDevice === "mobile" ? "" : forceDevice === "desktop" ? "hidden" : "md:hidden";
+    forceDevice === "mobile" ? "hidden" : forceDevice === "desktop" ? "block" : "hidden xl:block";
+  const mobileWrapCls = forceDevice === "mobile" ? "block" : forceDevice === "desktop" ? "hidden" : "xl:hidden";
+  const overlayMobileCls = forceDevice === "mobile" ? "" : forceDevice === "desktop" ? "hidden" : "xl:hidden";
   const overlayDesktopCls =
-    forceDevice === "mobile" ? "hidden" : forceDevice === "desktop" ? "block" : "hidden md:block";
+    forceDevice === "mobile" ? "hidden" : forceDevice === "desktop" ? "block" : "hidden xl:block";
   const hasMedia = banner.media_type !== "none";
   const sideButtons = banner.buttons_position === "side";
   const pos = banner.positions ?? {};
@@ -295,7 +295,7 @@ export function HeroBannerView({
           ? "h-full"
           : forceDevice === "desktop"
             ? "h-[230px]"
-            : "aspect-[13/5] w-full md:aspect-auto md:h-[230px]"
+            : "aspect-[13/5] w-full xl:aspect-auto xl:h-[230px]"
       }`}
       style={{ backgroundColor: banner.background_color ?? undefined }}
     >

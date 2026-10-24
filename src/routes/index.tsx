@@ -59,7 +59,7 @@ function SectionHeading({ title, to }: { title: string; to?: string }) {
     <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 mb-4">
       <div className="flex min-w-0 items-center gap-3">
         <span className="h-6 w-1 shrink-0 rounded-full bg-primary" />
-        <h2 className="truncate text-lg md:text-xl font-bold text-foreground">{title}</h2>
+        <h2 className="truncate text-lg xl:text-xl font-bold text-foreground">{title}</h2>
       </div>
       {to && (
         <Link
@@ -79,7 +79,7 @@ function CategoryCard({ c, index }: { c: any; index: number }) {
     <Link
       to="/category/$slug"
       params={{ slug: c.slug }}
-      className="group block w-40 shrink-0 text-foreground focus-visible:outline-none md:w-56"
+      className="group block w-40 shrink-0 text-foreground focus-visible:outline-none xl:w-56"
     >
       <div className="category-art-frame relative h-[5cm] overflow-hidden bg-category-surface">
         {c.banner_image ? (
@@ -97,16 +97,16 @@ function CategoryCard({ c, index }: { c: any; index: number }) {
         ) : null}
         {!c.banner_image && (
           <div className="category-art-content absolute inset-0 flex items-center justify-center px-3 text-center">
-            <span className="w-full text-sm font-bold text-foreground md:text-base">
+            <span className="w-full text-sm font-bold text-foreground xl:text-base">
               {c.name}
             </span>
           </div>
         )}
-        <div className="category-art-content absolute -inset-x-4 bottom-0 flex h-8 items-center justify-center gap-1 bg-discount text-[11px] font-bold text-discount-foreground md:text-xs">
+        <div className="category-art-content absolute -inset-x-4 bottom-0 flex h-8 items-center justify-center gap-1 bg-discount text-[11px] font-bold text-discount-foreground xl:text-xs">
           تصفح العروض
         </div>
       </div>
-      <h3 className="category-title mt-2 line-clamp-1 px-1 text-center text-sm font-bold text-foreground transition-colors duration-150 group-hover:text-primary md:text-base">
+      <h3 className="category-title mt-2 line-clamp-1 px-1 text-center text-sm font-bold text-foreground transition-colors duration-150 group-hover:text-primary xl:text-base">
         {c.name}
       </h3>
     </Link>
@@ -198,13 +198,13 @@ function Home() {
       <Header />
 
       {bannersQ.isLoading ? (
-        <div className="min-h-[152px] h-auto md:h-[230px] bg-card animate-pulse" />
+        <div className="min-h-[152px] h-auto xl:h-[230px] bg-card animate-pulse" />
       ) : (
         <>
-          <div className="md:hidden">
+          <div className="xl:hidden">
             <HeroCarousel banners={mobileBanners} />
           </div>
-          <div className="hidden md:block">
+          <div className="hidden xl:block">
             <HeroCarousel banners={desktopBanners} />
           </div>
         </>
@@ -227,7 +227,7 @@ function Home() {
               <SectionHeading title="بطاقات الشحن" to="/shop" />
               <ProductRail
                 ariaLabel="بطاقات الشحن"
-                itemClassName="w-[72%] sm:w-[46%] md:w-[32%] xl:w-[24%]"
+                itemClassName="w-[72%] sm:w-[46%] xl:w-[32%] xl:w-[24%]"
               >
                 {topups.map((p: any) => (
                   <TopupCard key={p.id} p={p} />
@@ -237,17 +237,17 @@ function Home() {
           )}
 
           {/* CATEGORIES */}
-          <section aria-labelledby="categories-title" className="pt-1 pb-3 md:pt-2 md:pb-5">
-            <h2 id="categories-title" className="mb-3 md:mb-4 text-base md:text-lg font-bold text-foreground">
+          <section aria-labelledby="categories-title" className="pt-1 pb-3 xl:pt-2 xl:pb-5">
+            <h2 id="categories-title" className="mb-3 xl:mb-4 text-base xl:text-lg font-bold text-foreground">
               تصفح الأقسام
             </h2>
 
             {/* ثابت — العميل يحركه يدويًا بالسحب فقط */}
             <div className="overflow-x-auto scrollbar-hide" aria-label="أقسام المتجر" style={{ touchAction: "pan-x pan-y" }}>
-              <div className="flex w-max gap-4 pb-3 md:gap-6">
+              <div className="flex w-max gap-4 pb-3 xl:gap-6">
                 {categoriesQ.isLoading &&
                   Array.from({ length: 6 }).map((_, i) => (
-                    <div key={`c-sk-${i}`} className="w-40 shrink-0 md:w-56">
+                    <div key={`c-sk-${i}`} className="w-40 shrink-0 xl:w-56">
                       <div className="category-art-frame h-[5cm] animate-pulse bg-category-surface" />
                       <div className="mx-auto mt-2 h-4 w-3/4 animate-pulse rounded bg-category-surface" />
                     </div>
@@ -264,7 +264,7 @@ function Home() {
           {/* PRODUCTS — شريط متحرك تلقائيًا من اليسار إلى اليمين */}
           {!latestQ.isLoading && marqueeProducts.length > 0 && (
             <section aria-labelledby="products-marquee-title">
-              <h2 id="products-marquee-title" className="mb-3 md:mb-4 text-base md:text-lg font-bold text-foreground">
+              <h2 id="products-marquee-title" className="mb-3 xl:mb-4 text-base xl:text-lg font-bold text-foreground">
                 المنتجات
               </h2>
               <div className="marquee-section overflow-x-auto scrollbar-hide [-webkit-overflow-scrolling:touch]" aria-label="المنتجات" style={{ touchAction: "pan-x pan-y" }}>
@@ -280,7 +280,7 @@ function Home() {
                     >
                       {Array.from({ length: productCopies }).map((_, setIndex) =>
                         marqueeProducts.map((p: any) => (
-                          <div key={`g${groupIndex}-s${setIndex}-${p.id}`} className="w-44 shrink-0 md:w-52">
+                          <div key={`g${groupIndex}-s${setIndex}-${p.id}`} className="w-44 shrink-0 xl:w-52">
                             <ProductCard p={p} compact />
                           </div>
                         ))
