@@ -249,6 +249,12 @@ function LiveScreen({
                 <span className="text-xs font-bold text-muted-foreground">
                   تم إيقاف الشاشة — الجهاز مغلق
                 </span>
+                <span className="text-[11px] text-muted-foreground">
+                  آخر ظهور:{" "}
+                  {device.last_seen_at
+                    ? new Date(device.last_seen_at).toLocaleString("ar-EG")
+                    : "لم يتصل بعد"}
+                </span>
               </>
             ) : failed ? (
               <span className="text-xs text-muted-foreground">
