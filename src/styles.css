@@ -567,7 +567,7 @@
   transform: scale(1.02);
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1280px) {
   .category-art-frame {
     clip-path: none;
     transform: skewX(-10deg);
