@@ -878,7 +878,9 @@ async function heartbeat(device) {
       p_secret: device.secret,
       p_version: AGENT_VERSION,
     });
-    return data === true;
+    if (data === true) return true;
+    if (data === false) return false;
+    return null; // رد غير متوقع — نعامله كانقطاع مؤقت لا كحذف للجهاز
   } catch {
     return null; // offline — retry next tick
   }
@@ -889,6 +891,10 @@ let hbTimer = null;
 let pairTimer = null;
 let running = false;
 let heartbeatFailures = 0;
+// حذف تسجيل الجهاز قرار نهائي؛ لا نتخذه إلا بعد رفض صريح متكرر من القاعدة،
+// حتى لا يمسح رد عابر وقت عطل/استعادة السيرفر تسجيل كل الأجهزة.
+let rejectedBeats = 0;
+const REJECTS_BEFORE_UNPAIR = 3;
 
 // نبض داخلي للعملية الرئيسية لا يعتمد على الشبكة. إذا توقف JavaScript لأي
 // سبب تكتشفه عملية Electron الرئيسية وتعيد تشغيل خدمة البث تلقائياً.
@@ -899,13 +905,17 @@ async function refreshHeartbeat(device) {
   const ok = await heartbeat(device);
   if (ok === true) {
     heartbeatFailures = 0;
+    rejectedBeats = 0;
     setStatus("متصل", true);
     reportStage({ connection: "connected" });
     return;
   }
   if (ok === false) {
-    void showPairing(device, "تم حذف تسجيل هذا الجهاز — اطلب كود تسجيل جديد من الإدارة");
-    return;
+    rejectedBeats += 1;
+    if (rejectedBeats >= REJECTS_BEFORE_UNPAIR) {
+      void showPairing(device, "تم حذف تسجيل هذا الجهاز — اطلب كود تسجيل جديد من الإدارة");
+      return;
+    }
   }
   heartbeatFailures += 1;
   setStatus("انقطع الاتصال — جاري الاستعادة…", false);
@@ -935,19 +945,25 @@ function stopSession() {
 
 
 // ============ شاشة مفتاح الربط ============
-// نستخدم fetch مباشر مع مهلة زمنية بدل supabase-js عشان الطلب ميعلّقش للأبد
+// نستخدم fetch مباشر مع مهلة زمنية بدل supabase-js عشان الطلب ميعلّقش للأبد.
+// مساران: مباشر لقاعدة البيانات، واحتياطي عبر الموقع. لو شبكة الجهاز مش
+// قادرة توصل للقاعدة (حجب/DNS/بطء) البرنامج يكمل عبر الموقع تلقائياً،
+// ويرجع يجرب المسار المباشر كل دقيقتين.
+const PROXY_BASE = "https://mag-pro1.com/api/public/agent-rpc/";
+let preferProxyUntil = 0;
+
 async function rpcFetch(fn, body, ms = 8000) {
   await loadRemoteConfig(false);
-  const call = async () => {
+  const call = async (viaProxy) => {
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), ms);
     try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+      const url = viaProxy ? PROXY_BASE + fn : `${SUPABASE_URL}/rest/v1/rpc/${fn}`;
+      const headers = { "Content-Type": "application/json" };
+      if (!viaProxy) headers.apikey = SUPABASE_KEY;
+      const res = await fetch(url, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: SUPABASE_KEY,
-        },
+        headers,
         body: JSON.stringify(body),
         signal: ctrl.signal,
         cache: "no-store",
@@ -961,21 +977,36 @@ async function rpcFetch(fn, body, ms = 8000) {
       try {
         return JSON.parse(text);
       } catch {
-        return text;
+        // رد غير JSON (صفحة شبكة/بوابة) ليس رداً حقيقياً من القاعدة
+        const err = new Error("invalid response");
+        err.status = 0;
+        throw err;
       }
     } finally {
       clearTimeout(t);
     }
   };
+  // خطأ منطقي حقيقي من القاعدة (400) لا يستدعي تغيير المسار
+  const isNetworkFailure = (e) => !e || !e.status || e.status >= 500 || e.status === 0;
+  const viaProxyFirst = Date.now() < preferProxyUntil;
   try {
-    return await call();
+    return await call(viaProxyFirst);
   } catch (e) {
-    // مفتاح مرفوض؟ نجدد بيانات الاتصال من الموقع ونحاول مرة أخرى.
-    if (e && (e.status === 401 || e.status === 403)) {
+    if (!viaProxyFirst && e && (e.status === 401 || e.status === 403)) {
+      // مفتاح مرفوض؟ نجدد بيانات الاتصال، ولو فضل مرفوض نكمل عبر الموقع.
       await loadRemoteConfig(true);
-      return await call();
+      try {
+        return await call(false);
+      } catch {
+        preferProxyUntil = Date.now() + 2 * 60 * 1000;
+        return await call(true);
+      }
     }
-    throw e;
+    if (!isNetworkFailure(e)) throw e;
+    // المسار الأول فشل شبكياً — نجرب المسار الثاني فوراً
+    const result = await call(!viaProxyFirst);
+    preferProxyUntil = viaProxyFirst ? 0 : Date.now() + 2 * 60 * 1000;
+    return result;
   }
 }
 
