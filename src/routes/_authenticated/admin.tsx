@@ -71,6 +71,14 @@ const panelKeys: PanelKey[] = [
 
 
 export const Route = createFileRoute("/_authenticated/admin")({
+  head: () => ({ meta: [
+    { title: "MG Pro | لوحة الإدارة والشفتات" },
+    { name: "description", content: "لوحة MG Pro لإدارة الطلبات ومعاملات الموظفين والشفتات." },
+    { property: "og:title", content: "MG Pro | لوحة الإدارة والشفتات" },
+    { property: "og:description", content: "إدارة طلبات MG Pro ومعاملات الموظفين والشفتات." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   validateSearch: (search: Record<string, unknown>): { panel?: PanelKey } =>
     panelKeys.includes(search.panel as PanelKey) ? { panel: search.panel as PanelKey } : {},
   component: Admin,
