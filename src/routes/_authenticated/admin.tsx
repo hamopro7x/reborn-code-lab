@@ -232,18 +232,11 @@ function Admin() {
         {adminOnly && <HandControl />}
 
         <Sidebar side="right" collapsible="icon">
-          <SidebarHeader className="border-b border-sidebar-border">
-            <div className="flex items-center gap-2 p-2">
-              <div className="size-9 shrink-0 overflow-hidden rounded-xl bg-sidebar-accent ring-1 ring-sidebar-border flex items-center justify-center">
-                <img src={headerMark} alt="MG Pro" className="size-full object-contain p-[3px]" />
-              </div>
+          <SidebarHeader>
+            <div className="flex items-center justify-center p-2">
+              <img src={headerMark} alt="MG Pro" className="size-9 object-contain" />
 
-              <div className="min-w-0">
-                <div className="font-bold text-sm text-gradient truncate">لوحة التحكم</div>
-                <div className="text-[10px] text-muted-foreground truncate">
-                  {adminOnly ? "أدمن" : `موظف : ${me?.full_name || me?.email?.split("@")[0] || ""}`}
-                </div>
-              </div>
+
             </div>
           </SidebarHeader>
           <SidebarContent>
