@@ -25,13 +25,13 @@ function Stat({
 }) {
   return (
     <div className="rounded-2xl border border-border/60 bg-background/60 p-4">
-      <div className="mb-2 grid min-h-9 content-start gap-1 text-right text-xs text-muted-foreground">
-        <span className="whitespace-nowrap">{label}</span>
+      <div className="mb-2 flex min-h-5 items-center gap-2 text-xs text-muted-foreground">
         {date ? (
-          <span className="whitespace-nowrap text-right text-[11px] tabular-nums opacity-80" dir="ltr">
+          <span className="whitespace-nowrap text-[11px] font-bold tabular-nums opacity-80" dir="ltr">
             {date}
           </span>
         ) : null}
+        <span className="whitespace-nowrap">{label}</span>
       </div>
       <div className="flex w-full items-center justify-end gap-2 text-right text-2xl font-black" dir="ltr">
         <img src={USDT_LOGO} alt="" className="size-5 shrink-0 rounded-full" aria-hidden="true" />
@@ -45,16 +45,16 @@ function Stat({
 
 
 /**
- * "2026 - 10 - 25" — the UTC day a spend window opens or closes. Digits and
- * dashes only: an Arabic (RTL) page cannot reorder them the way it reorders
- * Arabic month names, so the range always reads start → end.
+ * "2026/10" — the year/month a spend window closes. Digits and a slash only:
+ * an Arabic (RTL) page cannot reorder them the way it reorders Arabic month
+ * names, so it always reads the same way on either language.
  */
-const cycleDay = (ms: unknown) => {
+const cycleMonth = (ms: unknown) => {
   const n = Number(ms);
   if (!Number.isFinite(n)) return undefined;
   const d = new Date(n);
   const p = (v: number) => String(v).padStart(2, "0");
-  return `${d.getUTCFullYear()} - ${p(d.getUTCMonth() + 1)} - ${p(d.getUTCDate())}`;
+  return `${d.getUTCFullYear()}/${p(d.getUTCMonth() + 1)}`;
 };
 
 /** Coin cell with the official token icon, matching the source account layout. */
@@ -367,10 +367,8 @@ export function BybitLedgerPanel() {
 
   const t = totalsQ.data;
   const money = (n: unknown) => `$${Number(n ?? 0).toFixed(2)}`;
-  /** The exact window behind each number: today for daily, the Bybit cycle for monthly. */
-  const dayDate = cycleDay(t?.dayStart);
-  const monthDate =
-    t?.monthStart && t?.monthEnd ? `${cycleDay(t.monthStart)} → ${cycleDay(t.monthEnd)}` : undefined;
+  /** The monthly cards state which cycle they cover; the daily ones need no period. */
+  const monthDate = cycleMonth(t?.monthEnd);
 
   return (
     <div className="relative z-10 space-y-3" dir="rtl">
@@ -399,14 +397,14 @@ export function BybitLedgerPanel() {
           <div className="text-xs font-bold text-muted-foreground mb-2 px-1">الإنفاق</div>
           <div className="grid gap-3 sm:grid-cols-2">
             <Stat label="الإنفاق الشهري" value={money(t?.monthSpend)} date={monthDate} />
-            <Stat label="الإنفاق اليومي" value={money(t?.daySpend)} date={dayDate} />
+            <Stat label="الإنفاق اليومي" value={money(t?.daySpend)} />
           </div>
         </div>
         <div className="rounded-2xl border border-border/60 bg-card/70 p-3">
           <div className="text-xs font-bold text-muted-foreground mb-2 px-1">رسوم الفيزا</div>
           <div className="grid gap-3 sm:grid-cols-2">
             <Stat label="رسوم الفيزا الشهرية" value={money(t?.monthFees)} date={monthDate} />
-            <Stat label="رسوم الفيزا اليومية" value={money(t?.dayFees)} date={dayDate} />
+            <Stat label="رسوم الفيزا اليومية" value={money(t?.dayFees)} />
           </div>
         </div>
       </div>
