@@ -11,10 +11,28 @@ import { useLedgerAutoSync } from "@/lib/use-ledger-sync";
 const USDT_LOGO = "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xdAC17F958D2ee523a2206206994597C13D831ec7/logo.png";
 
 /** Same stat tile as the source visa account cards. */
-function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
+function Stat({
+  label,
+  value,
+  hint,
+  date,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  /** Which period the number covers, shown next to the label. */
+  date?: string;
+}) {
   return (
     <div className="rounded-2xl border border-border/60 bg-background/60 p-4">
-      <div className="text-right text-xs text-muted-foreground mb-1">{label}</div>
+      <div className="mb-1 flex items-center justify-between gap-2 text-right text-xs text-muted-foreground">
+        <span>{label}</span>
+        {date ? (
+          <span className="shrink-0 whitespace-nowrap text-[11px] tabular-nums opacity-80" dir="ltr">
+            {date}
+          </span>
+        ) : null}
+      </div>
       <div className="flex w-full items-center justify-end gap-2 text-right text-2xl font-black" dir="ltr">
         <img src={USDT_LOGO} alt="" className="size-5 shrink-0 rounded-full" aria-hidden="true" />
         <span className="text-sm font-bold text-muted-foreground">USDT</span>
@@ -25,6 +43,16 @@ function Stat({ label, value, hint }: { label: string; value: string; hint?: str
   );
 }
 
+
+/** "30 سبتمبر" — the UTC day a spend window opens or closes, in Arabic month names. */
+const AR_CYCLE_DAY = new Intl.DateTimeFormat("ar-EG", {
+  day: "2-digit",
+  month: "long",
+  numberingSystem: "latn",
+  timeZone: "UTC",
+});
+const cycleDay = (ms: unknown) =>
+  Number.isFinite(Number(ms)) ? AR_CYCLE_DAY.format(new Date(Number(ms))) : undefined;
 
 /** Coin cell with the official token icon, matching the source account layout. */
 function CoinCell({ coin }: { coin: string }) {
@@ -336,6 +364,10 @@ export function BybitLedgerPanel() {
 
   const t = totalsQ.data;
   const money = (n: unknown) => `$${Number(n ?? 0).toFixed(2)}`;
+  /** The exact window behind each number: today for daily, the Bybit cycle for monthly. */
+  const dayDate = cycleDay(t?.dayStart);
+  const monthDate =
+    t?.monthStart && t?.monthEnd ? `${cycleDay(t.monthStart)} → ${cycleDay(t.monthEnd)}` : undefined;
 
   return (
     <div className="relative z-10 space-y-3" dir="rtl">
@@ -363,15 +395,15 @@ export function BybitLedgerPanel() {
         <div className="rounded-2xl border border-border/60 bg-card/70 p-3">
           <div className="text-xs font-bold text-muted-foreground mb-2 px-1">الإنفاق</div>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Stat label="الإنفاق الشهري" value={money(t?.monthSpend)} />
-            <Stat label="الإنفاق اليومي" value={money(t?.daySpend)} />
+            <Stat label="الإنفاق الشهري" value={money(t?.monthSpend)} date={monthDate} />
+            <Stat label="الإنفاق اليومي" value={money(t?.daySpend)} date={dayDate} />
           </div>
         </div>
         <div className="rounded-2xl border border-border/60 bg-card/70 p-3">
           <div className="text-xs font-bold text-muted-foreground mb-2 px-1">رسوم الفيزا</div>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Stat label="رسوم الفيزا الشهرية" value={money(t?.monthFees)} />
-            <Stat label="رسوم الفيزا اليومية" value={money(t?.dayFees)} />
+            <Stat label="رسوم الفيزا الشهرية" value={money(t?.monthFees)} date={monthDate} />
+            <Stat label="رسوم الفيزا اليومية" value={money(t?.dayFees)} date={dayDate} />
           </div>
         </div>
       </div>
