@@ -44,15 +44,18 @@ function Stat({
 }
 
 
-/** "30 سبتمبر" — the UTC day a spend window opens or closes, in Arabic month names. */
-const AR_CYCLE_DAY = new Intl.DateTimeFormat("ar-EG", {
-  day: "2-digit",
-  month: "long",
-  numberingSystem: "latn",
-  timeZone: "UTC",
-});
-const cycleDay = (ms: unknown) =>
-  Number.isFinite(Number(ms)) ? AR_CYCLE_DAY.format(new Date(Number(ms))) : undefined;
+/**
+ * "2026 - 10 - 25" — the UTC day a spend window opens or closes. Digits and
+ * dashes only: an Arabic (RTL) page cannot reorder them the way it reorders
+ * Arabic month names, so the range always reads start → end.
+ */
+const cycleDay = (ms: unknown) => {
+  const n = Number(ms);
+  if (!Number.isFinite(n)) return undefined;
+  const d = new Date(n);
+  const p = (v: number) => String(v).padStart(2, "0");
+  return `${d.getUTCFullYear()} - ${p(d.getUTCMonth() + 1)} - ${p(d.getUTCDate())}`;
+};
 
 /** Coin cell with the official token icon, matching the source account layout. */
 function CoinCell({ coin }: { coin: string }) {
