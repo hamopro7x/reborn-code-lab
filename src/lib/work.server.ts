@@ -1751,13 +1751,18 @@ export async function saveMyManualCardTxn(
 /** شفتات موظف واحد + عدد المعاملات الناجحة المرتبطة بكل شفت. */
 export async function shiftHistory(userId: string, limit = 100) {
   const db = await admin();
-  const readShifts = (columns: string) => db.from("work_shifts").select(columns)
-    .eq("user_id", userId).order("started_at", { ascending: false })
-    .limit(Math.min(Math.max(limit, 1), 200));
-  let result = await readShifts("id,started_at,ended_at,ended_reason,reviewed_at,link_group");
-  // An unapplied colour-column update must not make actual shift history disappear.
-  if (result.error?.code === "42703" && result.error.message.includes("link_group")) {
-    result = await readShifts("id,started_at,ended_at,ended_reason,reviewed_at");
+  const readShifts = (columns: string, filterArchived: boolean) => {
+    let q = db.from("work_shifts").select(columns)
+      .eq("user_id", userId).order("started_at", { ascending: false })
+      .limit(Math.min(Math.max(limit, 1), 200));
+    // الشفتات المؤرشفة تختفي من القوائم بدون حذف أي سجل.
+    if (filterArchived) q = q.is("archived_at", null);
+    return q;
+  };
+  let result = await readShifts("id,started_at,ended_at,ended_reason,reviewed_at,link_group", true);
+  // An unapplied colour/archive-column update must not make actual shift history disappear.
+  if (result.error?.code === "42703") {
+    result = await readShifts("id,started_at,ended_at,ended_reason,reviewed_at", false);
   }
   if (result.error) throw new Error("تعذر تحميل سجل الشفتات. حاول مرة أخرى.");
   const data = result.data;
@@ -1797,6 +1802,20 @@ export async function markShiftReviewed(shiftId: string, reviewedBy: string) {
   const { error } = await db.from("work_shifts").update(patch).eq("id", shiftId);
   if (error) return { ok: false as const, error: error.message };
   return { ok: true as const };
+}
+
+/** أرشفة شفتات منتهية — تختفي من القوائم بدون حذف أي سجل. الشفت المفتوح لا يُؤرشف. */
+export async function archiveShifts(shiftIds: string[]) {
+  const db = await admin();
+  const { data, error } = await db
+    .from("work_shifts")
+    .update({ archived_at: new Date().toISOString() } as any)
+    .in("id", shiftIds)
+    .not("ended_at", "is", null)
+    .is("archived_at", null)
+    .select("id");
+  if (error) return { ok: false as const, error: error.message };
+  return { ok: true as const, archived: (data ?? []).length };
 }
 
 /** يتحقق أن الشفت يخص الموظف المطلوب (حماية ضد خلط بيانات الموظفين). */
