@@ -235,9 +235,8 @@ function Admin() {
           <SidebarHeader>
             <div className="flex items-center justify-center p-2">
               <img src={headerMark} alt="MG Pro" className="size-9 object-contain" />
-
-
             </div>
+
           </SidebarHeader>
           <SidebarContent>
             <SidebarGlider activeKey={panel}>
