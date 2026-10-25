@@ -232,10 +232,11 @@ function Admin() {
         {adminOnly && <HandControl />}
 
         <Sidebar side="right" collapsible="icon">
-          <SidebarHeader>
-            <div className="flex items-center justify-center p-2">
-              <img src={headerMark} alt="MG Pro" className="size-9 object-contain" />
+          <SidebarHeader className="p-0">
+            <div className="flex items-center justify-center px-1 py-1.5">
+              <img src={headerMark} alt="MG Pro" className="w-full max-h-16 object-contain" />
             </div>
+
 
           </SidebarHeader>
           <SidebarContent>
