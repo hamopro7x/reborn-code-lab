@@ -25,10 +25,10 @@ function Stat({
 }) {
   return (
     <div className="rounded-2xl border border-border/60 bg-background/60 p-4">
-      <div className="mb-1 flex items-center justify-between gap-2 text-right text-xs text-muted-foreground">
-        <span>{label}</span>
+      <div className="mb-2 grid min-h-9 content-start gap-1 text-right text-xs text-muted-foreground">
+        <span className="whitespace-nowrap">{label}</span>
         {date ? (
-          <span className="shrink-0 whitespace-nowrap text-[11px] tabular-nums opacity-80" dir="ltr">
+          <span className="whitespace-nowrap text-right text-[11px] tabular-nums opacity-80" dir="ltr">
             {date}
           </span>
         ) : null}
