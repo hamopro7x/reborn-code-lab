@@ -17,6 +17,7 @@ function Stat({ label, value, hint }: { label: string; value: string; hint?: str
       <div className="text-right text-xs text-muted-foreground mb-1">{label}</div>
       <div className="flex w-full items-center justify-end gap-2 text-right text-2xl font-black" dir="ltr">
         <img src={USDT_LOGO} alt="" className="size-5 shrink-0 rounded-full" aria-hidden="true" />
+        <span className="text-sm font-bold text-muted-foreground">USDT</span>
         <span>{value}</span>
       </div>
       {hint ? <div className="mt-1 text-right text-[11px] text-muted-foreground">{hint}</div> : null}
