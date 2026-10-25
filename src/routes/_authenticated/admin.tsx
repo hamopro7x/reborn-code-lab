@@ -18,6 +18,7 @@ import {
   SidebarHeader, SidebarFooter,
 } from "@/components/ui/sidebar";
 import { SidebarGlider } from "@/components/admin/SidebarGlider";
+import { AdminLangToggle, AdminTranslator, useAdminLang } from "@/lib/admin-i18n/translator";
 import {
   LayoutDashboard, Package, Layers, ShoppingCart, CreditCard, Coins, Clock, Settings2,
   Plus, Trash2, Edit, ExternalLink, Check, X, TrendingUp, DollarSign, Users, Bell, Loader2,
@@ -99,6 +100,7 @@ function useRole() {
 }
 
 function Admin() {
+  const [adminLang, setAdminLang] = useAdminLang();
   const search = Route.useSearch();
   const role = useRole();
   const navigate = useNavigate();
@@ -300,6 +302,10 @@ function Admin() {
             {readOnly && (
               <Badge variant="outline" className="ms-auto gap-1"><Lock className="size-3" />عرض فقط</Badge>
             )}
+            <div className={adminOnly && !basePanels.includes(panel) || readOnly ? "" : "ms-auto"}>
+              <AdminLangToggle lang={adminLang} onChange={setAdminLang} />
+            </div>
+            <AdminTranslator lang={adminLang} />
           </header>
           <main className="flex-1 p-4 md:p-6 overflow-x-hidden">
             {isEmployee && panel === "orders" && (
