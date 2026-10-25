@@ -1749,20 +1749,23 @@ export async function saveMyManualCardTxn(
  * قراءة فقط: لا يُحذف ولا يُعدّل أي سجل قديم. */
 
 /** شفتات موظف واحد + عدد المعاملات الناجحة المرتبطة بكل شفت. */
-export async function shiftHistory(userId: string, limit = 100) {
+export async function shiftHistory(userId: string, limit = 100, archivedOnly = false) {
   const db = await admin();
   const readShifts = (columns: string, filterArchived: boolean) => {
     let q = db.from("work_shifts").select(columns)
       .eq("user_id", userId).order("started_at", { ascending: false })
       .limit(Math.min(Math.max(limit, 1), 200));
     // الشفتات المؤرشفة تختفي من القوائم بدون حذف أي سجل.
-    if (filterArchived) q = q.is("archived_at", null);
+    if (filterArchived) {
+      q = archivedOnly ? q.not("archived_at", "is", null) : q.is("archived_at", null);
+    }
     return q;
   };
   let result = await readShifts("id,started_at,ended_at,ended_reason,reviewed_at,link_group", true);
   // An unapplied colour/archive-column update must not make actual shift history disappear.
   if (result.error?.code === "42703") {
     result = await readShifts("id,started_at,ended_at,ended_reason,reviewed_at", false);
+    if (archivedOnly && !result.error) return [];
   }
   if (result.error) throw new Error("تعذر تحميل سجل الشفتات. حاول مرة أخرى.");
   const data = result.data;

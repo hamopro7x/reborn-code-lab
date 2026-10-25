@@ -428,11 +428,11 @@ const shiftSchema = z.object({ shiftId: z.string().uuid() });
 
 export const getEmployeeShiftList = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => empSchema.parse(input))
+  .inputValidator((input: unknown) => empSchema.extend({ archivedOnly: z.boolean().optional() }).parse(input))
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
     const mod = await import("./work.server");
-    return mod.shiftHistory(data.userId);
+    return mod.shiftHistory(data.userId, 100, data.archivedOnly ?? false);
   });
 
 /** علامة مراجعة الشفت — تُحفظ في قاعدة البيانات فلا تختفي نهائيًا. */

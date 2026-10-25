@@ -183,9 +183,14 @@ function ShiftPickerMenu({
 }) {
   const listFn = useServerFn(getEmployeeShiftList);
   const del = useServerFn(deleteEmployeeShift);
+  const [archivedOnly, setArchivedOnly] = useState(false);
+  useEffect(() => { setArchivedOnly(false); }, [userId]);
   const q = useQuery({
-    queryKey: ["admin-employee-shifts", userId],
-    queryFn: () => listFn({ data: { userId: userId! } }) as Promise<Shift[]>,
+    queryKey: ["admin-employee-shifts", userId, archivedOnly],
+    queryFn: () => {
+      if (!userId) return Promise.resolve([]);
+      return listFn({ data: { userId, archivedOnly } }) as Promise<Shift[]>;
+    },
     enabled: !!userId && open,
     staleTime: 15_000,
   });
@@ -323,7 +328,7 @@ function ShiftPickerMenu({
         </button>
         <button
           type="button"
-          disabled={!picked.size || bulkBusy}
+          disabled={archivedOnly || !picked.size || bulkBusy}
           onClick={() => void archivePicked()}
           title="أرشفة الشفتات المحددة"
           aria-label="أرشفة الشفتات المحددة"
@@ -331,6 +336,16 @@ function ShiftPickerMenu({
         >
           {bulkBusy ? <Loader2 className="size-3.5 animate-spin" /> : <Archive className="size-3.5" />}
         </button>
+      </div>
+      <div className="mb-3 flex items-center gap-1" role="group" aria-label="عرض الشفتات">
+        <Button size="sm" variant={archivedOnly ? "ghost" : "secondary"} aria-pressed={!archivedOnly}
+          disabled={bulkBusy} onClick={() => { setArchivedOnly(false); setPicked(new Set()); setSelectMode(false); }}>
+          الشفتات
+        </Button>
+        <Button size="sm" variant={archivedOnly ? "secondary" : "ghost"} aria-pressed={archivedOnly}
+          disabled={bulkBusy} onClick={() => { setArchivedOnly(true); setPicked(new Set()); setSelectMode(false); }}>
+          <Archive className="size-4" /> المؤرشفة
+        </Button>
       </div>
       {selectMode && (
         <div className="mb-2 flex items-center justify-between gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2">
@@ -358,8 +373,13 @@ function ShiftPickerMenu({
 
       {q.isLoading ? (
         <Loader2 className="mx-auto my-6 size-5 animate-spin text-muted-foreground" />
+      ) : q.isError ? (
+        <div className="py-4 text-center text-sm text-destructive">
+          <p>تعذر تحميل الشفتات</p>
+          <Button variant="ghost" size="sm" onClick={() => void q.refetch()}>إعادة المحاولة</Button>
+        </div>
       ) : shifts.length === 0 ? (
-        <p className="py-6 text-center text-xs text-white/50">لا توجد شفتات</p>
+        <p className="py-6 text-center text-xs text-muted-foreground">{archivedOnly ? "لا توجد شفتات مؤرشفة" : "لا توجد شفتات"}</p>
       ) : (
         <ul className="scrollbar-hide max-h-[60vh] space-y-2 overflow-y-auto">
 
