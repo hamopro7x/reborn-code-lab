@@ -25,7 +25,7 @@ export const TABLE_QUERY_KEYS: Record<string, string[]> = {
   ],
   work_transfer_notes: ["shift-transfers", "work-transfers", "emp-archive"],
   work_manual_card_txns: ["my-manual-card-txns", "emp-archive", "emp-manual-card-txns"],
-  work_manual_txns: ["my-manual-txns", "emp-archive", "emp-manual-txns"],
+  work_manual_txns: ["my-manual-txns", "emp-archive", "emp-manual-txns", "shift-manual-txns"],
   work_shifts: [
     "my-work-state", "work-my-shifts-link", "admin-employee-shifts",
     "employee-panels", "emp-archive",
