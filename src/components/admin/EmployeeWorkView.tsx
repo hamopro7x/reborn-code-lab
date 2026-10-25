@@ -892,6 +892,15 @@ function ManualCell({
     valueRef.current = value;
   }, [value]);
 
+  // حفظ تلقائي أثناء الكتابة: كان الحفظ عند مغادرة الخانة فقط، فلو الموظف
+  // فضل واقف في الخانة القيمة ما كانتش بتتحفظ، وبعد 5 دقائق الصف يتقفل
+  // أو يتمسح كصف فاضي، فالأدمن ما يشوفش حاجة.
+  useEffect(() => {
+    if (locked || value === savedRef.current) return;
+    const t = setTimeout(() => flushRef.current(valueRef.current), 700);
+    return () => clearTimeout(t);
+  }, [value, locked]);
+
   // Save pending edits when the section unmounts, or when the tab/window
   // is hidden or closed — otherwise a fast "type then leave" loses the value.
   useEffect(() => {
@@ -1203,6 +1212,9 @@ function ManualSection({
     // التحديث اللحظي يتولى تحديث هذه القائمة، فلا داعي لإعادة جلبها من
     // الصفر مع كل فتح للقسم — كان ذلك أحد أسباب بطء ظهور البيانات.
     staleTime: 3_000,
+    // عرض الأدمن: تحديث دوري كاحتياطي لو التحديث اللحظي فوّت تغيير.
+    refetchInterval: readOnly ? 5_000 : false,
+    refetchIntervalInBackground: false,
   });
 
   const all = blank ? [] : ((q.data as any)?.rows ?? []);
