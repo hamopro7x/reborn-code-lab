@@ -414,10 +414,10 @@ export const getEmployeeManualTxns = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
     const mod = await import("./work.server");
-    const state = await mod.adminEmployeeWorkState(data.userId);
-    // Nothing is exposed while the employee's shift is still running.
-    if (!state.holding) return { serverNow: new Date().toISOString(), rows: [] as any[] };
-    return mod.listManualTxns(data.userId, state.shiftId);
+    // الأدمن يرى كل السجلات اليدوية للموظف (كل الشفتات + الصفوف بلا شفت).
+    // كان العرض مقيدًا بالشفت المفتوح فقط، فتختفي السجلات عند الأدمن بمجرد
+    // إغلاق الشفت أو تسجيلها بدون شفت.
+    return mod.listManualTxns(data.userId);
   });
 
 /* ------------------ admin: ONE employee + ONE shift (history) ------------------

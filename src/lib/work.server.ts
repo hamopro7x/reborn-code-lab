@@ -2121,20 +2121,20 @@ export async function shiftManualCardTxns(shiftId: string) {
   return listManualCardTxns(userId, shiftId);
 }
 
-/** المعاملات اليدوية لآخر شفت (أو الشفت المفتوح) لموظف معيّن — أدمن. */
+/** كل المعاملات اليدوية لموظف معيّن (كل الشفتات) — أدمن، قراءة فقط. */
 export async function employeeManualCardTxns(userId: string) {
   const db = await admin();
   const { data } = await db
-    .from("work_shifts")
-    .select("id")
+    .from("work_manual_card_txns")
+    .select("id,merchant,amount,egp,quantity,pan4,created_at")
     .eq("user_id", userId)
-    .order("started_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const shiftId = data ? String((data as any).id) : null;
-  if (!shiftId)
-    return { serverNow: new Date().toISOString(), editWindowMs: MANUAL_CARD_EDIT_MS, rows: [] as ManualCardRow[] };
-  return listManualCardTxns(userId, shiftId);
+    .order("created_at", { ascending: false })
+    .limit(500);
+  return {
+    serverNow: new Date().toISOString(),
+    editWindowMs: MANUAL_CARD_EDIT_MS,
+    rows: (data ?? []).map(mapManualCard),
+  };
 }
 
 /* ------------------------------ employee PIN ------------------------------ */
