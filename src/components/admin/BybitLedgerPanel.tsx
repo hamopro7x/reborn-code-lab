@@ -49,7 +49,7 @@ function Stat({
  * dashes only: an Arabic (RTL) page cannot reorder them the way it reorders
  * Arabic month names, so the range always reads start → end.
  */
-const cycleDay = (ms: unknown) => {
+const cycleMonth = (ms: unknown) => {
   const n = Number(ms);
   if (!Number.isFinite(n)) return undefined;
   const d = new Date(n);
@@ -368,9 +368,9 @@ export function BybitLedgerPanel() {
   const t = totalsQ.data;
   const money = (n: unknown) => `$${Number(n ?? 0).toFixed(2)}`;
   /** The exact window behind each number: today for daily, the Bybit cycle for monthly. */
-  const dayDate = cycleDay(t?.dayStart);
+  const dayDate = cycleMonth(t?.dayStart);
   const monthDate =
-    t?.monthStart && t?.monthEnd ? `${cycleDay(t.monthStart)} → ${cycleDay(t.monthEnd)}` : undefined;
+    t?.monthStart && t?.monthEnd ? `${cycleMonth(t.monthStart)} → ${cycleMonth(t.monthEnd)}` : undefined;
 
   return (
     <div className="relative z-10 space-y-3" dir="rtl">
