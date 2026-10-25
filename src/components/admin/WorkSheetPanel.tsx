@@ -321,6 +321,16 @@ function ShiftPickerMenu({
         >
           {selectMode ? <X className="size-4" /> : <ListChecks className="size-4" />}
         </button>
+        <button
+          type="button"
+          disabled={!picked.size || bulkBusy}
+          onClick={() => void archivePicked()}
+          title="أرشفة الشفتات المحددة"
+          aria-label="أرشفة الشفتات المحددة"
+          className="absolute left-10 top-1/2 grid size-7 -translate-y-1/2 place-items-center rounded-lg bg-white/15 text-white transition hover:bg-white/25 disabled:opacity-40"
+        >
+          {bulkBusy ? <Loader2 className="size-3.5 animate-spin" /> : <Archive className="size-3.5" />}
+        </button>
       </div>
       {selectMode && (
         <div className="mb-2 flex items-center justify-between gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2">
@@ -332,16 +342,6 @@ function ShiftPickerMenu({
               className="rounded-lg bg-white/10 px-2 py-1 text-[11px] font-bold text-white hover:bg-white/20"
             >
               {picked.size === shifts.length && shifts.length ? "إلغاء الكل" : "تحديد الكل"}
-            </button>
-            <button
-              type="button"
-              disabled={!picked.size || bulkBusy}
-              onClick={() => void archivePicked()}
-              title="أرشفة الشفتات المحددة"
-              aria-label="أرشفة الشفتات المحددة"
-              className="grid size-7 place-items-center rounded-lg bg-white/10 text-white transition hover:bg-white/20 disabled:opacity-40"
-            >
-              <Archive className="size-3.5" />
             </button>
             <button
               type="button"
