@@ -25,13 +25,13 @@ function Stat({
 }) {
   return (
     <div className="rounded-2xl border border-border/60 bg-background/60 p-4">
-      <div className="mb-2 flex min-h-5 items-center gap-2 text-xs text-muted-foreground">
+      <div className="mb-2 flex min-h-5 items-center justify-start gap-2 text-xs text-muted-foreground">
+        <span className="whitespace-nowrap">{label}</span>
         {date ? (
           <span className="whitespace-nowrap text-[11px] font-bold tabular-nums opacity-80" dir="ltr">
             {date}
           </span>
         ) : null}
-        <span className="whitespace-nowrap">{label}</span>
       </div>
       <div className="flex w-full items-center justify-end gap-2 text-right text-2xl font-black" dir="ltr">
         <img src={USDT_LOGO} alt="" className="size-5 shrink-0 rounded-full" aria-hidden="true" />
