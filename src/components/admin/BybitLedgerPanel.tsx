@@ -23,12 +23,14 @@ function Stat({
   /** Which period the number covers, shown next to the label. */
   date?: string;
 }) {
+  /** Arabic day names keep RTL base, otherwise the day number flips to the wrong side. */
+  const dateDir = date && /[\u0600-\u06FF]/.test(date) ? "rtl" : "ltr";
   return (
     <div className="rounded-2xl border border-border/60 bg-background/60 p-4">
       <div className="mb-2 flex min-h-5 items-center justify-start gap-2 text-xs text-muted-foreground">
         <span className="whitespace-nowrap">{label}</span>
         {date ? (
-          <span className="whitespace-nowrap text-[11px] font-bold tabular-nums opacity-80" dir="ltr">
+          <span className="whitespace-nowrap text-[11px] font-bold tabular-nums opacity-80" dir={dateDir}>
             {date}
           </span>
         ) : null}
@@ -55,6 +57,18 @@ const cycleMonth = (ms: unknown) => {
   const d = new Date(n);
   const p = (v: number) => String(v).padStart(2, "0");
   return `${d.getUTCFullYear()}/${p(d.getUTCMonth() + 1)}`;
+};
+
+/**
+ * "الأحد : 25" — the Arabic weekday and day-of-month a daily window covers,
+ * read from the window itself (UTC) so it never disagrees with the number.
+ */
+const cycleDayLabel = (ms: unknown) => {
+  const n = Number(ms);
+  if (!Number.isFinite(n)) return undefined;
+  const d = new Date(n);
+  const w = new Intl.DateTimeFormat("ar", { weekday: "long", timeZone: "UTC" }).format(d);
+  return `${w} : ${d.getUTCDate()}`;
 };
 
 /** Coin cell with the official token icon, matching the source account layout. */
@@ -367,8 +381,9 @@ export function BybitLedgerPanel() {
 
   const t = totalsQ.data;
   const money = (n: unknown) => `$${Number(n ?? 0).toFixed(2)}`;
-  /** The monthly cards state which cycle they cover; the daily ones need no period. */
+  /** Monthly cards state the cycle they cover, daily cards the weekday and day. */
   const monthDate = cycleMonth(t?.monthEnd);
+  const dayDate = cycleDayLabel(t?.dayStart);
 
   return (
     <div className="relative z-10 space-y-3" dir="rtl">
@@ -397,14 +412,14 @@ export function BybitLedgerPanel() {
           <div className="text-xs font-bold text-muted-foreground mb-2 px-1">الإنفاق</div>
           <div className="grid gap-3 sm:grid-cols-2">
             <Stat label="الإنفاق الشهري" value={money(t?.monthSpend)} date={monthDate} />
-            <Stat label="الإنفاق اليومي" value={money(t?.daySpend)} />
+            <Stat label="الإنفاق اليومي" value={money(t?.daySpend)} date={dayDate} />
           </div>
         </div>
         <div className="rounded-2xl border border-border/60 bg-card/70 p-3">
           <div className="text-xs font-bold text-muted-foreground mb-2 px-1">رسوم الفيزا</div>
           <div className="grid gap-3 sm:grid-cols-2">
             <Stat label="رسوم الفيزا الشهرية" value={money(t?.monthFees)} date={monthDate} />
-            <Stat label="رسوم الفيزا اليومية" value={money(t?.dayFees)} />
+            <Stat label="رسوم الفيزا اليومية" value={money(t?.dayFees)} date={dayDate} />
           </div>
         </div>
       </div>
