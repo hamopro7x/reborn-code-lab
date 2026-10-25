@@ -271,8 +271,11 @@ function CoinBalanceCard({ coin }: { coin: CoinRow }) {
       <div className="relative flex h-full flex-col justify-center overflow-hidden rounded-[15px] bg-[oklch(0.055_0.008_190)] px-3.5 py-2.5 shadow-[0_0_28px_-10px_oklch(0.6_0.14_170/0.35)]">
 
         <div className="flex items-center justify-between gap-2">
-          <div className="text-[26px] font-black leading-none tracking-tight tabular-nums text-white">
-            {coin.balance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          <div className="min-w-0">
+            <div className="mb-1 text-[12px] font-bold leading-none text-[oklch(0.72_0.12_170)]">{coin.coin}</div>
+            <div className="text-[26px] font-black leading-none tracking-tight tabular-nums text-white">
+              {coin.balance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
           </div>
 
           {isUsdt ? (
@@ -1175,16 +1178,16 @@ function BybitAccountView({ isAdmin, accountId, accountName, onBack }: { isAdmin
             {coinBalances.map((c) => (
               <div
                 key={c.coin}
-                className="rounded-xl border border-border/60 bg-background/60 p-3 inline-flex items-center gap-3"
+                className="rounded-xl border border-border/60 bg-background/60 p-3 inline-flex flex-col gap-1"
               >
-                <CoinLogo coin={c.coin} />
-                <div>
-                  <div className="text-[11px] text-muted-foreground mb-0.5">{c.coin}</div>
-                  <div className="text-3xl font-black tracking-tight tabular-nums">
+                <div dir="ltr" className="flex items-center gap-2">
+                  <CoinLogo coin={c.coin} />
+                  <span className="text-sm font-bold text-muted-foreground">{c.coin}</span>
+                  <span className="text-3xl font-black tracking-tight tabular-nums">
                     {c.balance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </div>
-                  <div className="text-[11px] text-muted-foreground mt-0.5">≈ {money(c.usd)}</div>
+                  </span>
                 </div>
+                <div className="text-[11px] text-muted-foreground" dir="ltr">≈ {money(c.usd)}</div>
               </div>
             ))}
           </div>
