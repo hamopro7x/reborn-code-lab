@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Check, ChevronDown, Eye, EyeOff, History, ListChecks, Loader2, Trash2, X } from "lucide-react";
+import { Archive, Check, ChevronDown, Eye, EyeOff, History, ListChecks, Loader2, Trash2, X } from "lucide-react";
 import { usePersistentState } from "@/lib/persistent-state";
 import { EmployeePinMenu } from "@/components/admin/EmployeePinMenu";
 import { EmployeeWorkView } from "@/components/admin/EmployeeWorkView";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { listEmployees } from "@/lib/admin.functions";
-import { getEmployeeShiftList, deleteEmployeeShift, getSharedShiftId, setSharedShift, getMySharedShift, markShiftReviewed } from "@/lib/work.functions";
+import { getEmployeeShiftList, deleteEmployeeShift, getSharedShiftId, setSharedShift, getMySharedShift, markShiftReviewed, archiveEmployeeShifts } from "@/lib/work.functions";
 import employeesBg from "@/assets/employees-bg.png.asset.json";
 
 /** ألوان مجموعات ربط P2P — الشفتات اللي اتربطو بنفس الطلب تاخد لون واحد، وكل مجموعة لون مختلف. */
@@ -244,6 +244,25 @@ function ShiftPickerMenu({
       void q.refetch();
     }
   };
+  const archiveFn = useServerFn(archiveEmployeeShifts);
+  const archivePicked = async () => {
+    const ids = [...picked];
+    if (!ids.length) return;
+    if (!window.confirm(`أرشفة ${ids.length} شفت؟ هيختفوا من القايمة من غير ما يتمسح أي سجل.`)) return;
+    setBulkBusy(true);
+    try {
+      const res = await archiveFn({ data: { shiftIds: ids } });
+      if (!res.ok) throw new Error(res.error);
+      if (selectedId && ids.includes(selectedId)) onDeleted(selectedId);
+      setPicked(new Set());
+      setSelectMode(false);
+    } catch (e: any) {
+      window.alert(e?.message || "تعذر أرشفة بعض الشفتات");
+    } finally {
+      setBulkBusy(false);
+      void q.refetch();
+    }
+  };
   const migratedRef = useRef(false);
   useEffect(() => {
     if (!open || !q.isSuccess || migratedRef.current) return;
@@ -313,6 +332,16 @@ function ShiftPickerMenu({
               className="rounded-lg bg-white/10 px-2 py-1 text-[11px] font-bold text-white hover:bg-white/20"
             >
               {picked.size === shifts.length && shifts.length ? "إلغاء الكل" : "تحديد الكل"}
+            </button>
+            <button
+              type="button"
+              disabled={!picked.size || bulkBusy}
+              onClick={() => void archivePicked()}
+              title="أرشفة الشفتات المحددة"
+              aria-label="أرشفة الشفتات المحددة"
+              className="grid size-7 place-items-center rounded-lg bg-white/10 text-white transition hover:bg-white/20 disabled:opacity-40"
+            >
+              <Archive className="size-3.5" />
             </button>
             <button
               type="button"

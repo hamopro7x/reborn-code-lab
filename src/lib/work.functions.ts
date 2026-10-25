@@ -445,6 +445,18 @@ export const markShiftReviewed = createServerFn({ method: "POST" })
     return mod.markShiftReviewed(data.shiftId, context.userId);
   });
 
+/** أرشفة شفتات محددة (المدير فقط) — تختفي من القوائم بدون حذف أي سجل. */
+export const archiveEmployeeShifts = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ shiftIds: z.array(z.string().uuid()).min(1).max(200) }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    return mod.archiveShifts(data.shiftIds);
+  });
+
 export const getShiftTxns = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
