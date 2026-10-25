@@ -18,6 +18,7 @@ import {
   SidebarHeader, SidebarFooter,
 } from "@/components/ui/sidebar";
 import { SidebarGlider } from "@/components/admin/SidebarGlider";
+import headerMark from "@/assets/mg-metallic-logo-3d.png";
 import { AdminLangToggle, AdminTranslator, useAdminLang } from "@/lib/admin-i18n/translator";
 import {
   LayoutDashboard, Package, Layers, ShoppingCart, CreditCard, Coins, Clock, Settings2,
@@ -233,13 +234,10 @@ function Admin() {
         <Sidebar side="right" collapsible="icon">
           <SidebarHeader className="border-b border-sidebar-border">
             <div className="flex items-center gap-2 p-2">
-              <div className="size-9 rounded-xl gradient-primary flex items-center justify-center shrink-0 overflow-hidden">
-                {me?.avatar_url ? (
-                  <img src={me.avatar_url} alt={me?.full_name || "avatar"} className="w-full h-full object-cover" />
-                ) : (
-                  <LayoutDashboard className="size-5 text-white" />
-                )}
+              <div className="size-9 shrink-0 overflow-hidden rounded-xl bg-sidebar-accent ring-1 ring-sidebar-border flex items-center justify-center">
+                <img src={headerMark} alt="MG Pro" className="size-full object-contain p-[3px]" />
               </div>
+
               <div className="min-w-0">
                 <div className="font-bold text-sm text-gradient truncate">لوحة التحكم</div>
                 <div className="text-[10px] text-muted-foreground truncate">
