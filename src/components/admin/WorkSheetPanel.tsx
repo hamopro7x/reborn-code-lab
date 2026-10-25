@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Check, ChevronDown, Eye, EyeOff, History, ListChecks, Loader2, Trash2, X } from "lucide-react";
+import { Archive, Check, ChevronDown, Eye, EyeOff, History, ListChecks, Loader2, Trash2, X } from "lucide-react";
 import { usePersistentState } from "@/lib/persistent-state";
 import { EmployeePinMenu } from "@/components/admin/EmployeePinMenu";
 import { EmployeeWorkView } from "@/components/admin/EmployeeWorkView";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { listEmployees } from "@/lib/admin.functions";
-import { getEmployeeShiftList, deleteEmployeeShift, getSharedShiftId, setSharedShift, getMySharedShift, markShiftReviewed } from "@/lib/work.functions";
+import { getEmployeeShiftList, deleteEmployeeShift, getSharedShiftId, setSharedShift, getMySharedShift, markShiftReviewed, archiveEmployeeShifts } from "@/lib/work.functions";
 import employeesBg from "@/assets/employees-bg.png.asset.json";
 
 /** ألوان مجموعات ربط P2P — الشفتات اللي اتربطو بنفس الطلب تاخد لون واحد، وكل مجموعة لون مختلف. */
