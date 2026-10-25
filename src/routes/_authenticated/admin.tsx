@@ -234,7 +234,7 @@ function Admin() {
         <Sidebar side="right" collapsible="icon">
           <SidebarHeader className="p-0">
             <div className="flex items-center justify-center px-1 py-1.5">
-              <img src={headerMark} alt="MG Pro" className="w-full max-h-16 object-contain" />
+              <img src={headerMark} alt="MG Pro" className="w-full max-h-24 object-contain" />
             </div>
 
 
