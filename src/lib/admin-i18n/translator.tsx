@@ -29,8 +29,21 @@ export function translateText(text: string): string {
     const trail = text.match(/\s*$/)?.[0] ?? "";
     return lead + exact + trail;
   }
-  return PARTIAL_RE ? text.replace(PARTIAL_RE, (m) => DICT[m] ?? m) : text;
+  let out = PARTIAL_RE ? text.replace(PARTIAL_RE, (m) => DICT[m] ?? m) : text;
+  for (const [re, rep] of PATTERNS) out = out.replace(re, rep);
+  return out;
 }
+
+/** Built-in fragments of generated text (dates, account labels) that no dictionary entry covers. */
+const PATTERNS: Array<[RegExp, string]> = [
+  [/فيزا\s*(\d+)/g, "Visa $1"],
+  [/(\d{1,2}:\d{2}(?::\d{2})?)\s*م(?![\u0600-\u06FF])/g, "$1 PM"],
+  [/(\d{1,2}:\d{2}(?::\d{2})?)\s*ص(?![\u0600-\u06FF])/g, "$1 AM"],
+  [/(^|[^\u0600-\u06FF])م(\s+[A-Za-z0-9])/g, "$1PM$2"],
+  [/(^|[^\u0600-\u06FF])ص(\s+[A-Za-z0-9])/g, "$1AM$2"],
+  [/الأحد/g, "Sunday"], [/الاثنين|الإثنين/g, "Monday"], [/الثلاثاء/g, "Tuesday"],
+  [/الأربعاء/g, "Wednesday"], [/الخميس/g, "Thursday"], [/الجمعة/g, "Friday"], [/السبت/g, "Saturday"],
+];
 
 const origText = new WeakMap<Text, { src: string; out: string }>();
 const origAttr = new WeakMap<Element, Record<string, { src: string; out: string }>>();
