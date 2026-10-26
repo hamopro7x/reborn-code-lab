@@ -787,6 +787,8 @@ export type CardTxn = {
   pan4: string;
   type: string;
   detail: Record<string, string | number | null>;
+  /** Bybit «معكوسة» (voided authorisation / hung retry): shown as failed, hidden from employees. */
+  reversed?: boolean;
 };
 
 function sanitize(o: Record<string, unknown>): Record<string, string | number | null> {
@@ -1096,6 +1098,7 @@ function mapStoredRow(r: any): CardTxn {
     pan4: r.pan4 ?? "",
     type: r.txn_type ?? "",
     detail,
+    reversed: outcome === "reversed" || r.status === "reversed",
   };
 }
 
@@ -1115,6 +1118,8 @@ export async function fetchCardTxnsPage(opts: {
   status?: "all" | "success" | "failed" | "refund";
   page?: number;
   pageSize?: number;
+  /** Employees never see reversed («معكوسة») attempts. */
+  hideReversed?: boolean;
 }): Promise<CardTxnPage> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const status = opts.status ?? "all";
@@ -1155,8 +1160,9 @@ export async function fetchCardTxnsPage(opts: {
 
   const total = Number(count ?? (data?.length ?? 0));
   const counts = { all: total, success: 0, failed: 0, refund: 0 };
+  const rows = markHangVoided((data ?? []).map(mapStoredRow));
   return {
-    rows: (data ?? []).map(mapStoredRow),
+    rows: opts.hideReversed ? rows.filter((r) => !r.reversed) : rows,
     total,
     counts,
   };
@@ -1178,6 +1184,7 @@ export async function fetchCardTxnsLive(opts: {
   status?: "all" | "success" | "failed" | "refund";
   page?: number;
   pageSize?: number;
+  hideReversed?: boolean;
 }): Promise<CardTxnPage> {
   const status = opts.status ?? "all";
   const pageSize = Math.min(Math.max(opts.pageSize ?? 150, 10), 500);
@@ -1198,10 +1205,11 @@ export async function fetchCardTxnsLive(opts: {
     } catch {
       /* الحفظ ليس شرطًا للعرض */
     }
-    return mapped;
+    return markHangVoided(mapped);
   });
 
-  const filtered = status === "all" ? rows : rows.filter((r) => r.status === status);
+  const visible = opts.hideReversed ? rows.filter((r) => !r.reversed) : rows;
+  const filtered = status === "all" ? visible : visible.filter((r) => r.status === status);
   const from = (page - 1) * pageSize;
   return {
     rows: filtered.slice(from, from + pageSize),
@@ -1936,7 +1944,9 @@ function markHangVoided(rows: CardTxn[]): CardTxn[] {
     })),
   );
   if (!voided.size) return rows;
-  return rows.map((t) => (voided.has(String(t.id)) && t.status === "success" ? { ...t, status: "failed" } : t));
+  return rows.map((t) =>
+    voided.has(String(t.id)) && t.status !== "refund" ? { ...t, status: "failed", reversed: true } : t,
+  );
 }
 
 const ledgerHangCandidate = (r: { account_id: string | null; ref_id: string; title?: unknown; amount?: unknown; occurred_at?: unknown; detail?: any }) => ({
@@ -2333,6 +2343,8 @@ export async function fetchLedgerPage(opts: {
   accountId?: string;
   page?: number;
   pageSize?: number;
+  /** Employees never see reversed («معكوسة») attempts. */
+  hideReversed?: boolean;
 }): Promise<LedgerPage> {
   const db = await admin();
   const pageSize = Math.min(Math.max(opts.pageSize ?? 50, 10), 200);
@@ -2352,6 +2364,7 @@ export async function fetchLedgerPage(opts: {
   const applyScope = (q: any, g: string, st: string) => {
     let out = q;
     if (opts.accountId) out = out.eq("account_id", opts.accountId);
+    if (opts.hideReversed) out = out.or("status.is.null,status.neq.reversed");
     if (g === "txns" && st === "refund") out = out.eq("kind", "refund");
     else if (g === "txns" && st === "success") out = out.eq("kind", "card").eq("status", st);
     else if (g === "txns" && st === "failed") out = out.eq("kind", "card").in("status", ["failed", "reversed"]);
