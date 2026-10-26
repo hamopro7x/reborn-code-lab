@@ -651,6 +651,8 @@ export async function computeSpend(
     status: row.status,
     type: row.txn_type,
     currency: row.currency,
+    pan4: row.pan4,
+    merchant: row.merchant,
     detail: (row.detail ?? {}) as Record<string, unknown>,
   }));
 
