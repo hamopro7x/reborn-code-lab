@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { auditSpend, canonicalAmounts, canonicalize, getCanonicalTransactionIdentity, getMonthlySpendPeriod, sumSpend, sumSpendByCard, type SpendRow } from "./bybit-spend";
+import { auditSpend, canonicalAmounts, canonicalize, cardRecordOutcome, getCanonicalTransactionIdentity, getMonthlySpendPeriod, sumSpend, sumSpendByCard, type SpendRow } from "./bybit-spend";
 
 const MONTH_START = Date.UTC(2026, 7, 1);
 const DAY_START = Date.UTC(2026, 7, 17);
