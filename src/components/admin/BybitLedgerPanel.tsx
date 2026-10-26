@@ -321,7 +321,7 @@ const BAD_STATUS = new Set([
 export function statusBadge(kind: string, status: string) {
   const s = String(status || "").trim().toLowerCase();
   if (kind === "refund" || s === "refund" || s === "مسترد") return { cls: "bg-muted text-muted-foreground", text: "مسترد" };
-  if (s === "reversed" || s === "معكوسة") return { cls: "bg-amber-500/15 text-amber-400 line-through", text: "معكوسة" };
+  if (s === "reversed" || s === "معكوسة") return { cls: "bg-amber-500/15 text-amber-400", text: "معكوسة" };
   if (OK_STATUS.has(s)) return { cls: "bg-emerald-500/15 text-emerald-400", text: "ناجحة" };
   if (BAD_STATUS.has(s)) return { cls: "bg-red-500/15 text-red-400", text: "فاشلة" };
   if (s === "pending" || s === "قيد التنفيذ" || s === "0" || s === "1")
