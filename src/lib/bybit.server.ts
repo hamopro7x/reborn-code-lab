@@ -1958,8 +1958,11 @@ async function applyHangReversals(db: any, clean: LedgerInsert[]) {
   const cards = clean.filter((r) => r.kind === "card");
   if (!cards.length) return;
   try {
+    // Always look back over the last 3 days of stored rows: the fast tick only
+    // carries the newest records, so a voided attempt saved earlier (e.g. this
+    // morning) must still be compared and fixed — not only rows near this batch.
     const times = cards.map((r) => new Date(String(r.occurred_at)).getTime()).filter(Number.isFinite);
-    const since = Math.max(Math.min(...times) - 60_000, Date.now() - 3 * 86_400_000);
+    const since = Math.min(Math.min(...times) - 60_000, Date.now() - 3 * 86_400_000);
     const accounts = [...new Set(cards.map((r) => r.account_id).filter(Boolean))] as string[];
     const { data } = await db
       .from("bybit_ledger")
@@ -1967,6 +1970,7 @@ async function applyHangReversals(db: any, clean: LedgerInsert[]) {
       .eq("kind", "card")
       .in("account_id", accounts)
       .gte("occurred_at", new Date(since).toISOString())
+      .order("occurred_at", { ascending: false })
       .limit(5000);
     const stored = (data ?? []) as any[];
     const byId = new Map<string, any>();

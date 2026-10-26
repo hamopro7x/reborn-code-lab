@@ -504,3 +504,15 @@ describe("hung checkout retry («معكوسة»)", () => {
     expect(sumSpend([pend("a", T, 3.61, "6938"), pend("b", T + 2_000, 3.61, "7130")], 0, 0).monthSpend).toBeCloseTo(7.22, 5);
   });
 });
+
+describe("findHangReversals (central ledger)", () => {
+  it("marks the earlier pending attempt of a 3-second retry as reversed, keeps the retry", async () => {
+    const { findHangReversals } = await import("./bybit-spend");
+    const t = Date.UTC(2026, 9, 26, 2, 46, 31);
+    const voided = findHangReversals([
+      { id: "first", pan4: "7130", merchant: "TIKTOK", amount: 3.61, time: t, tradeStatus: "0", side: "1" },
+      { id: "retry", pan4: "7130", merchant: "TIKTOK", amount: 3.61, time: t + 3_000, tradeStatus: "0", side: "1" },
+    ]);
+    expect([...voided]).toEqual(["first"]);
+  });
+});
