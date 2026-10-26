@@ -622,7 +622,7 @@ export async function computeSpend(
     for (let offset = 0; offset < 200_000; offset += CHUNK) {
       let query = (db as any)
         .from("bybit_card_txns")
-        .select("txn_id, amount, currency, txn_time, status, txn_type, detail")
+        .select("txn_id, amount, currency, txn_time, status, txn_type, pan4, merchant, detail")
         .gte("txn_time", from)
         .order("txn_time", { ascending: false })
         .order("txn_id", { ascending: true })
@@ -1578,6 +1578,7 @@ export async function fetchCards(accountId?: string): Promise<BybitCard[]> {
       currency: t.currency,
       detail: (t.detail ?? {}) as Record<string, unknown>,
       pan4: String(t.pan4 ?? ""),
+      merchant: t.merchant,
     })) as Array<SpendRow & { pan4: string }>,
     (row) => (row as SpendRow & { pan4: string }).pan4,
     getMonthlySpendPeriod(Date.now()),
