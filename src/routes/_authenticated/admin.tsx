@@ -56,7 +56,6 @@ import { EmployeeDevices } from "@/components/admin/DeviceMonitorGrid";
 import { HeroBannerManager } from "@/components/admin/HeroBannerManager";
 import { FooterManager } from "@/components/admin/FooterManager";
 import { ensureSlug } from "@/lib/slug";
-import { HandControl } from "@/components/admin/HandControl";
 import { getPaymentIconUrl, preparePaymentIconUpload } from "@/lib/payments.functions";
 
 
@@ -229,7 +228,6 @@ function Admin() {
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background" dir="rtl">
-        {adminOnly && <HandControl />}
 
         <Sidebar side="right" collapsible="icon">
           <SidebarHeader className="p-0">
