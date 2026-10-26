@@ -391,13 +391,15 @@ export function canonicalize(rows: Iterable<SpendRow>): {
   const excluded: Array<{ row: SpendRow; canonicalId: string; reason: string }> = [];
   let lastTxnTime = 0;
   const seenRaw = new Set<string>();
+  const list = [...rows];
+  const hangVoided = findHangReversals(list.map(hangCandidateOfSpendRow));
 
-  for (const row of rows) {
+  for (const row of list) {
     const time = Number(row.time ?? 0);
     if (time > lastTxnTime) lastTxnTime = time;
 
     const canonicalId = getCanonicalTransactionIdentity(row);
-    const kind = spendKind(row);
+    const kind = hangVoided.has(text(row.txnId)) ? "excluded" : spendKind(row);
     if (kind === "excluded") {
       excluded.push({ row, canonicalId, reason: "refund/reversed/failed" });
       continue;
