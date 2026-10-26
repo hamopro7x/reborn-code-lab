@@ -468,7 +468,11 @@ async function fetchCardPages(maxRows: number, creds: Creds, sinceMs?: number, b
   let successfulTypes = 0;
   let lastError: unknown;
 
-  for (const [typeIndex, type] of CARD_QUERY_TYPES.entries()) {
+  // Walk REFUND first, then FINANCIAL, then AUTH. The time budget used to run
+  // out inside the long AUTH walk, so reversals («معكوسة») were never read and
+  // the stale authorisation snapshot stayed "success". Priority stays by type.
+  const order = [...CARD_QUERY_TYPES.entries()].reverse();
+  for (const [typeIndex, type] of order) {
     if (Date.now() > deadline) break;
     try {
       successfulTypes++;
