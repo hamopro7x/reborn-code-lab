@@ -1891,6 +1891,19 @@ async function upsertLedger(rows: LedgerInsert[], assign = true) {
     else saved += Math.min(500, pending.length - i);
   }
 
+  // Same Bybit record now reported as refund/reversal: the earlier "card" copy
+  // (same ref_id) must stop counting as a successful purchase.
+  const reversedRefs = clean.filter((r) => r.kind === "refund").map((r) => r.ref_id);
+  for (let i = 0; i < reversedRefs.length; i += 200) {
+    const { error } = await db
+      .from("bybit_ledger")
+      .update({ status: "reversed" })
+      .eq("kind", "card")
+      .in("ref_id", reversedRefs.slice(i, i + 200))
+      .neq("status", "reversed");
+    if (error) console.error("bybit_ledger reversal mark failed:", error.message);
+  }
+
   // Work-sheet layer: link the freshly mirrored movements to the open shift.
   // Never modifies ledger rows; failures here must not break the sync.
   if (!assign) return saved;
