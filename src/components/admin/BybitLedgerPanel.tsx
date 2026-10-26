@@ -4,7 +4,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ChevronDown } from "lucide-react";
 import { getBybitCardBrands, getBybitLedger, getBybitSpendTotals } from "@/lib/bybit.functions";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime as baseFormatDateTime } from "@/lib/format";
+import { DEMO_DAY, demoTime, setDemoDate, useDemoDate } from "@/lib/demo-date";
+
+const formatDateTime = (v: Parameters<typeof baseFormatDateTime>[0]) => baseFormatDateTime(demoTime(v));
 import { useLedgerAutoSync } from "@/lib/use-ledger-sync";
 
 /** Official USDT token logo from TrustWallet (works on Fly and Lovable). */
@@ -383,8 +386,10 @@ export function BybitLedgerPanel() {
   const t = totalsQ.data;
   const money = (n: unknown) => `$${Number(n ?? 0).toFixed(2)}`;
   /** Monthly cards state the cycle they cover, daily cards the weekday and day. */
-  const monthDate = cycleMonth(t?.monthEnd);
-  const dayDate = cycleDayLabel(t?.dayStart);
+  const demo = useDemoDate();
+  const demoNoonUtc = Date.UTC(DEMO_DAY.y, DEMO_DAY.m - 1, DEMO_DAY.d, 12);
+  const monthDate = cycleMonth(demo ? demoNoonUtc : t?.monthEnd);
+  const dayDate = cycleDayLabel(demo ? demoNoonUtc : t?.dayStart);
 
   return (
     <div className="relative z-10 space-y-3" dir="rtl">
@@ -405,6 +410,9 @@ export function BybitLedgerPanel() {
             </Chip>
           ))}
         </div>
+        <Chip active={demo} onClick={() => setDemoDate(!demo)}>
+          {demo ? `تاريخ تجربة ${DEMO_DAY.y}/${DEMO_DAY.m}/${DEMO_DAY.d} — إلغاء` : "تاريخ تجربة"}
+        </Chip>
       </div>
 
       {/* Aggregated spend / visa fees across every visa account */}
