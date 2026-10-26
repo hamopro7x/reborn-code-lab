@@ -111,7 +111,7 @@ export const getBybitCardTxns = createServerFn({ method: "POST" })
   }))
   .handler(async ({ data, context }) => {
     const role = await assertAccess(context.supabase, context.userId);
-    const hideReversed = role !== "admin";
+    const hideReversed = false; void role;
     const mod = await import("./bybit.server");
     // The visible table is a database archive, so reading it must not depend on
     // the account's current API key. A missing/restricted Bybit key previously
@@ -462,7 +462,7 @@ export const getBybitLedger = createServerFn({ method: "POST" })
     await runCyclePurge();
     const mod = await import("./bybit.server");
     if (data.page === 1) await mod.pullFromBybit();
-    return mod.fetchLedgerPage({ ...data, hideReversed: role !== "admin" });
+    return mod.fetchLedgerPage({ ...data, hideReversed: false });
   });
 
 export const syncBybitLedger = createServerFn({ method: "POST" })
