@@ -110,7 +110,8 @@ export const getBybitCardTxns = createServerFn({ method: "POST" })
     pageSize: Math.min(Math.max(Number(input?.pageSize ?? 150) || 150, 10), 500),
   }))
   .handler(async ({ data, context }) => {
-    await assertAccess(context.supabase, context.userId);
+    const role = await assertAccess(context.supabase, context.userId);
+    const hideReversed = role !== "admin";
     const mod = await import("./bybit.server");
     // The visible table is a database archive, so reading it must not depend on
     // the account's current API key. A missing/restricted Bybit key previously
@@ -121,6 +122,7 @@ export const getBybitCardTxns = createServerFn({ method: "POST" })
       status: data.status,
       page: data.page,
       pageSize: data.pageSize,
+      hideReversed,
     });
     // Monthly cycles empty the archive of each account at the cycle boundary.
     // Until that account's own sync has written the new cycle, read it live from
@@ -136,6 +138,7 @@ export const getBybitCardTxns = createServerFn({ method: "POST" })
           status: data.status,
           page: data.page,
           pageSize: data.pageSize,
+          hideReversed,
         });
       } catch (e) {
         console.error("live card txns fallback failed:", (e as Error)?.message);
@@ -450,7 +453,7 @@ export const getBybitLedger = createServerFn({ method: "POST" })
     pageSize: Math.min(Math.max(Number(input?.pageSize ?? 50) || 50, 10), 200),
   }))
   .handler(async ({ data, context }) => {
-    await assertAccess(context.supabase, context.userId);
+    const role = await assertAccess(context.supabase, context.userId);
     // Do not depend on an external scheduler: opening the central transaction
     // screen itself guarantees that closed-cycle rows are physically removed.
     // The purge has an internal six-hour guard, so normal two-second polling
@@ -459,7 +462,7 @@ export const getBybitLedger = createServerFn({ method: "POST" })
     await runCyclePurge();
     const mod = await import("./bybit.server");
     if (data.page === 1) await mod.pullFromBybit();
-    return mod.fetchLedgerPage(data);
+    return mod.fetchLedgerPage({ ...data, hideReversed: role !== "admin" });
   });
 
 export const syncBybitLedger = createServerFn({ method: "POST" })
