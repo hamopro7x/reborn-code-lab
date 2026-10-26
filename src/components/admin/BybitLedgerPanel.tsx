@@ -4,10 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ChevronDown } from "lucide-react";
 import { getBybitCardBrands, getBybitLedger, getBybitSpendTotals } from "@/lib/bybit.functions";
-import { formatDateTime as baseFormatDateTime } from "@/lib/format";
-import { DEMO_AMOUNTS, DEMO_DAY, demoTime, setDemoDate, useDemoDate } from "@/lib/demo-date";
-
-const formatDateTime = (v: Parameters<typeof baseFormatDateTime>[0]) => baseFormatDateTime(demoTime(v));
+import { formatDateTime } from "@/lib/format";
 import { useLedgerAutoSync } from "@/lib/use-ledger-sync";
 
 /** Official USDT token logo from TrustWallet (works on Fly and Lovable). */
@@ -386,10 +383,8 @@ export function BybitLedgerPanel() {
   const t = totalsQ.data;
   const money = (n: unknown) => `$${Number(n ?? 0).toFixed(2)}`;
   /** Monthly cards state the cycle they cover, daily cards the weekday and day. */
-  const demo = useDemoDate();
-  const demoNoonUtc = Date.UTC(DEMO_DAY.y, DEMO_DAY.m - 1, DEMO_DAY.d, 12);
-  const monthDate = cycleMonth(demo ? demoNoonUtc : t?.monthEnd);
-  const dayDate = cycleDayLabel(demo ? demoNoonUtc : t?.dayStart);
+  const monthDate = cycleMonth(t?.monthEnd);
+  const dayDate = cycleDayLabel(t?.dayStart);
 
   return (
     <div className="relative z-10 space-y-3" dir="rtl">
@@ -410,9 +405,6 @@ export function BybitLedgerPanel() {
             </Chip>
           ))}
         </div>
-        <Chip active={demo} onClick={() => setDemoDate(!demo)}>
-          {demo ? `تاريخ تجربة ${DEMO_DAY.y}/${DEMO_DAY.m}/${DEMO_DAY.d} — إلغاء` : "تاريخ تجربة"}
-        </Chip>
       </div>
 
       {/* Aggregated spend / visa fees across every visa account */}
@@ -420,14 +412,14 @@ export function BybitLedgerPanel() {
         <div className="rounded-2xl border border-border/60 bg-card/70 p-3">
           <div className="text-xs font-bold text-muted-foreground mb-2 px-1">الإنفاق</div>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Stat label="الإنفاق الشهري" value={money(demo ? DEMO_AMOUNTS.monthSpend : t?.monthSpend)} date={monthDate} />
-            <Stat label="الإنفاق اليومي" value={money(demo ? DEMO_AMOUNTS.daySpend : t?.daySpend)} date={dayDate} />
+            <Stat label="الإنفاق الشهري" value={money(t?.monthSpend)} date={monthDate} />
+            <Stat label="الإنفاق اليومي" value={money(t?.daySpend)} date={dayDate} />
           </div>
         </div>
         <div className="rounded-2xl border border-border/60 bg-card/70 p-3">
           <div className="text-xs font-bold text-muted-foreground mb-2 px-1">رسوم الفيزا</div>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Stat label="رسوم الفيزا الشهرية" value={money(demo ? DEMO_AMOUNTS.monthFees : t?.monthFees)} date={monthDate} />
+            <Stat label="رسوم الفيزا الشهرية" value={money(t?.monthFees)} date={monthDate} />
             <Stat label="رسوم الفيزا اليومية" value={money(t?.dayFees)} date={dayDate} />
           </div>
         </div>
