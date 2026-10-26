@@ -6,6 +6,7 @@ import {
   auditSpend,
   getCanonicalTransactionIdentity,
   getMonthlySpendPeriod,
+  cardRecordOutcome,
   type SpendRow,
 } from "./bybit-spend";
 
@@ -822,21 +823,13 @@ function stageOf(t: any): string | null {
 }
 
 function mapCardTxn(t: any): CardTxn {
-    const tradeStatus = String(t.tradeStatus ?? t.status ?? "");
-    const upper = tradeStatus.toUpperCase();
     const side = String(t.side ?? "");
-    const isRefund =
-      ["3", "5", "6", "7", "10", "11"].includes(side) ||
-      tradeStatus === "3" ||
-      /REFUND|REVERS|CHARGEBACK/.test(upper);
-    // Bybit only returns card rows that already reached a financial outcome.
-    // Anything that is not explicitly a refund or a decline is a real purchase,
-    // so we never surface "pending" for card transactions.
-    const status: CardTxn["status"] = isRefund
-      ? "refund"
-      : tradeStatus === "2" || /FAIL|DECLIN|REJECT|CANCEL/.test(upper)
-        ? "failed"
-        : "success";
+    // Shared rule (bybit-spend.cardRecordOutcome). A reversed («معكوسة»)
+    // authorisation was never charged, so it is stored as "failed" and never
+    // counts as a purchase — it used to fall through to "success".
+    const outcome = cardRecordOutcome(t.tradeStatus ?? t.status, side);
+    const status: CardTxn["status"] =
+      outcome === "refund" ? "refund" : outcome === "ok" ? "success" : "failed";
 
 
     return {
@@ -1070,24 +1063,18 @@ async function storedCardTxns(limit: number, accountId?: string): Promise<CardTx
 /** Maps one archived row to the shape the UI reads. */
 function mapStoredRow(r: any): CardTxn {
   const detail = (r.detail ?? {}) as Record<string, string | number | null>;
-  const tradeStatus = String(detail.tradeStatus ?? "");
-  const upper = tradeStatus.toUpperCase();
   const side = String(detail.side ?? r.txn_type ?? "");
-  const isRefund =
-    ["3", "5", "6", "7", "10", "11"].includes(side) ||
-    tradeStatus === "3" ||
-    /REFUND|REVERS|CHARGEBACK/.test(upper);
-  // The status persisted at ingest time is the source of truth. A stored
-  // "pending" is a stale authorisation snapshot, so it is re-derived below and
-  // card rows never render as pending.
+  const outcome = cardRecordOutcome(detail.tradeStatus, side);
+  // Bybit's own raw status wins whenever it says refund / reversed / failed:
+  // older rows were stored as "success" while Bybit had reversed them.
   const stored: CardTxn["status"] | null =
     r.status === "success" || r.status === "failed" || r.status === "refund" ? r.status : null;
-  const derived: CardTxn["status"] = isRefund
-    ? "refund"
-    : tradeStatus === "2" || /FAIL|DECLIN|REJECT|CANCEL/.test(upper)
-      ? "failed"
-      : "success";
-  const status: CardTxn["status"] = isRefund ? "refund" : (stored ?? derived);
+  const status: CardTxn["status"] =
+    outcome === "refund"
+      ? "refund"
+      : outcome === "reversed" || outcome === "failed"
+        ? "failed"
+        : (stored ?? "success");
 
 
 
