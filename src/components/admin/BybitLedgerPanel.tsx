@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { ChevronDown } from "lucide-react";
 import { getBybitCardBrands, getBybitLedger, getBybitSpendTotals } from "@/lib/bybit.functions";
 import { formatDateTime as baseFormatDateTime } from "@/lib/format";
-import { DEMO_DAY, demoTime, setDemoDate, useDemoDate } from "@/lib/demo-date";
+import { DEMO_AMOUNTS, DEMO_DAY, demoTime, setDemoDate, useDemoDate } from "@/lib/demo-date";
 
 const formatDateTime = (v: Parameters<typeof baseFormatDateTime>[0]) => baseFormatDateTime(demoTime(v));
 import { useLedgerAutoSync } from "@/lib/use-ledger-sync";
@@ -420,14 +420,14 @@ export function BybitLedgerPanel() {
         <div className="rounded-2xl border border-border/60 bg-card/70 p-3">
           <div className="text-xs font-bold text-muted-foreground mb-2 px-1">الإنفاق</div>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Stat label="الإنفاق الشهري" value={money(t?.monthSpend)} date={monthDate} />
-            <Stat label="الإنفاق اليومي" value={money(t?.daySpend)} date={dayDate} />
+            <Stat label="الإنفاق الشهري" value={money(demo ? DEMO_AMOUNTS.monthSpend : t?.monthSpend)} date={monthDate} />
+            <Stat label="الإنفاق اليومي" value={money(demo ? DEMO_AMOUNTS.daySpend : t?.daySpend)} date={dayDate} />
           </div>
         </div>
         <div className="rounded-2xl border border-border/60 bg-card/70 p-3">
           <div className="text-xs font-bold text-muted-foreground mb-2 px-1">رسوم الفيزا</div>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Stat label="رسوم الفيزا الشهرية" value={money(t?.monthFees)} date={monthDate} />
+            <Stat label="رسوم الفيزا الشهرية" value={money(demo ? DEMO_AMOUNTS.monthFees : t?.monthFees)} date={monthDate} />
             <Stat label="رسوم الفيزا اليومية" value={money(t?.dayFees)} date={dayDate} />
           </div>
         </div>

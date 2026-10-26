@@ -14,7 +14,7 @@ import {
   listBybitAccounts, addBybitAccount, removeBybitAccount, updateBybitAccount, reorderBybitAccounts,
 } from "@/lib/bybit.functions";
 import { formatDateTime as baseFormatDateTime } from "@/lib/format";
-import { demoTime, useDemoDate } from "@/lib/demo-date";
+import { DEMO_AMOUNTS, demoTime, useDemoDate } from "@/lib/demo-date";
 
 const formatDateTime = (v: Parameters<typeof baseFormatDateTime>[0]) => baseFormatDateTime(demoTime(v));
 import { BybitDocsCard } from "@/components/admin/BybitDocs";
@@ -1205,14 +1205,14 @@ function BybitAccountView({ isAdmin, accountId, accountName, onBack }: { isAdmin
           <div className="rounded-2xl border border-border/60 bg-card/70 p-3">
             <div className="text-xs font-bold text-muted-foreground mb-2 px-1">الإنفاق</div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <Stat label="الإنفاق الشهري" value={`$${monthSpend.toFixed(2)}`} />
-              <Stat label="الإنفاق اليومي" value={`$${daySpend.toFixed(2)}`} />
+              <Stat label="الإنفاق الشهري" value={`$${(demoOn ? DEMO_AMOUNTS.monthSpend : monthSpend).toFixed(2)}`} />
+              <Stat label="الإنفاق اليومي" value={`$${(demoOn ? DEMO_AMOUNTS.daySpend : daySpend).toFixed(2)}`} />
             </div>
           </div>
           <div className="rounded-2xl border border-border/60 bg-card/70 p-3">
             <div className="text-xs font-bold text-muted-foreground mb-2 px-1">رسوم الفيزا</div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <Stat label="رسوم الفيزا الشهرية" value={`$${monthFees.toFixed(2)}`} />
+              <Stat label="رسوم الفيزا الشهرية" value={`$${(demoOn ? DEMO_AMOUNTS.monthFees : monthFees).toFixed(2)}`} />
               <Stat label="رسوم الفيزا اليومية" value={`$${dayFees.toFixed(2)}`} />
             </div>
           </div>
