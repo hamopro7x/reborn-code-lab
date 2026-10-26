@@ -58,3 +58,6 @@ export function demoTime<T extends string | number | Date | null | undefined>(va
   if (isNaN(d.getTime())) return value;
   return new Date(DEMO_DAY.y, DEMO_DAY.m - 1, DEMO_DAY.d, d.getHours(), d.getMinutes(), d.getSeconds()).getTime();
 }
+
+/** Display-only demo amounts shown on the spend/fee cards while demo date is on. */
+export const DEMO_AMOUNTS = { monthSpend: 1980, daySpend: 96, monthFees: 0.5 };
