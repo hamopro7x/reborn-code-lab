@@ -468,7 +468,11 @@ async function fetchCardPages(maxRows: number, creds: Creds, sinceMs?: number, b
   let successfulTypes = 0;
   let lastError: unknown;
 
-  for (const [typeIndex, type] of CARD_QUERY_TYPES.entries()) {
+  // Walk REFUND first, then FINANCIAL, then AUTH. The time budget used to run
+  // out inside the long AUTH walk, so reversals («معكوسة») were never read and
+  // the stale authorisation snapshot stayed "success". Priority stays by type.
+  const order = [...CARD_QUERY_TYPES.entries()].reverse();
+  for (const [typeIndex, type] of order) {
     if (Date.now() > deadline) break;
     try {
       successfulTypes++;
@@ -1885,6 +1889,19 @@ async function upsertLedger(rows: LedgerInsert[], assign = true) {
       .upsert(pending.slice(i, i + 500), { onConflict: "account_id,kind,ref_id" });
     if (error) console.error("bybit_ledger upsert failed:", error.message);
     else saved += Math.min(500, pending.length - i);
+  }
+
+  // Same Bybit record now reported as refund/reversal: the earlier "card" copy
+  // (same ref_id) must stop counting as a successful purchase.
+  const reversedRefs = clean.filter((r) => r.kind === "refund").map((r) => r.ref_id);
+  for (let i = 0; i < reversedRefs.length; i += 200) {
+    const { error } = await db
+      .from("bybit_ledger")
+      .update({ status: "reversed" })
+      .eq("kind", "card")
+      .in("ref_id", reversedRefs.slice(i, i + 200))
+      .neq("status", "reversed");
+    if (error) console.error("bybit_ledger reversal mark failed:", error.message);
   }
 
   // Work-sheet layer: link the freshly mirrored movements to the open shift.
