@@ -98,24 +98,46 @@ export const spendIdentity = getCanonicalTransactionIdentity;
 
 type Kind = "settled" | "authorised" | "excluded";
 
+/**
+ * Outcome of ONE raw card record, read only from Bybit's own fields.
+ * The single rule used by the archive, the central ledger, the shift sheet and
+ * every spend total.
+ *  - "reversed": Bybit «معكوسة» — the authorisation was voided, nothing was
+ *    charged (tradeStatus "4", or a REVERS/VOID status text).
+ *  - "refund":   money returned (refund side, tradeStatus "3"/"5", REFUND text).
+ *  - "failed":   declined / cancelled.
+ */
+export type CardOutcome = "ok" | "reversed" | "refund" | "failed";
+
+export function cardRecordOutcome(tradeStatus: unknown, side: unknown): CardOutcome {
+  const ts = text(tradeStatus).trim();
+  const up = ts.toUpperCase();
+  if (REFUND_SIDES.has(text(side).trim())) return "refund";
+  if (ts === "4" || /REVERS|VOID/.test(up)) return "reversed";
+  if (ts === "3" || ts === "5" || /REFUND|CHARGEBACK/.test(up)) return "refund";
+  if (ts === "2" || /FAIL|DECLIN|REJECT|CANCEL|EXPIRE/.test(up)) return "failed";
+  return "ok";
+}
+
 /** Classifies a row using Bybit's own status fields, never a stored guess. */
 export function spendKind(row: SpendRow): Kind {
   const d = row.detail ?? {};
   const side = text(d["side"]) || text(row.type);
-  if (REFUND_SIDES.has(side)) return "excluded";
+  if (cardRecordOutcome(d["tradeStatus"], side) !== "ok") return "excluded";
 
   const stored = text(row.status).toLowerCase();
-  if (stored === "refund" || stored === "failed") return "excluded";
+  if (stored === "refund" || stored === "failed" || stored === "reversed") return "excluded";
 
   const trade = text(d["tradeStatus"]);
-  if (trade === "3") return "excluded"; // reversed
-  if (trade === "2") return "excluded"; // failed / declined
   if (trade === "1") return "settled";
   if (trade === "0") return "authorised";
 
   // No raw trade status stored (older archive rows): trust the mapped status.
   return stored === "success" ? "settled" : "excluded";
 }
+
+/** A business identity (paymentId/orderNo/...) — not a record id or a guess. */
+const isBusinessIdentity = (id: string) => IDENTITY_KEYS.some((k) => id.startsWith(`${k}:`));
 
 /**
  * Fees embedded in a purchase (foreign transaction fee, handling fee, ...).
@@ -346,6 +368,17 @@ export function canonicalize(rows: Iterable<SpendRow>): {
       current.kind = kind;
       current.amounts = canonicalAmounts(row);
     }
+  }
+
+  // A reversal record that shares the business id of a purchase that was only
+  // authorised (never settled) voids that purchase: Bybit shows it struck
+  // through as «معكوسة» and nothing was charged.
+  for (const ex of excluded) {
+    if (!isBusinessIdentity(ex.canonicalId)) continue;
+    const d = ex.row.detail ?? {};
+    if (cardRecordOutcome(d["tradeStatus"], text(d["side"]) || text(ex.row.type)) === "failed") continue;
+    const txn = transactions.get(ex.canonicalId);
+    if (txn && txn.kind === "authorised") transactions.delete(ex.canonicalId);
   }
 
   return { transactions, excluded, lastTxnTime };
