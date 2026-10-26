@@ -7,6 +7,7 @@ import {
   getCanonicalTransactionIdentity,
   getMonthlySpendPeriod,
   cardRecordOutcome,
+  findHangReversals,
   type SpendRow,
 } from "./bybit-spend";
 
@@ -1060,7 +1061,7 @@ async function storedCardTxns(limit: number, accountId?: string): Promise<CardTx
       data.push(...rows);
       if (rows.length < CHUNK * BATCH) break;
     }
-    return data.map(mapStoredRow);
+    return markHangVoided(data.map(mapStoredRow));
   } catch {
     return [];
   }
@@ -1884,6 +1885,7 @@ async function upsertLedger(rows: LedgerInsert[], assign = true) {
 
   const db = await admin();
   let saved = 0;
+  await applyHangReversals(db, clean);
   // نكتب الجديد والمتغيّر فقط: لا إعادة كتابة لكل السجل في كل دورة.
   const pending = await changedLedgerRows(db, clean);
   for (let i = 0; i < pending.length; i += 500) {
@@ -1919,6 +1921,80 @@ async function upsertLedger(rows: LedgerInsert[], assign = true) {
   return saved;
 }
 
+
+/** Archive rows → hung-retry voids («معكوسة») shown as failed, like Bybit. */
+function markHangVoided(rows: CardTxn[]): CardTxn[] {
+  const voided = findHangReversals(
+    rows.map((t) => ({
+      id: String(t.id),
+      pan4: t.pan4,
+      merchant: t.merchant,
+      amount: Math.abs(num(t.amount)),
+      time: Number(t.time ?? 0),
+      tradeStatus: t.detail?.["tradeStatus"],
+      side: t.detail?.["side"] ?? t.type,
+    })),
+  );
+  if (!voided.size) return rows;
+  return rows.map((t) => (voided.has(String(t.id)) && t.status === "success" ? { ...t, status: "failed" } : t));
+}
+
+const ledgerHangCandidate = (r: { account_id: string | null; ref_id: string; title?: unknown; amount?: unknown; occurred_at?: unknown; detail?: any }) => ({
+  id: `${r.account_id ?? ""}|${r.ref_id}`,
+  pan4: `${r.account_id ?? ""}|${String(r.detail?.pan4 ?? "")}`,
+  merchant: r.title ?? r.detail?.merchantName,
+  amount: Math.abs(num(r.amount)),
+  time: new Date(String(r.occurred_at ?? "")).getTime(),
+  tradeStatus: r.detail?.tradeStatus,
+  side: r.detail?.side ?? r.detail?.type,
+});
+
+/**
+ * Hung checkout retries: the first, voided attempt becomes «معكوسة» in the
+ * central ledger (and therefore leaves the shift sheet). Compares the incoming
+ * rows with recent stored rows so a pair split across two syncs is still found.
+ */
+async function applyHangReversals(db: any, clean: LedgerInsert[]) {
+  const cards = clean.filter((r) => r.kind === "card");
+  if (!cards.length) return;
+  try {
+    const times = cards.map((r) => new Date(String(r.occurred_at)).getTime()).filter(Number.isFinite);
+    const since = Math.max(Math.min(...times) - 60_000, Date.now() - 3 * 86_400_000);
+    const accounts = [...new Set(cards.map((r) => r.account_id).filter(Boolean))] as string[];
+    const { data } = await db
+      .from("bybit_ledger")
+      .select("account_id, ref_id, title, amount, occurred_at, status, detail")
+      .eq("kind", "card")
+      .in("account_id", accounts)
+      .gte("occurred_at", new Date(since).toISOString())
+      .limit(5000);
+    const stored = (data ?? []) as any[];
+    const byId = new Map<string, any>();
+    for (const r of stored) byId.set(`${r.account_id ?? ""}|${r.ref_id}`, r);
+    for (const r of cards) byId.set(`${r.account_id ?? ""}|${r.ref_id}`, r);
+    const voided = findHangReversals([...byId.values()].map(ledgerHangCandidate));
+    if (!voided.size) return;
+    const incoming = new Set<string>();
+    for (const r of cards) {
+      const id = `${r.account_id ?? ""}|${r.ref_id}`;
+      incoming.add(id);
+      if (voided.has(id)) (r as any).status = "reversed";
+    }
+    for (const r of stored) {
+      const id = `${r.account_id ?? ""}|${r.ref_id}`;
+      if (!voided.has(id) || incoming.has(id) || r.status === "reversed") continue;
+      const { error } = await db
+        .from("bybit_ledger")
+        .update({ status: "reversed" })
+        .eq("account_id", r.account_id)
+        .eq("kind", "card")
+        .eq("ref_id", r.ref_id);
+      if (error) console.error("bybit_ledger hang reversal failed:", error.message);
+    }
+  } catch (e) {
+    console.error("hang reversal check skipped:", (e as Error)?.message);
+  }
+}
 
 /** One central-ledger row built from one archived card record (single source of truth). */
 function cardLedgerRow(accountId: string, c: any): LedgerInsert {
