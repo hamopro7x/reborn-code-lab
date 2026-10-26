@@ -13,7 +13,10 @@ import {
   createBybitCard, deleteBybitCard, updateBybitCard, getBybitAccountInfo, saveBybitAccountInfo,
   listBybitAccounts, addBybitAccount, removeBybitAccount, updateBybitAccount, reorderBybitAccounts,
 } from "@/lib/bybit.functions";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime as baseFormatDateTime } from "@/lib/format";
+import { demoTime, useDemoDate } from "@/lib/demo-date";
+
+const formatDateTime = (v: Parameters<typeof baseFormatDateTime>[0]) => baseFormatDateTime(demoTime(v));
 import { BybitDocsCard } from "@/components/admin/BybitDocs";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -315,6 +318,7 @@ type BybitAccountRow = {
 };
 
 export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
+  useDemoDate();
 
   const qc = useQueryClient();
   const listFn = useServerFn(listBybitAccounts);
