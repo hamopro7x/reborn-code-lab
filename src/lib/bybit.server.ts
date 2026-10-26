@@ -1904,8 +1904,11 @@ async function upsertLedger(rows: LedgerInsert[], assign = true) {
 function cardLedgerRow(accountId: string, c: any): LedgerInsert {
   const t = mapStoredRow(c);
   // This is the exact normalized row shown by the account's internal log.
-  // Do not derive a second status specifically for the central ledger.
-  const status = t.status;
+  // A reversed authorisation is labelled "reversed" («معكوسة») like Bybit; it
+  // is not a successful status, so the shift sheet never counts it.
+  const reversed =
+    cardRecordOutcome(t.detail?.["tradeStatus"], t.detail?.["side"] ?? t.type) === "reversed";
+  const status: string = reversed ? "reversed" : t.status;
   const isRefund = status === "refund";
   const src = (t.detail ?? {}) as Record<string, any>;
   const { raw: _raw, ...original } = src;
@@ -2250,7 +2253,8 @@ export async function fetchLedgerPage(opts: {
     let out = q;
     if (opts.accountId) out = out.eq("account_id", opts.accountId);
     if (g === "txns" && st === "refund") out = out.eq("kind", "refund");
-    else if (g === "txns" && (st === "success" || st === "failed")) out = out.eq("kind", "card").eq("status", st);
+    else if (g === "txns" && st === "success") out = out.eq("kind", "card").eq("status", st);
+    else if (g === "txns" && st === "failed") out = out.eq("kind", "card").in("status", ["failed", "reversed"]);
     else if (g !== "txns" && SUB_KIND[st] && (GROUP_KINDS[g] as string[]).includes(SUB_KIND[st]!))
       out = out.eq("kind", SUB_KIND[st]!);
     else out = out.in("kind", GROUP_KINDS[g] as string[]);
