@@ -476,3 +476,31 @@ describe("reversed («معكوسة») card records", () => {
     expect(cardRecordOutcome("1", "1")).toBe("ok");
   });
 });
+
+describe("hung checkout retry («معكوسة»)", () => {
+  const T = Date.UTC(2026, 9, 26, 14, 46, 31);
+  const pend = (txnId: string, time: number, amount = 3.61, pan4 = "6938") =>
+    row({
+      txnId,
+      amount,
+      time,
+      pan4,
+      merchant: "PAYPAL *TIKTOK INC",
+      detail: { tradeStatus: "0", side: "1", basicAmount: amount, basicCurrency: "USD" },
+    });
+
+  it("voids the first attempt when the same charge repeats 3 seconds later", () => {
+    const totals = sumSpend([pend("a", T), pend("b", T + 3_000)], 0, 0);
+    expect(totals.monthSpend).toBeCloseTo(3.61, 5);
+  });
+
+  it("keeps both purchases when they are more than 20 seconds apart", () => {
+    const totals = sumSpend([pend("a", T), pend("b", T + 21_000)], 0, 0);
+    expect(totals.monthSpend).toBeCloseTo(7.22, 5);
+  });
+
+  it("keeps both when the amounts differ or the cards differ", () => {
+    expect(sumSpend([pend("a", T), pend("b", T + 2_000, 5.15)], 0, 0).monthSpend).toBeCloseTo(8.76, 5);
+    expect(sumSpend([pend("a", T, 3.61, "6938"), pend("b", T + 2_000, 3.61, "7130")], 0, 0).monthSpend).toBeCloseTo(7.22, 5);
+  });
+});
