@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { auditSpend, canonicalAmounts, canonicalize, getCanonicalTransactionIdentity, getMonthlySpendPeriod, sumSpend, sumSpendByCard, type SpendRow } from "./bybit-spend";
+import { auditSpend, canonicalAmounts, canonicalize, cardRecordOutcome, getCanonicalTransactionIdentity, getMonthlySpendPeriod, sumSpend, sumSpendByCard, type SpendRow } from "./bybit-spend";
 
 const MONTH_START = Date.UTC(2026, 7, 1);
 const DAY_START = Date.UTC(2026, 7, 17);
@@ -444,5 +444,35 @@ describe("Bybit monthly spend cycle (getMonthlySpendPeriod)", () => {
     const cardTotal = [...perCard.values()].reduce((s, c) => s + c.monthSpend, 0);
     expect(cardTotal).toBeCloseTo(account.monthSpend, 10);
     expect(cardTotal).toBe(20);
+  });
+});
+
+describe("reversed («معكوسة») card records", () => {
+  it("never counts a reversed authorisation (tradeStatus 4)", () => {
+    const t = sumSpend(
+      [row({ txnId: "rv1", amount: 3.61, time: DAY_START + 1000, detail: { tradeStatus: "4", side: "1", paymentId: "RV1", basicAmount: 3.61, basicCurrency: "USD" } })],
+      DAY_START,
+      MONTH_START,
+    );
+    expect(t.daySpend).toBe(0);
+  });
+
+  it("a reversal sharing the purchase id voids the unsettled authorisation, the retry still counts", () => {
+    const t = sumSpend(
+      [
+        row({ txnId: "a1", amount: 3.61, time: DAY_START + 1000, detail: { tradeStatus: "0", side: "1", paymentId: "PAY-A", basicAmount: 3.61, basicCurrency: "USD" } }),
+        row({ txnId: "a1-rev", amount: 3.61, time: DAY_START + 1500, detail: { tradeStatus: "1", side: "3", paymentId: "PAY-A", basicAmount: 3.61, basicCurrency: "USD" } }),
+        row({ txnId: "a2", amount: 3.61, time: DAY_START + 4000, detail: { tradeStatus: "0", side: "1", paymentId: "PAY-B", basicAmount: 3.61, basicCurrency: "USD" } }),
+      ],
+      DAY_START,
+      MONTH_START,
+    );
+    expect(t.daySpend).toBeCloseTo(3.61, 2);
+    expect(t.countedTxns).toBe(1);
+  });
+
+  it("classifies tradeStatus 4 as reversed, not a purchase", () => {
+    expect(cardRecordOutcome("4", "1")).toBe("reversed");
+    expect(cardRecordOutcome("1", "1")).toBe("ok");
   });
 });
