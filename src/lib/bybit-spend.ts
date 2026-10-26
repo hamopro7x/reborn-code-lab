@@ -44,6 +44,8 @@ export type SpendRow = {
   status?: unknown;
   type?: unknown;
   currency?: unknown;
+  pan4?: unknown;
+  merchant?: unknown;
   detail?: Record<string, unknown> | null;
 };
 
@@ -117,6 +119,66 @@ export function cardRecordOutcome(tradeStatus: unknown, side: unknown): CardOutc
   if (ts === "3" || ts === "5" || /REFUND|CHARGEBACK/.test(up)) return "refund";
   if (ts === "2" || /FAIL|DECLIN|REJECT|CANCEL|EXPIRE/.test(up)) return "failed";
   return "ok";
+}
+
+/**
+ * Hung checkout retry («معكوسة»). When a PayPal/TikTok checkout hangs, the
+ * merchant fires the SAME charge again seconds later and Bybit voids the first
+ * authorisation. Bybit's API keeps returning that first record as a plain
+ * pending purchase (tradeStatus "0"), so the void is recognised by its shape:
+ * an unsettled authorisation followed, on the same card, by another purchase
+ * at the same merchant for the exact same amount within this window.
+ */
+export const HANG_RETRY_WINDOW_MS = 20_000;
+
+export type HangCandidate = {
+  id: string;
+  pan4: unknown;
+  merchant: unknown;
+  amount: number;
+  time: number;
+  tradeStatus: unknown;
+  side: unknown;
+};
+
+/** Ids of the voided first attempts. Pure; shared by archive, ledger, sheet and spend. */
+export function findHangReversals(rows: Iterable<HangCandidate>, windowMs = HANG_RETRY_WINDOW_MS): Set<string> {
+  const groups = new Map<string, HangCandidate[]>();
+  for (const r of rows) {
+    if (!r.id || !Number.isFinite(r.time) || r.time <= 0) continue;
+    if (cardRecordOutcome(r.tradeStatus, r.side) !== "ok") continue;
+    const cents = Math.round(Math.abs(Number(r.amount) || 0) * 100);
+    if (!cents) continue;
+    const key = `${text(r.pan4).trim()}|${text(r.merchant).trim().toUpperCase()}|${cents}`;
+    const list = groups.get(key) ?? [];
+    list.push(r);
+    groups.set(key, list);
+  }
+  const out = new Set<string>();
+  for (const list of groups.values()) {
+    if (list.length < 2) continue;
+    list.sort((a, b) => a.time - b.time);
+    for (let i = 0; i < list.length - 1; i++) {
+      const first = list[i];
+      if (text(first.tradeStatus).trim() !== "0") continue; // settled purchases are never voided
+      const next = list.slice(i + 1).find((r) => r.id !== first.id && r.time > first.time);
+      if (next && next.time - first.time <= windowMs) out.add(first.id);
+    }
+  }
+  return out;
+}
+
+function hangCandidateOfSpendRow(row: SpendRow): HangCandidate {
+  const d = row.detail ?? {};
+  return {
+    id: text(row.txnId),
+    pan4: row.pan4 ?? d["pan4"],
+    merchant: row.merchant ?? d["merchantName"] ?? d["merchName"],
+    amount: Math.abs(Number(row.amount) || 0),
+    time: Number(row.time ?? 0),
+    tradeStatus: d["tradeStatus"],
+    side: text(d["side"]) || text(row.type),
+  };
 }
 
 /** Classifies a row using Bybit's own status fields, never a stored guess. */
@@ -329,13 +391,15 @@ export function canonicalize(rows: Iterable<SpendRow>): {
   const excluded: Array<{ row: SpendRow; canonicalId: string; reason: string }> = [];
   let lastTxnTime = 0;
   const seenRaw = new Set<string>();
+  const list = [...rows];
+  const hangVoided = findHangReversals(list.map(hangCandidateOfSpendRow));
 
-  for (const row of rows) {
+  for (const row of list) {
     const time = Number(row.time ?? 0);
     if (time > lastTxnTime) lastTxnTime = time;
 
     const canonicalId = getCanonicalTransactionIdentity(row);
-    const kind = spendKind(row);
+    const kind = hangVoided.has(text(row.txnId)) ? "excluded" : spendKind(row);
     if (kind === "excluded") {
       excluded.push({ row, canonicalId, reason: "refund/reversed/failed" });
       continue;
