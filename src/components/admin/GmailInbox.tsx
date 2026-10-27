@@ -233,7 +233,6 @@ function ThreadView({ id, isAdmin, accounts, labels, onBack }: { id: string; isA
   const attFn = useServerFn(downloadMailAttachment);
   const q = useQuery({ queryKey: ["mail-thread", id], queryFn: () => getFn({ data: { id } }) });
   const [replyTo, setReplyTo] = useState<any | null>(null);
-  const [showRemote, setShowRemote] = useState(false);
   useEffect(() => { qc.invalidateQueries({ queryKey: ["mail-msgs"] }); }, [q.data, qc]);
   const msg = q.data?.thread.find((m: any) => m.id === id);
   const acct = accounts.find((a) => a.id === msg?.account_id);
@@ -299,7 +298,7 @@ function ThreadView({ id, isAdmin, accounts, labels, onBack }: { id: string; isA
             {m.body_html ? (
               <iframe title="email" sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin" scrolling="no"
                 className="w-full rounded-md border border-border bg-background"
-                srcDoc={showRemote ? safeEmailDocument(m.body_html).replace("img-src data: cid:", "img-src data: cid: https:") : safeEmailDocument(m.body_html)}
+                srcDoc={safeEmailDocument(m.body_html)}
                 onLoad={(e) => {
                   const f = e.currentTarget;
                   try {
