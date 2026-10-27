@@ -69,9 +69,9 @@ export function MailNotifier({ onOpen }: { onOpen?: (messageId: string) => void 
   const handled = useRef(new Set<string>());
   useMailRealtime();
   useEffect(() => {
-    const fresh = (q.data?.fresh ?? []).filter((n) => !handled.current.has(n.id));
+    const fresh = (q.data?.fresh ?? []).filter((n: any) => !handled.current.has(n.id));
     if (!fresh.length) return;
-    fresh.forEach((n) => handled.current.add(n.id));
+    fresh.forEach((n: any) => handled.current.add(n.id));
     beep();
     for (const n of fresh.slice(0, 3)) {
       toast(`رسالة جديدة من ${sender(n.from)}`, { description: n.subject || "(بدون عنوان)", action: onOpen ? { label: "فتح", onClick: () => onOpen(n.messageId) } : undefined });
@@ -81,7 +81,7 @@ export function MailNotifier({ onOpen }: { onOpen?: (messageId: string) => void 
         sys.onclick = () => { window.focus(); onOpen?.(n.messageId); sys.close(); };
       }
     }
-    seenFn({ data: { ids: fresh.map((n) => n.id) } }).catch(() => {});
+    seenFn({ data: { ids: fresh.map((n: any) => n.id) } }).catch(() => {});
   }, [q.data, onOpen, seenFn]);
   return null;
 }
