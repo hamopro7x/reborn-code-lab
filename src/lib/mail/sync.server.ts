@@ -3,7 +3,6 @@ import { accessTokenFor, gmail, GmailHttpError, ReauthError } from "./google.ser
 import { folderFromLabels, header, parsePayload } from "./mime";
 
 const LEASE_MS = 90_000;
-const MAX_NEW_PER_RUN = 100;
 
 export async function logActivity(admin: any, row: { actor_id?: string | null; action: string; account_id?: string | null; message_id?: string | null; meta?: any }) {
   await admin.from("mail_activity").insert({ meta: {}, ...row });
@@ -67,64 +66,145 @@ export async function importMessage(admin: any, token: string, account: any, gma
 }
 
 async function removeLocal(admin: any, accountId: string, gmailIds: string[]) {
-  if (!gmailIds.length) return;
-  await admin.from("mail_messages").delete().eq("account_id", accountId).in("gmail_message_id", gmailIds);
+  for (let i = 0; i < gmailIds.length; i += 100) {
+    const { error } = await admin.from("mail_messages").delete().eq("account_id", accountId).in("gmail_message_id", gmailIds.slice(i, i + 100));
+    if (error) throw new Error(error.message);
+  }
+}
+
+/** Ids already stored or tombstoned, so replays never re-fetch them from Gmail. */
+async function knownIds(admin: any, accountId: string, ids: string[]): Promise<Set<string>> {
+  const known = new Set<string>();
+  for (let i = 0; i < ids.length; i += 200) {
+    const chunk = ids.slice(i, i + 200);
+    const [a, b] = await Promise.all([
+      admin.from("mail_messages").select("gmail_message_id").eq("account_id", accountId).in("gmail_message_id", chunk),
+      admin.from("mail_local_tombstones").select("gmail_message_id").eq("account_id", accountId).in("gmail_message_id", chunk),
+    ]);
+    if (a.error || b.error) throw new Error((a.error ?? b.error).message);
+    for (const r of [...(a.data ?? []), ...(b.data ?? [])]) known.add(r.gmail_message_id);
+  }
+  return known;
+}
+
+// Each run has a time budget below the lease. Every page is processed fully; the history cursor
+// only advances after the LAST page succeeds. If the budget runs out, the cursor stays put and the
+// next run replays the same pages — already-imported ids are skipped without Gmail calls, so
+// every run makes guaranteed forward progress and nothing is skipped.
+const RUN_BUDGET_MS = 55_000;
+
+async function importIds(admin: any, token: string, account: any, ids: string[], deadline: number) {
+  const known = await knownIds(admin, account.id, ids);
+  let imported = 0;
+  for (const id of ids) {
+    if (known.has(id)) continue;
+    if (Date.now() > deadline) return { imported, complete: false };
+    if (await importMessage(admin, token, account, id)) imported++;
+  }
+  return { imported, complete: true };
 }
 
 async function syncAccount(admin: any, account: any) {
+  const deadline = Date.now() + RUN_BUDGET_MS;
   const token = await accessTokenFor(admin, account.id);
-  let historyId: string | null = account.history_id;
   let imported = 0;
-  if (!historyId) {
-    const p = await gmail(token, "/profile");
-    historyId = String(p.historyId);
-  }
-  try {
-    let pageToken: string | undefined;
-    let latest = historyId;
-    do {
-      const qs = new URLSearchParams({ startHistoryId: historyId!, maxResults: "200" });
-      for (const t of ["messageAdded", "messageDeleted", "labelAdded"]) qs.append("historyTypes", t);
-      if (pageToken) qs.set("pageToken", pageToken);
-      const h = await gmail(token, `/history?${qs}`);
-      latest = String(h.historyId ?? latest);
-      const deleted: string[] = [];
-      for (const rec of h.history ?? []) {
-        for (const d of rec.messagesDeleted ?? []) deleted.push(d.message.id);
-        for (const l of rec.labelsAdded ?? []) if ((l.labelIds ?? []).includes("TRASH")) deleted.push(l.message.id);
-      }
-      await removeLocal(admin, account.id, deleted);
-      const deletedSet = new Set(deleted);
-      for (const rec of h.history ?? []) {
-        for (const a of rec.messagesAdded ?? []) {
-          if (deletedSet.has(a.message.id) || imported >= MAX_NEW_PER_RUN) continue;
-          if (await importMessage(admin, token, account, a.message.id)) imported++;
+  let complete = true;
+  let newHistoryId: string | null = null;
+  if (!account.history_id) {
+    newHistoryId = String((await gmail(token, "/profile")).historyId);
+  } else {
+    try {
+      let pageToken: string | undefined;
+      let latest = account.history_id as string;
+      do {
+        const qs = new URLSearchParams({ startHistoryId: account.history_id, maxResults: "500" });
+        for (const t of ["messageAdded", "messageDeleted", "labelAdded"]) qs.append("historyTypes", t);
+        if (pageToken) qs.set("pageToken", pageToken);
+        const h = await gmail(token, `/history?${qs}`);
+        if (h.historyId) latest = String(h.historyId);
+        const deleted: string[] = [];
+        const added: string[] = [];
+        for (const rec of h.history ?? []) {
+          for (const d of rec.messagesDeleted ?? []) deleted.push(d.message.id);
+          for (const l of rec.labelsAdded ?? []) if ((l.labelIds ?? []).includes("TRASH")) deleted.push(l.message.id);
+          for (const a of rec.messagesAdded ?? []) added.push(a.message.id);
         }
-      }
-      pageToken = imported >= MAX_NEW_PER_RUN ? undefined : h.nextPageToken;
-      // If we stopped early, keep the cursor so the remainder is picked up next run.
-      if (imported >= MAX_NEW_PER_RUN) latest = historyId!;
-    } while (pageToken);
-    historyId = latest;
-  } catch (e) {
-    if (!(e instanceof GmailHttpError && e.status === 404)) throw e;
-    // Cursor expired: recover missed mail since the later of linked_at / last sync (never before linked_at).
-    const since = Math.max(new Date(account.linked_at).getTime(), new Date(account.last_sync_at ?? account.linked_at).getTime() - 3600_000);
-    const p = await gmail(token, "/profile");
-    let pageToken: string | undefined;
-    do {
-      const qs = new URLSearchParams({ q: `after:${Math.floor(since / 1000)}`, maxResults: "100", includeSpamTrash: "true" });
-      if (pageToken) qs.set("pageToken", pageToken);
-      const l = await gmail(token, `/messages?${qs}`);
-      for (const m of l.messages ?? []) if (await importMessage(admin, token, account, m.id)) imported++;
-      pageToken = imported < MAX_NEW_PER_RUN ? l.nextPageToken : undefined;
-    } while (pageToken);
-    historyId = String(p.historyId);
+        await removeLocal(admin, account.id, deleted);
+        const del = new Set(deleted);
+        const r = await importIds(admin, token, account, [...new Set(added)].filter((id) => !del.has(id)), deadline);
+        imported += r.imported;
+        if (!r.complete) { complete = false; break; }
+        pageToken = h.nextPageToken;
+        if (pageToken && Date.now() > deadline) { complete = false; break; }
+      } while (pageToken);
+      if (complete) newHistoryId = latest;
+    } catch (e) {
+      if (!(e instanceof GmailHttpError && e.status === 404)) throw e;
+      const r = await recoverExpiredCursor(admin, token, account, deadline);
+      imported += r.imported;
+      complete = r.complete;
+      if (r.complete) newHistoryId = r.historyId;
+    }
   }
-  await admin.from("mail_accounts").update({
-    history_id: historyId, last_sync_at: new Date().toISOString(), status: "active", last_error: null, sync_lease_until: null, updated_at: new Date().toISOString(),
-  }).eq("id", account.id);
+  if (complete) await reconcileSample(admin, token, account.id, deadline);
+  const patch: any = { last_sync_at: new Date().toISOString(), status: "active", last_error: null, sync_lease_until: null, updated_at: new Date().toISOString() };
+  if (newHistoryId) patch.history_id = newHistoryId; // never advanced past unprocessed items
+  const { error } = await admin.from("mail_accounts").update(patch).eq("id", account.id);
+  if (error) throw new Error(error.message);
   return imported;
+}
+
+/**
+ * Cursor expired (long outage). Scan everything since linked_at (never earlier), import what is
+ * missing, and — once the full listing completed — delete local copies no longer present in Gmail.
+ * The new cursor is captured BEFORE scanning, so mail arriving during the scan is picked up next run.
+ */
+async function recoverExpiredCursor(admin: any, token: string, account: any, deadline: number) {
+  const historyId = String((await gmail(token, "/profile")).historyId);
+  const after = Math.floor(new Date(account.linked_at).getTime() / 1000) - 1;
+  const present = new Set<string>();
+  let imported = 0;
+  let pageToken: string | undefined;
+  do {
+    const qs = new URLSearchParams({ q: `after:${after} -in:trash`, maxResults: "500", includeSpamTrash: "true" });
+    if (pageToken) qs.set("pageToken", pageToken);
+    const l = await gmail(token, `/messages?${qs}`);
+    const ids: string[] = (l.messages ?? []).map((m: any) => m.id);
+    ids.forEach((id) => present.add(id));
+    const r = await importIds(admin, token, account, ids, deadline);
+    imported += r.imported;
+    if (!r.complete) return { imported, complete: false, historyId };
+    pageToken = l.nextPageToken;
+    if (pageToken && Date.now() > deadline) return { imported, complete: false, historyId };
+  } while (pageToken);
+  // Full listing done: anything local but absent at source was deleted/trashed in Gmail.
+  const { data: local, error } = await admin.from("mail_messages").select("gmail_message_id, internal_date").eq("account_id", account.id);
+  if (error) throw new Error(error.message);
+  const scanStart = Date.now() - RUN_BUDGET_MS;
+  const gone = (local ?? []).filter((m: any) => !present.has(m.gmail_message_id) && new Date(m.internal_date).getTime() < scanStart).map((m: any) => m.gmail_message_id);
+  await removeLocal(admin, account.id, gone);
+  return { imported, complete: true, historyId };
+}
+
+/** Bounded safety net for source deletions history might miss: checks a rotating slice each run. */
+async function reconcileSample(admin: any, token: string, accountId: string, deadline: number) {
+  const { count } = await admin.from("mail_messages").select("id", { count: "exact", head: true }).eq("account_id", accountId);
+  if (!count) return;
+  const SIZE = 15;
+  const offset = (Math.floor(Date.now() / 60_000) * SIZE) % count;
+  const { data } = await admin.from("mail_messages").select("gmail_message_id").eq("account_id", accountId).order("id").range(offset, offset + SIZE - 1);
+  const gone: string[] = [];
+  for (const m of data ?? []) {
+    if (Date.now() > deadline) break;
+    try {
+      const r = await gmail(token, `/messages/${m.gmail_message_id}?format=minimal`);
+      if ((r.labelIds ?? []).includes("TRASH")) gone.push(m.gmail_message_id);
+    } catch (e) {
+      if (e instanceof GmailHttpError && e.status === 404) gone.push(m.gmail_message_id);
+      else break;
+    }
+  }
+  await removeLocal(admin, accountId, gone);
 }
 
 /** Sync every active account with a per-account lease so runs never overlap. */

@@ -14,7 +14,7 @@ import { safeEmailDocument } from "@/lib/mail/mime";
 import {
   listMailAccounts, startMailLink, setMailAccountPaused, deleteMailAccount, syncMailNow, listMailMessages,
   getMailThread, setMailRead, organizeMail, listMailLabels, saveMailLabel, downloadMailAttachment, sendMail,
-  listMailDrafts, saveMailDraft, mailNotifications, markMailNotificationsSeen, listMailActivity,
+  listMailDrafts, saveMailDraft, mailUnreadCount, claimMailNotifications, listMailActivity,
 } from "@/lib/mail.functions";
 
 type View = "inbox" | "sent" | "drafts" | "archive" | "starred" | "spam" | "trash" | "label" | "all";
@@ -54,6 +54,7 @@ function useMailRealtime() {
       .on("postgres_changes", { event: "*", schema: "public", table: "mail_messages" }, () => {
         qc.invalidateQueries({ queryKey: ["mail-msgs"] });
         qc.invalidateQueries({ queryKey: ["mail-notif"] });
+        qc.invalidateQueries({ queryKey: ["mail-unread"] });
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "mail_accounts" }, () => qc.invalidateQueries({ queryKey: ["mail-accounts"] }))
       .subscribe();
@@ -63,32 +64,32 @@ function useMailRealtime() {
 
 /** Mounted once in the admin shell: in-site + system notifications, de-duplicated per user on the server. */
 export function MailNotifier({ onOpen }: { onOpen?: (messageId: string) => void }) {
-  const fn = useServerFn(mailNotifications);
-  const seenFn = useServerFn(markMailNotificationsSeen);
-  const q = useQuery({ queryKey: ["mail-notif"], queryFn: () => fn(), refetchInterval: 15000, retry: false });
+  const claimFn = useServerFn(claimMailNotifications);
+  const q = useQuery({ queryKey: ["mail-notif"], queryFn: () => claimFn(), refetchInterval: 15000, retry: false, staleTime: 0 });
   const handled = useRef(new Set<string>());
   useMailRealtime();
   useEffect(() => {
-    const fresh = (q.data?.fresh ?? []).filter((n: any) => !handled.current.has(n.id));
+    // Server already claimed these atomically; the local set only guards React re-renders.
+    const fresh = (q.data ?? []).filter((n: any) => !handled.current.has(n.id));
     if (!fresh.length) return;
     fresh.forEach((n: any) => handled.current.add(n.id));
     beep();
     for (const n of fresh.slice(0, 3)) {
-      toast(`رسالة جديدة من ${sender(n.from)}`, { description: n.subject || "(بدون عنوان)", action: onOpen ? { label: "فتح", onClick: () => onOpen(n.messageId) } : undefined });
+      toast(`رسالة جديدة من ${sender(n.from)}`, { id: `mail-${n.messageId}`, description: n.subject || "(بدون عنوان)", action: onOpen ? { label: "فتح", onClick: () => onOpen(n.messageId) } : undefined });
       if (typeof Notification !== "undefined" && Notification.permission === "granted" && document.hidden) {
-        // Subject + sender only; never the body.
-        const sys = new Notification("MG Pro — بريد جديد", { body: `${sender(n.from)}: ${n.subject || ""}`.slice(0, 120), tag: n.messageId });
+        // Subject + sender only; never the body. `tag` also collapses OS-level duplicates.
+        const sys = new Notification("MG Pro — بريد جديد", { body: `${sender(n.from)}: ${n.subject || ""}`.slice(0, 120), tag: `mgpro-mail-${n.messageId}` });
         sys.onclick = () => { window.focus(); onOpen?.(n.messageId); sys.close(); };
       }
     }
-    seenFn({ data: { ids: fresh.map((n: any) => n.id) } }).catch(() => {});
-  }, [q.data, onOpen, seenFn]);
+    if (fresh.length > 3) toast(`و ${fresh.length - 3} رسائل جديدة أخرى`);
+  }, [q.data, onOpen]);
   return null;
 }
 
 export function useMailUnread() {
-  const fn = useServerFn(mailNotifications);
-  return useQuery({ queryKey: ["mail-notif"], queryFn: () => fn(), refetchInterval: 15000, retry: false }).data?.unread ?? 0;
+  const fn = useServerFn(mailUnreadCount);
+  return useQuery({ queryKey: ["mail-unread"], queryFn: () => fn(), refetchInterval: 15000, retry: false }).data?.unread ?? 0;
 }
 
 function Accounts({ isAdmin }: { isAdmin: boolean }) {
@@ -100,11 +101,13 @@ function Accounts({ isAdmin }: { isAdmin: boolean }) {
   const syncFn = useServerFn(syncMailNow);
   const q = useQuery({ queryKey: ["mail-accounts"], queryFn: () => listFn(), refetchInterval: 30000 });
   const [busy, setBusy] = useState<string | null>(null);
+  const popupRef = useRef<Window | null>(null);
   const refresh = () => qc.invalidateQueries({ queryKey: ["mail-accounts"] });
 
   useEffect(() => {
     const onMsg = (e: MessageEvent) => {
-      if (e.origin !== window.location.origin || e.data?.type !== "mgpro-mail-oauth") return;
+      if (e.origin !== window.location.origin || e.source !== popupRef.current || e.data?.type !== "mgpro-mail-oauth") return;
+      popupRef.current = null;
       e.data.ok ? toast.success(e.data.message) : toast.error(e.data.message);
       refresh();
     };
@@ -114,6 +117,7 @@ function Accounts({ isAdmin }: { isAdmin: boolean }) {
 
   const link = async () => {
     const popup = window.open("", "mgpro-mail-oauth", "width=520,height=680");
+    popupRef.current = popup;
     if (!popup) return toast.error("افتح السماح بالنوافذ المنبثقة");
     try {
       const { url } = await linkFn();
@@ -365,13 +369,14 @@ export function GmailInbox({ isAdmin = false }: { isAdmin?: boolean }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [compose, setCompose] = useState<any | null>(null);
   const [tab, setTab] = useState<"mail" | "accounts" | "activity">("mail");
+  const [draftView, setDraftView] = useState<any | null>(null);
   useMailRealtime();
 
   useEffect(() => { const t = setTimeout(() => setTerm(search), 350); return () => clearTimeout(t); }, [search]);
 
   const accounts = useQuery({ queryKey: ["mail-accounts"], queryFn: () => accFn(), refetchInterval: 30000 });
   const labels = useQuery({ queryKey: ["mail-labels"], queryFn: () => labelsFn() });
-  const drafts = useQuery({ queryKey: ["mail-drafts"], queryFn: () => draftsFn(), enabled: isAdmin && view === "drafts" });
+  const drafts = useQuery({ queryKey: ["mail-drafts"], queryFn: () => draftsFn(), enabled: view === "drafts" });
   const msgs = useInfiniteQuery({
     queryKey: ["mail-msgs", view, labelId, accountId, term],
     initialPageParam: undefined as string | undefined,
@@ -430,7 +435,7 @@ export function GmailInbox({ isAdmin = false }: { isAdmin?: boolean }) {
             )}
             <div className="flex gap-1 overflow-x-auto lg:flex-col">
               {VIEWS.map((v) => (
-                <button key={v.key} onClick={() => { setView(v.key); setLabelId(undefined); setOpenId(null); }}
+                <button key={v.key} onClick={() => { setView(v.key); setLabelId(undefined); setOpenId(null); setDraftView(null); }}
                   className={`flex shrink-0 items-center gap-2 rounded-md px-2 py-1.5 text-sm ${view === v.key ? "bg-primary/15 text-primary" : "hover:bg-muted"}`}>
                   <v.icon className="h-4 w-4" />{v.label}
                 </button>
@@ -448,7 +453,14 @@ export function GmailInbox({ isAdmin = false }: { isAdmin?: boolean }) {
           </aside>
 
           <section className="min-w-0 space-y-2">
-            {compose ? (
+            {draftView ? (
+              <div className="space-y-2 rounded-xl border border-border bg-card p-3">
+                <div className="flex items-center justify-between"><b>مسودة في الموقع (عرض فقط)</b><Button size="icon" variant="ghost" onClick={() => setDraftView(null)}><X className="h-4 w-4" /></Button></div>
+                <p className="text-sm" dir="ltr">From: {acctEmail(draftView.account_id)} · To: {draftView.to_addr}{draftView.cc_addr ? ` · Cc: ${draftView.cc_addr}` : ""}</p>
+                <p className="font-bold">{draftView.subject || "(بدون عنوان)"}</p>
+                <pre className="whitespace-pre-wrap break-words font-sans text-sm">{draftView.body}</pre>
+              </div>
+            ) : compose ? (
               <Composer accounts={activeAccounts} initial={compose} onDone={() => setCompose(null)} />
             ) : openId ? (
               <ThreadView id={openId} isAdmin={isAdmin} accounts={accList} labels={labels.data ?? []} onBack={() => setOpenId(null)} />
@@ -465,14 +477,16 @@ export function GmailInbox({ isAdmin = false }: { isAdmin?: boolean }) {
                   </select>
                 </div>
 
-                {view === "drafts" && isAdmin && (drafts.data ?? []).length > 0 && (
+                {view === "drafts" && (drafts.data ?? []).length > 0 && (
                   <ul className="divide-y divide-border rounded-xl border border-border bg-card">
                     {(drafts.data ?? []).map((d: any) => (
                       <li key={d.id} className="flex items-center gap-2 p-3 text-sm">
-                        <button className="flex-1 text-start" onClick={() => setCompose({ draftId: d.id, accountId: d.account_id, to: d.to_addr, cc: d.cc_addr, subject: d.subject, body: d.body, replyToId: d.reply_to_message_id ?? undefined })}>
-                          <b>{d.subject || "(بدون عنوان)"}</b> <span className="text-muted-foreground">— مسودة محلية إلى {d.to_addr || "—"}</span>
+                        <button className="flex-1 text-start" onClick={() => isAdmin ? setCompose({ draftId: d.id, accountId: d.account_id, to: d.to_addr, cc: d.cc_addr, subject: d.subject, body: d.body, replyToId: d.reply_to_message_id ?? undefined }) : setDraftView(d)}>
+                          <span className="me-2 rounded bg-secondary px-1.5 py-0.5 text-[11px]">مسودة في الموقع</span>
+                          <b>{d.subject || "(بدون عنوان)"}</b> <span className="text-muted-foreground">إلى {d.to_addr || "—"}</span>
+                          <div className="text-[11px] text-primary/80" dir="ltr">{acctEmail(d.account_id)}</div>
                         </button>
-                        <Button size="icon" variant="ghost" onClick={async () => { await draftSaveFn({ data: { id: d.id, remove: true, accountId: d.account_id } }); qc.invalidateQueries({ queryKey: ["mail-drafts"] }); }}><Trash2 className="h-4 w-4" /></Button>
+                        {isAdmin && <Button size="icon" variant="ghost" onClick={async () => { await draftSaveFn({ data: { id: d.id, remove: true, accountId: d.account_id } }); qc.invalidateQueries({ queryKey: ["mail-drafts"] }); }}><Trash2 className="h-4 w-4" /></Button>}
                       </li>
                     ))}
                   </ul>
@@ -499,6 +513,7 @@ export function GmailInbox({ isAdmin = false }: { isAdmin?: boolean }) {
                           <div className={`truncate text-sm ${m.is_read ? "text-muted-foreground" : "font-semibold"}`}>
                             {m.starred && <Star className="me-1 inline h-3 w-3 fill-primary text-primary" />}
                             {m.has_attachments && <Paperclip className="me-1 inline h-3 w-3" />}
+                            {m.folder === "drafts" && <span className="me-1 rounded bg-secondary px-1.5 py-0.5 text-[11px] font-normal">مسودة في Gmail</span>}
                             {m.subject || "(بدون عنوان)"}
                           </div>
                           <div className="truncate text-xs text-muted-foreground">{m.snippet}</div>

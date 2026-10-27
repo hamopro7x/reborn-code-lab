@@ -17,22 +17,22 @@ export function oauthConfig() {
   return { clientId, clientSecret, redirectUri };
 }
 
-export function authUrl(state: string) {
+export function authUrl(state: string, codeChallenge: string) {
   const { clientId, redirectUri } = oauthConfig();
   const p = new URLSearchParams({
     client_id: clientId, redirect_uri: redirectUri, response_type: "code",
     scope: GMAIL_SCOPES.join(" "), access_type: "offline", prompt: "consent select_account",
-    include_granted_scopes: "false", state,
+    include_granted_scopes: "false", state, code_challenge: codeChallenge, code_challenge_method: "S256",
   });
   return `https://accounts.google.com/o/oauth2/v2/auth?${p}`;
 }
 
-export async function exchangeCode(code: string) {
+export async function exchangeCode(code: string, codeVerifier: string) {
   const { clientId, clientSecret, redirectUri } = oauthConfig();
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ code, client_id: clientId, client_secret: clientSecret, redirect_uri: redirectUri, grant_type: "authorization_code" }),
+    body: new URLSearchParams({ code, client_id: clientId, client_secret: clientSecret, redirect_uri: redirectUri, grant_type: "authorization_code", code_verifier: codeVerifier }),
   });
   const j: any = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(`token_exchange_failed: ${j.error ?? res.status}`);
