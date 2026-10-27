@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { folderFromLabels, buildRawMessage, safeEmailDocument } from "./mime";
+import { folderFromLabels, buildRawMessage, safeEmailDocument, extractLogoUrl } from "./mime";
 
 const decode = (raw: string) => new TextDecoder().decode(Uint8Array.from(atob(raw.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0)));
 
@@ -20,5 +20,11 @@ describe("mail rules", () => {
   it("allows external https images by default", () => {
     const d = safeEmailDocument("<p>hi</p>");
     expect(d).toContain("img-src data: cid: https:");
+  });
+  it("picks a sender logo, skipping tracking pixels", () => {
+    expect(extractLogoUrl('<img width="1" height="1" src="https://t.example/pixel"><img width="106" src="https://www.paypalobjects.com/logo_paypal.png">')).toBe("https://www.paypalobjects.com/logo_paypal.png");
+    expect(extractLogoUrl('<img width="1" src="https://t.example/open.aspx"><img src="https://cdn.example/pic.jpg" width="200">')).toBe("https://cdn.example/pic.jpg");
+    expect(extractLogoUrl("<p>no images</p>")).toBeNull();
+    expect(extractLogoUrl(null)).toBeNull();
   });
 });
