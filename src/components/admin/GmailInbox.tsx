@@ -381,6 +381,10 @@ export function GmailInbox({ isAdmin = false }: { isAdmin?: boolean }) {
     queryFn: ({ pageParam }) => listFn({ data: { view, labelId, accountId, search: term || undefined, before: pageParam } }),
     getNextPageParam: (p) => p.nextBefore ?? undefined,
     refetchInterval: 20000,
+    retry: 4,
+    retryDelay: (n) => Math.min(1000 * 2 ** n, 8000),
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
   const items = useMemo(() => msgs.data?.pages.flatMap((p) => p.items) ?? [], [msgs.data]);
   const acctEmail = (id: string) => accounts.data?.find((a: any) => a.id === id)?.email ?? "";
@@ -489,8 +493,11 @@ export function GmailInbox({ isAdmin = false }: { isAdmin?: boolean }) {
 
                 {msgs.isLoading ? (
                   <div className="flex justify-center p-8"><Loader2 className="h-6 w-6 animate-spin" /></div>
-                ) : msgs.error ? (
-                  <p className="rounded-lg border border-destructive/40 p-3 text-sm text-destructive">{(msgs.error as Error).message}</p>
+                ) : msgs.error && !items.length ? (
+                  <div className="flex items-center justify-between gap-3 rounded-lg border border-destructive/40 p-3 text-sm text-destructive">
+                    <span>تعذر تحميل الرسائل، جاري إعادة المحاولة…</span>
+                    <Button size="sm" variant="outline" onClick={() => msgs.refetch()}>إعادة المحاولة</Button>
+                  </div>
                 ) : !items.length ? (
                   <p className="p-8 text-center text-muted-foreground">{accList.length ? "لا توجد رسائل هنا" : "لا يوجد حسابات Gmail مربوطة بعد"}</p>
                 ) : (
