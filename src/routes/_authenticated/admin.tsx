@@ -318,6 +318,7 @@ function Admin() {
               </div>
             )}
             <div className="min-w-0">
+            {canView("mail") && <MailNotifier onOpen={() => setPanel("mail")} />}
             {panel === "overview" && canView("overview") && <OverviewTab />}
             {panel === "orders" && <OrdersTab isAdmin={adminOnly} />}
 
