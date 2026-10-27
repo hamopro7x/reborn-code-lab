@@ -88,13 +88,13 @@ export function buildRawMessage(m: OutgoingMail): string {
   return b64Utf8(lines.join("\r\n")).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
-/** Wraps untrusted email HTML for a sandboxed iframe: no scripts, no remote loads. */
+/** Wraps untrusted email HTML for a sandboxed iframe: no scripts; https images are allowed. */
 export function safeEmailDocument(html: string): string {
   const stripped = html
     .replace(/<script[\s\S]*?<\/script>/gi, "")
     .replace(/<(iframe|object|embed|form|meta|link|base)[^>]*>/gi, "")
     .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "")
     .replace(/(href|src)\s*=\s*(["']?)\s*javascript:/gi, "$1=$2#");
-  const csp = "default-src 'none'; img-src data: cid:; style-src 'unsafe-inline'; font-src data:";
+  const csp = "default-src 'none'; img-src data: cid: https:; style-src 'unsafe-inline'; font-src data:";
   return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${csp}"><base target="_blank"><style>body{font-family:system-ui,sans-serif;color:#111;background:#fff;margin:12px;word-wrap:break-word}img{max-width:100%;height:auto}</style></head><body>${stripped}</body></html>`;
 }

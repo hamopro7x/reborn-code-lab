@@ -17,4 +17,8 @@ describe("mail rules", () => {
     expect(d).not.toContain("onerror");
     expect(d).not.toContain("alert(2)");
   });
+  it("allows external https images by default", () => {
+    const d = safeEmailDocument("<p>hi</p>");
+    expect(d).toContain("img-src data: cid: https:");
+  });
 });
