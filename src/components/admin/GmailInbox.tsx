@@ -297,8 +297,17 @@ function ThreadView({ id, isAdmin, accounts, labels, onBack }: { id: string; isA
             </div>
             <p className="mb-2 text-xs text-muted-foreground" dir="ltr">To: {m.to_addr}{m.cc_addr ? ` · Cc: ${m.cc_addr}` : ""}</p>
             {m.body_html ? (
-              <iframe title="email" sandbox="allow-popups allow-popups-to-escape-sandbox" className="h-[420px] w-full rounded-md border border-border bg-background"
-                srcDoc={showRemote ? safeEmailDocument(m.body_html).replace("img-src data: cid:", "img-src data: cid: https:") : safeEmailDocument(m.body_html)} />
+              <iframe title="email" sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin" scrolling="no"
+                className="w-full rounded-md border border-border bg-background"
+                srcDoc={showRemote ? safeEmailDocument(m.body_html).replace("img-src data: cid:", "img-src data: cid: https:") : safeEmailDocument(m.body_html)}
+                onLoad={(e) => {
+                  const f = e.currentTarget;
+                  try {
+                    const d = f.contentDocument;
+                    const h = Math.max(d?.documentElement?.scrollHeight ?? 0, d?.body?.scrollHeight ?? 0);
+                    if (h) f.style.height = `${Math.ceil(h)}px`;
+                  } catch {}
+                }} />
             ) : (
               <pre className="whitespace-pre-wrap break-words font-sans text-sm">{m.body_text || m.snippet}</pre>
             )}
