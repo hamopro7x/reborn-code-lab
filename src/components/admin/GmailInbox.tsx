@@ -89,7 +89,7 @@ export function GmailInbox() {
     <div className="space-y-3 text-right" dir="rtl">
       <h1 className="text-xl font-bold flex items-center gap-2"><Mail className="h-5 w-5" /> البريد</h1>
       {q.isLoading && <Loader2 className="h-6 w-6 animate-spin" />}
-      {q.error && <p className="text-destructive">تعذر جلب الرسائل</p>}
+      {q.error && <p className="text-destructive">تعذر جلب الرسائل: {(q.error as Error).message}</p>}
       <div className="rounded-lg border border-border bg-card divide-y divide-border">
         {(q.data ?? []).map((m) => (
           <button key={m.id} onClick={() => setOpenId(m.id)} className="w-full text-right p-3 hover:bg-muted/50 block">
