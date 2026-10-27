@@ -320,9 +320,6 @@ function ThreadView({ id, isAdmin, accounts, labels, onBack }: { id: string; isA
           </div>
         );
       })}
-      {q.data!.thread.some((m: any) => m.body_html) && !showRemote && (
-        <Button size="sm" variant="ghost" onClick={() => setShowRemote(true)}>عرض الصور الخارجية</Button>
-      )}
       {replyTo && isAdmin && (
         <Composer accounts={accounts} onDone={() => setReplyTo(null)}
           initial={{ accountId: replyTo.account_id, replyToId: replyTo.id, to: (replyTo.from_addr.match(/<([^>]+)>/)?.[1] ?? replyTo.from_addr), subject: /^re:/i.test(replyTo.subject ?? "") ? replyTo.subject : `Re: ${replyTo.subject ?? ""}` }} />
