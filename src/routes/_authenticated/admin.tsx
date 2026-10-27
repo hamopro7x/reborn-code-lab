@@ -49,7 +49,7 @@ import { RedotPayPanel } from "@/components/admin/RedotPayPanel";
 import { FileBarChart, MonitorPlay, Image as ImageIcon, ChevronUp, ChevronDown, WalletCards, KeyRound, ClipboardList, Table2 } from "lucide-react";
 import { WorkSheetPanel } from "@/components/admin/WorkSheetPanel";
 import { AdminSheet } from "@/components/admin/AdminSheet";
-import { GmailInbox } from "@/components/admin/GmailInbox";
+import { GmailInbox, MailNotifier } from "@/components/admin/GmailInbox";
 import { Mail } from "lucide-react";
 
 import { LessonUploader } from "@/components/admin/LessonUploader";
@@ -327,7 +327,7 @@ function Admin() {
             {panel === "cardtx" && canView("cardtx") && <BybitTab isAdmin={adminOnly} />}
             {panel === "worksheet" && canView("worksheet") && <WorkSheetPanel isAdmin={adminOnly} />}
             {panel === "sheet" && adminOnly && <AdminSheet />}
-            {panel === "mail" && canView("mail") && <GmailInbox />}
+            {panel === "mail" && canView("mail") && <GmailInbox isAdmin={adminOnly} />}
 
 
             
