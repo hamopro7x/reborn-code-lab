@@ -23,7 +23,7 @@ async function log(db: any, row: any) {
   await logActivity(db, row);
 }
 
-const LIST_COLS = "id, account_id, gmail_thread_id, folder, from_addr, to_addr, subject, snippet, internal_date, has_attachments, is_read, starred, archived, trashed_at, label_ids";
+const LIST_COLS = "id, account_id, gmail_thread_id, folder, from_addr, to_addr, subject, snippet, internal_date, has_attachments, is_read, starred, archived, trashed_at, label_ids, sender_logo_url";
 
 export const mailMe = createServerFn({ method: "GET" }).middleware([requireSupabaseAuth]).handler(async ({ context }) => ({ role: await roleOf(context.supabase, context.userId) }));
 
@@ -104,23 +104,35 @@ export const listMailMessages = createServerFn({ method: "GET" }).middleware([re
   .handler(async ({ data, context }) => {
     await roleOf(context.supabase, context.userId);
     const db = await adminDb();
-    let q = db.from("mail_messages").select(LIST_COLS).order("internal_date", { ascending: false }).limit(31);
-    if (data.accountId) q = q.eq("account_id", data.accountId);
-    if (data.before) q = q.lt("internal_date", data.before);
-    if (data.view === "trash") q = q.not("trashed_at", "is", null);
-    else {
-      q = q.is("trashed_at", null);
-      if (data.view === "inbox") q = q.eq("folder", "inbox").eq("archived", false);
-      if (data.view === "sent") q = q.eq("folder", "sent");
-      if (data.view === "drafts") q = q.eq("folder", "drafts");
-      if (data.view === "spam") q = q.eq("folder", "spam");
-      if (data.view === "archive") q = q.eq("archived", true);
-      if (data.view === "starred") q = q.eq("starred", true);
-      if (data.view === "label" && data.labelId) q = q.contains("label_ids", [data.labelId]);
+    const buildQ = (cols: string) => {
+      let q = db.from("mail_messages").select(cols).order("internal_date", { ascending: false }).limit(31);
+      if (data.accountId) q = q.eq("account_id", data.accountId);
+      if (data.before) q = q.lt("internal_date", data.before);
+      if (data.view === "trash") q = q.not("trashed_at", "is", null);
+      else {
+        q = q.is("trashed_at", null);
+        if (data.view === "inbox") q = q.eq("folder", "inbox").eq("archived", false);
+        if (data.view === "sent") q = q.eq("folder", "sent");
+        if (data.view === "drafts") q = q.eq("folder", "drafts");
+        if (data.view === "spam") q = q.eq("folder", "spam");
+        if (data.view === "archive") q = q.eq("archived", true);
+        if (data.view === "starred") q = q.eq("starred", true);
+        if (data.view === "label" && data.labelId) q = q.contains("label_ids", [data.labelId]);
+      }
+      const s = data.search?.trim().replace(/[%,()]/g, " ");
+      if (s) q = q.or(`subject.ilike.%${s}%,from_addr.ilike.%${s}%,snippet.ilike.%${s}%,to_addr.ilike.%${s}%`);
+      return q;
+    };
+    // Missing-column fallback: before the sender-logo migration runs, list without the column.
+    let rows: any[] | null = null; let error: { message: string } | null = null;
+    {
+      const r = await buildQ(LIST_COLS);
+      rows = r.data as any[] | null; error = r.error as { message: string } | null;
+      if (error && /sender_logo_url/i.test(error.message)) {
+        const retry = await buildQ(LIST_COLS.replace(", sender_logo_url", ""));
+        rows = retry.data as any[] | null; error = retry.error as { message: string } | null;
+      }
     }
-    const s = data.search?.trim().replace(/[%,()]/g, " ");
-    if (s) q = q.or(`subject.ilike.%${s}%,from_addr.ilike.%${s}%,snippet.ilike.%${s}%,to_addr.ilike.%${s}%`);
-    const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
     const items = (rows ?? []).slice(0, 30);
     return { items, nextBefore: (rows ?? []).length > 30 ? items[items.length - 1].internal_date : null };
