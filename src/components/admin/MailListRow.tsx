@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -8,6 +8,7 @@ type MailListRowProps = {
   preview: string;
   account: string;
   date: string;
+  logo?: string;
   read?: boolean;
   starred?: boolean;
   onOpen: () => void;
@@ -15,15 +16,21 @@ type MailListRowProps = {
   footer?: ReactNode;
 };
 
+function AvatarLogo({ src, fallback }: { src: string; fallback: string }) {
+  const [err, setErr] = useState(false);
+  if (err) return <>{fallback}</>;
+  return <img src={src} alt="" className="h-full w-full rounded-full bg-white object-contain p-0.5" onError={() => setErr(true)} />;
+}
+
 /** Physical RTL tracks stay fixed independently of the message text direction. */
-export function MailListRow({ sender, subject, preview, account, date, read = true, starred = false, onOpen, onToggleRead, footer }: MailListRowProps) {
+export function MailListRow({ sender, subject, preview, account, date, logo, read = true, starred = false, onOpen, onToggleRead, footer }: MailListRowProps) {
   return (
     <li dir="rtl" className={`grid grid-cols-[minmax(0,1fr)_104px] gap-x-3 p-3 hover:bg-muted/50 sm:grid-cols-[minmax(0,1fr)_144px] ${read ? "" : "bg-primary/5"}`}>
       <Button variant="ghost" onClick={onOpen}
         className="col-start-1 row-start-1 h-auto min-w-0 items-start justify-start rounded-none p-0 text-right font-normal whitespace-normal hover:bg-transparent">
         <span className="grid w-full min-w-0 grid-cols-[40px_minmax(0,1fr)] gap-x-3">
           <span aria-hidden="true" className="col-start-1 row-span-4 flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-lg text-muted-foreground">
-            {Array.from(sender.trim())[0]?.toLocaleUpperCase() || "?"}
+            {logo ? <AvatarLogo src={logo} fallback={Array.from(sender.trim())[0]?.toLocaleUpperCase() || "?"} /> : Array.from(sender.trim())[0]?.toLocaleUpperCase() || "?"}
           </span>
           <span dir="auto" className={`col-start-2 block h-5 min-w-0 truncate text-right text-sm leading-5 ${read ? "" : "font-bold"}`}>{sender}</span>
           <span dir="auto" className={`col-start-2 mt-1 block h-5 min-w-0 truncate text-right text-sm leading-5 ${read ? "text-muted-foreground" : "font-semibold"}`}>{subject}</span>
