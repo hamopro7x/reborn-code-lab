@@ -37,14 +37,19 @@ export const listMailAccounts = createServerFn({ method: "GET" }).middleware([re
 
 export const startMailLink = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).handler(async ({ context }) => {
   await requireAdmin(context);
-  const { randomToken, sha256Hex } = await import("@/lib/mail/crypto.server");
+  const { randomToken, oauthStateKey, pkcePair, MAIL_OAUTH_COOKIE } = await import("@/lib/mail/crypto.server");
   const { authUrl } = await import("@/lib/mail/google.server");
+  const { setCookie } = await import("@tanstack/react-start/server");
   const db = await adminDb();
   const state = randomToken(32);
+  const nonce = randomToken(32);
   await db.from("mail_oauth_states").delete().lt("expires_at", new Date().toISOString());
-  const { error } = await db.from("mail_oauth_states").insert({ state_hash: await sha256Hex(state), user_id: context.userId, expires_at: new Date(Date.now() + 10 * 60_000).toISOString() });
+  const { error } = await db.from("mail_oauth_states").insert({ state_hash: await oauthStateKey(state, nonce), user_id: context.userId, expires_at: new Date(Date.now() + 10 * 60_000).toISOString() });
   if (error) throw new Error(error.message);
-  return { url: authUrl(state) };
+  // HttpOnly nonce ties the flow to THIS browser; a leaked/forwarded consent link cannot complete elsewhere.
+  setCookie(MAIL_OAUTH_COOKIE, nonce, { httpOnly: true, secure: true, sameSite: "lax", path: "/api/public/mail-oauth", maxAge: 600 });
+  const { challenge } = await pkcePair(state, nonce);
+  return { url: authUrl(state, challenge) };
 });
 
 export const setMailAccountPaused = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])

@@ -49,3 +49,16 @@ export function timingSafeEqual(a: string, b: string) {
   for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return r === 0;
 }
+
+export const MAIL_OAUTH_COOKIE = "mgpro_mail_oauth";
+
+/** State row key binds the URL state to the HttpOnly browser nonce: both are needed to finish. */
+export const oauthStateKey = (state: string, nonce: string) => sha256Hex(`state:${state}:${nonce}`);
+
+/** PKCE verifier derived from state + browser nonce (never stored, never in a URL). */
+export async function pkcePair(state: string, nonce: string) {
+  const v = new Uint8Array(await crypto.subtle.digest("SHA-256", enc.encode(`pkce:${state}:${nonce}`)));
+  const verifier = b64(v).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "") + "mgpro";
+  const c = new Uint8Array(await crypto.subtle.digest("SHA-256", enc.encode(verifier)));
+  return { verifier, challenge: b64(c).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "") };
+}
