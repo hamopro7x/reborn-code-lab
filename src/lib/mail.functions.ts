@@ -266,8 +266,9 @@ export const sendMail = createServerFn({ method: "POST" }).middleware([requireSu
     return { ok: true };
   });
 
+// Local (site-only) drafts: every staff member can read them; only admins create/edit/send/delete.
 export const listMailDrafts = createServerFn({ method: "GET" }).middleware([requireSupabaseAuth]).handler(async ({ context }) => {
-  await requireAdmin(context);
+  await roleOf(context.supabase, context.userId);
   const { data } = await (await adminDb()).from("mail_drafts").select("*").order("updated_at", { ascending: false }).limit(100);
   return data ?? [];
 });
@@ -287,26 +288,28 @@ export const saveMailDraft = createServerFn({ method: "POST" }).middleware([requ
     return { id: r.id as string };
   });
 
-export const mailNotifications = createServerFn({ method: "GET" }).middleware([requireSupabaseAuth]).handler(async ({ context }) => {
+export const mailUnreadCount = createServerFn({ method: "GET" }).middleware([requireSupabaseAuth]).handler(async ({ context }) => {
   await roleOf(context.supabase, context.userId);
-  const db = await adminDb();
-  const [{ data: unseen }, { count }] = await Promise.all([
-    db.from("mail_notifications").select("id, message_id, mail_messages!inner(subject, from_addr, account_id)").eq("user_id", context.userId).is("seen_at", null).order("created_at").limit(20),
-    db.from("mail_messages").select("id", { count: "exact", head: true }).eq("is_read", false).is("trashed_at", null).in("folder", ["inbox", "spam", "other"]),
-  ]);
-  return {
-    unread: count ?? 0,
-    fresh: (unseen ?? []).map((n: any) => ({ id: n.id as string, messageId: n.message_id as string, subject: n.mail_messages?.subject ?? "", from: n.mail_messages?.from_addr ?? "" })),
-  };
+  const { count } = await (await adminDb()).from("mail_messages").select("id", { count: "exact", head: true }).eq("is_read", false).is("trashed_at", null).in("folder", ["inbox", "spam", "other"]);
+  return { unread: count ?? 0 };
 });
 
-export const markMailNotificationsSeen = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({ ids: z.array(z.string().uuid()).max(50) }).parse(i))
-  .handler(async ({ data, context }) => {
-    await roleOf(context.supabase, context.userId);
-    if (data.ids.length) await (await adminDb()).from("mail_notifications").update({ seen_at: new Date().toISOString() }).eq("user_id", context.userId).in("id", data.ids);
-    return { ok: true };
-  });
+/**
+ * Atomically claims this user's unseen notifications (sets seen_at and returns the rows in one
+ * statement). A reload, a second tab or a retry can never receive the same notification twice.
+ */
+export const claimMailNotifications = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).handler(async ({ context }) => {
+  await roleOf(context.supabase, context.userId);
+  const db = await adminDb();
+  const cutoff = new Date(Date.now() - 24 * 3600_000).toISOString();
+  const { data, error } = await db.from("mail_notifications").update({ seen_at: new Date().toISOString() })
+    .eq("user_id", context.userId).is("seen_at", null).gt("created_at", cutoff)
+    .select("id, message_id, mail_messages!inner(subject, from_addr)").limit(20);
+  if (error) throw new Error(error.message);
+  // Stale ones (offline > 24h) are silently marked seen instead of a burst of alerts.
+  await db.from("mail_notifications").update({ seen_at: new Date().toISOString() }).eq("user_id", context.userId).is("seen_at", null).lte("created_at", cutoff);
+  return (data ?? []).map((n: any) => ({ id: n.id as string, messageId: n.message_id as string, subject: n.mail_messages?.subject ?? "", from: n.mail_messages?.from_addr ?? "" }));
+});
 
 export const listMailActivity = createServerFn({ method: "GET" }).middleware([requireSupabaseAuth]).handler(async ({ context }) => {
   await requireAdmin(context);
