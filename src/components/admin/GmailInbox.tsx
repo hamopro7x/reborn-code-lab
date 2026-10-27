@@ -497,6 +497,7 @@ export function GmailInbox({ isAdmin = false }: { isAdmin?: boolean }) {
                   <ul className="divide-y divide-border rounded-xl border border-border bg-card">
                     {items.map((m: any) => (
                       <MailListRow key={m.id} sender={view === "sent" ? `إلى: ${m.to_addr}` : sender(m.from_addr)}
+                        logo={m.sender_logo_url ?? undefined}
                         account={acctEmail(m.account_id)} date={fmt(m.internal_date)} preview={m.snippet}
                         read={m.is_read} starred={m.starred} onOpen={() => setOpenId(m.id)} onToggleRead={() => toggleRead(m)}
                         subject={<>
