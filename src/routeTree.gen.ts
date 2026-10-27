@@ -40,6 +40,8 @@ import { Route as ApiPublicCardTransactionsRouteImport } from './routes/api/publ
 import { Route as ApiPublicIceServersRouteImport } from './routes/api/public/ice-servers'
 import { Route as ApiPublicAgentRpcFnRouteImport } from './routes/api/public/agent-rpc.$fn'
 import { Route as ApiPublicHooksBybitLedgerSyncRouteImport } from './routes/api/public/hooks/bybit-ledger-sync'
+import { Route as ApiPublicHooksMailSyncRouteImport } from './routes/api/public/hooks/mail-sync'
+import { Route as ApiPublicMailOauthCallbackRouteImport } from './routes/api/public/mail-oauth/callback'
 import { Route as ApiPublicV1ProductsRouteImport } from './routes/api/public/v1.products'
 
 const IndexRoute = IndexRouteImport.update({
@@ -202,6 +204,17 @@ const ApiPublicHooksBybitLedgerSyncRoute =
     path: '/api/public/hooks/bybit-ledger-sync',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksMailSyncRoute = ApiPublicHooksMailSyncRouteImport.update({
+  id: '/api/public/hooks/mail-sync',
+  path: '/api/public/hooks/mail-sync',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicMailOauthCallbackRoute =
+  ApiPublicMailOauthCallbackRouteImport.update({
+    id: '/api/public/mail-oauth/callback',
+    path: '/api/public/mail-oauth/callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicV1ProductsRoute = ApiPublicV1ProductsRouteImport.update({
   id: '/api/public/v1/products',
   path: '/api/public/v1/products',
@@ -239,6 +252,8 @@ export interface FileRoutesByFullPath {
   '/api/public/ice-servers': typeof ApiPublicIceServersRoute
   '/api/public/agent-rpc/$fn': typeof ApiPublicAgentRpcFnRoute
   '/api/public/hooks/bybit-ledger-sync': typeof ApiPublicHooksBybitLedgerSyncRoute
+  '/api/public/hooks/mail-sync': typeof ApiPublicHooksMailSyncRoute
+  '/api/public/mail-oauth/callback': typeof ApiPublicMailOauthCallbackRoute
   '/api/public/v1/products': typeof ApiPublicV1ProductsRoute
 }
 export interface FileRoutesByTo {
@@ -272,6 +287,8 @@ export interface FileRoutesByTo {
   '/api/public/ice-servers': typeof ApiPublicIceServersRoute
   '/api/public/agent-rpc/$fn': typeof ApiPublicAgentRpcFnRoute
   '/api/public/hooks/bybit-ledger-sync': typeof ApiPublicHooksBybitLedgerSyncRoute
+  '/api/public/hooks/mail-sync': typeof ApiPublicHooksMailSyncRoute
+  '/api/public/mail-oauth/callback': typeof ApiPublicMailOauthCallbackRoute
   '/api/public/v1/products': typeof ApiPublicV1ProductsRoute
 }
 export interface FileRoutesById {
@@ -307,6 +324,8 @@ export interface FileRoutesById {
   '/api/public/ice-servers': typeof ApiPublicIceServersRoute
   '/api/public/agent-rpc/$fn': typeof ApiPublicAgentRpcFnRoute
   '/api/public/hooks/bybit-ledger-sync': typeof ApiPublicHooksBybitLedgerSyncRoute
+  '/api/public/hooks/mail-sync': typeof ApiPublicHooksMailSyncRoute
+  '/api/public/mail-oauth/callback': typeof ApiPublicMailOauthCallbackRoute
   '/api/public/v1/products': typeof ApiPublicV1ProductsRoute
 }
 export interface FileRouteTypes {
@@ -342,6 +361,8 @@ export interface FileRouteTypes {
     | '/api/public/ice-servers'
     | '/api/public/agent-rpc/$fn'
     | '/api/public/hooks/bybit-ledger-sync'
+    | '/api/public/hooks/mail-sync'
+    | '/api/public/mail-oauth/callback'
     | '/api/public/v1/products'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -375,6 +396,8 @@ export interface FileRouteTypes {
     | '/api/public/ice-servers'
     | '/api/public/agent-rpc/$fn'
     | '/api/public/hooks/bybit-ledger-sync'
+    | '/api/public/hooks/mail-sync'
+    | '/api/public/mail-oauth/callback'
     | '/api/public/v1/products'
   id:
     | '__root__'
@@ -409,6 +432,8 @@ export interface FileRouteTypes {
     | '/api/public/ice-servers'
     | '/api/public/agent-rpc/$fn'
     | '/api/public/hooks/bybit-ledger-sync'
+    | '/api/public/hooks/mail-sync'
+    | '/api/public/mail-oauth/callback'
     | '/api/public/v1/products'
   fileRoutesById: FileRoutesById
 }
@@ -442,6 +467,8 @@ export interface RootRouteChildren {
   ApiPublicIceServersRoute: typeof ApiPublicIceServersRoute
   ApiPublicAgentRpcFnRoute: typeof ApiPublicAgentRpcFnRoute
   ApiPublicHooksBybitLedgerSyncRoute: typeof ApiPublicHooksBybitLedgerSyncRoute
+  ApiPublicHooksMailSyncRoute: typeof ApiPublicHooksMailSyncRoute
+  ApiPublicMailOauthCallbackRoute: typeof ApiPublicMailOauthCallbackRoute
   ApiPublicV1ProductsRoute: typeof ApiPublicV1ProductsRoute
 }
 
@@ -664,6 +691,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksBybitLedgerSyncRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/mail-sync': {
+      id: '/api/public/hooks/mail-sync'
+      path: '/api/public/hooks/mail-sync'
+      fullPath: '/api/public/hooks/mail-sync'
+      preLoaderRoute: typeof ApiPublicHooksMailSyncRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/mail-oauth/callback': {
+      id: '/api/public/mail-oauth/callback'
+      path: '/api/public/mail-oauth/callback'
+      fullPath: '/api/public/mail-oauth/callback'
+      preLoaderRoute: typeof ApiPublicMailOauthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/v1/products': {
       id: '/api/public/v1/products'
       path: '/api/public/v1/products'
@@ -718,6 +759,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicIceServersRoute: ApiPublicIceServersRoute,
   ApiPublicAgentRpcFnRoute: ApiPublicAgentRpcFnRoute,
   ApiPublicHooksBybitLedgerSyncRoute: ApiPublicHooksBybitLedgerSyncRoute,
+  ApiPublicHooksMailSyncRoute: ApiPublicHooksMailSyncRoute,
+  ApiPublicMailOauthCallbackRoute: ApiPublicMailOauthCallbackRoute,
   ApiPublicV1ProductsRoute: ApiPublicV1ProductsRoute,
 }
 export const routeTree = rootRouteImport

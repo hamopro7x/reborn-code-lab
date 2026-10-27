@@ -49,3 +49,22 @@ services:
       - ./sync-loop.sh:/sync-loop.sh:ro
     # السر يُقرأ من env فقط (SYNC_HOOK_SECRET) ولا يوجد fallback لمفتاح عام
     command: sh -c "apk add --no-cache curl >/dev/null && sh /sync-loop.sh"
+
+  # كرون مزامنة Gmail (كل الحسابات المربوطة) — يعمل حتى لو مفيش حد فاتح الموقع
+  mail-cron:
+    image: alpine:3.20
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      SYNC_URL: "http://app:3000/api/public/hooks/mail-sync"
+      SYNC_INTERVAL_SECONDS: "${MAIL_SYNC_INTERVAL_SECONDS:-30}"
+      SYNC_TIMEOUT_SECONDS: "120"
+      SYNC_HOOK_SECRET: "${MAIL_SYNC_SECRET:-${SYNC_HOOK_SECRET}}"
+    mem_limit: 128m
+    cpus: 0.25
+    volumes:
+      - ./sync-loop.sh:/sync-loop.sh:ro
+    command: sh -c "apk add --no-cache curl >/dev/null && sh /sync-loop.sh"

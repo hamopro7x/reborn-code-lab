@@ -26,7 +26,7 @@ run_once() {
     -d '{}' \
     "$SYNC_URL" || echo 000)
   body=$(cat /tmp/sync-out 2>/dev/null || true)
-  log "bybit sync http=$code $body"
+  log "sync http=$code $body"
   case "$code" in
     2*) return 0 ;;
     401|403) log "unauthorized: SYNC_HOOK_SECRET لا يطابق السر على التطبيق"; return 1 ;;
