@@ -23,7 +23,7 @@ async function log(db: any, row: any) {
   await logActivity(db, row);
 }
 
-const LIST_COLS = "id, account_id, gmail_thread_id, folder, from_addr, to_addr, subject, snippet, internal_date, has_attachments, is_read, starred, archived, trashed_at, label_ids";
+const LIST_COLS = "id, account_id, gmail_thread_id, folder, from_addr, to_addr, subject, snippet, internal_date, has_attachments, is_read, starred, archived, trashed_at, label_ids, sender_logo_url";
 
 export const mailMe = createServerFn({ method: "GET" }).middleware([requireSupabaseAuth]).handler(async ({ context }) => ({ role: await roleOf(context.supabase, context.userId) }));
 

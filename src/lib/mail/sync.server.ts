@@ -1,6 +1,6 @@
 // Server-side incremental Gmail sync. Only messages after an account's linked_at are imported.
 import { accessTokenFor, gmail, GmailHttpError, ReauthError } from "./google.server";
-import { folderFromLabels, header, parsePayload } from "./mime";
+import { extractLogoUrl, folderFromLabels, header, parsePayload } from "./mime";
 
 const LEASE_MS = 90_000;
 
@@ -44,6 +44,7 @@ export async function importMessage(admin: any, token: string, account: any, gma
     body_text: body.text?.slice(0, 500_000) ?? null,
     body_html: body.html?.slice(0, 1_000_000) ?? null,
     has_attachments: body.attachments.length > 0,
+    sender_logo_url: extractLogoUrl(body.html),
     // Our own outgoing mail is already "read".
     is_read: folder === "sent" || folder === "drafts",
   };
