@@ -73,17 +73,9 @@ export function MailNotifier({ onOpen }: { onOpen?: (messageId: string) => void 
     const fresh = (q.data ?? []).filter((n: any) => !handled.current.has(n.id));
     if (!fresh.length) return;
     fresh.forEach((n: any) => handled.current.add(n.id));
+    // Sound only — no popups on screen or from the browser.
     beep();
-    for (const n of fresh.slice(0, 3)) {
-      toast(`رسالة جديدة من ${sender(n.from)}`, { id: `mail-${n.messageId}`, description: n.subject || "(بدون عنوان)", action: onOpen ? { label: "فتح", onClick: () => onOpen(n.messageId) } : undefined });
-      if (typeof Notification !== "undefined" && Notification.permission === "granted" && document.hidden) {
-        // Subject + sender only; never the body. `tag` also collapses OS-level duplicates.
-        const sys = new Notification("MG Pro — بريد جديد", { body: `${sender(n.from)}: ${n.subject || ""}`.slice(0, 120), tag: `mgpro-mail-${n.messageId}` });
-        sys.onclick = () => { window.focus(); onOpen?.(n.messageId); sys.close(); };
-      }
-    }
-    if (fresh.length > 3) toast(`و ${fresh.length - 3} رسائل جديدة أخرى`);
-  }, [q.data, onOpen]);
+  }, [q.data]);
   return null;
 }
 
