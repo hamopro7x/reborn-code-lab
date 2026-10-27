@@ -479,7 +479,6 @@ export function GmailInbox({ isAdmin = false }: { isAdmin?: boolean }) {
                   <ul className="divide-y divide-border rounded-xl border border-border bg-card">
                     {(drafts.data ?? []).map((d: any) => (
                       <MailListRow key={d.id} sender={`إلى ${d.to_addr || "—"}`} account={acctEmail(d.account_id)} date={fmt(d.updated_at)} preview={d.body}
-                        senderAddress={d.to_addr}
                         subject={<><span className="me-2 rounded bg-secondary px-1.5 py-0.5 text-[11px]">مسودة في الموقع</span>{d.subject || "(بدون عنوان)"}</>}
                         onOpen={() => isAdmin ? setCompose({ draftId: d.id, accountId: d.account_id, to: d.to_addr, cc: d.cc_addr, subject: d.subject, body: d.body, replyToId: d.reply_to_message_id ?? undefined }) : setDraftView(d)}
                         footer={isAdmin ? <Button className="row-start-2 h-6 w-6" size="icon" variant="ghost" onClick={async () => { await draftSaveFn({ data: { id: d.id, remove: true, accountId: d.account_id } }); qc.invalidateQueries({ queryKey: ["mail-drafts"] }); }}><Trash2 className="h-4 w-4" /></Button> : undefined}
@@ -498,7 +497,6 @@ export function GmailInbox({ isAdmin = false }: { isAdmin?: boolean }) {
                   <ul className="divide-y divide-border rounded-xl border border-border bg-card">
                     {items.map((m: any) => (
                       <MailListRow key={m.id} sender={view === "sent" ? `إلى: ${m.to_addr}` : sender(m.from_addr)}
-                        senderAddress={view === "sent" ? m.to_addr : m.from_addr}
                         account={acctEmail(m.account_id)} date={fmt(m.internal_date)} preview={m.snippet}
                         read={m.is_read} starred={m.starred} onOpen={() => setOpenId(m.id)} onToggleRead={() => toggleRead(m)}
                         subject={<>
