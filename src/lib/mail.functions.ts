@@ -120,7 +120,12 @@ export const listMailMessages = createServerFn({ method: "GET" }).middleware([re
     }
     const s = data.search?.trim().replace(/[%,()]/g, " ");
     if (s) q = q.or(`subject.ilike.%${s}%,from_addr.ilike.%${s}%,snippet.ilike.%${s}%,to_addr.ilike.%${s}%`);
-    const { data: rows, error } = await q;
+    let { data: rows, error } = await q;
+    // Missing-column fallback: before the sender-logo migration runs, list without the column.
+    if (error && /sender_logo_url/i.test(error.message)) {
+      const retry = await db.from("mail_messages").select(LIST_COLS.replace(", sender_logo_url", "")).order("internal_date", { ascending: false }).limit(31);
+      rows = retry.data; error = retry.error;
+    }
     if (error) throw new Error(error.message);
     const items = (rows ?? []).slice(0, 30);
     return { items, nextBefore: (rows ?? []).length > 30 ? items[items.length - 1].internal_date : null };
