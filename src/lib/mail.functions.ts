@@ -304,7 +304,7 @@ export const claimMailNotifications = createServerFn({ method: "POST" }).middlew
   const cutoff = new Date(Date.now() - 24 * 3600_000).toISOString();
   const { data, error } = await db.from("mail_notifications").update({ seen_at: new Date().toISOString() })
     .eq("user_id", context.userId).is("seen_at", null).gt("created_at", cutoff)
-    .select("id, message_id, mail_messages!inner(subject, from_addr)").limit(20);
+    .select("id, message_id, mail_messages!inner(subject, from_addr)");
   if (error) throw new Error(error.message);
   // Stale ones (offline > 24h) are silently marked seen instead of a burst of alerts.
   await db.from("mail_notifications").update({ seen_at: new Date().toISOString() }).eq("user_id", context.userId).is("seen_at", null).lte("created_at", cutoff);
