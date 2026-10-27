@@ -50,7 +50,7 @@ function useMailRealtime() {
   const qc = useQueryClient();
   useEffect(() => {
     const ch = supabase
-      .channel("mail-live")
+      .channel(`mail-live-${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "mail_messages" }, () => {
         qc.invalidateQueries({ queryKey: ["mail-msgs"] });
         qc.invalidateQueries({ queryKey: ["mail-notif"] });
