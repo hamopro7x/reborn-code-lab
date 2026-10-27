@@ -49,6 +49,8 @@ import { RedotPayPanel } from "@/components/admin/RedotPayPanel";
 import { FileBarChart, MonitorPlay, Image as ImageIcon, ChevronUp, ChevronDown, WalletCards, KeyRound, ClipboardList, Table2 } from "lucide-react";
 import { WorkSheetPanel } from "@/components/admin/WorkSheetPanel";
 import { AdminSheet } from "@/components/admin/AdminSheet";
+import { GmailInbox } from "@/components/admin/GmailInbox";
+import { Mail } from "lucide-react";
 
 import { LessonUploader } from "@/components/admin/LessonUploader";
 import { DeviceMonitorGrid } from "@/components/admin/DeviceMonitorGrid";
@@ -62,11 +64,11 @@ import { getPaymentIconUrl, preparePaymentIconUpload } from "@/lib/payments.func
 
 type PanelKey =
   | "overview" | "orders" | "categories" | "products" | "customers" | "employees"
-  | "reviews" | "payments" | "currencies" | "timers" | "settings" | "courses" | "devices" | "reports" | "remote" | "cardtx" | "apikey" | "worksheet" | "sheet";
+  | "reviews" | "payments" | "currencies" | "timers" | "settings" | "courses" | "devices" | "reports" | "remote" | "cardtx" | "apikey" | "worksheet" | "sheet" | "mail";
 
 const panelKeys: PanelKey[] = [
   "overview", "orders", "categories", "customers", "employees",
-  "reviews", "payments", "currencies", "timers", "settings", "courses", "devices", "reports", "remote", "cardtx", "apikey", "worksheet", "sheet",
+  "reviews", "payments", "currencies", "timers", "settings", "courses", "devices", "reports", "remote", "cardtx", "apikey", "worksheet", "sheet", "mail",
 ];
 
 
@@ -140,7 +142,7 @@ function Admin() {
     refetchIntervalInBackground: false,
   });
   const shared = sharedQ.data ?? [];
-  const basePanels: PanelKey[] = ["orders", "courses", "worksheet"];
+  const basePanels: PanelKey[] = ["orders", "courses", "worksheet", "mail"];
   const employeeAllowed = (key: PanelKey) => basePanels.includes(key) || shared.includes(key);
   const canView = (key: PanelKey) => adminOnly || employeeAllowed(key);
   const readOnly = isEmployee && !basePanels.includes(panel);
@@ -192,6 +194,7 @@ function Admin() {
         { key: "cardtx", label: "معاملات الفيزا", icon: WalletCards, adminOnly: true },
         { key: "worksheet", label: "جدول بيانات الشغل", icon: ClipboardList },
         { key: "sheet", label: "جدول بيانات خاص", icon: Table2, adminOnly: true },
+        { key: "mail", label: "البريد", icon: Mail },
 
 
       ],
@@ -324,6 +327,7 @@ function Admin() {
             {panel === "cardtx" && canView("cardtx") && <BybitTab isAdmin={adminOnly} />}
             {panel === "worksheet" && canView("worksheet") && <WorkSheetPanel isAdmin={adminOnly} />}
             {panel === "sheet" && adminOnly && <AdminSheet />}
+            {panel === "mail" && canView("mail") && <GmailInbox />}
 
 
             
