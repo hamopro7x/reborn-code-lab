@@ -2,14 +2,16 @@
 alter table public.mail_messages add column if not exists sender_logo_url text;
 
 -- Backfill existing messages: prefer a URL containing "logo", otherwise the first https image.
-update public.mail_messages
-set sender_logo_url = coalesce(
-  (regexp_match(body_html, '<img[^>]{0,600}?src="(https://[^"<>\s]*logo[^"<>\s]{1,500})"'))[1],
-  (regexp_match(body_html, '<img[^>]{0,600}?src="(https://[^"<>\s]{10,500})"'))[1]
+with logos as (
+  select id,
+    coalesce(
+      (regexp_match(body_html, '<img[^>]*?src="(https://[^"<>[:space:]]*logo[^"<>[:space:]]*)"', 'i'))[1],
+      (regexp_match(body_html, '<img[^>]*?src="(https://[^"<>[:space:]]+)"', 'i'))[1]
+    ) as logo
+  from public.mail_messages
+  where sender_logo_url is null and body_html is not null
 )
-where sender_logo_url is null
-  and body_html is not null
-  and coalesce(
-    (regexp_match(body_html, '<img[^>]{0,600}?src="(https://[^"<>\s]*logo[^"<>\s]{1,500})"'))[1],
-    (regexp_match(body_html, '<img[^>]{0,600}?src="(https://[^"<>\s]{10,500})"'))[1]
-  ) is not null;
+update public.mail_messages m
+set sender_logo_url = l.logo
+from logos l
+where m.id = l.id and l.logo is not null and length(l.logo) <= 500;
