@@ -48,7 +48,12 @@ export async function importMessage(admin: any, token: string, account: any, gma
     // Our own outgoing mail is already "read".
     is_read: folder === "sent" || folder === "drafts",
   };
-  const { data: ins, error } = await admin.from("mail_messages").upsert(row, { onConflict: "account_id,gmail_message_id", ignoreDuplicates: true }).select("id").maybeSingle();
+  let { data: ins, error } = await admin.from("mail_messages").upsert(row, { onConflict: "account_id,gmail_message_id", ignoreDuplicates: true }).select("id").maybeSingle();
+  // Missing-column fallback: before the sender-logo migration runs, save without the column.
+  if (error && /sender_logo_url/i.test(error.message)) {
+    const { sender_logo_url: _drop, ...rest } = row;
+    ({ data: ins, error } = await admin.from("mail_messages").upsert(rest as typeof row, { onConflict: "account_id,gmail_message_id", ignoreDuplicates: true }).select("id").maybeSingle());
+  }
   if (error) throw new Error(error.message);
   if (!ins) return null;
   if (body.attachments.length) {
