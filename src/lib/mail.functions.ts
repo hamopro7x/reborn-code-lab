@@ -137,13 +137,9 @@ export const getMailThread = createServerFn({ method: "POST" }).middleware([requ
     const { data: flipped } = await db.from("mail_messages").update({ is_read: true, read_at: new Date().toISOString(), read_by: context.userId })
       .eq("id", data.id).eq("is_read", false).select("id").maybeSingle();
     if (flipped) await log(db, { actor_id: context.userId, action: "read", account_id: msg.account_id, message_id: msg.id });
-    let thread = [msg];
-    if (msg.gmail_thread_id) {
-      const { data: t } = await db.from("mail_messages").select("*").eq("account_id", msg.account_id).eq("gmail_thread_id", msg.gmail_thread_id).is("trashed_at", null).order("internal_date");
-      if (t?.length) thread = t;
-    }
-    const { data: atts } = await db.from("mail_attachments").select("id, message_id, filename, mime_type, size_bytes").in("message_id", thread.map((m: any) => m.id));
-    return { thread: thread.map((m: any) => ({ ...m, is_read: m.id === msg.id ? true : m.is_read })), attachments: atts ?? [] };
+    // كل رسالة تُعرض وحدها: لا تجميع محادثات على الموقع.
+    const { data: atts } = await db.from("mail_attachments").select("id, message_id, filename, mime_type, size_bytes").eq("message_id", msg.id);
+    return { thread: [msg], attachments: atts ?? [] };
   });
 
 export const setMailRead = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
