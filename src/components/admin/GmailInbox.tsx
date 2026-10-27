@@ -4,11 +4,12 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
   Loader2, Mail, Send, ArrowRight, Inbox, Archive, Star, ShieldAlert, Trash2, Tag, FileText, Plus, RefreshCw,
-  Pause, Play, Paperclip, Search, MailOpen, Reply, History, X, RotateCcw, Link2,
+  Pause, Play, Paperclip, Search, Reply, History, X, RotateCcw, Link2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { MailListRow } from "@/components/admin/MailListRow";
 import { supabase } from "@/integrations/supabase/client";
 import { safeEmailDocument } from "@/lib/mail/mime";
 import {
@@ -472,14 +473,11 @@ export function GmailInbox({ isAdmin = false }: { isAdmin?: boolean }) {
                 {view === "drafts" && (drafts.data ?? []).length > 0 && (
                   <ul className="divide-y divide-border rounded-xl border border-border bg-card">
                     {(drafts.data ?? []).map((d: any) => (
-                      <li key={d.id} className="flex items-center gap-2 p-3 text-sm">
-                        <button className="flex-1 text-start" onClick={() => isAdmin ? setCompose({ draftId: d.id, accountId: d.account_id, to: d.to_addr, cc: d.cc_addr, subject: d.subject, body: d.body, replyToId: d.reply_to_message_id ?? undefined }) : setDraftView(d)}>
-                          <span className="me-2 rounded bg-secondary px-1.5 py-0.5 text-[11px]">مسودة في الموقع</span>
-                          <b>{d.subject || "(بدون عنوان)"}</b> <span className="text-muted-foreground">إلى {d.to_addr || "—"}</span>
-                          <div className="text-[11px] text-primary/80" dir="ltr">{acctEmail(d.account_id)}</div>
-                        </button>
-                        {isAdmin && <Button size="icon" variant="ghost" onClick={async () => { await draftSaveFn({ data: { id: d.id, remove: true, accountId: d.account_id } }); qc.invalidateQueries({ queryKey: ["mail-drafts"] }); }}><Trash2 className="h-4 w-4" /></Button>}
-                      </li>
+                      <MailListRow key={d.id} sender={`إلى ${d.to_addr || "—"}`} account={acctEmail(d.account_id)} date={fmt(d.updated_at)} preview={d.body}
+                        subject={<><span className="me-2 rounded bg-secondary px-1.5 py-0.5 text-[11px]">مسودة في الموقع</span>{d.subject || "(بدون عنوان)"}</>}
+                        onOpen={() => isAdmin ? setCompose({ draftId: d.id, accountId: d.account_id, to: d.to_addr, cc: d.cc_addr, subject: d.subject, body: d.body, replyToId: d.reply_to_message_id ?? undefined }) : setDraftView(d)}
+                        footer={isAdmin ? <Button className="row-start-2 h-6 w-6" size="icon" variant="ghost" onClick={async () => { await draftSaveFn({ data: { id: d.id, remove: true, accountId: d.account_id } }); qc.invalidateQueries({ queryKey: ["mail-drafts"] }); }}><Trash2 className="h-4 w-4" /></Button> : undefined}
+                      />
                     ))}
                   </ul>
                 )}
@@ -493,25 +491,15 @@ export function GmailInbox({ isAdmin = false }: { isAdmin?: boolean }) {
                 ) : (
                   <ul className="divide-y divide-border rounded-xl border border-border bg-card">
                     {items.map((m: any) => (
-                      <li key={m.id} className={`flex items-start gap-2 p-3 hover:bg-muted/50 ${m.is_read ? "" : "bg-primary/5"}`}>
-                        <button title={m.is_read ? "تعليم كغير مقروء" : "تعليم كمقروء"} onClick={() => toggleRead(m)} className="mt-1">
-                          {m.is_read ? <MailOpen className="h-4 w-4 text-muted-foreground" /> : <Mail className="h-4 w-4 text-primary" />}
-                        </button>
-                        <button className="min-w-0 flex-1 text-start" onClick={() => setOpenId(m.id)}>
-                          <div className="flex justify-between gap-2 text-sm">
-                            <span className={`truncate ${m.is_read ? "" : "font-bold"}`}>{view === "sent" ? `إلى: ${m.to_addr}` : sender(m.from_addr)}</span>
-                            <span className="shrink-0 text-xs text-muted-foreground">{fmt(m.internal_date)}</span>
-                          </div>
-                          <div className={`truncate text-sm ${m.is_read ? "text-muted-foreground" : "font-semibold"}`}>
-                            {m.starred && <Star className="me-1 inline h-3 w-3 fill-primary text-primary" />}
-                            {m.has_attachments && <Paperclip className="me-1 inline h-3 w-3" />}
-                            {m.folder === "drafts" && <span className="me-1 rounded bg-secondary px-1.5 py-0.5 text-[11px] font-normal">مسودة في Gmail</span>}
-                            {m.subject || "(بدون عنوان)"}
-                          </div>
-                          <div className="truncate text-xs text-muted-foreground">{m.snippet}</div>
-                          <div className="mt-1 text-[11px] text-primary/80" dir="ltr">{acctEmail(m.account_id)}</div>
-                        </button>
-                      </li>
+                      <MailListRow key={m.id} sender={view === "sent" ? `إلى: ${m.to_addr}` : sender(m.from_addr)}
+                        account={acctEmail(m.account_id)} date={fmt(m.internal_date)} preview={m.snippet}
+                        read={m.is_read} starred={m.starred} onOpen={() => setOpenId(m.id)} onToggleRead={() => toggleRead(m)}
+                        subject={<>
+                          {m.has_attachments && <Paperclip className="me-1 inline h-3 w-3" />}
+                          {m.folder === "drafts" && <span className="me-1 rounded bg-secondary px-1.5 py-0.5 text-[11px] font-normal">مسودة في Gmail</span>}
+                          {m.subject || "(بدون عنوان)"}
+                        </>}
+                      />
                     ))}
                   </ul>
                 )}
