@@ -318,10 +318,12 @@ const BAD_STATUS = new Set([
   "منتهية",
 ]);
 
-export function statusBadge(kind: string, status: string) {
+export function statusBadge(kind: string, status: string, tradeStatus?: unknown) {
   const s = String(status || "").trim().toLowerCase();
   if (kind === "refund" || s === "refund" || s === "مسترد") return { cls: "bg-muted text-muted-foreground", text: "مسترد" };
-  if (s === "reversed" || s === "معكوسة") return { cls: "bg-red-500/15 text-red-400", text: "فاشلة" };
+  if (s === "reversed" || s === "معكوسة") return { cls: "bg-red-500/15 text-red-400", text: "فاشلة — معكوسة" };
+  if (OK_STATUS.has(s) && String(tradeStatus ?? "") === "0")
+    return { cls: "bg-amber-500/15 text-amber-400", text: "قيد التنفيذ" };
   if (OK_STATUS.has(s)) return { cls: "bg-emerald-500/15 text-emerald-400", text: "ناجحة" };
   if (BAD_STATUS.has(s)) return { cls: "bg-red-500/15 text-red-400", text: "فاشلة" };
   if (s === "pending" || s === "قيد التنفيذ" || s === "0" || s === "1")
@@ -465,7 +467,7 @@ export function BybitLedgerPanel() {
               </thead>
               <tbody>
                 {rows.map((r) => {
-                  const badge = statusBadge(r.kind, r.status);
+                  const badge = statusBadge(r.kind, r.status, (r as any).detail?.tradeStatus);
                   const d = (r.detail ?? {}) as Record<string, unknown>;
                   const pan4 = String(d["pan4"] ?? "").trim();
                   const brand = String(
