@@ -1,5 +1,4 @@
 import { useState, type ReactNode } from "react";
-import { Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type MailListRowProps = {
@@ -50,7 +49,7 @@ export function MailListRow({ sender, subject, preview, account, date, logo, rea
             </Button>
           )}
         </div>
-        {footer ?? <Star aria-label={starred ? "رسالة مميزة" : "رسالة غير مميزة"} className={`row-start-2 h-4 w-4 self-center ${starred ? "fill-primary text-primary" : "text-muted-foreground"}`} />}
+        {footer}
       </div>
     </li>
   );
