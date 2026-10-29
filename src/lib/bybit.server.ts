@@ -13,6 +13,8 @@ import {
   isExplicitReversal,
   cardLinkIds,
   findLinkedReversals,
+  cardPurchaseGroup,
+  cardFilterMatches,
 } from "./bybit-spend";
 
 
@@ -413,6 +415,52 @@ export function cardRecordRank(t: any): number {
 }
 
 /**
+ * True when Bybit rejected the request itself (e.g. a query type this key or
+ * API version does not support) — not a network, auth or rate-limit problem.
+ * Only SIDE_QUERY_AUTH/FINANCIAL/REFUND are publicly documented; the other
+ * types are best-effort and are skipped when rejected.
+ */
+const TRANSIENT_OR_AUTH_CODES = new Set(["10002", "10003", "10004", "10005", "10006", "10016", "10018"]);
+export function isUnsupportedCardTypeError(err: unknown): boolean {
+  const m = /^Bybit (\d+):/.exec(String((err as Error)?.message ?? err ?? ""));
+  return Boolean(m && !TRANSIENT_OR_AUTH_CODES.has(m[1]));
+}
+
+/**
+ * Merge per-type results of one fetch. A rejected type never hides the rows of
+ * the types that worked; it is reported (not silently dropped). Throws only
+ * when every type failed.
+ */
+export function mergeCardTypeResults(
+  results: PromiseSettledResult<any>[],
+  types: readonly string[] = CARD_QUERY_TYPES,
+  warn: (msg: string) => void = (m) => console.warn(m),
+): any[] {
+  const merged = new Map<string, { row: any; sourcePriority: number; updatedAt: number }>();
+  let ok = 0;
+  let lastError: unknown;
+  results.forEach((res, typeIndex) => {
+    if (res.status !== "fulfilled") {
+      lastError = res.reason;
+      warn(
+        `bybit card type ${types[typeIndex] ?? typeIndex} ${isUnsupportedCardTypeError(res.reason) ? "unsupported" : "failed"}: ${String((res.reason as Error)?.message ?? res.reason)}`,
+      );
+      return;
+    }
+    ok++;
+    const rows = Array.isArray(res.value?.data) ? res.value.data : [];
+    for (const r of rows) {
+      const k = cardRowKey(r);
+      const updatedAt = Number(r?.txnUpdate ?? r?.updateTime ?? r?.updatedTime ?? r?.settleTime ?? r?.txnCreate ?? 0);
+      const current = merged.get(k);
+      if (preferRecord(current, r, typeIndex, updatedAt)) merged.set(k, { row: r, sourcePriority: typeIndex, updatedAt });
+    }
+  });
+  if (!ok && lastError) throw lastError;
+  return [...merged.values()].map(({ row }) => row);
+}
+
+/**
  * Storage key of ONE raw Bybit record (not of a purchase).
  * Raw authorisation and settlement records are kept side by side for auditing;
  * deciding that two records are the SAME purchase is the job of
@@ -548,7 +596,8 @@ async function fetchCardPages(maxRows: number, creds: Creds, sinceMs?: number, b
     } catch (error) {
       successfulTypes--;
       lastError = error;
-      /* a type may be unsupported for this key; keep the successful types */
+      // A type may be unsupported for this key; keep the successful types, but say so.
+      console.warn(`bybit card type ${type} skipped:`, (error as Error)?.message ?? error);
     }
     await sleep(400);
   }
@@ -996,6 +1045,11 @@ const CARD_TXN_COMPARE = [
   "txn_type",
 ] as const;
 
+/** Status flags inside detail: a linkedReversal/tradeStatus change alone must still be written. */
+const CARD_DETAIL_COMPARE = ["tradeStatus", "side", "cryptoSold", "linkedReversal"] as const;
+/** detail->>key returns text; compare the incoming JSON value the same way. */
+const detailText = (v: unknown) => (v === null || v === undefined ? null : String(v));
+
 /**
  * يرجّع الصفوف الجديدة أو المتغيّرة فقط.
  *
@@ -1010,7 +1064,10 @@ async function changedCardTxns(db: any, payload: any[], accountId?: string): Pro
     const slice = payload.slice(i, i + 500);
     let q = db
       .from("bybit_card_txns")
-      .select("txn_id, merchant, amount, currency, status, txn_time, pan4, txn_type")
+      .select(
+        "txn_id, merchant, amount, currency, status, txn_time, pan4, txn_type, " +
+          "tradeStatus:detail->>tradeStatus, side:detail->>side, cryptoSold:detail->>cryptoSold, linkedReversal:detail->>linkedReversal",
+      )
       .in(
         "txn_id",
         slice.map((r) => r.txn_id),
@@ -1025,7 +1082,11 @@ async function changedCardTxns(db: any, payload: any[], accountId?: string): Pro
     const existing = new Map((data ?? []).map((r: any) => [String(r.txn_id), r]));
     for (const row of slice) {
       const prev = existing.get(String(row.txn_id));
-      if (!prev || CARD_TXN_COMPARE.some((k) => !sameStoredValue((prev as any)[k], row[k]))) {
+      if (
+        !prev ||
+        CARD_TXN_COMPARE.some((k) => !sameStoredValue((prev as any)[k], row[k])) ||
+        CARD_DETAIL_COMPARE.some((k) => !sameStoredValue((prev as any)[k], detailText(row.detail?.[k])))
+      ) {
         out.push(row);
       }
     }
@@ -1071,6 +1132,10 @@ async function linkReversalsBeforeSave(db: any, payload: any[], accountId?: stri
     const pd = prev?.detail ?? {};
     if (prev && isExplicitReversal(pd.tradeStatus, pd.side) && !isExplicitReversal(r.detail?.tradeStatus, r.detail?.side)) {
       r.__keepStored = true;
+    } else if (prev && pd.linkedReversal && r.status !== "refund") {
+      // A purchase already voided by a confirmed reversal record stays voided.
+      r.status = "failed";
+      r.detail = { ...(r.detail ?? {}), linkedReversal: 1 };
     }
   }
 
@@ -1139,7 +1204,18 @@ async function persistCardTxns(rows: CardTxn[], accountId?: string): Promise<str
       const { error } = await (supabaseAdmin as any)
         .from("bybit_card_txns")
         .upsert(pending.slice(i, i + 500), { onConflict: "account_id,txn_id" });
-      if (error) console.error("bybit_card_txns upsert failed:", error.message);
+      if (error) {
+        // One conflicting row (e.g. the same txnId already archived under another
+        // account while the table still has a txn_id-only primary key) must not
+        // drop the whole batch: retry row by row and report only the bad ones.
+        console.error("bybit_card_txns batch upsert failed, retrying per row:", error.message);
+        for (const row of pending.slice(i, i + 500)) {
+          const { error: e1 } = await (supabaseAdmin as any)
+            .from("bybit_card_txns")
+            .upsert(row, { onConflict: "account_id,txn_id" });
+          if (e1) console.error(`bybit_card_txns row ${row.txn_id} (account ${row.account_id ?? "-"}) skipped:`, e1.message);
+        }
+      }
     }
     await (supabaseAdmin as any).rpc("prune_bybit_card_txns", {
       p_max: MAX_TXNS,
@@ -1246,60 +1322,87 @@ export async function fetchCardTxnsPage(opts: {
   const from = (page - 1) * pageSize;
   const { periodStart, periodEnd } = currentCycleForRead();
 
-  const base = () => {
-    let q = (supabaseAdmin as any).from("bybit_card_txns");
-    return { q };
-  };
+  // The filter, the count and the page all come from ONE classification
+  // (mapStoredRow + markHangVoided + cardPurchaseGroup), so a row shown as
+  // «فاشلة» can never be counted under «المشتريات الناجحة» or vice versa.
+  // A light projection of the cycle is classified first; only the page's
+  // rows are then read in full.
+  const light = await lightCycleRows(supabaseAdmin, opts.accountId, periodStart, periodEnd);
+  let classified = light.map((r) => ({ r, group: cardPurchaseGroup(r.t) }));
+  if (opts.hideReversed) classified = classified.filter((x) => !x.r.t.reversed);
+  const matching = classified.filter((x) => cardFilterMatches(status, x.group));
+  const total = matching.length;
+  const counts = { all: classified.length, success: 0, failed: 0, refund: 0 };
+  for (const x of classified) counts[x.group]++;
+  const slice = matching.slice(from, from + pageSize);
 
-  const scoped = (q: any) => {
-    let scopedQuery = opts.accountId ? q.eq("account_id", opts.accountId) : q;
-    scopedQuery = scopedQuery.gte("txn_time", periodStart).lt("txn_time", periodEnd);
-    return scopedQuery;
-  };
-
-  const applyStatus = (q: any, s: "all" | "success" | "failed" | "refund") =>
-    s === "all" ? q : q.eq("status", s);
-
-  // Page rows and the count for the same scope in a single round trip; the
-  // three extra per-status counts were never rendered and cost a full scan each.
-  const rowsQuery = applyStatus(
-    scoped(
-      base().q.select("txn_id, account_id, merchant, amount, currency, status, txn_time, pan4, txn_type, detail", {
-        count: "exact",
-      }),
-    ),
-    status,
-  );
-
-  const { data, error, count } = await rowsQuery
-    .order("txn_time", { ascending: false })
-    .range(from, from + pageSize - 1);
-  if (error) throw new Error(error.message);
-
-  const total = Number(count ?? (data?.length ?? 0));
-  const counts = { all: total, success: 0, failed: 0, refund: 0 };
-  const rows = markHangVoided(
-    (data ?? []).map(mapStoredRow),
-    (data ?? []).map((r: any) => r.account_id ?? ""),
-  );
-  return {
-    rows: opts.hideReversed ? rows.filter((r) => !r.reversed) : rows,
-    total,
-    counts,
-  };
+  const full = new Map<string, any>();
+  const ids = [...new Set(slice.map((x) => x.r.txn_id))];
+  for (let i = 0; i < ids.length; i += 200) {
+    let q = (supabaseAdmin as any)
+      .from("bybit_card_txns")
+      .select("txn_id, account_id, merchant, amount, currency, status, txn_time, pan4, txn_type, detail")
+      .in("txn_id", ids.slice(i, i + 200));
+    if (opts.accountId) q = q.eq("account_id", opts.accountId);
+    const { data, error } = await q;
+    if (error) throw new Error(error.message);
+    for (const r of data ?? []) full.set(`${r.account_id ?? ""}|${r.txn_id}`, r);
+  }
+  const rows: CardTxn[] = slice.map(({ r, group }) => {
+    const f = full.get(`${r.account_id ?? ""}|${r.txn_id}`);
+    const base = f ? mapStoredRow(f) : r.t;
+    // Status/reversed come from the same classification used by the filter.
+    void group;
+    return { ...base, status: r.t.status, reversed: r.t.reversed };
+  });
+  return { rows, total, counts };
 }
 
 function currentCycleForRead() {
   return getMonthlySpendPeriod(Date.now());
 }
 
-/**
- * Live read of the current cycle straight from Bybit, used when the archive of a
- * specific account is still empty (e.g. its rows were purged with the previous
- * cycle and no successful sync has written the new ones yet). This keeps every
- * account's transaction table in step with its own balance/spend cards instead
- * of showing "no transactions" while the account clearly has spending.
- */
+/** Light projection of one cycle (no raw blob), classified like the full rows. */
+async function lightCycleRows(db: any, accountId: string | undefined, periodStart: number, periodEnd: number) {
+  const CHUNK = 1000;
+  const data: any[] = [];
+  for (let from = 0; from < 200_000; from += CHUNK) {
+    let q = db
+      .from("bybit_card_txns")
+      .select(
+        "txn_id, account_id, merchant, amount, currency, status, txn_time, pan4, txn_type, " +
+          "tradeStatus:detail->>tradeStatus, side:detail->>side, cryptoSold:detail->>cryptoSold, " +
+          "linkedReversal:detail->>linkedReversal, orderNo:detail->>orderNo, orderId:detail->>orderId, dTxnId:detail->>txnId",
+      )
+      .gte("txn_time", periodStart)
+      .lt("txn_time", periodEnd);
+    if (accountId) q = q.eq("account_id", accountId);
+    const { data: chunk, error } = await q
+      .order("txn_time", { ascending: false })
+      .order("txn_id", { ascending: true })
+      .range(from, from + CHUNK - 1);
+    if (error) throw new Error(error.message);
+    data.push(...(chunk ?? []));
+    if ((chunk ?? []).length < CHUNK) break;
+  }
+  const mapped = data.map((r: any) =>
+    mapStoredRow({
+      ...r,
+      detail: {
+        tradeStatus: r.tradeStatus ?? null,
+        side: r.side ?? null,
+        cryptoSold: r.cryptoSold ?? null,
+        linkedReversal: r.linkedReversal ?? null,
+        orderNo: r.orderNo ?? null,
+        orderId: r.orderId ?? null,
+        txnId: r.dTxnId ?? null,
+      },
+    }),
+  );
+  const marked = markHangVoided(mapped, data.map((r: any) => r.account_id ?? ""));
+  return marked.map((t, i) => ({ txn_id: String(data[i].txn_id), account_id: data[i].account_id ?? null, t }));
+}
+
 export async function fetchCardTxnsLive(opts: {
   accountId?: string;
   status?: "all" | "success" | "failed" | "refund";
@@ -1469,10 +1572,17 @@ async function backfillChunkLegacy(
 
   try {
     while (typeIndex < CARD_QUERY_TYPES.length && Date.now() < deadline) {
-      const result = await callCardPage(
-        { limit: 100, page, type: CARD_QUERY_TYPES[typeIndex] },
-        creds,
-      );
+      let result: any;
+      try {
+        result = await callCardPage({ limit: 100, page, type: CARD_QUERY_TYPES[typeIndex] }, creds);
+      } catch (e) {
+        if (!isUnsupportedCardTypeError(e)) throw e;
+        // Rejected type: move on so the cursor never sticks on it forever.
+        console.warn(`bybit backfill type ${CARD_QUERY_TYPES[typeIndex]} skipped:`, (e as Error)?.message);
+        typeIndex++;
+        page = 1;
+        continue;
+      }
       const rows = Array.isArray(result?.data) ? result.data : [];
       collected.push(...rows);
 
@@ -1979,7 +2089,10 @@ async function changedLedgerRows(db: any, rows: LedgerInsert[]): Promise<LedgerI
     const slice = rows.slice(i, i + 500);
     const { data, error } = await db
       .from("bybit_ledger")
-      .select("account_id, kind, ref_id, direction, title, amount, currency, fee, status, occurred_at")
+      .select(
+        "account_id, kind, ref_id, direction, title, amount, currency, fee, status, occurred_at, " +
+          "tradeStatus:detail->>tradeStatus, side:detail->>side, linkedReversal:detail->>linkedReversal",
+      )
       .in(
         "ref_id",
         slice.map((r) => r.ref_id),
@@ -1990,10 +2103,26 @@ async function changedLedgerRows(db: any, rows: LedgerInsert[]): Promise<LedgerI
     }
     const existing = new Map((data ?? []).map((r: any) => [key(r), r]));
     for (const row of slice) {
-      const prev = existing.get(key(row));
+      const prev = existing.get(key(row)) as any;
+      const d = ((row as any).detail ?? {}) as Record<string, unknown>;
+      // A card row already marked failed/reversed by a confirmed reversal is
+      // never brought back to success by an older snapshot.
+      if (
+        prev &&
+        row.kind === "card" &&
+        (prev.linkedReversal || isExplicitReversal(prev.tradeStatus, prev.side)) &&
+        (prev.status === "reversed" || prev.status === "failed") &&
+        row.status === "success"
+      ) {
+        (row as any).status = prev.status;
+        (row as any).detail = { ...d, linkedReversal: prev.linkedReversal ?? d["linkedReversal"] ?? null };
+      }
       if (
         !prev ||
-        LEDGER_COMPARE.some((k) => !sameStoredValue((prev as any)[k], (row as any)[k]))
+        LEDGER_COMPARE.some((k) => !sameStoredValue(prev[k], (row as any)[k])) ||
+        (["tradeStatus", "side", "linkedReversal"] as const).some(
+          (k) => !sameStoredValue(prev[k], detailText(((row as any).detail ?? {})[k])),
+        )
       ) {
         out.push(row);
       }
@@ -2025,18 +2154,10 @@ async function upsertLedger(rows: LedgerInsert[], assign = true) {
     else saved += Math.min(500, pending.length - i);
   }
 
-  // Same Bybit record now reported as refund/reversal: the earlier "card" copy
-  // (same ref_id) must stop counting as a successful purchase.
-  const reversedRefs = clean.filter((r) => r.kind === "refund").map((r) => r.ref_id);
-  for (let i = 0; i < reversedRefs.length; i += 200) {
-    const { error } = await db
-      .from("bybit_ledger")
-      .update({ status: "reversed" })
-      .eq("kind", "card")
-      .in("ref_id", reversedRefs.slice(i, i + 200))
-      .neq("status", "reversed");
-    if (error) console.error("bybit_ledger reversal mark failed:", error.message);
-  }
+  // (Removed) refund rows used to flip every kind="card" row with the same
+  // ref_id to "reversed" across ALL accounts. A real refund is not an
+  // authorisation reversal; confirmed reversals are linked per account in
+  // linkReversalsBeforeSave and reach the ledger through cardLedgerRow.
 
   // Work-sheet layer: link the freshly mirrored movements to the open shift.
   // Never modifies ledger rows; failures here must not break the sync.
@@ -2343,30 +2464,10 @@ export async function syncAllLedger(): Promise<{ saved: number; accounts: number
  * most every few minutes, to catch late status changes on older rows.
  */
 async function fetchRecentCardRows(creds: Creds): Promise<any[]> {
-  const merged = new Map<string, { row: any; sourcePriority: number; updatedAt: number }>();
   const results = await Promise.allSettled(
     CARD_QUERY_TYPES.map((type) => callCardPage({ limit: 10, page: 1, type }, creds)),
   );
-  let ok = 0;
-  let lastError: unknown;
-  results.forEach((res, typeIndex) => {
-    if (res.status !== "fulfilled") {
-      lastError = res.reason;
-      return;
-    }
-    ok++;
-    const rows = Array.isArray(res.value?.data) ? res.value.data : [];
-    for (const r of rows) {
-      const k = cardRowKey(r);
-      const updatedAt = Number(r?.txnUpdate ?? r?.updateTime ?? r?.updatedTime ?? r?.settleTime ?? r?.txnCreate ?? 0);
-      const current = merged.get(k);
-      if (preferRecord(current, r, typeIndex, updatedAt)) {
-        merged.set(k, { row: r, sourcePriority: typeIndex, updatedAt });
-      }
-    }
-  });
-  if (!ok && lastError) throw lastError;
-  return [...merged.values()].map(({ row }) => row);
+  return mergeCardTypeResults(results);
 }
 
 /** Newest movements of ONE account -> archive -> central ledger (no shift link). */
@@ -2502,8 +2603,12 @@ export async function fetchLedgerPage(opts: {
     if (opts.accountId) out = out.eq("account_id", opts.accountId);
     if (opts.hideReversed) out = out.or("status.is.null,status.neq.reversed");
     if (g === "txns" && st === "refund") out = out.eq("kind", "refund");
-    else if (g === "txns" && st === "success") out = out.eq("kind", "card").eq("status", st);
-    else if (g === "txns" && st === "failed") out = out.eq("kind", "card").in("status", ["failed", "reversed"]);
+    // Same groups as cardPurchasePresenter: ناجحة = everything not failed/reversed
+    // (pending included), فاشلة = failed/reversed/linkedReversal.
+    else if (g === "txns" && st === "success")
+      out = out.eq("kind", "card").not("status", "in", "(failed,reversed)").is("detail->>linkedReversal", null);
+    else if (g === "txns" && st === "failed")
+      out = out.eq("kind", "card").or("status.in.(failed,reversed),detail->>linkedReversal.not.is.null");
     else if (g !== "txns" && SUB_KIND[st] && (GROUP_KINDS[g] as string[]).includes(SUB_KIND[st]!))
       out = out.eq("kind", SUB_KIND[st]!);
     else out = out.in("kind", GROUP_KINDS[g] as string[]);

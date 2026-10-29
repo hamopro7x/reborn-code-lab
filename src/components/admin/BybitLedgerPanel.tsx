@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { ChevronDown } from "lucide-react";
 import { getBybitCardBrands, getBybitLedger, getBybitSpendTotals } from "@/lib/bybit.functions";
 import { formatDateTime } from "@/lib/format";
+import { cardPurchasePresenter } from "@/lib/bybit-spend";
 import { useLedgerAutoSync } from "@/lib/use-ledger-sync";
 
 /** Official USDT token logo from TrustWallet (works on Fly and Lovable). */
@@ -318,12 +319,14 @@ const BAD_STATUS = new Set([
   "منتهية",
 ]);
 
-export function statusBadge(kind: string, status: string, tradeStatus?: unknown) {
+export function statusBadge(kind: string, status: string, _tradeStatus?: unknown, detail?: unknown) {
+  // Card purchases (and their refunds) use the single shared presenter.
+  if (kind === "card" || kind === "refund") {
+    const p = cardPurchasePresenter({ kind, status, detail });
+    return { cls: p.cls, text: p.text };
+  }
   const s = String(status || "").trim().toLowerCase();
-  if (kind === "refund" || s === "refund" || s === "مسترد") return { cls: "bg-muted text-muted-foreground", text: "مسترد" };
-  if (s === "reversed" || s === "معكوسة") return { cls: "bg-red-500/15 text-red-400", text: "فاشلة — معكوسة" };
-  if (OK_STATUS.has(s) && String(tradeStatus ?? "") === "0")
-    return { cls: "bg-amber-500/15 text-amber-400", text: "قيد التنفيذ" };
+  if (s === "refund" || s === "مسترد") return { cls: "bg-muted text-muted-foreground", text: "مسترد" };
   if (OK_STATUS.has(s)) return { cls: "bg-emerald-500/15 text-emerald-400", text: "ناجحة" };
   if (BAD_STATUS.has(s)) return { cls: "bg-red-500/15 text-red-400", text: "فاشلة" };
   if (s === "pending" || s === "قيد التنفيذ" || s === "0" || s === "1")

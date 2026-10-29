@@ -26,6 +26,7 @@ import { BybitLedgerPanel } from "@/components/admin/BybitLedgerPanel";
 
 
 
+import { cardPurchasePresenter } from "@/lib/bybit-spend";
 import { RefreshCw, CreditCard, Layers, ArrowUp, ArrowDown, ChevronDown, Loader2, Trash2, Plus, Download, Copy, Pencil, ChevronLeft, Wallet, ArrowDownUp, Search, BarChart3, Clock, PieChart, Lock } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -1902,8 +1903,8 @@ function CardTableInner({
                     {t.status === "refund" ? "استرداد" : t.type ? String(t.type) : "شراء"}
                   </td>
                   <td className="p-4">
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold ${t.status === "failed" ? "bg-red-500/15 text-red-400" : t.status === "refund" ? "bg-muted text-muted-foreground" : t.status === "pending" || String(t.detail?.tradeStatus ?? "") === "0" ? "bg-amber-500/15 text-amber-400" : "bg-emerald-500/15 text-emerald-400"}`}>
-                      {t.reversed ? "فاشلة — معكوسة" : t.status === "failed" ? "فاشلة" : t.status === "refund" ? "مسترد" : t.status === "pending" || String(t.detail?.tradeStatus ?? "") === "0" ? "قيد التنفيذ" : "ناجحة"}
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold ${cardPurchasePresenter(t).cls}`}>
+                      {cardPurchasePresenter(t).text}
                     </span>
                   </td>
                   <td className="p-4 text-xs text-muted-foreground tabular-nums">{dt(t.time)}</td>
