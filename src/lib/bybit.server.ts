@@ -13,6 +13,8 @@ import {
   isExplicitReversal,
   cardLinkIds,
   findLinkedReversals,
+  REVERSAL_LINK_WINDOW_MS,
+  type LinkCandidate,
   cardPurchaseGroup,
   cardFilterMatches,
   LEDGER_CARD_FILTERS,
@@ -1150,6 +1152,21 @@ async function linkReversalsBeforeSave(db: any, payload: any[], accountId?: stri
       );
       for (const r of data ?? []) stored.set(String(r.txn_id), r);
     }
+    // Side-2 reversals rarely share an id with their authorisation: also load
+    // this account's authorisations from just before each reversal.
+    const revTimes = payload
+      .filter((r) => String(r.detail?.side ?? r.txn_type ?? "") === "2")
+      .map((r) => Number(r.txn_time ?? 0))
+      .filter((t) => t > 0);
+    if (revTimes.length) {
+      const lo = Math.min(...revTimes) - REVERSAL_LINK_WINDOW_MS;
+      const hi = Math.max(...revTimes);
+      const { data } = await scope(
+        db.from("bybit_card_txns").select("txn_id, status, detail, pan4, amount, txn_time")
+          .gte("txn_time", lo).lte("txn_time", hi).limit(5000),
+      );
+      for (const r of data ?? []) if (!stored.has(String(r.txn_id))) stored.set(String(r.txn_id), r);
+    }
   } catch (e) {
     console.error("reversal link lookup skipped:", (e as Error)?.message);
   }
@@ -1167,13 +1184,18 @@ async function linkReversalsBeforeSave(db: any, payload: any[], accountId?: stri
     }
   }
 
-  const candidate = (id: string, d: any) => {
+  const candidate = (r: any) => {
+    const id = String(r.txn_id);
+    const d = r.detail ?? {};
     const ids = idsOf(d);
-    return { id, scope: accountId ?? "", orderNo: ids.orderNo, txnId: ids.txnId || id, tradeStatus: d?.tradeStatus, side: d?.side };
+    return {
+      id, scope: accountId ?? "", orderNo: ids.orderNo, txnId: ids.txnId || id, tradeStatus: d?.tradeStatus, side: d?.side ?? r.txn_type,
+      pan4: r.pan4 ?? d?.pan4, amount: r.amount, time: r.txn_time,
+    };
   };
-  const all = new Map<string, { id: string; scope: string; orderNo: string; txnId: string; tradeStatus: unknown; side: unknown }>();
-  for (const r of stored.values()) all.set(String(r.txn_id), candidate(String(r.txn_id), r.detail ?? {}));
-  for (const r of payload) if (!r.__keepStored) all.set(String(r.txn_id), candidate(String(r.txn_id), r.detail ?? {}));
+  const all = new Map<string, LinkCandidate>();
+  for (const r of stored.values()) all.set(String(r.txn_id), candidate(r));
+  for (const r of payload) if (!r.__keepStored) all.set(String(r.txn_id), candidate(r));
   const voided = findLinkedReversals(all.values());
   if (!voided.size) return [];
 
@@ -2224,6 +2246,9 @@ function markHangVoided(rows: CardTxn[], scopes?: unknown[]): CardTxn[] {
         txnId: ids.txnId || String(t.id),
         tradeStatus: t.detail?.["tradeStatus"],
         side: t.detail?.["side"] ?? t.type,
+        pan4: t.pan4 ?? t.detail?.["pan4"],
+        amount: t.amount,
+        time: t.time,
       };
     }),
   );
