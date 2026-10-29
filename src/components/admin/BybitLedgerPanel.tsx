@@ -452,6 +452,10 @@ export function BybitLedgerPanel() {
 
         {q.isLoading ? (
           <div className="py-10 text-center text-sm text-muted-foreground">جارٍ التحميل…</div>
+        ) : q.isError ? (
+          <div role="alert" className="py-10 text-center text-sm text-destructive">
+            تعذّر تحميل المعاملات — جارٍ إعادة المحاولة.
+          </div>
         ) : !rows.length ? (
           <div className="py-10 text-center text-sm text-muted-foreground">
             جارٍ تحديث السجل تلقائياً — ستظهر المعاملات هنا بمجرد جلبها.

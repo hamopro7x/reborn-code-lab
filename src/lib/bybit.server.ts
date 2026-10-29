@@ -2683,7 +2683,8 @@ export async function fetchLedgerPage(opts: {
 
   const base = () => {
     const { periodStart, periodEnd } = currentBybitCycle();
-    let q: any = db.from("bybit_ledger")
+    // PostgREST exposes filters only after select(), not on from().
+    const q = db.from("bybit_ledger").select("*", { count: "exact" })
       .gte("occurred_at", new Date(periodStart).toISOString())
       .lt("occurred_at", new Date(periodEnd).toISOString());
     return q;
@@ -2711,7 +2712,7 @@ export async function fetchLedgerPage(opts: {
   // previous version issued ~15 extra exact-count scans per request (one per
   // group and sub-filter) even though the UI shows no counters — that alone
   // made every ledger read scan the whole table more than a dozen times.
-  const { data, error, count } = (await applyScope(base().select("*", { count: "exact" }), group, status)
+  const { data, error, count } = (await applyScope(base(), group, status)
     .order("occurred_at", { ascending: false })
     .range(from, from + pageSize - 1)) as {
     data: any[] | null;
