@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { cardFilterMatches, cardPurchasePresenter, cardRecordOutcome, findLinkedReversals } from "./bybit-spend";
+import { LEDGER_CARD_FILTERS, cardFilterMatches, cardPurchasePresenter, cardRecordOutcome, findLinkedReversals } from "./bybit-spend";
 import { isUnsupportedCardTypeError, mergeCardTypeResults } from "./bybit.server";
 
 const label = (x: Parameters<typeof cardPurchasePresenter>[0]) => cardPurchasePresenter(x).text;
@@ -107,5 +107,39 @@ describe("unsupported Bybit query types", () => {
     expect(() =>
       mergeCardTypeResults([{ status: "rejected", reason: new Error("Bybit 10001: x") }], ["A"], () => {}),
     ).toThrow();
+  });
+});
+
+describe("raw Bybit codes win over a stale stored status", () => {
+  const g = (status: string, detail: Record<string, unknown>, kind = "card") => cardPurchasePresenter({ kind, status, detail });
+  it("stale success + tradeStatus 3 → فاشلة", () => expect(g("success", { tradeStatus: "3" }).text).toBe("فاشلة"));
+  it("stale success + side 2 → فاشلة", () => expect(g("success", { tradeStatus: "1", side: "2" }).text).toBe("فاشلة"));
+  it("stale success + tradeStatus 2 → فاشلة", () => expect(g("success", { tradeStatus: "2" }).text).toBe("فاشلة"));
+  it("pending 0 → ناجحة", () => expect(g("success", { tradeStatus: "0", side: "1" }).text).toBe("ناجحة"));
+  it("settled 1 → ناجحة", () => expect(g("success", { tradeStatus: "1", side: "3" }).text).toBe("ناجحة"));
+  it("refund tradeStatus 5 → مسترد", () => expect(g("success", { tradeStatus: "5" }).text).toBe("مسترد"));
+  it("refund side + tradeStatus 3 stays مسترد", () => expect(g("refund", { tradeStatus: "3", side: "5" }, "refund").text).toBe("مسترد"));
+  it("hang-voided failed never becomes success from raw pending", () =>
+    expect(g("failed", { tradeStatus: "0", side: "1" }).text).toBe("فاشلة"));
+});
+
+describe("ledger SQL filters mirror the presenter", () => {
+  it("failed filter covers raw tradeStatus 3 and side 2", () => {
+    expect(LEDGER_CARD_FILTERS.failed).toContain("detail->>side.eq.2");
+    expect(LEDGER_CARD_FILTERS.failed).toContain("detail->>tradeStatus.in.(2,3,4)");
+  });
+  it("success filter excludes raw failure codes and keeps nulls", () => {
+    const f = LEDGER_CARD_FILTERS.success.join(" ");
+    expect(f).toContain("detail->>tradeStatus.not.in.(2,3,4,5)");
+    expect(f).toContain("detail->>side.is.null");
+  });
+});
+
+describe("central ledger badge", () => {
+  it("statusBadge passes detail to the presenter", async () => {
+    const { statusBadge } = await import("@/components/admin/BybitLedgerPanel");
+    expect(statusBadge("card", "success", "3", { tradeStatus: "3" }).text).toBe("فاشلة");
+    expect(statusBadge("card", "success", "0", { tradeStatus: "0" }).text).toBe("ناجحة");
+    expect(statusBadge("card", "success", undefined, { linkedReversal: 1 }).text).toBe("فاشلة");
   });
 });
