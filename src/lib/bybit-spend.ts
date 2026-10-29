@@ -747,9 +747,37 @@ export function cardPurchaseGroup(input: { kind?: unknown; status?: unknown; rev
   if (text(input.kind) === "refund" || s === "refund" || s === "مسترد") return "refund";
   const d = (input.detail && typeof input.detail === "object" ? input.detail : {}) as Record<string, unknown>;
   if (input.reversed || d["linkedReversal"]) return "failed";
+  // A stored failure (incl. hang-voided) is never lifted to success by raw pending.
   if (FAILED_STATUS_TEXT.has(s)) return "failed";
+  // Raw Bybit codes win over a stale stored "success" (same rule as
+  // cardRecordOutcome, without the cryptoSold heuristic so the ledger SQL
+  // filter can reproduce it exactly).
+  const raw = cardRecordOutcome(d["tradeStatus"], d["side"] ?? d["type"], null);
+  if (raw === "reversed" || raw === "failed") return "failed";
+  if (raw === "refund") return "refund";
   return "success";
 }
+
+/**
+ * PostgREST filters for the central ledger tabs — the SQL twin of
+ * cardPurchaseGroup for kind="card" rows (numeric raw codes only).
+ */
+const LEDGER_REFUND_SIDES = "(4,5,6,8,9,10,11)";
+const notRefundSide = `or(detail->>side.is.null,detail->>side.not.in.${LEDGER_REFUND_SIDES})`;
+export const LEDGER_CARD_FILTERS = {
+  failed:
+    "or(status.in.(failed,reversed),detail->>linkedReversal.not.is.null,detail->>side.eq.2," +
+    `and(detail->>tradeStatus.in.(2,3,4),${notRefundSide}))`,
+  success: [
+    "or(status.is.null,status.not.in.(failed,reversed,refund))",
+    "detail->>linkedReversal.is.null",
+    `or(detail->>side.is.null,detail->>side.not.in.(2,4,5,6,8,9,10,11))`,
+    "or(detail->>tradeStatus.is.null,detail->>tradeStatus.not.in.(2,3,4,5))",
+  ],
+  refund:
+    "or(kind.eq.refund,and(kind.eq.card,or(status.is.null,status.not.in.(failed,reversed)),detail->>linkedReversal.is.null," +
+    `or(status.eq.refund,detail->>side.in.${LEDGER_REFUND_SIDES},and(detail->>tradeStatus.eq.5,or(detail->>side.is.null,detail->>side.neq.2)))))`,
+} as const;
 
 export const CARD_PURCHASE_LABEL: Record<CardPurchaseGroup, { text: string; cls: string }> = {
   success: { text: "ناجحة", cls: "bg-emerald-500/15 text-emerald-400" },

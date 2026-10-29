@@ -470,7 +470,7 @@ export function BybitLedgerPanel() {
               </thead>
               <tbody>
                 {rows.map((r) => {
-                  const badge = statusBadge(r.kind, r.status, (r as any).detail?.tradeStatus);
+                  const badge = statusBadge(r.kind, r.status, (r as any).detail?.tradeStatus, (r as any).detail);
                   const d = (r.detail ?? {}) as Record<string, unknown>;
                   const pan4 = String(d["pan4"] ?? "").trim();
                   const brand = String(
