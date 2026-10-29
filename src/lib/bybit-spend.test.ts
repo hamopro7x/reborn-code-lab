@@ -44,7 +44,7 @@ describe("monthly spend engine", () => {
   it("excludes refunds, reversals and failed rows", () => {
     const totals = sumSpend(
       [
-        row({ txnId: "r1", amount: 30, detail: { tradeStatus: "1", side: "3", paymentId: "R1", basicAmount: 30, basicCurrency: "USD" } }),
+        row({ txnId: "r1", amount: 30, detail: { tradeStatus: "1", side: "5", paymentId: "R1", basicAmount: 30, basicCurrency: "USD" } }),
         row({ txnId: "r2", amount: 40, detail: { tradeStatus: "3", side: "1", paymentId: "R2", basicAmount: 40, basicCurrency: "USD" } }),
         row({ txnId: "r3", amount: 50, detail: { tradeStatus: "2", side: "1", paymentId: "R3", basicAmount: 50, basicCurrency: "USD" } }),
       ],
@@ -241,7 +241,7 @@ describe("canonical transactions", () => {
   it("cases 7-9: refund, failed and reversed rows never reach spend", () => {
     const totals = sumSpend(
       [
-        row({ txnId: "rf", amount: 10, detail: { tradeStatus: "1", side: "3", paymentId: "RF", basicAmount: 10, basicCurrency: "USD" } }),
+        row({ txnId: "rf", amount: 10, detail: { tradeStatus: "1", side: "5", paymentId: "RF", basicAmount: 10, basicCurrency: "USD" } }),
         row({ txnId: "fl", amount: 10, detail: { tradeStatus: "2", side: "1", paymentId: "FL", basicAmount: 10, basicCurrency: "USD" } }),
         row({ txnId: "rv", amount: 10, detail: { tradeStatus: "3", side: "1", paymentId: "RV", basicAmount: 10, basicCurrency: "USD" } }),
       ],
@@ -326,7 +326,7 @@ describe("canonical transactions", () => {
     const rows = [
       row({ txnId: "A", amount: 50, detail: { tradeStatus: "0", side: "1", paymentId: "MIX", basicAmount: 50, basicCurrency: "USD" } }),
       row({ txnId: "F", amount: 50, detail: { tradeStatus: "COMPLETED", side: "1", paymentId: "MIX", basicAmount: 50, basicCurrency: "USD" } }),
-      row({ txnId: "R", amount: 50, detail: { tradeStatus: "1", side: "3", paymentId: "MIX", basicAmount: 50, basicCurrency: "USD" } }),
+      row({ txnId: "R", amount: 50, detail: { tradeStatus: "1", side: "5", paymentId: "MIX", basicAmount: 50, basicCurrency: "USD" } }),
     ];
     const totals = sumSpend(rows, DAY_START, MONTH_START);
     expect(totals.countedTxns).toBe(1);
@@ -338,7 +338,7 @@ describe("canonical transactions", () => {
       [
         row({ txnId: "A", amount: 9, detail: { tradeStatus: "0", side: "1", paymentId: "AU", basicAmount: 9, basicCurrency: "USD" } }),
         row({ txnId: "F", amount: 9, detail: { tradeStatus: "COMPLETED", side: "1", paymentId: "AU", basicAmount: 9, basicCurrency: "USD" } }),
-        row({ txnId: "R", amount: 9, detail: { tradeStatus: "1", side: "3", paymentId: "RB", basicAmount: 9, basicCurrency: "USD" } }),
+        row({ txnId: "R", amount: 9, detail: { tradeStatus: "1", side: "5", paymentId: "RB", basicAmount: 9, basicCurrency: "USD" } }),
       ],
       DAY_START,
       MONTH_START,
@@ -461,7 +461,7 @@ describe("reversed («معكوسة») card records", () => {
     const t = sumSpend(
       [
         row({ txnId: "a1", amount: 3.61, time: DAY_START + 1000, detail: { tradeStatus: "0", side: "1", paymentId: "PAY-A", basicAmount: 3.61, basicCurrency: "USD" } }),
-        row({ txnId: "a1-rev", amount: 3.61, time: DAY_START + 1500, detail: { tradeStatus: "1", side: "3", paymentId: "PAY-A", basicAmount: 3.61, basicCurrency: "USD" } }),
+        row({ txnId: "a1-rev", amount: 3.61, time: DAY_START + 1500, detail: { tradeStatus: "1", side: "2", paymentId: "PAY-A", basicAmount: 3.61, basicCurrency: "USD" } }),
         row({ txnId: "a2", amount: 3.61, time: DAY_START + 4000, detail: { tradeStatus: "0", side: "1", paymentId: "PAY-B", basicAmount: 3.61, basicCurrency: "USD" } }),
       ],
       DAY_START,

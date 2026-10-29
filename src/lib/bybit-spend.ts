@@ -51,8 +51,11 @@ export type SpendRow = {
 
 const STABLE_USD = new Set(["USD", "USDT", "USDC", "DAI", "FDUSD", "TUSD", "BUSD"]);
 
-/** Bybit `side` values that describe a refund/reversal rather than a purchase. */
-const REFUND_SIDES = new Set(["3", "5", "6", "7", "10", "11"]);
+/**
+ * Bybit `side` values that move money back (refund / chargeback family).
+ * 3 and 7 are purchases (Transaction / Transaction Direct), not refunds.
+ */
+const REFUND_SIDES = new Set(["4", "5", "6", "8", "9", "10", "11"]);
 
 /**
  * Business identifiers Bybit exposes for one purchase, in priority order.
@@ -131,19 +134,115 @@ export function cryptoSoldOf(src: unknown): boolean | null {
   return null;
 }
 
+/** Bybit `side` "2" = Authorization Reversal (official docs). */
+export const AUTH_REVERSAL_SIDE = "2";
+/** Authorisation sides (empty = older rows stored without a side). */
+const AUTH_SIDES = new Set(["", "1"]);
+
+/**
+ * Official Bybit Card asset-records enums
+ * (https://bybit-exchange.github.io/docs/v5/bybit-card/asset-records):
+ *   tradeStatus 0=In_Progress 1=Completed 2=Declined 3=Reversal
+ *   side 1=Authorization 2=Authorization Reversal 3=Transaction 4=Refund(unDeduct)
+ *        5=Refund 6=Chargeback 7=Transaction(Direct) 8=Refund Reversal
+ *        9=Chargeback Reversal 10=Refund Request 11=Refund Reversal Request
+ *        12=Chargeback Fee 13=ATM Withdrawal
+ * "4" and REVERS/VOID text are kept for rows archived by older code.
+ */
 export function cardRecordOutcome(tradeStatus: unknown, side: unknown, cryptoSold: boolean | null = null): CardOutcome {
   const ts = text(tradeStatus).trim();
   const up = ts.toUpperCase();
-  if (REFUND_SIDES.has(text(side).trim())) return "refund";
-  // Bybit card records: "0" = pending purchase, "1" = completed purchase,
-  // "2" = declined. "1" is NOT a reversal: it is how most real purchases end.
-  if (ts === "4" || /REVERS|VOID/.test(up)) return "reversed";
-  // A finished record ("1") where Bybit took nothing from the wallet is what
-  // Bybit's app shows as «معكوسة»; real completed purchases have cryptoSold true.
-  if (ts === "1" && cryptoSold === false) return "reversed";
-  if (ts === "3" || ts === "5" || /REFUND|CHARGEBACK/.test(up)) return "refund";
+  const sd = text(side).trim();
+  if (sd === AUTH_REVERSAL_SIDE) return "reversed";
+  if (REFUND_SIDES.has(sd)) return "refund";
+  if (ts === "3" || ts === "4" || /REVERS|VOID/.test(up)) return "reversed";
+  if (ts === "5" || /REFUND|CHARGEBACK/.test(up)) return "refund";
   if (ts === "2" || /FAIL|DECLIN|REJECT|CANCEL|EXPIRE/.test(up)) return "failed";
+  // Legacy fallback for accounts whose API still reports the voided
+  // authorisation as "1": Bybit took nothing from the wallet (cryptoSold false).
+  if (ts === "1" && cryptoSold === false && AUTH_SIDES.has(sd)) return "reversed";
   return "ok";
+}
+
+/** An explicit Bybit reversal code (side 2 or tradeStatus 3/4) — not the cryptoSold heuristic. */
+export function isExplicitReversal(tradeStatus: unknown, side: unknown): boolean {
+  const sd = text(side).trim();
+  if (sd === AUTH_REVERSAL_SIDE) return true;
+  if (REFUND_SIDES.has(sd)) return false;
+  const ts = text(tradeStatus).trim();
+  return ts === "3" || ts === "4" || /REVERS|VOID/.test(ts.toUpperCase());
+}
+
+/** orderNo / txnId of a raw record or stored detail (falls back to the raw JSON). */
+export function cardLinkIds(src: unknown): { orderNo: string; txnId: string } {
+  const o = (src && typeof src === "object" ? src : {}) as Record<string, unknown>;
+  let raw: Record<string, unknown> = {};
+  if (typeof o["raw"] === "string") {
+    try {
+      raw = JSON.parse(o["raw"] as string) ?? {};
+    } catch {
+      raw = {};
+    }
+  }
+  return {
+    orderNo: cleanId(o["orderNo"] ?? raw["orderNo"] ?? o["orderId"]),
+    txnId: cleanId(o["txnId"] ?? raw["txnId"]),
+  };
+}
+
+export type LinkCandidate = {
+  id: string;
+  /** account scope — links never cross accounts */
+  scope: unknown;
+  orderNo: unknown;
+  txnId: unknown;
+  tradeStatus: unknown;
+  side: unknown;
+};
+
+/**
+ * Authorisations voided by a SEPARATE Bybit reversal record that carries the
+ * same orderNo or txnId inside the same account. Matching uses Bybit ids only,
+ * never amount/time similarity. Returns ids of the voided purchase records.
+ */
+export function findLinkedReversals(rows: Iterable<LinkCandidate>): Set<string> {
+  const list = [...rows];
+  const keys = new Set<string>();
+  const reversalIds = new Set<string>();
+  for (const r of list) {
+    if (!isExplicitReversal(r.tradeStatus, r.side)) continue;
+    reversalIds.add(r.id);
+    const scope = text(r.scope);
+    const o = cleanId(r.orderNo);
+    const t = cleanId(r.txnId);
+    if (o) keys.add(`${scope}|o:${o}`);
+    if (t) keys.add(`${scope}|t:${t}`);
+  }
+  const out = new Set<string>();
+  if (!keys.size) return out;
+  for (const r of list) {
+    if (reversalIds.has(r.id)) continue;
+    if (!AUTH_SIDES.has(text(r.side).trim())) continue; // clearings/refunds are never voided here
+    if (text(r.tradeStatus).trim() === "2") continue; // declined already failed
+    const scope = text(r.scope);
+    const o = cleanId(r.orderNo);
+    const t = cleanId(r.txnId);
+    if ((o && keys.has(`${scope}|o:${o}`)) || (t && keys.has(`${scope}|t:${t}`))) out.add(r.id);
+  }
+  return out;
+}
+
+function linkCandidateOfSpendRow(row: SpendRow): LinkCandidate {
+  const d = row.detail ?? {};
+  const ids = cardLinkIds(d);
+  return {
+    id: text(row.txnId),
+    scope: "",
+    orderNo: ids.orderNo,
+    txnId: ids.txnId || text(row.txnId),
+    tradeStatus: d["tradeStatus"],
+    side: text(d["side"]) || text(row.type),
+  };
 }
 
 /**
@@ -420,13 +519,14 @@ export function canonicalize(rows: Iterable<SpendRow>): {
   const seenRaw = new Set<string>();
   const list = [...rows];
   const hangVoided = findHangReversals(list.map(hangCandidateOfSpendRow));
+  const linkVoided = findLinkedReversals(list.map(linkCandidateOfSpendRow));
 
   for (const row of list) {
     const time = Number(row.time ?? 0);
     if (time > lastTxnTime) lastTxnTime = time;
 
     const canonicalId = getCanonicalTransactionIdentity(row);
-    const kind = hangVoided.has(text(row.txnId)) ? "excluded" : spendKind(row);
+    const kind = hangVoided.has(text(row.txnId)) || linkVoided.has(text(row.txnId)) ? "excluded" : spendKind(row);
     if (kind === "excluded") {
       excluded.push({ row, canonicalId, reason: "refund/reversed/failed" });
       continue;
