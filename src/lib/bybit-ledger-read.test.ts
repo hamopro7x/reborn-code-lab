@@ -16,7 +16,7 @@ vi.mock("@/integrations/supabase/client.server", async () => {
           requests.push(url);
           const table = url.pathname.split("/").at(-1);
           if (table === "bybit_ledger" && response.fail) {
-            return new Response(JSON.stringify({ message: "ledger read unavailable" }), { status: 503 });
+            return new Response(JSON.stringify({ message: "ledger read unavailable" }), { status: 400 });
           }
           const ledger = {
             id: "movement", account_id: "account", kind: "card", status: "success", direction: "out",
