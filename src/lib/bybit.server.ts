@@ -1171,7 +1171,7 @@ async function storedCardTxns(limit: number, accountId?: string): Promise<CardTx
         const from = base + i * CHUNK;
         let query = (supabaseAdmin as any)
           .from("bybit_card_txns")
-          .select("txn_id, merchant, amount, currency, status, txn_time, pan4, txn_type, detail");
+          .select("txn_id, account_id, merchant, amount, currency, status, txn_time, pan4, txn_type, detail");
         if (accountId) query = query.eq("account_id", accountId);
         requests.push(query.order("txn_time", { ascending: false }).range(from, from + CHUNK - 1));
       }
@@ -1180,7 +1180,7 @@ async function storedCardTxns(limit: number, accountId?: string): Promise<CardTx
       data.push(...rows);
       if (rows.length < CHUNK * BATCH) break;
     }
-    return markHangVoided(data.map(mapStoredRow));
+    return markHangVoided(data.map(mapStoredRow), data.map((r: any) => r.account_id ?? ""));
   } catch {
     return [];
   }
