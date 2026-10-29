@@ -1,5 +1,4 @@
 import { useState, type ReactNode } from "react";
-import { Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type MailListRowProps = {
@@ -10,7 +9,6 @@ type MailListRowProps = {
   date: string;
   logo?: string;
   read?: boolean;
-  starred?: boolean;
   onOpen: () => void;
   onToggleRead?: () => void;
   footer?: ReactNode;
@@ -23,7 +21,7 @@ function AvatarLogo({ src, fallback }: { src: string; fallback: string }) {
 }
 
 /** Physical RTL tracks stay fixed independently of the message text direction. */
-export function MailListRow({ sender, subject, preview, account, date, logo, read = true, starred = false, onOpen, onToggleRead, footer }: MailListRowProps) {
+export function MailListRow({ sender, subject, preview, account, date, logo, read = true, onOpen, onToggleRead, footer }: MailListRowProps) {
   return (
     <li dir="rtl" className={`grid grid-cols-[minmax(0,1fr)_104px] gap-x-3 p-3 hover:bg-muted/50 sm:grid-cols-[minmax(0,1fr)_144px] ${read ? "" : "bg-primary/5"}`}>
       <Button variant="ghost" onClick={onOpen}
@@ -50,7 +48,7 @@ export function MailListRow({ sender, subject, preview, account, date, logo, rea
             </Button>
           )}
         </div>
-        {footer ?? <Star aria-label={starred ? "رسالة مميزة" : "رسالة غير مميزة"} className={`row-start-2 h-4 w-4 self-center ${starred ? "fill-primary text-primary" : "text-muted-foreground"}`} />}
+        {footer}
       </div>
     </li>
   );

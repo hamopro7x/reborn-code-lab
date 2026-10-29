@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { MailListRow } from "@/components/admin/MailListRow";
 import { supabase } from "@/integrations/supabase/client";
 import { safeEmailDocument } from "@/lib/mail/mime";
+import { formatDateTime } from "@/lib/format";
 import { refreshQueries } from "@/lib/refresh-queries";
 import {
   listMailAccounts, startMailLink, setMailAccountPaused, deleteMailAccount, syncMailNow, listMailMessages,
@@ -44,7 +45,7 @@ function beep() {
     o.stop(ctx.currentTime + 0.6);
   } catch {}
 }
-const fmt = (d?: string | null) => (d ? new Date(d).toLocaleString("ar-EG", { dateStyle: "medium", timeStyle: "short" }) : "—");
+const fmt = (d?: string | null) => formatDateTime(d);
 const BRANDS: Record<string, string> = { paypal: "PayPal", tiktok: "TikTok", google: "Google", bybit: "Bybit", facebookmail: "Facebook", facebook: "Facebook", instagram: "Instagram", youtube: "YouTube", linkedin: "LinkedIn", github: "GitHub", openai: "OpenAI", binance: "Binance", amazon: "Amazon", apple: "Apple", microsoft: "Microsoft", netflix: "Netflix", spotify: "Spotify", x: "X", twitter: "X", whatsapp: "WhatsApp", telegram: "Telegram", lovable: "Lovable" };
 const SLD = new Set(["co", "com", "net", "org", "gov", "edu", "ac"]);
 const platformName = (addr: string) => {
@@ -423,10 +424,6 @@ export function GmailInbox({ isAdmin = false }: { isAdmin?: boolean }) {
     return () => io.disconnect();
   }, [msgs]);
 
-  const askNotify = () => {
-    if (typeof Notification === "undefined") return toast.error("المتصفح لا يدعم الإشعارات");
-    Notification.requestPermission().then((p) => toast(p === "granted" ? "تم تفعيل إشعارات الجهاز" : "لم يتم السماح بالإشعارات"));
-  };
   const toggleRead = async (m: any) => {
     try { await readFn({ data: { ids: [m.id], read: !m.is_read } }); qc.invalidateQueries({ queryKey: ["mail-msgs"] }); }
     catch (e: any) { toast.error(e?.message ?? "حدث خطأ"); }
@@ -448,7 +445,6 @@ export function GmailInbox({ isAdmin = false }: { isAdmin?: boolean }) {
           <Button size="sm" variant={tab === "mail" ? "default" : "outline"} onClick={() => setTab("mail")}>الرسائل</Button>
           <Button size="sm" variant={tab === "accounts" ? "default" : "outline"} onClick={() => setTab("accounts")}>الحسابات</Button>
           {isAdmin && <Button size="sm" variant={tab === "activity" ? "default" : "outline"} onClick={() => setTab("activity")}><History className="ms-1 h-4 w-4" />السجل</Button>}
-          <Button size="sm" variant="ghost" onClick={askNotify}>تفعيل الإشعارات</Button>
         </div>
       </div>
 
@@ -532,7 +528,7 @@ export function GmailInbox({ isAdmin = false }: { isAdmin?: boolean }) {
                       <MailListRow key={m.id} sender={view === "sent" ? `إلى: ${m.to_addr}` : sender(m.from_addr)}
                         logo={m.sender_logo_url ?? undefined}
                         account={acctEmail(m.account_id)} date={fmt(m.internal_date)} preview={m.snippet}
-                        read={m.is_read} starred={m.starred} onOpen={() => setOpenId(m.id)} onToggleRead={() => toggleRead(m)}
+                        read={m.is_read} onOpen={() => setOpenId(m.id)} onToggleRead={() => toggleRead(m)}
                         subject={<>
                           {m.has_attachments && <Paperclip className="me-1 inline h-3 w-3" />}
                           {m.folder === "drafts" && <span className="me-1 rounded bg-secondary px-1.5 py-0.5 text-[11px] font-normal">مسودة في Gmail</span>}
