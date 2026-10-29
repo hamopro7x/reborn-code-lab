@@ -5,7 +5,6 @@ import {
   sumSpendByCard,
   auditSpend,
   getCanonicalTransactionIdentity,
-  getMonthlySpendPeriod,
   cardRecordOutcome,
   findHangReversals,
   type SpendRow,
@@ -19,6 +18,7 @@ import {
   cardFilterMatches,
   LEDGER_CARD_FILTERS,
 } from "./bybit-spend";
+import { currentBybitCycle, currentBybitRows } from "./monthly-cycle.server";
 
 
 const BASE = "https://api.bybit.com";
@@ -617,13 +617,18 @@ async function fetchCardPages(maxRows: number, creds: Creds, sinceMs?: number, b
 
 async function callCard(limit: number, accountId?: string, creds?: Creds, sinceMs?: number): Promise<any[]> {
   const key = accountId ?? "default";
+  const filterRows = (rows: any[]) => {
+    const { periodStart, periodEnd } = currentBybitCycle();
+    const start = Math.max(periodStart, sinceMs ?? periodStart);
+    return rows.filter((row) => Number(row?.txnCreate) >= start && Number(row?.txnCreate) < periodEnd);
+  };
   const cached = cardCache.get(key);
   // Short TTL: a settlement can land seconds after its authorisation, and a
   // cached authorisation must never be treated as the final record.
-  if (cached && Date.now() - cached.at < 10_000) return cached.rows;
+  if (cached && Date.now() - cached.at < 10_000) return filterRows(cached.rows);
 
   const running = cardInflight.get(key);
-  if (running) return running;
+  if (running) return running.then(filterRows);
   const p = fetchCardPages(Math.max(limit, 100), creds ?? (await getCreds(accountId)), sinceMs)
     .then((rows) => {
       cardCache.set(key, { at: Date.now(), rows });
@@ -633,7 +638,7 @@ async function callCard(limit: number, accountId?: string, creds?: Creds, sinceM
       cardInflight.delete(key);
     });
   cardInflight.set(key, p);
-  return p;
+  return p.then(filterRows);
 }
 
 const STABLES = new Set(["USDT", "USDC", "USD", "DAI", "FDUSD", "TUSD", "BUSD"]);
@@ -680,9 +685,9 @@ export function spendWindows(nowMs: number) {
   if (nowMs < dayStart) dayStart -= DAY;
 
 
-  const { periodStart, periodEnd } = getMonthlySpendPeriod(nowMs);
+  const { periodStart, periodEnd } = currentBybitCycle(nowMs);
 
-  return { dayStart, monthStart: periodStart, monthEnd: periodEnd };
+  return { dayStart: Math.max(dayStart, periodStart), monthStart: periodStart, monthEnd: periodEnd };
 }
 
 
@@ -709,6 +714,10 @@ export function computeSpend(
   monthStart: number,
   monthEnd: number = Number.POSITIVE_INFINITY,
 ) {
+  const { periodStart, periodEnd } = currentBybitCycle();
+  dayStart = Math.max(dayStart, periodStart);
+  monthStart = Math.max(monthStart, periodStart);
+  monthEnd = Math.min(monthEnd, periodEnd);
   const key = `${accountId ?? "*"}|${dayStart}|${monthStart}|${monthEnd}`;
   const now = Date.now();
   const hit = spendCache.get(key);
@@ -1290,6 +1299,7 @@ async function storedCardTxns(limit: number, accountId?: string): Promise<CardTx
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const CHUNK = 1000;
     const BATCH = 3; // fewer parallel database reads per request keeps the worker responsive
+    const { periodStart, periodEnd } = currentBybitCycle();
     const data: any[] = [];
     for (let base = 0; base < limit; base += CHUNK * BATCH) {
       const requests: any[] = [];
@@ -1297,7 +1307,9 @@ async function storedCardTxns(limit: number, accountId?: string): Promise<CardTx
         const from = base + i * CHUNK;
         let query = (supabaseAdmin as any)
           .from("bybit_card_txns")
-          .select("txn_id, account_id, merchant, amount, currency, status, txn_time, pan4, txn_type, detail");
+          .select("txn_id, account_id, merchant, amount, currency, status, txn_time, pan4, txn_type, detail")
+          .gte("txn_time", periodStart)
+          .lt("txn_time", periodEnd);
         if (accountId) query = query.eq("account_id", accountId);
         requests.push(query.order("txn_time", { ascending: false }).range(from, from + CHUNK - 1));
       }
@@ -1409,7 +1421,7 @@ export async function fetchCardTxnsPage(opts: {
 }
 
 function currentCycleForRead() {
-  return getMonthlySpendPeriod(Date.now());
+  return currentBybitCycle();
 }
 
 /** Light projection of one cycle (no raw blob), classified like the full rows. */
@@ -1482,13 +1494,16 @@ export async function fetchCardTxnsLive(opts: {
     return markHangVoided(mapped);
   });
 
-  const visible = opts.hideReversed ? rows.filter((r) => !r.reversed) : rows;
-  const filtered = status === "all" ? visible : visible.filter((r) => r.status === status);
+  const current = currentBybitRows(rows);
+  const visible = opts.hideReversed ? current.filter((r) => !r.reversed) : current;
+  const filtered = visible.filter((r) => cardFilterMatches(status, cardPurchaseGroup(r)));
+  const counts = { all: visible.length, success: 0, failed: 0, refund: 0 };
+  for (const row of visible) counts[cardPurchaseGroup(row)]++;
   const from = (page - 1) * pageSize;
   return {
     rows: filtered.slice(from, from + pageSize),
     total: filtered.length,
-    counts: { all: filtered.length, success: 0, failed: 0, refund: 0 },
+    counts,
   };
 }
 
@@ -1727,7 +1742,7 @@ export async function fetchP2P(accountId?: string): Promise<P2PRow[]> {
     }
     if (items.length < 30) break;
   }
-  return out.sort((a, b) => b.time - a.time);
+  return currentBybitRows(out).sort((a, b) => b.time - a.time);
 }
 
 const wdStatus = (s: unknown) => {
@@ -1773,7 +1788,7 @@ export async function fetchOnChain(accountId?: string): Promise<{ deposits: Asse
         }))
       : [];
 
-  return { deposits, withdrawals };
+  return { deposits: currentBybitRows(deposits), withdrawals: currentBybitRows(withdrawals) };
 }
 
 export async function fetchInternal(accountId?: string): Promise<{ deposits: AssetRow[]; withdrawals: AssetRow[] }> {
@@ -1813,7 +1828,7 @@ export async function fetchInternal(accountId?: string): Promise<{ deposits: Ass
         }))
       : [];
 
-  return { deposits, withdrawals };
+  return { deposits: currentBybitRows(deposits), withdrawals: currentBybitRows(withdrawals) };
 }
 
 export type BybitCard = {
@@ -1871,7 +1886,7 @@ export async function fetchCards(accountId?: string): Promise<BybitCard[]> {
       merchant: t.merchant,
     })) as Array<SpendRow & { pan4: string }>,
     (row) => (row as SpendRow & { pan4: string }).pan4,
-    getMonthlySpendPeriod(Date.now()),
+    currentBybitCycle(),
   );
   const currencyByPan = new Map<string, string>();
   for (const t of rows) {
@@ -2647,7 +2662,10 @@ export async function fetchLedgerPage(opts: {
   const nameById = new Map(accounts.map((a, i) => [a.id, `${a.name} (فيزا ${a.sortOrder || i + 1})`]));
 
   const base = () => {
-    let q: any = db.from("bybit_ledger");
+    const { periodStart, periodEnd } = currentBybitCycle();
+    let q: any = db.from("bybit_ledger")
+      .gte("occurred_at", new Date(periodStart).toISOString())
+      .lt("occurred_at", new Date(periodEnd).toISOString());
     return q;
   };
 
