@@ -836,7 +836,7 @@ function mapCardTxn(t: any): CardTxn {
     // Shared rule (bybit-spend.cardRecordOutcome). A reversed («معكوسة»)
     // authorisation was never charged, so it is stored as "failed" and never
     // counts as a purchase — it used to fall through to "success".
-    const outcome = cardRecordOutcome(t.tradeStatus ?? t.status, side);
+    const outcome = cardRecordOutcome(t.tradeStatus ?? t.status, side, cryptoSoldOf(t));
     const status: CardTxn["status"] =
       outcome === "refund" ? "refund" : outcome === "ok" ? "success" : "failed";
 
@@ -1073,7 +1073,7 @@ async function storedCardTxns(limit: number, accountId?: string): Promise<CardTx
 function mapStoredRow(r: any): CardTxn {
   const detail = (r.detail ?? {}) as Record<string, string | number | null>;
   const side = String(detail.side ?? r.txn_type ?? "");
-  const outcome = cardRecordOutcome(detail.tradeStatus, side);
+  const outcome = cardRecordOutcome(detail.tradeStatus, side, cryptoSoldOf(detail));
   // Bybit's own raw status wins whenever it says refund / reversed / failed:
   // older rows were stored as "success" while Bybit had reversed them.
   const stored: CardTxn["status"] | null =
@@ -2017,7 +2017,7 @@ function cardLedgerRow(accountId: string, c: any): LedgerInsert {
   // A reversed authorisation is labelled "reversed" («معكوسة») like Bybit; it
   // is not a successful status, so the shift sheet never counts it.
   const reversed =
-    cardRecordOutcome(t.detail?.["tradeStatus"], t.detail?.["side"] ?? t.type) === "reversed";
+    cardRecordOutcome(t.detail?.["tradeStatus"], t.detail?.["side"] ?? t.type, cryptoSoldOf(t.detail)) === "reversed";
   const status: string = reversed ? "reversed" : t.status;
   const isRefund = status === "refund";
   const src = (t.detail ?? {}) as Record<string, any>;
