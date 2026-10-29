@@ -111,13 +111,36 @@ type Kind = "settled" | "authorised" | "excluded";
  */
 export type CardOutcome = "ok" | "reversed" | "refund" | "failed";
 
-export function cardRecordOutcome(tradeStatus: unknown, side: unknown): CardOutcome {
+/**
+ * Bybit's `cryptoSold` flag from a raw record or a stored detail (which keeps
+ * the raw payload as JSON in `raw`). null when Bybit did not send it.
+ */
+export function cryptoSoldOf(src: unknown): boolean | null {
+  if (!src || typeof src !== "object") return null;
+  const o = src as Record<string, unknown>;
+  let v = o["cryptoSold"];
+  if (v === undefined && typeof o["raw"] === "string") {
+    try {
+      v = (JSON.parse(o["raw"] as string) as Record<string, unknown>)?.["cryptoSold"];
+    } catch {
+      v = undefined;
+    }
+  }
+  if (v === true || v === "true") return true;
+  if (v === false || v === "false") return false;
+  return null;
+}
+
+export function cardRecordOutcome(tradeStatus: unknown, side: unknown, cryptoSold: boolean | null = null): CardOutcome {
   const ts = text(tradeStatus).trim();
   const up = ts.toUpperCase();
   if (REFUND_SIDES.has(text(side).trim())) return "refund";
   // Bybit card records: "0" = pending purchase, "1" = completed purchase,
   // "2" = declined. "1" is NOT a reversal: it is how most real purchases end.
   if (ts === "4" || /REVERS|VOID/.test(up)) return "reversed";
+  // A finished record ("1") where Bybit took nothing from the wallet is what
+  // Bybit's app shows as «معكوسة»; real completed purchases have cryptoSold true.
+  if (ts === "1" && cryptoSold === false) return "reversed";
   if (ts === "3" || ts === "5" || /REFUND|CHARGEBACK/.test(up)) return "refund";
   if (ts === "2" || /FAIL|DECLIN|REJECT|CANCEL|EXPIRE/.test(up)) return "failed";
   return "ok";
@@ -141,6 +164,7 @@ export type HangCandidate = {
   time: number;
   tradeStatus: unknown;
   side: unknown;
+  cryptoSold?: boolean | null;
 };
 
 /** Ids of the voided first attempts. Pure; shared by archive, ledger, sheet and spend. */
@@ -148,7 +172,7 @@ export function findHangReversals(rows: Iterable<HangCandidate>, windowMs = HANG
   const groups = new Map<string, HangCandidate[]>();
   for (const r of rows) {
     if (!r.id || !Number.isFinite(r.time) || r.time <= 0) continue;
-    if (cardRecordOutcome(r.tradeStatus, r.side) !== "ok") continue;
+    if (cardRecordOutcome(r.tradeStatus, r.side, r.cryptoSold ?? null) !== "ok") continue;
     const cents = Math.round(Math.abs(Number(r.amount) || 0) * 100);
     if (!cents) continue;
     const key = `${text(r.pan4).trim()}|${text(r.merchant).trim().toUpperCase()}|${cents}`;
@@ -180,6 +204,7 @@ function hangCandidateOfSpendRow(row: SpendRow): HangCandidate {
     time: Number(row.time ?? 0),
     tradeStatus: d["tradeStatus"],
     side: text(d["side"]) || text(row.type),
+    cryptoSold: cryptoSoldOf(d),
   };
 }
 
@@ -187,7 +212,7 @@ function hangCandidateOfSpendRow(row: SpendRow): HangCandidate {
 export function spendKind(row: SpendRow): Kind {
   const d = row.detail ?? {};
   const side = text(d["side"]) || text(row.type);
-  if (cardRecordOutcome(d["tradeStatus"], side) !== "ok") return "excluded";
+  if (cardRecordOutcome(d["tradeStatus"], side, cryptoSoldOf(d)) !== "ok") return "excluded";
 
   const stored = text(row.status).toLowerCase();
   if (stored === "refund" || stored === "failed" || stored === "reversed") return "excluded";
@@ -442,7 +467,7 @@ export function canonicalize(rows: Iterable<SpendRow>): {
   for (const ex of excluded) {
     if (!isBusinessIdentity(ex.canonicalId)) continue;
     const d = ex.row.detail ?? {};
-    if (cardRecordOutcome(d["tradeStatus"], text(d["side"]) || text(ex.row.type)) === "failed") continue;
+    if (cardRecordOutcome(d["tradeStatus"], text(d["side"]) || text(ex.row.type), cryptoSoldOf(d)) === "failed") continue;
     const txn = transactions.get(ex.canonicalId);
     if (txn && txn.kind === "authorised") transactions.delete(ex.canonicalId);
   }

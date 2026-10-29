@@ -531,3 +531,20 @@ describe("Bybit completed purchases (tradeStatus 1)", () => {
     expect(totals.daySpend).toBeCloseTo(9.49, 5);
   });
 });
+
+import { cardRecordOutcome as outcomeRule, cryptoSoldOf as soldOf } from "./bybit-spend";
+describe("reversed = completed with nothing charged", () => {
+  it("completed with cryptoSold false is reversed", () => {
+    expect(outcomeRule("1", "1", false)).toBe("reversed");
+  });
+  it("completed with cryptoSold true stays a purchase", () => {
+    expect(outcomeRule("1", "1", true)).toBe("ok");
+  });
+  it("pending with cryptoSold false stays pending purchase", () => {
+    expect(outcomeRule("0", "1", false)).toBe("ok");
+  });
+  it("reads cryptoSold from stored raw json", () => {
+    expect(soldOf({ raw: JSON.stringify({ cryptoSold: false }) })).toBe(false);
+    expect(soldOf({ cryptoSold: "true" })).toBe(true);
+  });
+});
