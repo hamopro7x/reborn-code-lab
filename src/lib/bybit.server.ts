@@ -1358,6 +1358,10 @@ export async function fetchCardTxnsPage(opts: {
   return { rows, total, counts };
 }
 
+function currentCycleForRead() {
+  return getMonthlySpendPeriod(Date.now());
+}
+
 /** Light projection of one cycle (no raw blob), classified like the full rows. */
 async function lightCycleRows(db: any, accountId: string | undefined, periodStart: number, periodEnd: number) {
   const CHUNK = 1000;

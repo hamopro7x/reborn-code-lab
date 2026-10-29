@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { ChevronDown } from "lucide-react";
 import { getBybitCardBrands, getBybitLedger, getBybitSpendTotals } from "@/lib/bybit.functions";
 import { formatDateTime } from "@/lib/format";
+import { cardPurchasePresenter } from "@/lib/bybit-spend";
 import { useLedgerAutoSync } from "@/lib/use-ledger-sync";
 
 /** Official USDT token logo from TrustWallet (works on Fly and Lovable). */
