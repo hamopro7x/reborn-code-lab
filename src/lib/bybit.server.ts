@@ -13,6 +13,8 @@ import {
   isExplicitReversal,
   cardLinkIds,
   findLinkedReversals,
+  cardPurchaseGroup,
+  cardFilterMatches,
 } from "./bybit-spend";
 
 
@@ -1246,60 +1248,82 @@ export async function fetchCardTxnsPage(opts: {
   const from = (page - 1) * pageSize;
   const { periodStart, periodEnd } = currentCycleForRead();
 
-  const base = () => {
-    let q = (supabaseAdmin as any).from("bybit_card_txns");
-    return { q };
-  };
+  // The filter, the count and the page all come from ONE classification
+  // (mapStoredRow + markHangVoided + cardPurchaseGroup), so a row shown as
+  // «فاشلة» can never be counted under «المشتريات الناجحة» or vice versa.
+  // A light projection of the cycle is classified first; only the page's
+  // rows are then read in full.
+  const light = await lightCycleRows(supabaseAdmin, opts.accountId, periodStart, periodEnd);
+  let classified = light.map((r) => ({ r, group: cardPurchaseGroup(r.t) }));
+  if (opts.hideReversed) classified = classified.filter((x) => !x.r.t.reversed);
+  const matching = classified.filter((x) => cardFilterMatches(status, x.group));
+  const total = matching.length;
+  const counts = { all: classified.length, success: 0, failed: 0, refund: 0 };
+  for (const x of classified) counts[x.group]++;
+  const slice = matching.slice(from, from + pageSize);
 
-  const scoped = (q: any) => {
-    let scopedQuery = opts.accountId ? q.eq("account_id", opts.accountId) : q;
-    scopedQuery = scopedQuery.gte("txn_time", periodStart).lt("txn_time", periodEnd);
-    return scopedQuery;
-  };
-
-  const applyStatus = (q: any, s: "all" | "success" | "failed" | "refund") =>
-    s === "all" ? q : q.eq("status", s);
-
-  // Page rows and the count for the same scope in a single round trip; the
-  // three extra per-status counts were never rendered and cost a full scan each.
-  const rowsQuery = applyStatus(
-    scoped(
-      base().q.select("txn_id, account_id, merchant, amount, currency, status, txn_time, pan4, txn_type, detail", {
-        count: "exact",
-      }),
-    ),
-    status,
-  );
-
-  const { data, error, count } = await rowsQuery
-    .order("txn_time", { ascending: false })
-    .range(from, from + pageSize - 1);
-  if (error) throw new Error(error.message);
-
-  const total = Number(count ?? (data?.length ?? 0));
-  const counts = { all: total, success: 0, failed: 0, refund: 0 };
-  const rows = markHangVoided(
-    (data ?? []).map(mapStoredRow),
-    (data ?? []).map((r: any) => r.account_id ?? ""),
-  );
-  return {
-    rows: opts.hideReversed ? rows.filter((r) => !r.reversed) : rows,
-    total,
-    counts,
-  };
+  const full = new Map<string, any>();
+  const ids = [...new Set(slice.map((x) => x.r.txn_id))];
+  for (let i = 0; i < ids.length; i += 200) {
+    let q = (supabaseAdmin as any)
+      .from("bybit_card_txns")
+      .select("txn_id, account_id, merchant, amount, currency, status, txn_time, pan4, txn_type, detail")
+      .in("txn_id", ids.slice(i, i + 200));
+    if (opts.accountId) q = q.eq("account_id", opts.accountId);
+    const { data, error } = await q;
+    if (error) throw new Error(error.message);
+    for (const r of data ?? []) full.set(`${r.account_id ?? ""}|${r.txn_id}`, r);
+  }
+  const rows: CardTxn[] = slice.map(({ r, group }) => {
+    const f = full.get(`${r.account_id ?? ""}|${r.txn_id}`);
+    const base = f ? mapStoredRow(f) : r.t;
+    // Status/reversed come from the same classification used by the filter.
+    return { ...base, status: r.t.status, reversed: r.t.reversed || group === "failed" && base.reversed };
+  });
+  return { rows, total, counts };
 }
 
-function currentCycleForRead() {
-  return getMonthlySpendPeriod(Date.now());
+/** Light projection of one cycle (no raw blob), classified like the full rows. */
+async function lightCycleRows(db: any, accountId: string | undefined, periodStart: number, periodEnd: number) {
+  const CHUNK = 1000;
+  const data: any[] = [];
+  for (let from = 0; from < 200_000; from += CHUNK) {
+    let q = db
+      .from("bybit_card_txns")
+      .select(
+        "txn_id, account_id, merchant, amount, currency, status, txn_time, pan4, txn_type, " +
+          "tradeStatus:detail->>tradeStatus, side:detail->>side, cryptoSold:detail->>cryptoSold, " +
+          "linkedReversal:detail->>linkedReversal, orderNo:detail->>orderNo, orderId:detail->>orderId, dTxnId:detail->>txnId",
+      )
+      .gte("txn_time", periodStart)
+      .lt("txn_time", periodEnd);
+    if (accountId) q = q.eq("account_id", accountId);
+    const { data: chunk, error } = await q
+      .order("txn_time", { ascending: false })
+      .order("txn_id", { ascending: true })
+      .range(from, from + CHUNK - 1);
+    if (error) throw new Error(error.message);
+    data.push(...(chunk ?? []));
+    if ((chunk ?? []).length < CHUNK) break;
+  }
+  const mapped = data.map((r: any) =>
+    mapStoredRow({
+      ...r,
+      detail: {
+        tradeStatus: r.tradeStatus ?? null,
+        side: r.side ?? null,
+        cryptoSold: r.cryptoSold ?? null,
+        linkedReversal: r.linkedReversal ?? null,
+        orderNo: r.orderNo ?? null,
+        orderId: r.orderId ?? null,
+        txnId: r.dTxnId ?? null,
+      },
+    }),
+  );
+  const marked = markHangVoided(mapped, data.map((r: any) => r.account_id ?? ""));
+  return marked.map((t, i) => ({ txn_id: String(data[i].txn_id), account_id: data[i].account_id ?? null, t }));
 }
 
-/**
- * Live read of the current cycle straight from Bybit, used when the archive of a
- * specific account is still empty (e.g. its rows were purged with the previous
- * cycle and no successful sync has written the new ones yet). This keeps every
- * account's transaction table in step with its own balance/spend cards instead
- * of showing "no transactions" while the account clearly has spending.
- */
 export async function fetchCardTxnsLive(opts: {
   accountId?: string;
   status?: "all" | "success" | "failed" | "refund";
