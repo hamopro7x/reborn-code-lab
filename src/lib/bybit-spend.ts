@@ -115,10 +115,9 @@ export function cardRecordOutcome(tradeStatus: unknown, side: unknown): CardOutc
   const ts = text(tradeStatus).trim();
   const up = ts.toUpperCase();
   if (REFUND_SIDES.has(text(side).trim())) return "refund";
-  // Bybit card records: "0" = purchase, "1" = authorisation released
-  // («معكوسة» in the Bybit app, shown there as +amount), "2" = declined.
-  // Verified against live AUTH records: settled purchases stay "0" forever.
-  if (ts === "1" || ts === "4" || /REVERS|VOID/.test(up)) return "reversed";
+  // Bybit card records: "0" = pending purchase, "1" = completed purchase,
+  // "2" = declined. "1" is NOT a reversal: it is how most real purchases end.
+  if (ts === "4" || /REVERS|VOID/.test(up)) return "reversed";
   if (ts === "3" || ts === "5" || /REFUND|CHARGEBACK/.test(up)) return "refund";
   if (ts === "2" || /FAIL|DECLIN|REJECT|CANCEL|EXPIRE/.test(up)) return "failed";
   return "ok";
@@ -194,7 +193,7 @@ export function spendKind(row: SpendRow): Kind {
   if (stored === "refund" || stored === "failed" || stored === "reversed") return "excluded";
 
   const trade = text(d["tradeStatus"]);
-  if (trade === "COMPLETED" || trade === "SETTLED") return "settled";
+  if (trade === "COMPLETED" || trade === "SETTLED" || trade === "1") return "settled";
   if (trade === "0") return "authorised";
 
   // No raw trade status stored (older archive rows): trust the mapped status.
