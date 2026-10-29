@@ -1278,7 +1278,8 @@ export async function fetchCardTxnsPage(opts: {
     const f = full.get(`${r.account_id ?? ""}|${r.txn_id}`);
     const base = f ? mapStoredRow(f) : r.t;
     // Status/reversed come from the same classification used by the filter.
-    return { ...base, status: r.t.status, reversed: r.t.reversed || group === "failed" && base.reversed };
+    void group;
+    return { ...base, status: r.t.status, reversed: r.t.reversed };
   });
   return { rows, total, counts };
 }
