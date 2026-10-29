@@ -22,7 +22,7 @@ describe("monthly spend engine", () => {
     const totals = sumSpend(
       [
         row({ txnId: "auth-1", amount: 4, detail: { tradeStatus: "0", side: "1", paymentId: "P1", basicAmount: 4, basicCurrency: "USD" } }),
-        row({ txnId: "fin-1", amount: 4, detail: { tradeStatus: "0", side: "1", paymentId: "P1", basicAmount: 4, basicCurrency: "USD" } }),
+        row({ txnId: "fin-1", amount: 4, detail: { tradeStatus: "COMPLETED", side: "1", paymentId: "P1", basicAmount: 4, basicCurrency: "USD" } }),
       ],
       DAY_START,
       MONTH_START,
@@ -229,7 +229,7 @@ describe("canonical transactions", () => {
     expect(authOnly.transactions.size).toBe(1);
     expect([...authOnly.transactions.values()][0]!.kind).toBe("authorised");
 
-    const settled = row({ txnId: "F", amount: 15, detail: { tradeStatus: "0", side: "1", orderId: "O-1", basicAmount: 15, basicCurrency: "USD" } });
+    const settled = row({ txnId: "F", amount: 15, detail: { tradeStatus: "COMPLETED", side: "1", orderId: "O-1", basicAmount: 15, basicCurrency: "USD" } });
     const resolved = canonicalize([auth, settled]);
     expect(resolved.transactions.size).toBe(1);
     const winner = [...resolved.transactions.values()][0]!;
@@ -325,7 +325,7 @@ describe("canonical transactions", () => {
   it("case 15: auth + financial + refund of one purchase never double counts", () => {
     const rows = [
       row({ txnId: "A", amount: 50, detail: { tradeStatus: "0", side: "1", paymentId: "MIX", basicAmount: 50, basicCurrency: "USD" } }),
-      row({ txnId: "F", amount: 50, detail: { tradeStatus: "0", side: "1", paymentId: "MIX", basicAmount: 50, basicCurrency: "USD" } }),
+      row({ txnId: "F", amount: 50, detail: { tradeStatus: "COMPLETED", side: "1", paymentId: "MIX", basicAmount: 50, basicCurrency: "USD" } }),
       row({ txnId: "R", amount: 50, detail: { tradeStatus: "1", side: "3", paymentId: "MIX", basicAmount: 50, basicCurrency: "USD" } }),
     ];
     const totals = sumSpend(rows, DAY_START, MONTH_START);
@@ -337,7 +337,7 @@ describe("canonical transactions", () => {
     const audit = auditSpend(
       [
         row({ txnId: "A", amount: 9, detail: { tradeStatus: "0", side: "1", paymentId: "AU", basicAmount: 9, basicCurrency: "USD" } }),
-        row({ txnId: "F", amount: 9, detail: { tradeStatus: "0", side: "1", paymentId: "AU", basicAmount: 9, basicCurrency: "USD" } }),
+        row({ txnId: "F", amount: 9, detail: { tradeStatus: "COMPLETED", side: "1", paymentId: "AU", basicAmount: 9, basicCurrency: "USD" } }),
         row({ txnId: "R", amount: 9, detail: { tradeStatus: "1", side: "3", paymentId: "RB", basicAmount: 9, basicCurrency: "USD" } }),
       ],
       DAY_START,
@@ -415,7 +415,7 @@ describe("Bybit monthly spend cycle (getMonthlySpendPeriod)", () => {
         txnId: `b${i}`,
         amount: 10,
         time,
-        detail: { tradeStatus: "0", side: "1", paymentId: `B${i}`, basicAmount: 10, basicCurrency: "USD" },
+        pan4: `c${i}`, detail: { tradeStatus: "0", side: "1", paymentId: `B${i}`, basicAmount: 10, basicCurrency: "USD" },
       }),
     );
 
