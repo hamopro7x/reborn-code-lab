@@ -1234,7 +1234,7 @@ async function linkReversalsBeforeSave(db: any, payload: any[], accountId?: stri
  * archived: anything older than the cycle start (00:00 UTC of the last day of
  * the month) belongs to a closed cycle and is never stored again.
  */
-async function persistCardTxns(rows: CardTxn[], accountId?: string): Promise<string[]> {
+async function persistCardTxns(rows: CardTxn[], accountId?: string, assign = true): Promise<string[]> {
   if (!rows.length) return [];
   try {
     const { currentCycleStart } = await import("./monthly-cycle.server");
@@ -1276,7 +1276,14 @@ async function persistCardTxns(rows: CardTxn[], accountId?: string): Promise<str
         }
       }
     }
-    await (supabaseAdmin as any).rpc("prune_bybit_card_txns", {
+    // Every ingest path (including the individual live fallback) mirrors the
+    // persisted truth immediately. Never wait for unrelated asset APIs.
+    if (accountId) {
+      await mirrorStoredCardRows(supabaseAdmin, accountId, [...payload.map((r) => r.txn_id), ...extra],
+        (ledger) => upsertLedger(ledger, assign));
+    }
+    if (pending.length) spendCache.clear();
+    if (pending.length) await (supabaseAdmin as any).rpc("prune_bybit_card_txns", {
       p_max: MAX_TXNS,
       p_delete: PRUNE_TO_DELETE,
     });
@@ -2381,6 +2388,29 @@ function cardLedgerRow(accountId: string, c: any): LedgerInsert {
   };
 }
 
+/** Mirror only persisted rows, with account and reset scoping; safe to retry. */
+export async function mirrorStoredCardRows(
+  db: any,
+  accountId: string,
+  ids: string[],
+  save: (rows: LedgerInsert[]) => Promise<number> = upsertLedger,
+): Promise<number> {
+  const unique = [...new Set(ids.filter(Boolean))];
+  const { periodStart, periodEnd } = currentBybitCycle();
+  let saved = 0;
+  for (let i = 0; i < unique.length; i += 200) {
+    const { data, error } = await db.from("bybit_card_txns")
+      .select("txn_id, merchant, amount, currency, status, txn_time, pan4, txn_type, detail")
+      .eq("account_id", accountId)
+      .gte("txn_time", periodStart).lt("txn_time", periodEnd)
+      .in("txn_id", unique.slice(i, i + 200));
+    if (error) throw new Error(`card ledger mirror read failed: ${error.message}`);
+    const rows = (data ?? []).map((row: any) => cardLedgerRow(accountId, row));
+    if (rows.length) saved += await save(rows);
+  }
+  return saved;
+}
+
 /** On-chain, internal transfers and P2P of one account, read live from Bybit. */
 async function assetLedgerRows(accountId: string): Promise<LedgerInsert[]> {
   const rows: LedgerInsert[] = [];
@@ -2533,7 +2563,7 @@ export async function syncAllLedger(): Promise<{ saved: number; accounts: number
  */
 async function fetchRecentCardRows(creds: Creds): Promise<any[]> {
   const results = await Promise.allSettled(
-    CARD_QUERY_TYPES.map((type) => callCardPage({ limit: 10, page: 1, type }, creds)),
+    CARD_QUERY_TYPES.map((type) => callCardPage({ limit: 100, page: 1, type }, creds)),
   );
   return mergeCardTypeResults(results);
 }
@@ -2541,25 +2571,15 @@ async function fetchRecentCardRows(creds: Creds): Promise<any[]> {
 /** Newest movements of ONE account -> archive -> central ledger (no shift link). */
 async function syncAccountRecent(accountId: string): Promise<number> {
   const creds = await getCreds(accountId);
-  const [cardRes, assets] = await Promise.allSettled([fetchRecentCardRows(creds), assetLedgerRows(accountId)]);
-  const rows: LedgerInsert[] = assets.status === "fulfilled" ? assets.value : [];
-  if (cardRes.status === "fulfilled" && cardRes.value.length) {
-    const mapped = cardRes.value.map(mapCardTxn);
-    const extra = await persistCardTxns(mapped, accountId);
-    // Mirror from the stored rows so the ledger shows exactly what the archive holds
-    // (plus older purchases this batch's reversal records just voided).
-    const db = await admin();
-    const ids = [...new Set([...mapped.map((r) => String(r.id)), ...extra])].filter(Boolean);
-    for (let i = 0; i < ids.length; i += 100) {
-      const { data } = await db
-        .from("bybit_card_txns")
-        .select("txn_id, merchant, amount, currency, status, txn_time, pan4, txn_type, detail")
-        .eq("account_id", accountId)
-        .in("txn_id", ids.slice(i, i + 100));
-      for (const c of data ?? []) rows.push(cardLedgerRow(accountId, c));
-    }
-  }
-  return upsertLedger(rows, false);
+  const results = await Promise.allSettled([
+    fetchRecentCardRows(creds).then(async (raw) => {
+      const mapped = currentBybitRows(raw.map(mapCardTxn));
+      await persistCardTxns(mapped, accountId, false);
+      return mapped.length;
+    }),
+    assetLedgerRows(accountId).then((rows) => upsertLedger(rows, false)),
+  ]);
+  return results.reduce((sum, result) => sum + (result.status === "fulfilled" ? result.value : 0), 0);
 }
 
 async function mapLimit<T>(items: T[], limit: number, fn: (item: T) => Promise<void>) {
@@ -2737,13 +2757,13 @@ export async function computeSpendAllAccounts() {
   const { dayStart, monthStart, monthEnd } = spendWindows(await bybitNow().catch(() => Date.now()));
   const accounts = await listAccounts();
   const totals = { daySpend: 0, monthSpend: 0, dayFees: 0, monthFees: 0 };
-  for (const acc of accounts) {
+  await mapLimit(accounts, 4, async (acc) => {
     const t = await computeSpend(acc.id, dayStart, monthStart, monthEnd);
     totals.daySpend += t.daySpend;
     totals.monthSpend += t.monthSpend;
     totals.dayFees += t.dayFees;
     totals.monthFees += t.monthFees;
-  }
+  });
   return { ...totals, accounts: accounts.length, dayStart, monthStart, monthEnd };
 }
 
