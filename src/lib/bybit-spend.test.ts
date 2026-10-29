@@ -12,7 +12,7 @@ function row(over: Partial<SpendRow> & { detail?: Record<string, unknown> }): Sp
     status: "success",
     type: "1",
     currency: "USD",
-    detail: { tradeStatus: "1", side: "1", basicAmount: 10, basicCurrency: "USD" },
+    detail: { tradeStatus: "0", side: "1", basicAmount: 10, basicCurrency: "USD" },
     ...over,
   };
 }
@@ -22,7 +22,7 @@ describe("monthly spend engine", () => {
     const totals = sumSpend(
       [
         row({ txnId: "auth-1", amount: 4, detail: { tradeStatus: "0", side: "1", paymentId: "P1", basicAmount: 4, basicCurrency: "USD" } }),
-        row({ txnId: "fin-1", amount: 4, detail: { tradeStatus: "1", side: "1", paymentId: "P1", basicAmount: 4, basicCurrency: "USD" } }),
+        row({ txnId: "fin-1", amount: 4, detail: { tradeStatus: "COMPLETED", side: "1", paymentId: "P1", basicAmount: 4, basicCurrency: "USD" } }),
       ],
       DAY_START,
       MONTH_START,
@@ -55,9 +55,9 @@ describe("monthly spend engine", () => {
   });
 
   it("ignores duplicate page rows and rows outside the month window", () => {
-    const dup = row({ txnId: "d1", amount: 100, detail: { tradeStatus: "1", side: "1", paymentId: "D1", basicAmount: 100, basicCurrency: "USD" } });
+    const dup = row({ txnId: "d1", amount: 100, detail: { tradeStatus: "0", side: "1", paymentId: "D1", basicAmount: 100, basicCurrency: "USD" } });
     const totals = sumSpend(
-      [dup, dup, row({ txnId: "old", amount: 500, time: Date.UTC(2026, 6, 20), detail: { tradeStatus: "1", side: "1", paymentId: "OLD", basicAmount: 500, basicCurrency: "USD" } })],
+      [dup, dup, row({ txnId: "old", amount: 500, time: Date.UTC(2026, 6, 20), detail: { tradeStatus: "0", side: "1", paymentId: "OLD", basicAmount: 500, basicCurrency: "USD" } })],
       DAY_START,
       MONTH_START,
     );
@@ -66,7 +66,7 @@ describe("monthly spend engine", () => {
 
   it("never sums a non-USD amount as dollars", () => {
     const totals = sumSpend(
-      [row({ txnId: "eur", amount: 90, currency: "EUR", detail: { tradeStatus: "1", side: "1", paymentId: "E1", basicAmount: 90, basicCurrency: "EUR" } })],
+      [row({ txnId: "eur", amount: 90, currency: "EUR", detail: { tradeStatus: "0", side: "1", paymentId: "E1", basicAmount: 90, basicCurrency: "EUR" } })],
       DAY_START,
       MONTH_START,
     );
@@ -76,7 +76,7 @@ describe("monthly spend engine", () => {
 
   it("uses the USD-denominated field when the local amount is foreign", () => {
     const totals = sumSpend(
-      [row({ txnId: "mix", amount: 0, detail: { tradeStatus: "1", side: "1", paymentId: "M1", basicAmount: 25.37, basicCurrency: "USD", localAmount: 800, localCurrency: "EGP" } })],
+      [row({ txnId: "mix", amount: 0, detail: { tradeStatus: "0", side: "1", paymentId: "M1", basicAmount: 25.37, basicCurrency: "USD", localAmount: 800, localCurrency: "EGP" } })],
       DAY_START,
       MONTH_START,
     );
@@ -86,7 +86,7 @@ describe("monthly spend engine", () => {
   it("reproduces the reported case: actual 1246 is not reported as 1250", () => {
     const rows: SpendRow[] = [];
     for (let i = 0; i < 623; i++) {
-      rows.push(row({ txnId: `f${i}`, amount: 2, detail: { tradeStatus: "1", side: "1", paymentId: `PX${i}`, basicAmount: 2, basicCurrency: "USD" } }));
+      rows.push(row({ txnId: `f${i}`, amount: 2, detail: { tradeStatus: "0", side: "1", paymentId: `PX${i}`, basicAmount: 2, basicCurrency: "USD" } }));
       // Bybit also archived the authorisation copy of the same purchase.
       rows.push(row({ txnId: `a${i}`, amount: 2, detail: { tradeStatus: "0", side: "1", paymentId: `PX${i}`, basicAmount: 2, basicCurrency: "USD" } }));
     }
@@ -97,7 +97,7 @@ describe("monthly spend engine", () => {
 
   it("counts the charged total, fee included, when the fee sits inside it", () => {
     const totals = sumSpend(
-      [row({ txnId: "fee1", amount: 16.54, detail: { tradeStatus: "1", side: "1", paymentId: "F1", basicAmount: 16.54, basicCurrency: "USD", foreignTxnFee: 0.32 } })],
+      [row({ txnId: "fee1", amount: 16.54, detail: { tradeStatus: "0", side: "1", paymentId: "F1", basicAmount: 16.54, basicCurrency: "USD", foreignTxnFee: 0.32 } })],
       DAY_START,
       MONTH_START,
     );
@@ -111,7 +111,7 @@ describe("monthly spend engine", () => {
         row({
           txnId: "fee2",
           amount: 16.54,
-          detail: { tradeStatus: "1", side: "1", paymentId: "F2", basicAmount: 16.22, basicCurrency: "USD", transactionAmount: 16.54, transactionCurrency: "USD", foreignTxnFee: 0.32 },
+          detail: { tradeStatus: "0", side: "1", paymentId: "F2", basicAmount: 16.22, basicCurrency: "USD", transactionAmount: 16.54, transactionCurrency: "USD", foreignTxnFee: 0.32 },
         }),
       ],
       DAY_START,
@@ -122,7 +122,7 @@ describe("monthly spend engine", () => {
 
   it("counts duplicated fee field names once", () => {
     const totals = sumSpend(
-      [row({ txnId: "fee3", amount: 10.5, detail: { tradeStatus: "1", side: "1", paymentId: "F3", basicAmount: 10.5, basicCurrency: "USD", foreignTxnFee: 0.5, feeAmount: 0.5 } })],
+      [row({ txnId: "fee3", amount: 10.5, detail: { tradeStatus: "0", side: "1", paymentId: "F3", basicAmount: 10.5, basicCurrency: "USD", foreignTxnFee: 0.5, feeAmount: 0.5 } })],
       DAY_START,
       MONTH_START,
     );
@@ -136,8 +136,8 @@ describe("monthly spend engine", () => {
   it("counts the full amount when the transaction has no fee", () => {
     const totals = sumSpend(
       [
-        row({ txnId: "nf1", amount: 25, detail: { tradeStatus: "1", side: "1", paymentId: "N1", basicAmount: 25, basicCurrency: "USD" } }),
-        row({ txnId: "nf2", amount: 12.4, detail: { tradeStatus: "1", side: "1", paymentId: "N2", basicAmount: 12.4, basicCurrency: "USD", foreignTxnFee: 0 } }),
+        row({ txnId: "nf1", amount: 25, detail: { tradeStatus: "0", side: "1", paymentId: "N1", basicAmount: 25, basicCurrency: "USD" } }),
+        row({ txnId: "nf2", amount: 12.4, detail: { tradeStatus: "0", side: "1", paymentId: "N2", basicAmount: 12.4, basicCurrency: "USD", foreignTxnFee: 0 } }),
       ],
       DAY_START,
       MONTH_START,
@@ -151,7 +151,7 @@ describe("monthly spend engine", () => {
         row({
           txnId: "nf3",
           amount: 20,
-          detail: { tradeStatus: "1", side: "1", paymentId: "N3", basicAmount: 20, basicCurrency: "USD", foreignTxnFee: 5, feeCurrency: "EGP" },
+          detail: { tradeStatus: "0", side: "1", paymentId: "N3", basicAmount: 20, basicCurrency: "USD", foreignTxnFee: 5, feeCurrency: "EGP" },
         }),
       ],
       DAY_START,
@@ -164,7 +164,7 @@ describe("monthly spend engine", () => {
     const perCard = sumSpendByCard(
       [
         { ...row({ txnId: "c-auth", amount: 7, detail: { tradeStatus: "0", side: "1", paymentId: "C1", basicAmount: 7, basicCurrency: "USD" } }), pan4: "4321" },
-        { ...row({ txnId: "c-fin", amount: 7, detail: { tradeStatus: "1", side: "1", paymentId: "C1", basicAmount: 7, basicCurrency: "USD" } }), pan4: "4321" },
+        { ...row({ txnId: "c-fin", amount: 7, detail: { tradeStatus: "0", side: "1", paymentId: "C1", basicAmount: 7, basicCurrency: "USD" } }), pan4: "4321" },
       ] as Array<SpendRow & { pan4: string }>,
       (r) => (r as SpendRow & { pan4: string }).pan4,
     );
@@ -181,7 +181,7 @@ describe("canonical transactions", () => {
     const totals = sumSpend(
       [
         row({ txnId: "A123", amount: 20, detail: { tradeStatus: "0", side: "1", paymentId: "PAY-1", basicAmount: 20, basicCurrency: "USD" } }),
-        row({ txnId: "B456", amount: 20, detail: { tradeStatus: "1", side: "1", paymentId: "PAY-1", basicAmount: 20, basicCurrency: "USD" } }),
+        row({ txnId: "B456", amount: 20, detail: { tradeStatus: "0", side: "1", paymentId: "PAY-1", basicAmount: 20, basicCurrency: "USD" } }),
       ],
       DAY_START,
       MONTH_START,
@@ -191,8 +191,8 @@ describe("canonical transactions", () => {
   });
 
   it("case 3: shared paymentId collapses to one identity", () => {
-    const a = row({ txnId: "x1", detail: { tradeStatus: "1", side: "1", paymentId: "SAME", basicAmount: 10, basicCurrency: "USD" } });
-    const b = row({ txnId: "x2", detail: { tradeStatus: "1", side: "1", paymentId: "SAME", basicAmount: 10, basicCurrency: "USD" } });
+    const a = row({ txnId: "x1", detail: { tradeStatus: "0", side: "1", paymentId: "SAME", basicAmount: 10, basicCurrency: "USD" } });
+    const b = row({ txnId: "x2", detail: { tradeStatus: "0", side: "1", paymentId: "SAME", basicAmount: 10, basicCurrency: "USD" } });
     expect(getCanonicalTransactionIdentity(a)).toBe(getCanonicalTransactionIdentity(b));
     expect(sumSpend([a, b], DAY_START, MONTH_START).countedTxns).toBe(1);
   });
@@ -201,7 +201,7 @@ describe("canonical transactions", () => {
     const totals = sumSpend(
       [
         row({ txnId: "AUTH-9", amount: 33, detail: { tradeStatus: "0", side: "1", orderNo: "ORD-9", basicAmount: 33, basicCurrency: "USD" } }),
-        row({ txnId: "FIN-9", amount: 33, detail: { tradeStatus: "1", side: "1", orderNo: "ORD-9", basicAmount: 33, basicCurrency: "USD" } }),
+        row({ txnId: "FIN-9", amount: 33, detail: { tradeStatus: "0", side: "1", orderNo: "ORD-9", basicAmount: 33, basicCurrency: "USD" } }),
       ],
       DAY_START,
       MONTH_START,
@@ -213,8 +213,8 @@ describe("canonical transactions", () => {
   it("ignores placeholder identifiers instead of merging unrelated purchases", () => {
     const totals = sumSpend(
       [
-        row({ txnId: "t-a", amount: 5, detail: { tradeStatus: "1", side: "1", paymentId: "0", basicAmount: 5, basicCurrency: "USD" } }),
-        row({ txnId: "t-b", amount: 6, detail: { tradeStatus: "1", side: "1", paymentId: "null", basicAmount: 6, basicCurrency: "USD" } }),
+        row({ txnId: "t-a", amount: 5, detail: { tradeStatus: "0", side: "1", paymentId: "0", basicAmount: 5, basicCurrency: "USD" } }),
+        row({ txnId: "t-b", amount: 6, detail: { tradeStatus: "0", side: "1", paymentId: "null", basicAmount: 6, basicCurrency: "USD" } }),
       ],
       DAY_START,
       MONTH_START,
@@ -229,7 +229,7 @@ describe("canonical transactions", () => {
     expect(authOnly.transactions.size).toBe(1);
     expect([...authOnly.transactions.values()][0]!.kind).toBe("authorised");
 
-    const settled = row({ txnId: "F", amount: 15, detail: { tradeStatus: "1", side: "1", orderId: "O-1", basicAmount: 15, basicCurrency: "USD" } });
+    const settled = row({ txnId: "F", amount: 15, detail: { tradeStatus: "COMPLETED", side: "1", orderId: "O-1", basicAmount: 15, basicCurrency: "USD" } });
     const resolved = canonicalize([auth, settled]);
     expect(resolved.transactions.size).toBe(1);
     const winner = [...resolved.transactions.values()][0]!;
@@ -253,8 +253,8 @@ describe("canonical transactions", () => {
   });
 
   it("case 10: the same transaction returned by two pages counts once", () => {
-    const page1 = row({ txnId: "P-1", amount: 42, detail: { tradeStatus: "1", side: "1", paymentId: "DUP", basicAmount: 42, basicCurrency: "USD" } });
-    const page2 = row({ txnId: "P-1", amount: 42, detail: { tradeStatus: "1", side: "1", paymentId: "DUP", basicAmount: 42, basicCurrency: "USD" } });
+    const page1 = row({ txnId: "P-1", amount: 42, detail: { tradeStatus: "0", side: "1", paymentId: "DUP", basicAmount: 42, basicCurrency: "USD" } });
+    const page2 = row({ txnId: "P-1", amount: 42, detail: { tradeStatus: "0", side: "1", paymentId: "DUP", basicAmount: 42, basicCurrency: "USD" } });
     const totals = sumSpend([page1, page2], DAY_START, MONTH_START);
     expect(totals.countedTxns).toBe(1);
     expect(totals.monthSpend).toBe(42);
@@ -262,7 +262,7 @@ describe("canonical transactions", () => {
 
   it("case 11: gross / fee / net — spend is the charged total, fee never deducted twice", () => {
     const feeInclusive = canonicalAmounts(
-      row({ txnId: "g1", amount: 16.54, detail: { tradeStatus: "1", side: "1", paymentId: "G1", basicAmount: 16.54, basicCurrency: "USD", foreignTxnFee: 0.32 } }),
+      row({ txnId: "g1", amount: 16.54, detail: { tradeStatus: "0", side: "1", paymentId: "G1", basicAmount: 16.54, basicCurrency: "USD", foreignTxnFee: 0.32 } }),
     );
     expect(feeInclusive.spendUsd).toBeCloseTo(16.54, 10);
     expect(feeInclusive.grossAmount).toBeCloseTo(16.54, 10);
@@ -273,7 +273,7 @@ describe("canonical transactions", () => {
       row({
         txnId: "g2",
         amount: 16.54,
-        detail: { tradeStatus: "1", side: "1", paymentId: "G2", basicAmount: 16.22, basicCurrency: "USD", transactionAmount: 16.54, transactionCurrency: "USD", foreignTxnFee: 0.32 },
+        detail: { tradeStatus: "0", side: "1", paymentId: "G2", basicAmount: 16.22, basicCurrency: "USD", transactionAmount: 16.54, transactionCurrency: "USD", foreignTxnFee: 0.32 },
       }),
     );
     expect(alreadyNet.spendUsd).toBeCloseTo(16.54, 10);
@@ -283,12 +283,12 @@ describe("canonical transactions", () => {
 
   it("case 12: foreign currency is never assumed to be USD", () => {
     const amounts = canonicalAmounts(
-      row({ txnId: "fx", amount: 900, currency: "EGP", detail: { tradeStatus: "1", side: "1", paymentId: "FX", basicAmount: 900, basicCurrency: "EGP" } }),
+      row({ txnId: "fx", amount: 900, currency: "EGP", detail: { tradeStatus: "0", side: "1", paymentId: "FX", basicAmount: 900, basicCurrency: "EGP" } }),
     );
     expect(amounts.spendUsd).toBeNull();
     expect(amounts.currency).toBe("EGP");
     const totals = sumSpend(
-      [row({ txnId: "fx", amount: 900, currency: "EGP", detail: { tradeStatus: "1", side: "1", paymentId: "FX", basicAmount: 900, basicCurrency: "EGP" } })],
+      [row({ txnId: "fx", amount: 900, currency: "EGP", detail: { tradeStatus: "0", side: "1", paymentId: "FX", basicAmount: 900, basicCurrency: "EGP" } })],
       DAY_START,
       MONTH_START,
     );
@@ -301,8 +301,8 @@ describe("canonical transactions", () => {
     const firstSecond = Date.UTC(2026, 8, 1, 0, 0, 0, 0);
     const august = sumSpend(
       [
-        row({ txnId: "aug", amount: 10, time: lastSecond, detail: { tradeStatus: "1", side: "1", paymentId: "AUG", basicAmount: 10, basicCurrency: "USD" } }),
-        row({ txnId: "sep", amount: 70, time: firstSecond, detail: { tradeStatus: "1", side: "1", paymentId: "SEP", basicAmount: 70, basicCurrency: "USD" } }),
+        row({ txnId: "aug", amount: 10, time: lastSecond, detail: { tradeStatus: "0", side: "1", paymentId: "AUG", basicAmount: 10, basicCurrency: "USD" } }),
+        row({ txnId: "sep", amount: 70, time: firstSecond, detail: { tradeStatus: "0", side: "1", paymentId: "SEP", basicAmount: 70, basicCurrency: "USD" } }),
       ],
       lastSecond,
       MONTH_START,
@@ -311,8 +311,8 @@ describe("canonical transactions", () => {
     const septemberStart = Date.UTC(2026, 8, 1);
     const september = sumSpend(
       [
-        row({ txnId: "aug", amount: 10, time: lastSecond, detail: { tradeStatus: "1", side: "1", paymentId: "AUG", basicAmount: 10, basicCurrency: "USD" } }),
-        row({ txnId: "sep", amount: 70, time: firstSecond, detail: { tradeStatus: "1", side: "1", paymentId: "SEP", basicAmount: 70, basicCurrency: "USD" } }),
+        row({ txnId: "aug", amount: 10, time: lastSecond, detail: { tradeStatus: "0", side: "1", paymentId: "AUG", basicAmount: 10, basicCurrency: "USD" } }),
+        row({ txnId: "sep", amount: 70, time: firstSecond, detail: { tradeStatus: "0", side: "1", paymentId: "SEP", basicAmount: 70, basicCurrency: "USD" } }),
       ],
       septemberStart,
       septemberStart,
@@ -325,7 +325,7 @@ describe("canonical transactions", () => {
   it("case 15: auth + financial + refund of one purchase never double counts", () => {
     const rows = [
       row({ txnId: "A", amount: 50, detail: { tradeStatus: "0", side: "1", paymentId: "MIX", basicAmount: 50, basicCurrency: "USD" } }),
-      row({ txnId: "F", amount: 50, detail: { tradeStatus: "1", side: "1", paymentId: "MIX", basicAmount: 50, basicCurrency: "USD" } }),
+      row({ txnId: "F", amount: 50, detail: { tradeStatus: "COMPLETED", side: "1", paymentId: "MIX", basicAmount: 50, basicCurrency: "USD" } }),
       row({ txnId: "R", amount: 50, detail: { tradeStatus: "1", side: "3", paymentId: "MIX", basicAmount: 50, basicCurrency: "USD" } }),
     ];
     const totals = sumSpend(rows, DAY_START, MONTH_START);
@@ -337,7 +337,7 @@ describe("canonical transactions", () => {
     const audit = auditSpend(
       [
         row({ txnId: "A", amount: 9, detail: { tradeStatus: "0", side: "1", paymentId: "AU", basicAmount: 9, basicCurrency: "USD" } }),
-        row({ txnId: "F", amount: 9, detail: { tradeStatus: "1", side: "1", paymentId: "AU", basicAmount: 9, basicCurrency: "USD" } }),
+        row({ txnId: "F", amount: 9, detail: { tradeStatus: "COMPLETED", side: "1", paymentId: "AU", basicAmount: 9, basicCurrency: "USD" } }),
         row({ txnId: "R", amount: 9, detail: { tradeStatus: "1", side: "3", paymentId: "RB", basicAmount: 9, basicCurrency: "USD" } }),
       ],
       DAY_START,
@@ -354,8 +354,8 @@ describe("canonical transactions", () => {
   it("account monthly spend equals the sum of the per-card spends", () => {
     const rows = [
       { ...row({ txnId: "c1a", amount: 11, detail: { tradeStatus: "0", side: "1", paymentId: "K1", basicAmount: 11, basicCurrency: "USD" } }), pan4: "1111" },
-      { ...row({ txnId: "c1f", amount: 11, detail: { tradeStatus: "1", side: "1", paymentId: "K1", basicAmount: 11, basicCurrency: "USD" } }), pan4: "1111" },
-      { ...row({ txnId: "c2f", amount: 4.5, detail: { tradeStatus: "1", side: "1", paymentId: "K2", basicAmount: 4.5, basicCurrency: "USD" } }), pan4: "2222" },
+      { ...row({ txnId: "c1f", amount: 11, detail: { tradeStatus: "0", side: "1", paymentId: "K1", basicAmount: 11, basicCurrency: "USD" } }), pan4: "1111" },
+      { ...row({ txnId: "c2f", amount: 4.5, detail: { tradeStatus: "0", side: "1", paymentId: "K2", basicAmount: 4.5, basicCurrency: "USD" } }), pan4: "2222" },
     ] as Array<SpendRow & { pan4: string }>;
     const account = sumSpend(rows, 0, 0);
     const perCard = sumSpendByCard(rows, (r) => (r as SpendRow & { pan4: string }).pan4);
@@ -415,7 +415,7 @@ describe("Bybit monthly spend cycle (getMonthlySpendPeriod)", () => {
         txnId: `b${i}`,
         amount: 10,
         time,
-        detail: { tradeStatus: "1", side: "1", paymentId: `B${i}`, basicAmount: 10, basicCurrency: "USD" },
+        pan4: `c${i}`, detail: { tradeStatus: "0", side: "1", paymentId: `B${i}`, basicAmount: 10, basicCurrency: "USD" },
       }),
     );
 
@@ -436,8 +436,8 @@ describe("Bybit monthly spend cycle (getMonthlySpendPeriod)", () => {
   it("per-card monthly spend uses the same cycle as the account", () => {
     const { periodStart, periodEnd } = getMonthlySpendPeriod(Date.UTC(2026, 8, 15));
     const rows = [
-      { ...row({ txnId: "p1", amount: 20, time: periodStart, detail: { tradeStatus: "1", side: "1", paymentId: "P1", basicAmount: 20, basicCurrency: "USD" } }), pan4: "1111" },
-      { ...row({ txnId: "p2", amount: 5, time: periodStart - 1, detail: { tradeStatus: "1", side: "1", paymentId: "P2", basicAmount: 5, basicCurrency: "USD" } }), pan4: "2222" },
+      { ...row({ txnId: "p1", amount: 20, time: periodStart, detail: { tradeStatus: "0", side: "1", paymentId: "P1", basicAmount: 20, basicCurrency: "USD" } }), pan4: "1111" },
+      { ...row({ txnId: "p2", amount: 5, time: periodStart - 1, detail: { tradeStatus: "0", side: "1", paymentId: "P2", basicAmount: 5, basicCurrency: "USD" } }), pan4: "2222" },
     ] as Array<SpendRow & { pan4: string }>;
     const account = sumSpend(rows, 0, periodStart, periodEnd);
     const perCard = sumSpendByCard(rows, (r) => (r as SpendRow & { pan4: string }).pan4, { periodStart, periodEnd });
@@ -473,7 +473,8 @@ describe("reversed («معكوسة») card records", () => {
 
   it("classifies tradeStatus 4 as reversed, not a purchase", () => {
     expect(cardRecordOutcome("4", "1")).toBe("reversed");
-    expect(cardRecordOutcome("1", "1")).toBe("ok");
+    expect(cardRecordOutcome("1", "1")).toBe("reversed");
+    expect(cardRecordOutcome("0", "1")).toBe("ok");
   });
 });
 
@@ -514,5 +515,19 @@ describe("findHangReversals (central ledger)", () => {
       { id: "retry", pan4: "7130", merchant: "TIKTOK", amount: 3.61, time: t + 3_000, tradeStatus: "0", side: "1" },
     ]);
     expect([...voided]).toEqual(["first"]);
+  });
+});
+
+describe("Bybit released authorisations (tradeStatus 1)", () => {
+  it("a record Bybit shows as «معكوسة» never counts as spend", () => {
+    const totals = sumSpend(
+      [
+        row({ txnId: "rev", amount: 1.55, time: DAY_START + 1000, detail: { tradeStatus: "1", side: "1", paymentId: "RV", basicAmount: 1.55, basicCurrency: "USD" } }),
+        row({ txnId: "pend", amount: 7.94, time: DAY_START + 9_000_000, detail: { tradeStatus: "0", side: "1", paymentId: "PD", basicAmount: 7.94, basicCurrency: "USD" } }),
+      ],
+      DAY_START,
+      MONTH_START,
+    );
+    expect(totals.daySpend).toBe(7.94);
   });
 });

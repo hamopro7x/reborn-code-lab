@@ -822,7 +822,7 @@ function stageOf(t: any): string | null {
   const ts = String(t?.tradeStatus ?? t?.status ?? "");
   const map: Record<string, string> = {
     "0": "PENDING",
-    "1": "COMPLETED",
+    "1": "REVERSED",
     "2": "DECLINED",
     "3": "REFUNDED",
     "4": "REVERSED",
