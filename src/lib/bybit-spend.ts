@@ -572,7 +572,59 @@ export function canonicalize(rows: Iterable<SpendRow>): {
     if (txn && txn.kind === "authorised") transactions.delete(ex.canonicalId);
   }
 
+  dropSettledAuthorisations(transactions);
+
   return { transactions, excluded, lastTxnTime };
+}
+
+/** Settlement (side 3/7) may arrive this long after its authorisation. */
+export const SETTLEMENT_WINDOW_MS = 10 * 24 * 60 * 60 * 1000;
+/** Clock skew tolerance: a settlement stamped slightly before its authorisation. */
+const SETTLEMENT_EARLY_MS = 60 * 60 * 1000;
+const SETTLEMENT_SIDES = new Set(["3", "7"]);
+
+/**
+ * Bybit returns the authorisation (side 1) and its settlement (side 3/7) as two
+ * records with DIFFERENT orderNo/txnId, so identity dedup cannot join them and
+ * both were summed (double spend). Each settlement consumes at most one
+ * authorisation on the same card for the same amount, made up to
+ * {@link SETTLEMENT_WINDOW_MS} earlier; the settlement is kept, the
+ * authorisation dropped. Unsettled authorisations (pending or recent) still
+ * count. Callers pass one account's rows at a time.
+ */
+function dropSettledAuthorisations(transactions: Map<string, CanonicalTxn>): void {
+  const sideOf = (r: SpendRow) => text(r.detail?.["side"]) || text(r.type);
+  const cardOf = (r: SpendRow) => text(r.pan4 ?? r.detail?.["pan4"]);
+  const cents = (r: SpendRow) => Math.round(Math.abs(Number(r.amount) || 0) * 100);
+  const auths = new Map<string, CanonicalTxn[]>();
+  const settlements: CanonicalTxn[] = [];
+  for (const t of transactions.values()) {
+    const side = sideOf(t.winner);
+    const key = `${cardOf(t.winner)}|${cents(t.winner)}`;
+    if (SETTLEMENT_SIDES.has(side)) settlements.push(t);
+    else if (AUTH_SIDES.has(side)) {
+      const list = auths.get(key) ?? [];
+      list.push(t);
+      auths.set(key, list);
+    }
+  }
+  for (const list of auths.values()) list.sort((a, b) => Number(a.winner.time) - Number(b.winner.time));
+  settlements.sort((a, b) => Number(a.winner.time) - Number(b.winner.time));
+  for (const s of settlements) {
+    const list = auths.get(`${cardOf(s.winner)}|${cents(s.winner)}`);
+    if (!list?.length) continue;
+    const st = Number(s.winner.time ?? 0);
+    // Closest earlier authorisation inside the window.
+    let pick = -1;
+    for (let i = 0; i < list.length; i++) {
+      const at = Number(list[i].winner.time ?? 0);
+      if (at > st + SETTLEMENT_EARLY_MS) break;
+      if (st - at <= SETTLEMENT_WINDOW_MS) pick = i;
+    }
+    if (pick < 0) continue;
+    transactions.delete(list[pick].canonicalId);
+    list.splice(pick, 1);
+  }
 }
 
 /**

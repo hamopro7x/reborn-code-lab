@@ -548,3 +548,25 @@ describe("reversed = completed with nothing charged", () => {
     expect(soldOf({ cryptoSold: "true" })).toBe(true);
   });
 });
+
+describe("authorisation + settlement double count", () => {
+  const H = 3600_000;
+  const auth = (id: string, t: number, amt = 26.78) =>
+    row({ txnId: id, amount: amt, time: t, pan4: "0540", detail: { tradeStatus: "1", side: "1", orderNo: `a${id}`, basicAmount: amt, basicCurrency: "USD" } });
+  const settle = (id: string, t: number, amt = 26.78) =>
+    row({ txnId: id, amount: amt, time: t, pan4: "0540", type: "3", detail: { tradeStatus: "1", side: "3", orderNo: `s${id}`, basicAmount: amt, basicCurrency: "USD" } });
+  const T = Date.UTC(2026, 7, 10);
+
+  it("counts a settled purchase once", () => {
+    expect(sumSpend([auth("1", T), settle("2", T + 3 * H)], 0, MONTH_START).monthSpend).toBeCloseTo(26.78);
+  });
+  it("still counts an authorisation that has not settled yet", () => {
+    expect(sumSpend([auth("1", T), auth("3", T + H), settle("2", T + 3 * H)], 0, MONTH_START).monthSpend).toBeCloseTo(53.56);
+  });
+  it("does not pair different amounts or cards", () => {
+    expect(sumSpend([auth("1", T, 10), settle("2", T + H, 11)], 0, MONTH_START).monthSpend).toBeCloseTo(21);
+  });
+  it("does not pair a settlement with an authorisation older than the window", () => {
+    expect(sumSpend([auth("1", T - 11 * 24 * H), settle("2", T)], 0, 0).monthSpend).toBeCloseTo(53.56);
+  });
+});
