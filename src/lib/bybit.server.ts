@@ -2603,7 +2603,7 @@ export async function fetchLedgerPage(opts: {
     let out = q;
     if (opts.accountId) out = out.eq("account_id", opts.accountId);
     if (opts.hideReversed) out = out.or("status.is.null,status.neq.reversed");
-    if (g === "txns" && st === "refund") out = out.in("kind", ["card", "refund"]).or(LEDGER_CARD_FILTERS.refund);
+    if (g === "txns" && st === "refund") out = out.in("kind", ["card", "refund"]).or(LEDGER_CARD_FILTERS.refund.slice(3, -1));
     // Same groups as cardPurchasePresenter: ناجحة = everything not failed/reversed
     // (pending included), فاشلة = failed/reversed/linkedReversal.
     else if (g === "txns" && st === "success") {
