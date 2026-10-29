@@ -9,6 +9,7 @@ import {
   cardRecordOutcome,
   findHangReversals,
   type SpendRow,
+  cryptoSoldOf,
 } from "./bybit-spend";
 
 
@@ -864,6 +865,7 @@ function mapCardTxn(t: any): CardTxn {
         stage: stageOf(t),
         eventCode: pick(t, ["eventCode", "transactionEventCode", "txnEventCode"]),
         tradeStatus: t.tradeStatus ?? t.status ?? null,
+        cryptoSold: t.cryptoSold ?? null,
         side: t.side ?? null,
         createdAt: pick(t, ["txnCreate", "createTime", "createdTime"]),
         updatedAt: pick(t, ["txnUpdate", "updateTime", "updatedTime", "settleTime"]),
@@ -1941,6 +1943,7 @@ function markHangVoided(rows: CardTxn[]): CardTxn[] {
       time: Number(t.time ?? 0),
       tradeStatus: t.detail?.["tradeStatus"],
       side: t.detail?.["side"] ?? t.type,
+      cryptoSold: cryptoSoldOf(t.detail),
     })),
   );
   if (!voided.size) return rows;
@@ -1957,6 +1960,7 @@ const ledgerHangCandidate = (r: { account_id: string | null; ref_id: string; tit
   time: new Date(String(r.occurred_at ?? "")).getTime(),
   tradeStatus: r.detail?.tradeStatus,
   side: r.detail?.side ?? r.detail?.type,
+  cryptoSold: cryptoSoldOf(r.detail),
 });
 
 /**
