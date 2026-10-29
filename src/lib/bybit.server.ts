@@ -998,6 +998,11 @@ const CARD_TXN_COMPARE = [
   "txn_type",
 ] as const;
 
+/** Status flags inside detail: a linkedReversal/tradeStatus change alone must still be written. */
+const CARD_DETAIL_COMPARE = ["tradeStatus", "side", "cryptoSold", "linkedReversal"] as const;
+/** detail->>key returns text; compare the incoming JSON value the same way. */
+const detailText = (v: unknown) => (v === null || v === undefined ? null : String(v));
+
 /**
  * يرجّع الصفوف الجديدة أو المتغيّرة فقط.
  *
@@ -1012,7 +1017,10 @@ async function changedCardTxns(db: any, payload: any[], accountId?: string): Pro
     const slice = payload.slice(i, i + 500);
     let q = db
       .from("bybit_card_txns")
-      .select("txn_id, merchant, amount, currency, status, txn_time, pan4, txn_type")
+      .select(
+        "txn_id, merchant, amount, currency, status, txn_time, pan4, txn_type, " +
+          "tradeStatus:detail->>tradeStatus, side:detail->>side, cryptoSold:detail->>cryptoSold, linkedReversal:detail->>linkedReversal",
+      )
       .in(
         "txn_id",
         slice.map((r) => r.txn_id),
@@ -1027,7 +1035,11 @@ async function changedCardTxns(db: any, payload: any[], accountId?: string): Pro
     const existing = new Map((data ?? []).map((r: any) => [String(r.txn_id), r]));
     for (const row of slice) {
       const prev = existing.get(String(row.txn_id));
-      if (!prev || CARD_TXN_COMPARE.some((k) => !sameStoredValue((prev as any)[k], row[k]))) {
+      if (
+        !prev ||
+        CARD_TXN_COMPARE.some((k) => !sameStoredValue((prev as any)[k], row[k])) ||
+        CARD_DETAIL_COMPARE.some((k) => !sameStoredValue((prev as any)[k], detailText(row.detail?.[k])))
+      ) {
         out.push(row);
       }
     }
@@ -1073,6 +1085,10 @@ async function linkReversalsBeforeSave(db: any, payload: any[], accountId?: stri
     const pd = prev?.detail ?? {};
     if (prev && isExplicitReversal(pd.tradeStatus, pd.side) && !isExplicitReversal(r.detail?.tradeStatus, r.detail?.side)) {
       r.__keepStored = true;
+    } else if (prev && pd.linkedReversal && r.status !== "refund") {
+      // A purchase already voided by a confirmed reversal record stays voided.
+      r.status = "failed";
+      r.detail = { ...(r.detail ?? {}), linkedReversal: 1 };
     }
   }
 
@@ -1141,7 +1157,18 @@ async function persistCardTxns(rows: CardTxn[], accountId?: string): Promise<str
       const { error } = await (supabaseAdmin as any)
         .from("bybit_card_txns")
         .upsert(pending.slice(i, i + 500), { onConflict: "account_id,txn_id" });
-      if (error) console.error("bybit_card_txns upsert failed:", error.message);
+      if (error) {
+        // One conflicting row (e.g. the same txnId already archived under another
+        // account while the table still has a txn_id-only primary key) must not
+        // drop the whole batch: retry row by row and report only the bad ones.
+        console.error("bybit_card_txns batch upsert failed, retrying per row:", error.message);
+        for (const row of pending.slice(i, i + 500)) {
+          const { error: e1 } = await (supabaseAdmin as any)
+            .from("bybit_card_txns")
+            .upsert(row, { onConflict: "account_id,txn_id" });
+          if (e1) console.error(`bybit_card_txns row ${row.txn_id} (account ${row.account_id ?? "-"}) skipped:`, e1.message);
+        }
+      }
     }
     await (supabaseAdmin as any).rpc("prune_bybit_card_txns", {
       p_max: MAX_TXNS,
@@ -2004,7 +2031,10 @@ async function changedLedgerRows(db: any, rows: LedgerInsert[]): Promise<LedgerI
     const slice = rows.slice(i, i + 500);
     const { data, error } = await db
       .from("bybit_ledger")
-      .select("account_id, kind, ref_id, direction, title, amount, currency, fee, status, occurred_at")
+      .select(
+        "account_id, kind, ref_id, direction, title, amount, currency, fee, status, occurred_at, " +
+          "tradeStatus:detail->>tradeStatus, side:detail->>side, linkedReversal:detail->>linkedReversal",
+      )
       .in(
         "ref_id",
         slice.map((r) => r.ref_id),
@@ -2015,10 +2045,26 @@ async function changedLedgerRows(db: any, rows: LedgerInsert[]): Promise<LedgerI
     }
     const existing = new Map((data ?? []).map((r: any) => [key(r), r]));
     for (const row of slice) {
-      const prev = existing.get(key(row));
+      const prev = existing.get(key(row)) as any;
+      const d = ((row as any).detail ?? {}) as Record<string, unknown>;
+      // A card row already marked failed/reversed by a confirmed reversal is
+      // never brought back to success by an older snapshot.
+      if (
+        prev &&
+        row.kind === "card" &&
+        (prev.linkedReversal || isExplicitReversal(prev.tradeStatus, prev.side)) &&
+        (prev.status === "reversed" || prev.status === "failed") &&
+        row.status === "success"
+      ) {
+        (row as any).status = prev.status;
+        (row as any).detail = { ...d, linkedReversal: prev.linkedReversal ?? d["linkedReversal"] ?? null };
+      }
       if (
         !prev ||
-        LEDGER_COMPARE.some((k) => !sameStoredValue((prev as any)[k], (row as any)[k]))
+        LEDGER_COMPARE.some((k) => !sameStoredValue(prev[k], (row as any)[k])) ||
+        (["tradeStatus", "side", "linkedReversal"] as const).some(
+          (k) => !sameStoredValue(prev[k], detailText(((row as any).detail ?? {})[k])),
+        )
       ) {
         out.push(row);
       }
@@ -2050,18 +2096,10 @@ async function upsertLedger(rows: LedgerInsert[], assign = true) {
     else saved += Math.min(500, pending.length - i);
   }
 
-  // Same Bybit record now reported as refund/reversal: the earlier "card" copy
-  // (same ref_id) must stop counting as a successful purchase.
-  const reversedRefs = clean.filter((r) => r.kind === "refund").map((r) => r.ref_id);
-  for (let i = 0; i < reversedRefs.length; i += 200) {
-    const { error } = await db
-      .from("bybit_ledger")
-      .update({ status: "reversed" })
-      .eq("kind", "card")
-      .in("ref_id", reversedRefs.slice(i, i + 200))
-      .neq("status", "reversed");
-    if (error) console.error("bybit_ledger reversal mark failed:", error.message);
-  }
+  // (Removed) refund rows used to flip every kind="card" row with the same
+  // ref_id to "reversed" across ALL accounts. A real refund is not an
+  // authorisation reversal; confirmed reversals are linked per account in
+  // linkReversalsBeforeSave and reach the ledger through cardLedgerRow.
 
   // Work-sheet layer: link the freshly mirrored movements to the open shift.
   // Never modifies ledger rows; failures here must not break the sync.
@@ -2527,8 +2565,12 @@ export async function fetchLedgerPage(opts: {
     if (opts.accountId) out = out.eq("account_id", opts.accountId);
     if (opts.hideReversed) out = out.or("status.is.null,status.neq.reversed");
     if (g === "txns" && st === "refund") out = out.eq("kind", "refund");
-    else if (g === "txns" && st === "success") out = out.eq("kind", "card").eq("status", st);
-    else if (g === "txns" && st === "failed") out = out.eq("kind", "card").in("status", ["failed", "reversed"]);
+    // Same groups as cardPurchasePresenter: ناجحة = everything not failed/reversed
+    // (pending included), فاشلة = failed/reversed/linkedReversal.
+    else if (g === "txns" && st === "success")
+      out = out.eq("kind", "card").not("status", "in", "(failed,reversed)").is("detail->>linkedReversal", null);
+    else if (g === "txns" && st === "failed")
+      out = out.eq("kind", "card").or("status.in.(failed,reversed),detail->>linkedReversal.not.is.null");
     else if (g !== "txns" && SUB_KIND[st] && (GROUP_KINDS[g] as string[]).includes(SUB_KIND[st]!))
       out = out.eq("kind", SUB_KIND[st]!);
     else out = out.in("kind", GROUP_KINDS[g] as string[]);
