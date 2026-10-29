@@ -9,7 +9,6 @@ type MailListRowProps = {
   date: string;
   logo?: string;
   read?: boolean;
-  starred?: boolean;
   onOpen: () => void;
   onToggleRead?: () => void;
   footer?: ReactNode;
