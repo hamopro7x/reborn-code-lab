@@ -517,3 +517,17 @@ describe("findHangReversals (central ledger)", () => {
     expect([...voided]).toEqual(["first"]);
   });
 });
+
+describe("Bybit released authorisations (tradeStatus 1)", () => {
+  it("a record Bybit shows as «معكوسة» never counts as spend", () => {
+    const totals = sumSpend(
+      [
+        row({ txnId: "rev", amount: 1.55, time: DAY_START + 1000, detail: { tradeStatus: "1", side: "1", paymentId: "RV", basicAmount: 1.55, basicCurrency: "USD" } }),
+        row({ txnId: "pend", amount: 7.94, time: DAY_START + 9_000_000, detail: { tradeStatus: "0", side: "1", paymentId: "PD", basicAmount: 7.94, basicCurrency: "USD" } }),
+      ],
+      DAY_START,
+      MONTH_START,
+    );
+    expect(totals.daySpend).toBe(7.94);
+  });
+});
