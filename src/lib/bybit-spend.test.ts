@@ -44,7 +44,7 @@ describe("monthly spend engine", () => {
   it("excludes refunds, reversals and failed rows", () => {
     const totals = sumSpend(
       [
-        row({ txnId: "r1", amount: 30, detail: { tradeStatus: "1", side: "3", paymentId: "R1", basicAmount: 30, basicCurrency: "USD" } }),
+        row({ txnId: "r1", amount: 30, detail: { tradeStatus: "1", side: "5", paymentId: "R1", basicAmount: 30, basicCurrency: "USD" } }),
         row({ txnId: "r2", amount: 40, detail: { tradeStatus: "3", side: "1", paymentId: "R2", basicAmount: 40, basicCurrency: "USD" } }),
         row({ txnId: "r3", amount: 50, detail: { tradeStatus: "2", side: "1", paymentId: "R3", basicAmount: 50, basicCurrency: "USD" } }),
       ],
