@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { MailListRow } from "@/components/admin/MailListRow";
 import { supabase } from "@/integrations/supabase/client";
 import { safeEmailDocument } from "@/lib/mail/mime";
+import { refreshQueries } from "@/lib/refresh-queries";
 import {
   listMailAccounts, startMailLink, setMailAccountPaused, deleteMailAccount, syncMailNow, listMailMessages,
   getMailThread, setMailRead, organizeMail, listMailLabels, saveMailLabel, downloadMailAttachment, sendMail,
@@ -50,16 +51,25 @@ const sender = (f?: string | null) => (f ?? "").replace(/<.*>/, "").replace(/"/g
 function useMailRealtime() {
   const qc = useQueryClient();
   useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const keys = new Set<string>();
+    const schedule = (...next: string[]) => {
+      next.forEach((key) => keys.add(key));
+      if (timer !== undefined) return;
+      timer = setTimeout(() => {
+        timer = undefined;
+        void refreshQueries(qc, [...keys].map((key) => [key]));
+        keys.clear();
+      }, 350);
+    };
     const ch = supabase
       .channel(`mail-live-${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "mail_messages" }, () => {
-        qc.invalidateQueries({ queryKey: ["mail-msgs"] });
-        qc.invalidateQueries({ queryKey: ["mail-notif"] });
-        qc.invalidateQueries({ queryKey: ["mail-unread"] });
+        schedule("mail-msgs", "mail-notif", "mail-unread");
       })
-      .on("postgres_changes", { event: "*", schema: "public", table: "mail_accounts" }, () => qc.invalidateQueries({ queryKey: ["mail-accounts"] }))
+      .on("postgres_changes", { event: "*", schema: "public", table: "mail_accounts" }, () => schedule("mail-accounts"))
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => { if (timer !== undefined) clearTimeout(timer); supabase.removeChannel(ch); };
   }, [qc]);
 }
 

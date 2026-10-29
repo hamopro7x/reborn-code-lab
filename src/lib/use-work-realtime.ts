@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useQueryClient, type QueryKey } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { refreshQueries } from "./refresh-queries";
 
 /**
  * تحديث لحظي (Realtime) لجدول بيانات الشغل.
@@ -69,7 +70,7 @@ export function useWorkRealtime(opts: {
       >;
       pendingRef.current.clear();
       for (const g of groups) {
-        for (const key of keysFor(g)) void qc.invalidateQueries({ queryKey: key });
+        void refreshQueries(qc, keysFor(g));
       }
     };
     const schedule = (...groups: Array<"txns" | "p2p" | "transfers" | "manual" | "shifts">) => {
