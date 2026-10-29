@@ -725,3 +725,44 @@ export function auditSpend(
     totals: sumSpend(rows, dayStart, monthStart, monthEnd),
   };
 }
+
+// ---------------------------------------------------------------------------
+// Card purchase presenter — the ONE display rule for every Bybit card purchase
+// screen (account archive, central ledger, shift sheet, filters and badges).
+//   ناجحة  = success + pending/in-progress (tradeStatus 0 / 1)
+//   فاشلة  = failed / declined / reversed / linkedReversal (tradeStatus 2/3, side 2)
+//   مسترد  = real refund only
+// Raw tradeStatus/side/stage stay in detail for audits; this only decides the
+// group + label. Pending is NOT turned into a settled purchase for spend.
+// ---------------------------------------------------------------------------
+export type CardPurchaseGroup = "success" | "failed" | "refund";
+
+const FAILED_STATUS_TEXT = new Set([
+  "failed", "fail", "failure", "declined", "reversed", "rejected", "cancelled", "canceled", "expired",
+  "فاشلة", "معكوسة", "مرفوضة", "ملغاة",
+]);
+
+export function cardPurchaseGroup(input: { kind?: unknown; status?: unknown; reversed?: unknown; detail?: unknown }): CardPurchaseGroup {
+  const s = text(input.status).trim().toLowerCase();
+  if (text(input.kind) === "refund" || s === "refund" || s === "مسترد") return "refund";
+  const d = (input.detail && typeof input.detail === "object" ? input.detail : {}) as Record<string, unknown>;
+  if (input.reversed || d["linkedReversal"]) return "failed";
+  if (FAILED_STATUS_TEXT.has(s)) return "failed";
+  return "success";
+}
+
+export const CARD_PURCHASE_LABEL: Record<CardPurchaseGroup, { text: string; cls: string }> = {
+  success: { text: "ناجحة", cls: "bg-emerald-500/15 text-emerald-400" },
+  failed: { text: "فاشلة", cls: "bg-red-500/15 text-red-400" },
+  refund: { text: "مسترد", cls: "bg-muted text-muted-foreground" },
+};
+
+export function cardPurchasePresenter(input: Parameters<typeof cardPurchaseGroup>[0]) {
+  const group = cardPurchaseGroup(input);
+  return { group, ...CARD_PURCHASE_LABEL[group] };
+}
+
+/** Archive tab filter → stored statuses it covers (count, pages and rows agree). */
+export function cardFilterMatches(filter: "all" | CardPurchaseGroup, group: CardPurchaseGroup): boolean {
+  return filter === "all" || filter === group;
+}
