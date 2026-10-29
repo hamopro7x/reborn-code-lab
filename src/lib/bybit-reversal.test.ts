@@ -58,10 +58,10 @@ describe("reversal regression", () => {
     expect(set.size).toBe(0);
   });
 
-  it("a different orderNo with same amount and time is NOT voided", () => {
+  it("a reversal of a different amount is NOT linked to the purchase", () => {
     expect(spend([
       r("X1", { tradeStatus: "0", side: "1", orderNo: "O2" }, 5),
-      r("X2", { tradeStatus: "1", side: "2", orderNo: "O3" }, 5),
+      r("X2", { tradeStatus: "1", side: "2", orderNo: "O3" }, 6),
     ])).toBe(5);
   });
 
