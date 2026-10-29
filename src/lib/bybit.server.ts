@@ -10,6 +10,9 @@ import {
   findHangReversals,
   type SpendRow,
   cryptoSoldOf,
+  isExplicitReversal,
+  cardLinkIds,
+  findLinkedReversals,
 } from "./bybit-spend";
 
 
@@ -385,7 +388,29 @@ const CARD_PATH = "/v5/card/transaction/query-asset-records";
 const cardCache = new Map<string, { at: number; rows: any[] }>();
 const cardInflight = new Map<string, Promise<any[]>>();
 
-const CARD_QUERY_TYPES = ["SIDE_QUERY_AUTH", "SIDE_QUERY_FINANCIAL", "SIDE_QUERY_REFUND"];
+/**
+ * Query types, in ascending priority. The *_ALL / *_REVERSAL / *_REFUND types
+ * are the ones Bybit documents as available to every user; SIDE_QUERY_FINANCIAL
+ * and SIDE_QUERY_REFUND require txnId+orderNo, so they are no longer walked.
+ * SIDE_QUERY_AUTH is kept for keys that do not support the newer types (a type
+ * that errors is skipped by every walker).
+ */
+const CARD_QUERY_TYPES = [
+  "SIDE_QUERY_AUTH",
+  "SIDE_QUERY_AUTH_ALL",
+  "SIDE_QUERY_FINANCIAL_ALL",
+  "SIDE_QUERY_FINANCIAL_REFUND",
+  "SIDE_QUERY_AUTH_REVERSAL",
+];
+
+/** How final a raw record's state is: a later sync never downgrades a reversal to pending/success. */
+export function cardRecordRank(t: any): number {
+  if (isExplicitReversal(t?.tradeStatus ?? t?.status, t?.side)) return 3;
+  const ts = String(t?.tradeStatus ?? t?.status ?? "");
+  if (ts === "2") return 2;
+  if (ts === "1") return 1;
+  return 0;
+}
 
 /**
  * Storage key of ONE raw Bybit record (not of a purchase).
@@ -459,6 +484,20 @@ async function callCardPage(params: Record<string, unknown>, creds: Creds) {
   throw new Error(`Bybit rate limited: ${lastErr}`);
 }
 
+/** Same record from two query types: keep the more final state, then the higher type, then the newer. */
+function preferRecord(
+  current: { row: any; sourcePriority: number; updatedAt: number } | undefined,
+  r: any,
+  typeIndex: number,
+  updatedAt: number,
+) {
+  if (!current) return true;
+  const a = cardRecordRank(r);
+  const b = cardRecordRank(current.row);
+  if (a !== b) return a > b;
+  return typeIndex > current.sourcePriority || (typeIndex === current.sourcePriority && updatedAt > current.updatedAt);
+}
+
 /** Fetch every card record ever recorded on the account, for every Bybit query type. */
 async function fetchCardPages(maxRows: number, creds: Creds, sinceMs?: number, budgetMs = 20_000): Promise<any[]> {
   const merged = new Map<string, { row: any; sourcePriority: number; updatedAt: number }>();
@@ -493,11 +532,7 @@ async function fetchCardPages(maxRows: number, creds: Creds, sinceMs?: number, b
           // The same transaction can be returned by AUTH first and FINANCIAL
           // later. Keep the provider's later/more final record instead of
           // freezing the initial authorisation (usually pending).
-          if (
-            !current ||
-            typeIndex > current.sourcePriority ||
-            (typeIndex === current.sourcePriority && updatedAt > current.updatedAt)
-          ) {
+          if (preferRecord(current, r, typeIndex, updatedAt)) {
             merged.set(k, { row: r, sourcePriority: typeIndex, updatedAt });
           }
         }
@@ -820,12 +855,15 @@ function pick(t: any, keys: string[]): string | number | null {
 function stageOf(t: any): string | null {
   const explicit = pick(t, ["eventCode", "transactionEventCode", "txnEventCode", "transactionType", "txnType"]);
   if (explicit !== null) return String(explicit);
+  if (String(t?.side ?? "") === "2") return "AUTH_REVERSAL";
   const ts = String(t?.tradeStatus ?? t?.status ?? "");
+  // Official tradeStatus: 0 In_Progress, 1 Completed, 2 Declined, 3 Reversal.
+  // "4"/"5" only appear in rows archived by older code.
   const map: Record<string, string> = {
     "0": "PENDING",
     "1": "COMPLETED",
     "2": "DECLINED",
-    "3": "REFUNDED",
+    "3": "REVERSED",
     "4": "REVERSED",
     "5": "REFUNDED",
   };
@@ -859,6 +897,7 @@ function mapCardTxn(t: any): CardTxn {
         canonicalId: canonicalIdOfRaw(t),
 
         orderId: pick(t, ["orderNo", "orderId", "referenceId", "refId"]),
+        orderNo: t.orderNo ?? null,
         paymentId: pick(t, ["paymentId", "orderNo"]),
         authCode: pick(t, ["authCode", "authorizationCode"]),
         // ---- status ----
@@ -1075,7 +1114,8 @@ async function storedCardTxns(limit: number, accountId?: string): Promise<CardTx
 function mapStoredRow(r: any): CardTxn {
   const detail = (r.detail ?? {}) as Record<string, string | number | null>;
   const side = String(detail.side ?? r.txn_type ?? "");
-  const outcome = cardRecordOutcome(detail.tradeStatus, side, cryptoSoldOf(detail));
+  const linked = Boolean(detail.linkedReversal);
+  const outcome = linked ? "reversed" : cardRecordOutcome(detail.tradeStatus, side, cryptoSoldOf(detail));
   // Bybit's own raw status wins whenever it says refund / reversed / failed:
   // older rows were stored as "success" while Bybit had reversed them.
   const stored: CardTxn["status"] | null =
@@ -2021,6 +2061,7 @@ function cardLedgerRow(accountId: string, c: any): LedgerInsert {
   // A reversed authorisation is labelled "reversed" («معكوسة») like Bybit; it
   // is not a successful status, so the shift sheet never counts it.
   const reversed =
+    Boolean(t.reversed) ||
     cardRecordOutcome(t.detail?.["tradeStatus"], t.detail?.["side"] ?? t.type, cryptoSoldOf(t.detail)) === "reversed";
   const status: string = reversed ? "reversed" : t.status;
   const isRefund = status === "refund";
@@ -2225,11 +2266,7 @@ async function fetchRecentCardRows(creds: Creds): Promise<any[]> {
       const k = cardRowKey(r);
       const updatedAt = Number(r?.txnUpdate ?? r?.updateTime ?? r?.updatedTime ?? r?.settleTime ?? r?.txnCreate ?? 0);
       const current = merged.get(k);
-      if (
-        !current ||
-        typeIndex > current.sourcePriority ||
-        (typeIndex === current.sourcePriority && updatedAt > current.updatedAt)
-      ) {
+      if (preferRecord(current, r, typeIndex, updatedAt)) {
         merged.set(k, { row: r, sourcePriority: typeIndex, updatedAt });
       }
     }
