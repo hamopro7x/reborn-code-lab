@@ -16,7 +16,7 @@
  * Bybit archives a single card purchase more than once:
  *   - SIDE_QUERY_AUTH       → the authorisation row (tradeStatus "0")
  *   - SIDE_QUERY_FINANCIAL  → the settlement row for the SAME purchase
- *     (tradeStatus "1"), usually with a DIFFERENT txnId
+ *     (tradeStatus "COMPLETED"), usually with a DIFFERENT txnId
  *   - SIDE_QUERY_REFUND     → reversal rows
  *
  * Raw rows are never deleted — they stay in the archive for auditing and for the
@@ -194,7 +194,7 @@ export function spendKind(row: SpendRow): Kind {
   if (stored === "refund" || stored === "failed" || stored === "reversed") return "excluded";
 
   const trade = text(d["tradeStatus"]);
-  if (trade === "1") return "settled";
+  if (trade === "COMPLETED" || trade === "SETTLED") return "settled";
   if (trade === "0") return "authorised";
 
   // No raw trade status stored (older archive rows): trust the mapped status.
