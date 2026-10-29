@@ -34,7 +34,7 @@ export function MailListRow({ sender, subject, preview, account, date, logo, rea
           </span>
           <span dir="auto" className={`col-start-2 block h-5 min-w-0 truncate text-right text-sm leading-5 ${read ? "" : "font-bold"}`}>{sender}</span>
           <span dir="auto" className={`col-start-2 mt-1 block h-5 min-w-0 truncate text-right text-sm leading-5 ${read ? "text-muted-foreground" : "font-semibold"}`}>{subject}</span>
-          <span dir="auto" className="col-start-2 mt-1 block h-5 min-w-0 truncate text-right text-xs leading-5 text-muted-foreground">{preview || "\u00a0"}</span>
+          <span dir="auto" className="col-start-2 mt-1 block h-5 min-w-0 truncate text-right text-sm leading-5 text-muted-foreground">{preview || "\u00a0"}</span>
           <span dir="ltr" className="col-start-2 mt-1 block h-4 min-w-0 truncate text-right text-[11px] leading-4 text-primary/80">{account}</span>
         </span>
       </Button>
