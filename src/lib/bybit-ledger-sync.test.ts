@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mirrorStoredCardRows } from "./bybit.server";
 
 function archive(rows: any[], error: { message: string } | null = null) {
@@ -22,6 +22,8 @@ const row = (txn_id: string, account_id = "a", detail = { side: "1", tradeStatus
 });
 
 describe("immediate individual-to-central card mirror", () => {
+  beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(new Date("2026-10-29T19:16:00Z")); });
+  afterEach(() => { vi.useRealTimers(); });
   it("mirrors persisted purchases once with the same account, amount and time", async () => {
     const db = archive([row("t")]);
     const save = vi.fn(async (rows: any[]) => rows.length);
