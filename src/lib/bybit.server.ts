@@ -693,7 +693,34 @@ export function spendWindows(nowMs: number) {
  * USD-denominated amount. That engine — not this loop — decides what counts, so
  * every account and every caller produces the same total.
  */
-export async function computeSpend(
+const SPEND_CACHE_MS = 30_000;
+const spendCache = new Map<string, { at: number; value: Promise<Awaited<ReturnType<typeof computeSpendUncached>>> }>();
+
+/**
+ * Cached front of {@link computeSpendUncached}: reading a full month of card
+ * records per account on every screen refresh made the whole site slow, so
+ * identical requests share one result (and one in-flight read) for 30 seconds.
+ */
+export function computeSpend(
+  accountId: string | undefined,
+  dayStart: number,
+  monthStart: number,
+  monthEnd: number = Number.POSITIVE_INFINITY,
+) {
+  const key = `${accountId ?? "*"}|${dayStart}|${monthStart}|${monthEnd}`;
+  const now = Date.now();
+  const hit = spendCache.get(key);
+  if (hit && now - hit.at < SPEND_CACHE_MS) return hit.value;
+  const value = computeSpendUncached(accountId, dayStart, monthStart, monthEnd);
+  spendCache.set(key, { at: now, value });
+  value.catch(() => spendCache.delete(key));
+  if (spendCache.size > 200) {
+    for (const [k, v] of spendCache) if (now - v.at >= SPEND_CACHE_MS) spendCache.delete(k);
+  }
+  return value;
+}
+
+async function computeSpendUncached(
   accountId: string | undefined,
   dayStart: number,
   monthStart: number,
