@@ -2568,18 +2568,18 @@ async function fetchRecentCardRows(creds: Creds): Promise<any[]> {
   return mergeCardTypeResults(results);
 }
 
-/** Newest movements of ONE account -> archive -> central ledger (no shift link). */
-async function syncAccountRecent(accountId: string): Promise<number> {
-  const creds = await getCreds(accountId);
-  const results = await Promise.allSettled([
-    fetchRecentCardRows(creds).then(async (raw) => {
-      const mapped = currentBybitRows(raw.map(mapCardTxn));
-      await persistCardTxns(mapped, accountId, false);
-      return mapped.length;
-    }),
-    assetLedgerRows(accountId).then((rows) => upsertLedger(rows, false)),
-  ]);
-  return results.reduce((sum, result) => sum + (result.status === "fulfilled" ? result.value : 0), 0);
+/** A card reaches the ledger AND shift without waiting for transfers or other accounts. */
+export async function syncAccountRecent(
+  accountId: string,
+  operations = {
+    read: async () => fetchRecentCardRows(await getCreds(accountId)),
+    persist: persistCardTxns,
+  },
+): Promise<number> {
+  const raw = await operations.read();
+  const mapped = currentBybitRows(raw.map(mapCardTxn));
+  await operations.persist(mapped, accountId, true);
+  return mapped.length;
 }
 
 async function mapLimit<T>(items: T[], limit: number, fn: (item: T) => Promise<void>) {
@@ -2597,7 +2597,17 @@ async function mapLimit<T>(items: T[], limit: number, fn: (item: T) => Promise<v
   await Promise.all(workers);
 }
 
-/** Fast sync of every linked account; links the open shift once at the end. */
+/** Transfers have their own in-flight key: a slow transfer never locks card polling. */
+function runRecentAssetSync(accounts: BybitAccount[]): void {
+  void heavyOnce("recent:assets", 15_000, async () => {
+    await mapLimit(accounts, 2, async (account) => {
+      if (!(await bybitConfigured(account.id))) return;
+      await upsertLedger(await assetLedgerRows(account.id));
+    });
+  }).catch((e) => console.error("recent asset sync failed:", (e as Error)?.message));
+}
+
+/** Fast card sync; each account links its shift as soon as its own rows land. */
 export async function syncAllRecent(): Promise<{ saved: number; accounts: number }> {
   return heavyOnce("recent:all", 2_000, async () => {
     const accounts = await listAccounts();
@@ -2606,12 +2616,7 @@ export async function syncAllRecent(): Promise<{ saved: number; accounts: number
       if (!(await bybitConfigured(a.id))) return;
       saved += await syncAccountRecent(a.id);
     });
-    try {
-      const work = await import("./work-assign.server");
-      await work.autoAssignLedger(await admin());
-    } catch (e) {
-      console.error("work auto-assign skipped:", (e as Error)?.message);
-    }
+    runRecentAssetSync(accounts);
     return { saved, accounts: accounts.length };
   });
 }
