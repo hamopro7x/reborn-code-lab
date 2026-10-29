@@ -886,6 +886,7 @@ function mapCardTxn(t: any): CardTxn {
       amount: num(t.basicAmount ?? t.transactionAmount),
       currency: String(t.basicCurrency ?? t.transactionCurrency ?? "USD"),
       status,
+      reversed: outcome === "reversed" || undefined,
       time: Number(t.txnCreate ?? 0),
       pan4: String(t.pan4 ?? ""),
       type: side,
@@ -1033,12 +1034,84 @@ async function changedCardTxns(db: any, payload: any[], accountId?: string): Pro
 }
 
 /**
+ * Reversal linking before the archive write (scoped to ONE account):
+ *  - a stored explicit reversal (side 2 / tradeStatus 3) is never downgraded by
+ *    a later sync that returns an older pending/success snapshot of that txn;
+ *  - an authorisation whose orderNo/txnId matches a separate reversal record
+ *    (incoming or already stored) is saved as failed + detail.linkedReversal.
+ * Returns ids of already-stored purchases that this batch newly voided, so the
+ * caller can re-mirror them to the central ledger. Matching uses Bybit ids only.
+ */
+async function linkReversalsBeforeSave(db: any, payload: any[], accountId?: string): Promise<string[]> {
+  const idsOf = (d: any) => cardLinkIds(d);
+  const orderNos = [...new Set(payload.map((r) => idsOf(r.detail).orderNo).filter(Boolean))];
+  const txnIds = [...new Set(payload.flatMap((r) => [String(r.txn_id), idsOf(r.detail).txnId]).filter(Boolean))];
+  const stored = new Map<string, any>();
+  const scope = (q: any) => (accountId ? q.eq("account_id", accountId) : q.is("account_id", null));
+  try {
+    for (let i = 0; i < txnIds.length; i += 200) {
+      const { data } = await scope(
+        db.from("bybit_card_txns").select("txn_id, status, detail").in("txn_id", txnIds.slice(i, i + 200)),
+      );
+      for (const r of data ?? []) stored.set(String(r.txn_id), r);
+    }
+    for (let i = 0; i < orderNos.length; i += 200) {
+      const { data } = await scope(
+        db.from("bybit_card_txns").select("txn_id, status, detail").in("detail->>orderId", orderNos.slice(i, i + 200)),
+      );
+      for (const r of data ?? []) stored.set(String(r.txn_id), r);
+    }
+  } catch (e) {
+    console.error("reversal link lookup skipped:", (e as Error)?.message);
+  }
+
+  // Never let a later sync bring a confirmed reversal back to success/pending.
+  for (const r of payload) {
+    const prev = stored.get(String(r.txn_id));
+    const pd = prev?.detail ?? {};
+    if (prev && isExplicitReversal(pd.tradeStatus, pd.side) && !isExplicitReversal(r.detail?.tradeStatus, r.detail?.side)) {
+      r.__keepStored = true;
+    }
+  }
+
+  const candidate = (id: string, d: any) => {
+    const ids = idsOf(d);
+    return { id, scope: accountId ?? "", orderNo: ids.orderNo, txnId: ids.txnId || id, tradeStatus: d?.tradeStatus, side: d?.side };
+  };
+  const all = new Map<string, { id: string; scope: string; orderNo: string; txnId: string; tradeStatus: unknown; side: unknown }>();
+  for (const r of stored.values()) all.set(String(r.txn_id), candidate(String(r.txn_id), r.detail ?? {}));
+  for (const r of payload) if (!r.__keepStored) all.set(String(r.txn_id), candidate(String(r.txn_id), r.detail ?? {}));
+  const voided = findLinkedReversals(all.values());
+  if (!voided.size) return [];
+
+  const incoming = new Set(payload.map((r) => String(r.txn_id)));
+  for (const r of payload) {
+    if (!voided.has(String(r.txn_id)) || r.__keepStored) continue;
+    r.status = "failed";
+    r.detail = { ...(r.detail ?? {}), linkedReversal: 1 };
+  }
+  const extra: string[] = [];
+  for (const [id, prev] of stored) {
+    if (!voided.has(id) || incoming.has(id) || prev.detail?.linkedReversal) continue;
+    let q = db
+      .from("bybit_card_txns")
+      .update({ status: "failed", detail: { ...(prev.detail ?? {}), linkedReversal: 1 } })
+      .eq("txn_id", id);
+    q = accountId ? q.eq("account_id", accountId) : q.is("account_id", null);
+    const { error } = await q;
+    if (error) console.error("linked reversal mark failed:", error.message);
+    else extra.push(id);
+  }
+  return extra;
+}
+
+/**
  * Persist fetched rows. Only transactions of the CURRENT monthly cycle are
  * archived: anything older than the cycle start (00:00 UTC of the last day of
  * the month) belongs to a closed cycle and is never stored again.
  */
-async function persistCardTxns(rows: CardTxn[], accountId?: string) {
-  if (!rows.length) return;
+async function persistCardTxns(rows: CardTxn[], accountId?: string): Promise<string[]> {
+  if (!rows.length) return [];
   try {
     const { currentCycleStart } = await import("./monthly-cycle.server");
     const cycleStart = currentCycleStart();
@@ -1057,10 +1130,11 @@ async function persistCardTxns(rows: CardTxn[], accountId?: string) {
         txn_type: r.type,
         detail: r.detail,
     }));
-    if (!payload.length) return;
+    if (!payload.length) return [];
 
+    const extra = await linkReversalsBeforeSave(supabaseAdmin as any, payload, accountId);
     // نكتب الجديد والمتغيّر فقط بدل إعادة كتابة الأرشيف بالكامل.
-    const pending = await changedCardTxns(supabaseAdmin as any, payload, accountId);
+    const pending = await changedCardTxns(supabaseAdmin as any, payload.filter((r: any) => !r.__keepStored), accountId);
     for (let i = 0; i < pending.length; i += 500) {
       const { error } = await (supabaseAdmin as any)
         .from("bybit_card_txns")
@@ -1071,8 +1145,10 @@ async function persistCardTxns(rows: CardTxn[], accountId?: string) {
       p_max: MAX_TXNS,
       p_delete: PRUNE_TO_DELETE,
     });
+    return extra;
   } catch (e) {
     console.error("bybit_card_txns persist failed:", (e as any)?.message ?? e);
+    return [];
   }
 
 }
@@ -1311,7 +1387,7 @@ type BackfillCursor = { version: number; typeIndex: number; page: number; done: 
 // Version 5 restarts cursors that may have been marked complete while the UI
 // only executed one historical chunk. The new client keeps requesting chunks
 // until this cursor reaches the oldest page for every transaction type.
-const BACKFILL_VERSION = 5;
+const BACKFILL_VERSION = 6; // 6: query types changed to the documented *_ALL / *_REVERSAL set
 // No page cap: pagination continues until Bybit reports the last (oldest) page.
 // A wall-clock budget only decides when to pause and resume from the cursor.
 const BACKFILL_BUDGET_MS = 20_000;
@@ -1986,9 +2062,24 @@ function markHangVoided(rows: CardTxn[]): CardTxn[] {
       cryptoSold: cryptoSoldOf(t.detail),
     })),
   );
-  if (!voided.size) return rows;
+  const linked = findLinkedReversals(
+    rows.map((t) => {
+      const ids = cardLinkIds(t.detail);
+      return {
+        id: String(t.id),
+        scope: (t as any).scope ?? "",
+        orderNo: ids.orderNo,
+        txnId: ids.txnId || String(t.id),
+        tradeStatus: t.detail?.["tradeStatus"],
+        side: t.detail?.["side"] ?? t.type,
+      };
+    }),
+  );
+  if (!voided.size && !linked.size) return rows;
   return rows.map((t) =>
-    voided.has(String(t.id)) && t.status !== "refund" ? { ...t, status: "failed", reversed: true } : t,
+    (voided.has(String(t.id)) || linked.has(String(t.id))) && t.status !== "refund"
+      ? { ...t, status: "failed", reversed: true }
+      : t,
   );
 }
 
@@ -2251,7 +2342,7 @@ export async function syncAllLedger(): Promise<{ saved: number; accounts: number
 async function fetchRecentCardRows(creds: Creds): Promise<any[]> {
   const merged = new Map<string, { row: any; sourcePriority: number; updatedAt: number }>();
   const results = await Promise.allSettled(
-    CARD_QUERY_TYPES.map((type) => callCardPage({ limit: 1, page: 1, type }, creds)),
+    CARD_QUERY_TYPES.map((type) => callCardPage({ limit: 10, page: 1, type }, creds)),
   );
   let ok = 0;
   let lastError: unknown;
@@ -2282,10 +2373,11 @@ async function syncAccountRecent(accountId: string): Promise<number> {
   const rows: LedgerInsert[] = assets.status === "fulfilled" ? assets.value : [];
   if (cardRes.status === "fulfilled" && cardRes.value.length) {
     const mapped = cardRes.value.map(mapCardTxn);
-    await persistCardTxns(mapped, accountId);
-    // Mirror from the stored rows so the ledger shows exactly what the archive holds.
+    const extra = await persistCardTxns(mapped, accountId);
+    // Mirror from the stored rows so the ledger shows exactly what the archive holds
+    // (plus older purchases this batch's reversal records just voided).
     const db = await admin();
-    const ids = mapped.map((r) => String(r.id)).filter(Boolean);
+    const ids = [...new Set([...mapped.map((r) => String(r.id)), ...extra])].filter(Boolean);
     for (let i = 0; i < ids.length; i += 100) {
       const { data } = await db
         .from("bybit_card_txns")
