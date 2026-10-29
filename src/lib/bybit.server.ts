@@ -415,6 +415,52 @@ export function cardRecordRank(t: any): number {
 }
 
 /**
+ * True when Bybit rejected the request itself (e.g. a query type this key or
+ * API version does not support) — not a network, auth or rate-limit problem.
+ * Only SIDE_QUERY_AUTH/FINANCIAL/REFUND are publicly documented; the other
+ * types are best-effort and are skipped when rejected.
+ */
+const TRANSIENT_OR_AUTH_CODES = new Set(["10002", "10003", "10004", "10005", "10006", "10016", "10018"]);
+export function isUnsupportedCardTypeError(err: unknown): boolean {
+  const m = /^Bybit (\d+):/.exec(String((err as Error)?.message ?? err ?? ""));
+  return Boolean(m && !TRANSIENT_OR_AUTH_CODES.has(m[1]));
+}
+
+/**
+ * Merge per-type results of one fetch. A rejected type never hides the rows of
+ * the types that worked; it is reported (not silently dropped). Throws only
+ * when every type failed.
+ */
+export function mergeCardTypeResults(
+  results: PromiseSettledResult<any>[],
+  types: readonly string[] = CARD_QUERY_TYPES,
+  warn: (msg: string) => void = (m) => console.warn(m),
+): any[] {
+  const merged = new Map<string, { row: any; sourcePriority: number; updatedAt: number }>();
+  let ok = 0;
+  let lastError: unknown;
+  results.forEach((res, typeIndex) => {
+    if (res.status !== "fulfilled") {
+      lastError = res.reason;
+      warn(
+        `bybit card type ${types[typeIndex] ?? typeIndex} ${isUnsupportedCardTypeError(res.reason) ? "unsupported" : "failed"}: ${String((res.reason as Error)?.message ?? res.reason)}`,
+      );
+      return;
+    }
+    ok++;
+    const rows = Array.isArray(res.value?.data) ? res.value.data : [];
+    for (const r of rows) {
+      const k = cardRowKey(r);
+      const updatedAt = Number(r?.txnUpdate ?? r?.updateTime ?? r?.updatedTime ?? r?.settleTime ?? r?.txnCreate ?? 0);
+      const current = merged.get(k);
+      if (preferRecord(current, r, typeIndex, updatedAt)) merged.set(k, { row: r, sourcePriority: typeIndex, updatedAt });
+    }
+  });
+  if (!ok && lastError) throw lastError;
+  return [...merged.values()].map(({ row }) => row);
+}
+
+/**
  * Storage key of ONE raw Bybit record (not of a purchase).
  * Raw authorisation and settlement records are kept side by side for auditing;
  * deciding that two records are the SAME purchase is the job of
@@ -550,7 +596,8 @@ async function fetchCardPages(maxRows: number, creds: Creds, sinceMs?: number, b
     } catch (error) {
       successfulTypes--;
       lastError = error;
-      /* a type may be unsupported for this key; keep the successful types */
+      // A type may be unsupported for this key; keep the successful types, but say so.
+      console.warn(`bybit card type ${type} skipped:`, (error as Error)?.message ?? error);
     }
     await sleep(400);
   }
@@ -1521,10 +1568,17 @@ async function backfillChunkLegacy(
 
   try {
     while (typeIndex < CARD_QUERY_TYPES.length && Date.now() < deadline) {
-      const result = await callCardPage(
-        { limit: 100, page, type: CARD_QUERY_TYPES[typeIndex] },
-        creds,
-      );
+      let result: any;
+      try {
+        result = await callCardPage({ limit: 100, page, type: CARD_QUERY_TYPES[typeIndex] }, creds);
+      } catch (e) {
+        if (!isUnsupportedCardTypeError(e)) throw e;
+        // Rejected type: move on so the cursor never sticks on it forever.
+        console.warn(`bybit backfill type ${CARD_QUERY_TYPES[typeIndex]} skipped:`, (e as Error)?.message);
+        typeIndex++;
+        page = 1;
+        continue;
+      }
       const rows = Array.isArray(result?.data) ? result.data : [];
       collected.push(...rows);
 
@@ -2406,30 +2460,10 @@ export async function syncAllLedger(): Promise<{ saved: number; accounts: number
  * most every few minutes, to catch late status changes on older rows.
  */
 async function fetchRecentCardRows(creds: Creds): Promise<any[]> {
-  const merged = new Map<string, { row: any; sourcePriority: number; updatedAt: number }>();
   const results = await Promise.allSettled(
     CARD_QUERY_TYPES.map((type) => callCardPage({ limit: 10, page: 1, type }, creds)),
   );
-  let ok = 0;
-  let lastError: unknown;
-  results.forEach((res, typeIndex) => {
-    if (res.status !== "fulfilled") {
-      lastError = res.reason;
-      return;
-    }
-    ok++;
-    const rows = Array.isArray(res.value?.data) ? res.value.data : [];
-    for (const r of rows) {
-      const k = cardRowKey(r);
-      const updatedAt = Number(r?.txnUpdate ?? r?.updateTime ?? r?.updatedTime ?? r?.settleTime ?? r?.txnCreate ?? 0);
-      const current = merged.get(k);
-      if (preferRecord(current, r, typeIndex, updatedAt)) {
-        merged.set(k, { row: r, sourcePriority: typeIndex, updatedAt });
-      }
-    }
-  });
-  if (!ok && lastError) throw lastError;
-  return [...merged.values()].map(({ row }) => row);
+  return mergeCardTypeResults(results);
 }
 
 /** Newest movements of ONE account -> archive -> central ledger (no shift link). */
