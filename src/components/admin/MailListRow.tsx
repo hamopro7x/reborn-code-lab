@@ -23,7 +23,7 @@ function AvatarLogo({ src, fallback }: { src: string; fallback: string }) {
 /** Physical RTL tracks stay fixed independently of the message text direction. */
 export function MailListRow({ sender, subject, preview, account, date, logo, read = true, onOpen, onToggleRead, footer }: MailListRowProps) {
   return (
-    <li dir="rtl" className={`grid grid-cols-[minmax(0,1fr)_104px] gap-x-3 p-3 hover:bg-muted/50 sm:grid-cols-[minmax(0,1fr)_144px] ${read ? "" : "bg-primary/5"}`}>
+    <li dir="rtl" className={`grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 p-3 hover:bg-muted/50 ${read ? "" : "bg-primary/5"}`}>
       <Button variant="ghost" onClick={onOpen}
         className="col-start-1 row-start-1 h-auto min-w-0 items-start justify-start rounded-none p-0 text-right font-normal whitespace-normal hover:bg-transparent">
         <span className="grid w-full min-w-0 grid-cols-[40px_minmax(0,1fr)] gap-x-3">
@@ -37,8 +37,8 @@ export function MailListRow({ sender, subject, preview, account, date, logo, rea
       </Button>
       <div className="col-start-2 row-start-1 grid min-w-0 grid-rows-[44px_24px_20px] justify-items-end">
         <div className="flex w-full items-start justify-end gap-2">
-          <time className="min-w-0 text-left text-xs leading-5 text-muted-foreground">{date}</time>
-          <span dir="ltr" className="min-w-0 truncate text-left text-[11px] leading-5 text-primary/80">{account}</span>
+          <time className="shrink-0 whitespace-nowrap text-left text-xs leading-5 text-muted-foreground">{date}</time>
+          <span dir="ltr" className="max-w-[160px] truncate text-left text-[11px] leading-5 text-primary/80">{account}</span>
           {onToggleRead && (
             <Button variant="ghost" size="icon" onClick={onToggleRead}
               title={read ? "تعليم كغير مقروء" : "تعليم كمقروء"}
