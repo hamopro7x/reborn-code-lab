@@ -157,17 +157,8 @@ export const syncBybitCardTxns = createServerFn({ method: "POST" })
       added: 0,
       backfillDone: false,
     });
-    // Mirror the freshly archived card movements into the central ledger (and,
-    // through it, into the open shift). Without this the card page fills up
-    // while «جميع معاملات الفيزا» and the employee sheet stay behind whenever
-    // the background sync hook is not running.
-    if (data.accountId) {
-      try {
-        await mod.syncAccountLedger(data.accountId);
-      } catch (e) {
-        console.error("ledger mirror after card sync failed:", (e as Error)?.message);
-      }
-    }
+    // Card persistence already mirrors the stored truth into the ledger.
+    // Do not repeat a full archive scan and wait for transfer APIs here.
     return res;
   });
 
@@ -467,7 +458,9 @@ export const syncBybitLedger = createServerFn({ method: "POST" })
     await assertAccess(context.supabase, context.userId);
     const mod = await import("./bybit.server");
     try {
-      return { ok: true as const, ...(await mod.syncAllLedger()) };
+      const recent = await mod.syncAllRecent();
+      mod.runDeepSyncIfDue();
+      return { ok: true as const, ...recent };
     } catch (e) {
       const errs = await import("./bybit-errors");
       const { message, code } = errs.normalizeBybitError(e);

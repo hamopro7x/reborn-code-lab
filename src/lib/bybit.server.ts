@@ -1282,7 +1282,7 @@ async function persistCardTxns(rows: CardTxn[], accountId?: string, assign = tru
       await mirrorStoredCardRows(supabaseAdmin, accountId, [...payload.map((r) => r.txn_id), ...extra],
         (ledger) => upsertLedger(ledger, assign));
     }
-    if (pending.length) spendCache.clear();
+    if (pending.length || extra.length) spendCache.clear();
     if (pending.length) await (supabaseAdmin as any).rpc("prune_bybit_card_txns", {
       p_max: MAX_TXNS,
       p_delete: PRUNE_TO_DELETE,
