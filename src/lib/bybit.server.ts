@@ -5,7 +5,6 @@ import {
   sumSpendByCard,
   auditSpend,
   getCanonicalTransactionIdentity,
-  getMonthlySpendPeriod,
   cardRecordOutcome,
   findHangReversals,
   type SpendRow,
@@ -1887,7 +1886,7 @@ export async function fetchCards(accountId?: string): Promise<BybitCard[]> {
       merchant: t.merchant,
     })) as Array<SpendRow & { pan4: string }>,
     (row) => (row as SpendRow & { pan4: string }).pan4,
-    getMonthlySpendPeriod(Date.now()),
+    currentBybitCycle(),
   );
   const currencyByPan = new Map<string, string>();
   for (const t of rows) {
