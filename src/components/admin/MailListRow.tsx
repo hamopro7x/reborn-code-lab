@@ -22,7 +22,7 @@ function AvatarLogo({ src, fallback }: { src: string; fallback: string }) {
 }
 
 /** Physical RTL tracks stay fixed independently of the message text direction. */
-export function MailListRow({ sender, subject, preview, account, date, logo, read = true, starred = false, onOpen, onToggleRead, footer }: MailListRowProps) {
+export function MailListRow({ sender, subject, preview, account, date, logo, read = true, onOpen, onToggleRead, footer }: MailListRowProps) {
   return (
     <li dir="rtl" className={`grid grid-cols-[minmax(0,1fr)_104px] gap-x-3 p-3 hover:bg-muted/50 sm:grid-cols-[minmax(0,1fr)_144px] ${read ? "" : "bg-primary/5"}`}>
       <Button variant="ghost" onClick={onOpen}

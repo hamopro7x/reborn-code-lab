@@ -44,7 +44,7 @@ function beep() {
     o.stop(ctx.currentTime + 0.6);
   } catch {}
 }
-const fmt = (d?: string | null) => (d ? new Date(d).toLocaleString("ar-EG", { dateStyle: "medium", timeStyle: "short" }) : "—");
+const fmt = (d?: string | null) => formatDateTime(d);
 const BRANDS: Record<string, string> = { paypal: "PayPal", tiktok: "TikTok", google: "Google", bybit: "Bybit", facebookmail: "Facebook", facebook: "Facebook", instagram: "Instagram", youtube: "YouTube", linkedin: "LinkedIn", github: "GitHub", openai: "OpenAI", binance: "Binance", amazon: "Amazon", apple: "Apple", microsoft: "Microsoft", netflix: "Netflix", spotify: "Spotify", x: "X", twitter: "X", whatsapp: "WhatsApp", telegram: "Telegram", lovable: "Lovable" };
 const SLD = new Set(["co", "com", "net", "org", "gov", "edu", "ac"]);
 const platformName = (addr: string) => {
