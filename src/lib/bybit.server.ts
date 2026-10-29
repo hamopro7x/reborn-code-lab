@@ -1264,7 +1264,7 @@ export async function fetchCardTxnsPage(opts: {
   // three extra per-status counts were never rendered and cost a full scan each.
   const rowsQuery = applyStatus(
     scoped(
-      base().q.select("txn_id, merchant, amount, currency, status, txn_time, pan4, txn_type, detail", {
+      base().q.select("txn_id, account_id, merchant, amount, currency, status, txn_time, pan4, txn_type, detail", {
         count: "exact",
       }),
     ),
@@ -1278,7 +1278,10 @@ export async function fetchCardTxnsPage(opts: {
 
   const total = Number(count ?? (data?.length ?? 0));
   const counts = { all: total, success: 0, failed: 0, refund: 0 };
-  const rows = markHangVoided((data ?? []).map(mapStoredRow));
+  const rows = markHangVoided(
+    (data ?? []).map(mapStoredRow),
+    (data ?? []).map((r: any) => r.account_id ?? ""),
+  );
   return {
     rows: opts.hideReversed ? rows.filter((r) => !r.reversed) : rows,
     total,
@@ -2049,7 +2052,7 @@ async function upsertLedger(rows: LedgerInsert[], assign = true) {
 
 
 /** Archive rows → hung-retry voids («معكوسة») shown as failed, like Bybit. */
-function markHangVoided(rows: CardTxn[]): CardTxn[] {
+function markHangVoided(rows: CardTxn[], scopes?: unknown[]): CardTxn[] {
   const voided = findHangReversals(
     rows.map((t) => ({
       id: String(t.id),
@@ -2063,11 +2066,11 @@ function markHangVoided(rows: CardTxn[]): CardTxn[] {
     })),
   );
   const linked = findLinkedReversals(
-    rows.map((t) => {
+    rows.map((t, i) => {
       const ids = cardLinkIds(t.detail);
       return {
         id: String(t.id),
-        scope: (t as any).scope ?? "",
+        scope: scopes?.[i] ?? "",
         orderNo: ids.orderNo,
         txnId: ids.txnId || String(t.id),
         tradeStatus: t.detail?.["tradeStatus"],
