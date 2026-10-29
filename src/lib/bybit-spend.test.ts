@@ -570,3 +570,19 @@ describe("authorisation + settlement double count", () => {
     expect(sumSpend([auth("1", T - 11 * 24 * H), settle("2", T)], 0, 0).monthSpend).toBeCloseTo(53.56);
   });
 });
+
+describe("side-2 reversal without a shared id", () => {
+  const T = Date.UTC(2026, 7, 10);
+  const mk = (id: string, side: string, t: number, amt = 352.2, pan4 = "7987") =>
+    row({ txnId: id, amount: amt, time: t, pan4, type: side, detail: { tradeStatus: "1", side, orderNo: `o${id}`, basicAmount: amt, basicCurrency: "USD" } });
+  it("voids the authorisation it follows seconds later", () => {
+    expect(sumSpend([mk("a", "1", T), mk("r", "2", T + 6000)], 0, 0).monthSpend).toBe(0);
+  });
+  it("voids only one of two identical authorisations", () => {
+    expect(sumSpend([mk("a", "1", T), mk("b", "1", T + 1000), mk("r", "2", T + 6000)], 0, 0).monthSpend).toBeCloseTo(352.2);
+  });
+  it("ignores other cards, amounts and old authorisations", () => {
+    const l = [mk("a", "1", T, 352.2, "0540"), mk("b", "1", T, 10), mk("c", "1", T - 11 * 60_000), mk("r", "2", T + 6000)];
+    expect(sumSpend(l, 0, 0).monthSpend).toBeCloseTo(352.2 * 2 + 10);
+  });
+});

@@ -198,7 +198,14 @@ export type LinkCandidate = {
   txnId: unknown;
   tradeStatus: unknown;
   side: unknown;
+  /** optional card/amount/time, used only when the reversal carries no shared id */
+  pan4?: unknown;
+  amount?: unknown;
+  time?: unknown;
 };
+
+/** Bybit posts the side-2 reversal seconds after the authorisation it voids. */
+export const REVERSAL_LINK_WINDOW_MS = 10 * 60 * 1000;
 
 /**
  * Authorisations voided by a SEPARATE Bybit reversal record that carries the
@@ -229,6 +236,39 @@ export function findLinkedReversals(rows: Iterable<LinkCandidate>): Set<string> 
     const t = cleanId(r.txnId);
     if ((o && keys.has(`${scope}|o:${o}`)) || (t && keys.has(`${scope}|t:${t}`))) out.add(r.id);
   }
+
+  // Bybit's side-2 reversal usually carries its OWN orderNo/txnId, so the ids
+  // above never meet. Fallback: each reversal that voided nothing by id voids
+  // the closest earlier, not-yet-voided authorisation in the same account, on
+  // the same card, for the same amount, within REVERSAL_LINK_WINDOW_MS.
+  const cents = (v: unknown) => Math.round(Math.abs(Number(v) || 0) * 100);
+  const byId = new Map(list.map((r) => [r.id, r]));
+  const idLinked = new Set<string>();
+  for (const id of out) {
+    const a = byId.get(id);
+    if (!a) continue;
+    for (const r of list) {
+      if (!reversalIds.has(r.id) || text(r.scope) !== text(a.scope)) continue;
+      const o = cleanId(r.orderNo), t = cleanId(r.txnId);
+      if ((o && o === cleanId(a.orderNo)) || (t && t === cleanId(a.txnId))) idLinked.add(r.id);
+    }
+  }
+  const revs = list
+    .filter((r) => reversalIds.has(r.id) && !idLinked.has(r.id) && text(r.side).trim() === AUTH_REVERSAL_SIDE && text(r.pan4) && cents(r.amount) > 0 && Number(r.time) > 0)
+    .sort((a, b) => Number(a.time) - Number(b.time));
+  for (const rev of revs) {
+    const rt = Number(rev.time);
+    let best: LinkCandidate | null = null;
+    for (const a of list) {
+      if (reversalIds.has(a.id) || out.has(a.id)) continue;
+      if (!AUTH_SIDES.has(text(a.side).trim()) || text(a.tradeStatus).trim() === "2") continue;
+      if (text(a.scope) !== text(rev.scope) || text(a.pan4) !== text(rev.pan4) || cents(a.amount) !== cents(rev.amount)) continue;
+      const at = Number(a.time);
+      if (!(at > 0) || at > rt || rt - at > REVERSAL_LINK_WINDOW_MS) continue;
+      if (!best || at > Number(best.time)) best = a;
+    }
+    if (best) out.add(best.id);
+  }
   return out;
 }
 
@@ -242,6 +282,9 @@ function linkCandidateOfSpendRow(row: SpendRow): LinkCandidate {
     txnId: ids.txnId || text(row.txnId),
     tradeStatus: d["tradeStatus"],
     side: text(d["side"]) || text(row.type),
+    pan4: row.pan4 ?? d["pan4"],
+    amount: row.amount,
+    time: row.time,
   };
 }
 
