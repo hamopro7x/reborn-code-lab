@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.15"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
@@ -246,6 +246,8 @@ export type Database = {
           created_at: string
           created_by: string | null
           email: string | null
+          frozen: boolean
+          frozen_until: string | null
           id: string
           monthly_cashback: number
           name: string
@@ -257,6 +259,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           email?: string | null
+          frozen?: boolean
+          frozen_until?: string | null
           id?: string
           monthly_cashback?: number
           name?: string
@@ -268,6 +272,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           email?: string | null
+          frozen?: boolean
+          frozen_until?: string | null
           id?: string
           monthly_cashback?: number
           name?: string
@@ -861,6 +867,7 @@ export type Database = {
           content_position_x: string
           content_position_y: string
           created_at: string
+          device: string
           gap_subtitle_buttons: number
           gap_title_subtitle: number
           id: string
@@ -903,6 +910,7 @@ export type Database = {
           content_position_x?: string
           content_position_y?: string
           created_at?: string
+          device?: string
           gap_subtitle_buttons?: number
           gap_title_subtitle?: number
           id?: string
@@ -945,6 +953,7 @@ export type Database = {
           content_position_x?: string
           content_position_y?: string
           created_at?: string
+          device?: string
           gap_subtitle_buttons?: number
           gap_title_subtitle?: number
           id?: string
@@ -976,6 +985,415 @@ export type Database = {
           video_autoplay?: boolean
           video_loop?: boolean
           video_muted?: boolean
+        }
+        Relationships: []
+      }
+      mail_account_secrets: {
+        Row: {
+          access_expires_at: string | null
+          access_token_ciphertext: string | null
+          account_id: string
+          refresh_token_ciphertext: string
+          scopes: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_expires_at?: string | null
+          access_token_ciphertext?: string | null
+          account_id: string
+          refresh_token_ciphertext: string
+          scopes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_expires_at?: string | null
+          access_token_ciphertext?: string | null
+          account_id?: string
+          refresh_token_ciphertext?: string
+          scopes?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mail_account_secrets_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "mail_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mail_accounts: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          display_name: string | null
+          email: string
+          history_id: string | null
+          id: string
+          last_error: string | null
+          last_sync_at: string | null
+          linked_at: string
+          status: string
+          sync_lease_until: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          display_name?: string | null
+          email: string
+          history_id?: string | null
+          id?: string
+          last_error?: string | null
+          last_sync_at?: string | null
+          linked_at?: string
+          status?: string
+          sync_lease_until?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          display_name?: string | null
+          email?: string
+          history_id?: string | null
+          id?: string
+          last_error?: string | null
+          last_sync_at?: string | null
+          linked_at?: string
+          status?: string
+          sync_lease_until?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      mail_activity: {
+        Row: {
+          account_id: string | null
+          action: string
+          actor_id: string | null
+          created_at: string
+          id: number
+          message_id: string | null
+          meta: Json
+        }
+        Insert: {
+          account_id?: string | null
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          id?: number
+          message_id?: string | null
+          meta?: Json
+        }
+        Update: {
+          account_id?: string | null
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          id?: number
+          message_id?: string | null
+          meta?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mail_activity_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "mail_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mail_activity_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "mail_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mail_attachments: {
+        Row: {
+          filename: string
+          gmail_attachment_id: string
+          id: string
+          message_id: string
+          mime_type: string | null
+          size_bytes: number | null
+        }
+        Insert: {
+          filename: string
+          gmail_attachment_id: string
+          id?: string
+          message_id: string
+          mime_type?: string | null
+          size_bytes?: number | null
+        }
+        Update: {
+          filename?: string
+          gmail_attachment_id?: string
+          id?: string
+          message_id?: string
+          mime_type?: string | null
+          size_bytes?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mail_attachments_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "mail_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mail_drafts: {
+        Row: {
+          account_id: string
+          body: string
+          cc_addr: string
+          created_by: string | null
+          id: string
+          reply_to_message_id: string | null
+          subject: string
+          to_addr: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          body?: string
+          cc_addr?: string
+          created_by?: string | null
+          id?: string
+          reply_to_message_id?: string | null
+          subject?: string
+          to_addr?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          body?: string
+          cc_addr?: string
+          created_by?: string | null
+          id?: string
+          reply_to_message_id?: string | null
+          subject?: string
+          to_addr?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mail_drafts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "mail_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mail_drafts_reply_to_message_id_fkey"
+            columns: ["reply_to_message_id"]
+            isOneToOne: false
+            referencedRelation: "mail_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mail_labels: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      mail_local_tombstones: {
+        Row: {
+          account_id: string
+          deleted_at: string
+          deleted_by: string | null
+          gmail_message_id: string
+        }
+        Insert: {
+          account_id: string
+          deleted_at?: string
+          deleted_by?: string | null
+          gmail_message_id: string
+        }
+        Update: {
+          account_id?: string
+          deleted_at?: string
+          deleted_by?: string | null
+          gmail_message_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mail_local_tombstones_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "mail_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mail_messages: {
+        Row: {
+          account_id: string
+          archived: boolean
+          body_html: string | null
+          body_text: string | null
+          cc_addr: string | null
+          created_at: string
+          folder: string
+          from_addr: string | null
+          gmail_message_id: string
+          gmail_thread_id: string | null
+          has_attachments: boolean
+          id: string
+          internal_date: string
+          is_read: boolean
+          label_ids: string[]
+          read_at: string | null
+          read_by: string | null
+          rfc_message_id: string | null
+          rfc_references: string | null
+          sender_logo_url: string | null
+          snippet: string | null
+          starred: boolean
+          subject: string | null
+          to_addr: string | null
+          trashed_at: string | null
+        }
+        Insert: {
+          account_id: string
+          archived?: boolean
+          body_html?: string | null
+          body_text?: string | null
+          cc_addr?: string | null
+          created_at?: string
+          folder?: string
+          from_addr?: string | null
+          gmail_message_id: string
+          gmail_thread_id?: string | null
+          has_attachments?: boolean
+          id?: string
+          internal_date: string
+          is_read?: boolean
+          label_ids?: string[]
+          read_at?: string | null
+          read_by?: string | null
+          rfc_message_id?: string | null
+          rfc_references?: string | null
+          sender_logo_url?: string | null
+          snippet?: string | null
+          starred?: boolean
+          subject?: string | null
+          to_addr?: string | null
+          trashed_at?: string | null
+        }
+        Update: {
+          account_id?: string
+          archived?: boolean
+          body_html?: string | null
+          body_text?: string | null
+          cc_addr?: string | null
+          created_at?: string
+          folder?: string
+          from_addr?: string | null
+          gmail_message_id?: string
+          gmail_thread_id?: string | null
+          has_attachments?: boolean
+          id?: string
+          internal_date?: string
+          is_read?: boolean
+          label_ids?: string[]
+          read_at?: string | null
+          read_by?: string | null
+          rfc_message_id?: string | null
+          rfc_references?: string | null
+          sender_logo_url?: string | null
+          snippet?: string | null
+          starred?: boolean
+          subject?: string | null
+          to_addr?: string | null
+          trashed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mail_messages_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "mail_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mail_notifications: {
+        Row: {
+          created_at: string
+          id: string
+          message_id: string
+          seen_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message_id: string
+          seen_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message_id?: string
+          seen_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mail_notifications_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "mail_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mail_oauth_states: {
+        Row: {
+          created_at: string
+          expires_at: string
+          state_hash: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          state_hash: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          state_hash?: string
+          used_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -1109,45 +1527,73 @@ export type Database = {
             referencedRelation: "payment_methods"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "orders_payment_method_id_fkey"
+            columns: ["payment_method_id"]
+            isOneToOne: false
+            referencedRelation: "payment_methods_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       payment_methods: {
         Row: {
+          account_label: string
           account_name: string | null
-          account_number: string
+          account_name_label: string
+          account_number: string | null
           active: boolean
           country_code: string | null
           created_at: string
+          display_type: string
           icon: string | null
           id: string
           instructions: string | null
           name: string
+          network_icon: string | null
+          show_account_name: boolean
+          show_amount: boolean
+          show_instructions: boolean
           sort_order: number
           type: string
         }
         Insert: {
+          account_label?: string
           account_name?: string | null
-          account_number: string
+          account_name_label?: string
+          account_number?: string | null
           active?: boolean
           country_code?: string | null
           created_at?: string
+          display_type?: string
           icon?: string | null
           id?: string
           instructions?: string | null
           name: string
+          network_icon?: string | null
+          show_account_name?: boolean
+          show_amount?: boolean
+          show_instructions?: boolean
           sort_order?: number
           type: string
         }
         Update: {
+          account_label?: string
           account_name?: string | null
-          account_number?: string
+          account_name_label?: string
+          account_number?: string | null
           active?: boolean
           country_code?: string | null
           created_at?: string
+          display_type?: string
           icon?: string | null
           id?: string
           instructions?: string | null
           name?: string
+          network_icon?: string | null
+          show_account_name?: boolean
+          show_amount?: boolean
+          show_instructions?: boolean
           sort_order?: number
           type?: string
         }
@@ -1435,6 +1881,59 @@ export type Database = {
         }
         Relationships: []
       }
+      tiktok_jobs: {
+        Row: {
+          amount_egp: number
+          attempts: number
+          claimed_at: string | null
+          coins: number
+          created_at: string
+          error: string | null
+          finished_at: string | null
+          id: string
+          order_id: string
+          qr_image: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount_egp?: number
+          attempts?: number
+          claimed_at?: string | null
+          coins: number
+          created_at?: string
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          order_id: string
+          qr_image?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount_egp?: number
+          attempts?: number
+          claimed_at?: string | null
+          coins?: number
+          created_at?: string
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          order_id?: string
+          qr_image?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tiktok_jobs_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_devices: {
         Row: {
           device_fingerprint: string
@@ -1681,30 +2180,42 @@ export type Database = {
       }
       work_shifts: {
         Row: {
+          archived_at: string | null
           created_at: string
           ended_at: string | null
           ended_reason: string | null
           id: string
+          link_group: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
           started_at: string
           user_id: string
           verified_device: boolean
           verified_face: boolean
         }
         Insert: {
+          archived_at?: string | null
           created_at?: string
           ended_at?: string | null
           ended_reason?: string | null
           id?: string
+          link_group?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           started_at?: string
           user_id: string
           verified_device?: boolean
           verified_face?: boolean
         }
         Update: {
+          archived_at?: string | null
           created_at?: string
           ended_at?: string | null
           ended_reason?: string | null
           id?: string
+          link_group?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           started_at?: string
           user_id?: string
           verified_device?: boolean
@@ -1838,7 +2349,44 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      payment_methods_public: {
+        Row: {
+          country_code: string | null
+          display_type: string | null
+          icon: string | null
+          id: string | null
+          name: string | null
+          sort_order: number | null
+          type: string | null
+        }
+        Insert: {
+          country_code?: string | null
+          display_type?: string | null
+          icon?: string | null
+          id?: string | null
+          name?: string | null
+          sort_order?: number | null
+          type?: string | null
+        }
+        Update: {
+          country_code?: string | null
+          display_type?: string | null
+          icon?: string | null
+          id?: string | null
+          name?: string | null
+          sort_order?: number | null
+          type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_methods_country_code_fkey"
+            columns: ["country_code"]
+            isOneToOne: false
+            referencedRelation: "countries"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
     }
     Functions: {
       admin_allow_signup: { Args: { p_email: string }; Returns: boolean }
@@ -1927,6 +2475,25 @@ export type Database = {
         Args: { p_by: string; p_key: string; p_secret: string }
         Returns: boolean
       }
+      mail_is_staff: { Args: { _uid: string }; Returns: boolean }
+      payment_method_details: {
+        Args: { p_id: string }
+        Returns: {
+          account_label: string
+          account_name: string
+          account_name_label: string
+          account_number: string
+          display_type: string
+          id: string
+          instructions: string
+          name: string
+          network_icon: string
+          show_account_name: boolean
+          show_amount: boolean
+          show_instructions: boolean
+          type: string
+        }[]
+      }
       prune_bybit_card_txns: {
         Args: { p_delete?: number; p_max?: number }
         Returns: number
@@ -1937,6 +2504,15 @@ export type Database = {
       }
       work_claim_shift: {
         Args: { p_device: boolean; p_face: boolean }
+        Returns: Json
+      }
+      work_link_p2p_atomic: {
+        Args: {
+          p_actor_id: string
+          p_ledger_id: string
+          p_shift_id: string
+          p_used_shift_ids: string[]
+        }
         Returns: Json
       }
     }
