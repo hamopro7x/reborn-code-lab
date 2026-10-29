@@ -519,13 +519,14 @@ export function canonicalize(rows: Iterable<SpendRow>): {
   const seenRaw = new Set<string>();
   const list = [...rows];
   const hangVoided = findHangReversals(list.map(hangCandidateOfSpendRow));
+  const linkVoided = findLinkedReversals(list.map(linkCandidateOfSpendRow));
 
   for (const row of list) {
     const time = Number(row.time ?? 0);
     if (time > lastTxnTime) lastTxnTime = time;
 
     const canonicalId = getCanonicalTransactionIdentity(row);
-    const kind = hangVoided.has(text(row.txnId)) ? "excluded" : spendKind(row);
+    const kind = hangVoided.has(text(row.txnId)) || linkVoided.has(text(row.txnId)) ? "excluded" : spendKind(row);
     if (kind === "excluded") {
       excluded.push({ row, canonicalId, reason: "refund/reversed/failed" });
       continue;
