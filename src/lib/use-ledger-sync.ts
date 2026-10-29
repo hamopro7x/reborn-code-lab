@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { syncAllBybitCardTxns } from "./bybit.functions";
+import { refreshQueries } from "./refresh-queries";
 
 const LOCK_KEY = "bybit-auto-sync-at";
 
@@ -53,7 +54,7 @@ export function useLedgerAutoSync(enabled = true, intervalMs = 5_000) {
           ["my-work-state"],
           ["emp-work-state"],
         ]) {
-          void qc.invalidateQueries({ queryKey: key });
+          void refreshQueries(qc, [key]);
         }
       } catch {
         /* transient failures are retried on the next tick */

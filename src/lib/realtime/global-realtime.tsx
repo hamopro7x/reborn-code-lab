@@ -4,6 +4,7 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 
 import { supabase } from "@/integrations/supabase/client";
 import { REALTIME_TABLES, TABLE_QUERY_KEYS } from "./tables";
+import { refreshQueries } from "../refresh-queries";
 
 /**
  * طبقة Realtime عامة واحدة للموقع كامل (أدمن / موظف / مستخدم).
@@ -50,12 +51,10 @@ export function GlobalRealtime() {
       }
       if (broad) {
         // جدول غير معروف في الخريطة: نحدّث الـqueries النشطة فقط.
-        void qc.invalidateQueries({ refetchType: "active" });
+        void qc.invalidateQueries({ refetchType: "active" }, { cancelRefetch: false });
         return;
       }
-      for (const p of prefixes) {
-        void qc.invalidateQueries({ queryKey: [p], refetchType: "active" });
-      }
+      void refreshQueries(qc, [...prefixes].map((p) => [p]));
     };
 
     const schedule = (table: string) => {
@@ -92,7 +91,7 @@ export function GlobalRealtime() {
         teardown();
         subscribe();
       }
-      void qc.invalidateQueries({ refetchType: "active" });
+      void qc.invalidateQueries({ refetchType: "active" }, { cancelRefetch: false });
     };
 
     const onVisible = () => {
@@ -103,15 +102,17 @@ export function GlobalRealtime() {
     document.addEventListener("visibilitychange", onVisible);
 
     // تحديث توكن الـRealtime عند تغيّر الجلسة حتى تبقى الصلاحيات صحيحة.
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       const token = session?.access_token;
       try {
         supabase.realtime.setAuth(token ?? null);
       } catch {
         /* تجاهل */
       }
-      teardown();
-      if (!disposed) subscribe();
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") {
+        teardown();
+        if (!disposed) subscribe();
+      }
     });
 
     return () => {
