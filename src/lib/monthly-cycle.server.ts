@@ -33,7 +33,7 @@ export function currentCycle(nowMs: number = Date.now()): MonthlySpendPeriod {
  * بداية جديدة يدوية: كل معاملات Bybit قبل اللحظة دي اتحذفت بطلب صاحب الموقع
  * (29/10/2026 18:45 UTC) ومتتسجلش تاني مع المزامنة.
  */
-export const BYBIT_FRESH_START_MS = 1793299530757;
+export const BYBIT_FRESH_START_MS = 1793303130757; // 29/10/2026 21:45 Cairo (UTC+2) = 19:45 UTC
 
 /** بداية الدورة الحالية (ms, UTC) — أي شيء قبلها ينتمي لدورة قديمة. */
 export function currentCycleStart(nowMs: number = Date.now()): number {
