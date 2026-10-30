@@ -17,19 +17,19 @@ function archive(rows: any[], error: { message: string } | null = null) {
 }
 
 const row = (txn_id: string, account_id = "a", detail = { side: "1", tradeStatus: "1" }) => ({
-  txn_id, account_id, detail, amount: 12, currency: "USD", txn_time: Date.parse("2026-10-29T19:00:00Z"),
+  txn_id, account_id, detail, amount: 12, currency: "USD", txn_time: Date.parse("2026-10-29T20:00:00Z"),
   merchant: "TikTok", pan4: "1234", txn_type: detail.side, status: "success",
 });
 
 describe("immediate individual-to-central card mirror", () => {
-  beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(new Date("2026-10-29T19:16:00Z")); });
+  beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(new Date("2026-10-29T20:16:00Z")); });
   afterEach(() => { vi.useRealTimers(); });
   it("mirrors persisted purchases once with the same account, amount and time", async () => {
     const db = archive([row("t")]);
     const save = vi.fn(async (rows: any[]) => rows.length);
     expect(await mirrorStoredCardRows(db, "a", ["t", "t"], save)).toBe(1);
     expect(save.mock.calls[0][0]).toMatchObject([{
-      account_id: "a", ref_id: "t", kind: "card", amount: -12, status: "success", occurred_at: "2026-10-29T19:00:00.000Z",
+      account_id: "a", ref_id: "t", kind: "card", amount: -12, status: "success", occurred_at: "2026-10-29T20:00:00.000Z",
     }]);
   });
 
@@ -40,7 +40,7 @@ describe("immediate individual-to-central card mirror", () => {
   });
 
   it("does not mirror another account or any transaction before the reset", async () => {
-    const db = archive([row("other", "b"), { ...row("old"), txn_time: Date.parse("2026-10-29T18:00:00Z") }, row("new")]);
+    const db = archive([row("other", "b"), { ...row("old"), txn_time: Date.parse("2026-10-29T19:00:00Z") }, row("new")]);
     const save = vi.fn(async (rows: any[]) => rows.length);
     expect(await mirrorStoredCardRows(db, "a", ["other", "old", "new"], save)).toBe(1);
     expect(save.mock.calls[0][0].map((r: any) => r.ref_id)).toEqual(["new"]);
@@ -69,7 +69,7 @@ describe("immediate individual-to-central card mirror", () => {
     const assignment = new Promise<void>((resolve) => { release = resolve; });
     const persist = vi.fn(async () => { await assignment; return []; });
     const read = vi.fn(async () => [{
-      txnId: "new-card", txnCreate: Date.parse("2026-10-29T19:00:00Z"),
+      txnId: "new-card", txnCreate: Date.parse("2026-10-29T20:00:00Z"),
       side: "1", tradeStatus: "0", basicAmount: "12", basicCurrency: "USD", merchName: "TikTok",
     }]);
     let completed = false;
@@ -84,7 +84,7 @@ describe("immediate individual-to-central card mirror", () => {
   it("never sends a pre-reset purchase for immediate assignment", async () => {
     const persist = vi.fn(async () => []);
     await syncAccountRecent("a", {
-      read: async () => [{ txnId: "old", txnCreate: Date.parse("2026-10-29T18:00:00Z"), side: "1", tradeStatus: "1" }],
+      read: async () => [{ txnId: "old", txnCreate: Date.parse("2026-10-29T19:00:00Z"), side: "1", tradeStatus: "1" }],
       persist,
     });
     expect(persist).toHaveBeenCalledWith([], "a", true);

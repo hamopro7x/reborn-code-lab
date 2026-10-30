@@ -2,22 +2,22 @@ import { describe, expect, it } from "vitest";
 import { BYBIT_FRESH_START_MS, currentBybitCycle, currentBybitRows, currentCycleStart, inCurrentCycle } from "./monthly-cycle.server";
 import { spendWindows } from "./bybit.server";
 
-const now = Date.parse("2026-10-29T19:08:00Z");
+const now = Date.parse("2026-10-29T20:08:00Z");
 
 describe("Bybit fresh start after the owner's reset", () => {
   it("preserves the existing 29 October 21:45 Cairo reset instant", () => {
-    expect(BYBIT_FRESH_START_MS).toBe(Date.parse("2026-10-29T18:45:30.757Z"));
+    expect(BYBIT_FRESH_START_MS).toBe(Date.parse("2026-10-29T19:45:30.757Z"));
     expect(currentCycleStart(now)).toBe(BYBIT_FRESH_START_MS);
   });
 
   it("rejects old transactions even if fetched again from Bybit", () => {
-    expect(inCurrentCycle(Date.parse("2026-10-29T18:14:00Z"), now)).toBe(false);
+    expect(inCurrentCycle(Date.parse("2026-10-29T19:14:00Z"), now)).toBe(false);
     expect(inCurrentCycle(BYBIT_FRESH_START_MS - 1, now)).toBe(false);
   });
 
   it("includes transactions at and after the reset without moving the start", () => {
     expect(inCurrentCycle(BYBIT_FRESH_START_MS, now)).toBe(true);
-    expect(inCurrentCycle(Date.parse("2026-10-29T19:00:00Z"), now)).toBe(true);
+    expect(inCurrentCycle(Date.parse("2026-10-29T20:00:00Z"), now)).toBe(true);
     expect(currentCycleStart(now + 60_000)).toBe(BYBIT_FRESH_START_MS);
   });
 
