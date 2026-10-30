@@ -473,9 +473,16 @@ export async function saveTransferNote(userId: string, ledgerId: string, note: s
 
   const { data: existing } = await db
     .from("work_transfer_notes")
-    .select("ledger_id,saved_at")
+    .select("ledger_id,saved_at,user_id")
     .eq("ledger_id", ledgerId)
     .maybeSingle();
+
+  if (existing && (existing as any).user_id && (existing as any).user_id !== userId) {
+    const { data: roles } = await db.from("user_roles").select("role").eq("user_id", userId);
+    if (!(roles ?? []).some((r: any) => r.role === "admin")) {
+      return { ok: false as const, error: "هذه الملاحظة خاصة بموظف آخر." };
+    }
+  }
 
   const now = new Date();
   const savedAt = now.toISOString();
