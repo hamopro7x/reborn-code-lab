@@ -527,7 +527,7 @@ export const getMyAvatarUrl = createServerFn({ method: "GET" })
       .eq("id", context.userId)
       .maybeSingle();
     let url: string | null = null;
-    if (profile?.avatar_url) {
+    if (profile?.avatar_url && profile.avatar_url.startsWith(`${context.userId}/`) && !profile.avatar_url.includes("..")) {
       const { data: signed } = await supabaseAdmin.storage
         .from("avatars")
         .createSignedUrl(profile.avatar_url, 60 * 60 * 24);
