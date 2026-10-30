@@ -21,7 +21,7 @@ vi.mock("@/integrations/supabase/client.server", async () => {
           const ledger = {
             id: "movement", account_id: "account", kind: "card", status: "success", direction: "out",
             ref_id: "txn", title: "TikTok", amount: -12, currency: "USD", fee: 0,
-            occurred_at: "2026-10-29T19:17:50Z", detail: { side: "1", tradeStatus: "1" },
+            occurred_at: "2026-10-29T20:17:50Z", detail: { side: "1", tradeStatus: "1" },
           };
           const rows = table === "bybit_ledger" ? [ledger]
             : table === "work_txn_assignments" ? [{
@@ -44,7 +44,7 @@ import { workTable } from "./work.server";
 describe("saved Bybit movements remain readable in central and shift lists", () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-10-29T19:21:00Z"));
+    vi.setSystemTime(new Date("2026-10-29T20:21:00Z"));
     requests.length = 0;
     response.fail = false;
   });
@@ -57,7 +57,7 @@ describe("saved Bybit movements remain readable in central and shift lists", () 
     const query = requests.find((url) => url.pathname.endsWith("/bybit_ledger"));
     expect(query?.searchParams.get("select")).toBe("*");
     expect(query?.searchParams.getAll("occurred_at")).toEqual([
-      "gte.2026-10-29T18:45:30.757Z", "lt.2026-10-31T00:00:00.000Z",
+      "gte.2026-10-29T19:45:30.757Z", "lt.2026-10-31T00:00:00.000Z",
     ]);
     expect(query?.searchParams.get("kind")).toBe("in.(card,refund)");
   });
