@@ -144,6 +144,9 @@ export const attachOrderScreenshot = createServerFn({ method: "POST" })
     if (order.status !== "pending_payment") {
       throw new Error("Order is not awaiting payment proof");
     }
+    if (!data.screenshot_path.startsWith(`${data.order_code}/`) || data.screenshot_path.includes("..")) {
+      throw new Error("Invalid screenshot path");
+    }
     const { error: upErr } = await supabaseAdmin
       .from("orders")
       .update({
@@ -206,7 +209,7 @@ export const getOrderByCode = createServerFn({ method: "GET" })
   });
 
 const deviceOrdersSchema = z.object({
-  device_id: z.string().trim().min(4).max(128),
+  device_id: z.string().trim().min(16).max(128),
 });
 
 export const listOrdersByDevice = createServerFn({ method: "POST" })
@@ -215,7 +218,7 @@ export const listOrdersByDevice = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: orders, error } = await supabaseAdmin
       .from("orders")
-      .select("id, order_code, status, customer_name, total, currency_code, created_at")
+      .select("id, order_code, status, total, currency_code, created_at")
       .eq("device_id", data.device_id)
       .order("created_at", { ascending: false })
       .limit(50);

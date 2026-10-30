@@ -210,8 +210,15 @@ export const getLessonVideoUrl = createServerFn({ method: "POST" })
 
 
     const { data: lesson } = await supabaseAdmin
-      .from("course_lessons").select("video_path").eq("id", data.lesson_id).maybeSingle();
+      .from("course_lessons").select("video_path,course_id").eq("id", data.lesson_id).maybeSingle();
     if (!lesson?.video_path) throw new Error("Lesson not found");
+    if (role !== "admin") {
+      const { data: access } = await supabaseAdmin
+        .from("course_access").select("id")
+        .eq("course_id", lesson.course_id).eq("user_id", context.userId)
+        .limit(1).maybeSingle();
+      if (!access) throw new Error("Forbidden");
+    }
 
     const { data: signed, error } = await supabaseAdmin
       .storage.from("course-videos")
