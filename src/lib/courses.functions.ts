@@ -278,7 +278,7 @@ export const getViewerIdentity = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data } = await context.supabase.from("profiles").select("email,full_name,avatar_url").eq("id", context.userId).maybeSingle();
     let avatarUrl = "";
-    if (data?.avatar_url) {
+    if (data?.avatar_url && data.avatar_url.startsWith(`${context.userId}/`) && !data.avatar_url.includes("..")) {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const { data: signed } = await supabaseAdmin.storage
         .from("avatars")

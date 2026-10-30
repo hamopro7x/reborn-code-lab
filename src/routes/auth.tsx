@@ -49,10 +49,12 @@ function AuthPage() {
   const { next } = Route.useSearch();
 
   function goAfterAuth() {
-    if (next) { window.location.href = next; return; }
+    const safe = (u?: string | null) => (u && u.startsWith("/") && !u.startsWith("//") && !u.startsWith("/\\") ? u : null);
+    const target = safe(next);
+    if (target) { window.location.href = target; return; }
     // بدون هدف محدد: نرجّع المستخدم لآخر مكان كان فيه قبل الخروج/الدخول.
     const last = readLastLocation();
-    if (last) { window.location.href = last; return; }
+    if (safe(last)) { window.location.href = last!; return; }
     navigate({ to: "/admin" });
   }
 
