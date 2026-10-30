@@ -1,6 +1,8 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { checkBreachedPassword } from "@/lib/password.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,6 +45,7 @@ function AuthPage() {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const checkBreachedFn = useServerFn(checkBreachedPassword);
   const { next } = Route.useSearch();
 
   function goAfterAuth() {
@@ -66,6 +69,7 @@ function AuthPage() {
     setLoading(true);
     try {
       if (mode === "signup") {
+        await checkBreachedFn({ data: password });
         const { error: upErr } = await supabase.auth.signUp({
           email: normalized,
           password,

@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { assertPasswordNotBreached } from "@/lib/password.functions";
 
 async function assertAdmin(supabase: any, userId: string) {
   const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId);
@@ -19,6 +20,7 @@ export const createEmployee = createServerFn({ method: "POST" })
   .inputValidator((data) => createEmpSchema.parse(data))
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
+    await assertPasswordNotBreached(data.password);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     // Pre-approve this email server-side (private allowlist) so the DB signup gate
@@ -211,6 +213,7 @@ export const updateEmployee = createServerFn({ method: "POST" })
   .inputValidator((data) => updateEmpSchema.parse(data))
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
+    if (data.password) await assertPasswordNotBreached(data.password);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const authUpdate: { email?: string; password?: string; user_metadata?: Record<string, unknown> } = {};
