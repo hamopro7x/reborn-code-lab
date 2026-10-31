@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 import { BYBIT_FRESH_START_MS, currentBybitCycle, currentBybitRows, currentCycleStart, inCurrentCycle } from "./monthly-cycle.server";
 import { spendWindows } from "./bybit.server";
 
-const now = Date.parse("2026-10-29T20:08:00Z");
+const now = Date.parse("2026-10-31T18:08:00Z");
 
 describe("Bybit fresh start after the owner's reset", () => {
-  it("preserves the existing 29 October 21:45 Cairo reset instant", () => {
-    expect(BYBIT_FRESH_START_MS).toBe(Date.parse("2026-10-29T19:45:30.757Z"));
+  it("preserves the owner's real-work start on 31 October at 19:35:02 Cairo", () => {
+    expect(BYBIT_FRESH_START_MS).toBe(Date.parse("2026-10-31T17:35:02Z"));
     expect(currentCycleStart(now)).toBe(BYBIT_FRESH_START_MS);
   });
 
@@ -17,7 +17,7 @@ describe("Bybit fresh start after the owner's reset", () => {
 
   it("includes transactions at and after the reset without moving the start", () => {
     expect(inCurrentCycle(BYBIT_FRESH_START_MS, now)).toBe(true);
-    expect(inCurrentCycle(Date.parse("2026-10-29T20:00:00Z"), now)).toBe(true);
+    expect(inCurrentCycle(Date.parse("2026-10-31T18:00:00Z"), now)).toBe(true);
     expect(currentCycleStart(now + 60_000)).toBe(BYBIT_FRESH_START_MS);
   });
 
@@ -35,12 +35,12 @@ describe("Bybit fresh start after the owner's reset", () => {
     expect(spendWindows(now)).toEqual({
       dayStart: BYBIT_FRESH_START_MS,
       monthStart: BYBIT_FRESH_START_MS,
-      monthEnd: Date.parse("2026-10-31T00:00:00Z"),
+      monthEnd: Date.parse("2026-11-30T00:00:00Z"),
     });
   });
 
   it("keeps the monthly rollover and exclusive end", () => {
-    const next = Date.parse("2026-10-31T00:00:00Z");
+    const next = Date.parse("2026-11-30T00:00:00Z");
     expect(inCurrentCycle(currentBybitCycle(now).periodEnd, now)).toBe(false);
     expect(currentCycleStart(next)).toBe(next);
   });
