@@ -102,3 +102,15 @@ describe("reversal regression", () => {
     expect(spend(rows)).toBe(6);
   });
 });
+
+describe("real 2.79 case (31 Oct 2026, card 0540) — raw Bybit API fields", () => {
+  it("leaves both purchases untouched when the side-2 event has its own ids and two candidates", () => {
+    const base = { scope: "acc", pan4: "0540", amount: 2.79 };
+    const set = findLinkedReversals([
+      { ...base, id: "3000000683626441", txnId: "3000000683626441", orderNo: "2116644829806116864_585452119", side: "1", tradeStatus: "1", time: 1793482427000 },
+      { ...base, id: "3000000683626471", txnId: "3000000683626471", orderNo: "2116644841181069312_585452119", side: "1", tradeStatus: "0", time: 1793482430000 },
+      { ...base, id: "3000000683640474", txnId: "3000000683640474", orderNo: "2116650191820705792_585452119", side: "2", tradeStatus: "1", time: 1793483706000 },
+    ]);
+    expect([...set]).toEqual([]);
+  });
+});
