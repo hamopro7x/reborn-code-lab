@@ -491,9 +491,9 @@ describe("hung checkout retry («معكوسة»)", () => {
       detail: { tradeStatus: "0", side: "1", basicAmount: amount, basicCurrency: "USD" },
     });
 
-  it("voids the first attempt when the same charge repeats 3 seconds later", () => {
+  it("does not invent a reversal from two identical purchases 3 seconds apart", () => {
     const totals = sumSpend([pend("a", T), pend("b", T + 3_000)], 0, 0);
-    expect(totals.monthSpend).toBeCloseTo(3.61, 5);
+    expect(totals.monthSpend).toBeCloseTo(7.22, 5);
   });
 
   it("keeps both purchases when they are more than 20 seconds apart", () => {
@@ -508,14 +508,14 @@ describe("hung checkout retry («معكوسة»)", () => {
 });
 
 describe("findHangReversals (central ledger)", () => {
-  it("marks the earlier pending attempt of a 3-second retry as reversed, keeps the retry", async () => {
+  it("does not mark a retry reversed without an actual Bybit reversal event", async () => {
     const { findHangReversals } = await import("./bybit-spend");
     const t = Date.UTC(2026, 9, 26, 2, 46, 31);
     const voided = findHangReversals([
       { id: "first", pan4: "7130", merchant: "TIKTOK", amount: 3.61, time: t, tradeStatus: "0", side: "1" },
       { id: "retry", pan4: "7130", merchant: "TIKTOK", amount: 3.61, time: t + 3_000, tradeStatus: "0", side: "1" },
     ]);
-    expect([...voided]).toEqual(["first"]);
+    expect([...voided]).toEqual([]);
   });
 });
 
@@ -579,19 +579,19 @@ describe("side-2 reversal without a shared id", () => {
   it("voids the authorisation it follows seconds later", () => {
     expect(sumSpend([mk("a", "1", T), mk("r", "2", T + 6000)], 0, 0).monthSpend).toBe(0);
   });
-  it("voids only one of two identical authorisations", () => {
-    expect(sumSpend([mk("a", "1", T), mk("b", "1", T + 1000), mk("r", "2", T + 6000)], 0, 0).monthSpend).toBeCloseTo(352.2);
+  it("does not guess which of two authorisations a side-2 event reverses", () => {
+    expect(sumSpend([mk("a", "1", T), mk("b", "1", T + 1000), mk("r", "2", T + 6000)], 0, 0).monthSpend).toBeCloseTo(704.4);
   });
   it("ignores other cards, amounts and old authorisations", () => {
     const l = [mk("a", "1", T, 352.2, "0540"), mk("b", "1", T, 10), mk("c", "1", T - 61 * 60_000), mk("r", "2", T + 6000)];
     expect(sumSpend(l, 0, 0).monthSpend).toBeCloseTo(352.2 * 2 + 10);
   });
-  it("voids the pending retry, not the completed attempt, 21 minutes later", () => {
+  it("never voids a fresh retry when two same-amount candidates exist 21 minutes later", () => {
     const done = mk("a", "1", T, 2.79, "0540");
     const pend = row({ txnId: "b", amount: 2.79, time: T + 3000, pan4: "0540", type: "1", detail: { tradeStatus: "0", side: "1", orderNo: "ob", basicAmount: 2.79, basicCurrency: "USD" } });
     const voided = findLinkedReversals([done, pend, mk("r", "2", T + 21 * 60_000, 2.79, "0540")].map((r: any) => ({
       id: r.txnId, scope: "", orderNo: r.detail.orderNo, txnId: r.txnId, tradeStatus: r.detail.tradeStatus, side: r.detail.side, pan4: r.pan4, amount: r.amount, time: r.time,
     })));
-    expect([...voided]).toEqual(["b"]);
+    expect([...voided]).toEqual([]);
   });
 });
