@@ -1255,7 +1255,7 @@ async function persistCardTxns(rows: CardTxn[], accountId?: string, assign = tru
     const { currentCycleStart } = await import("./monthly-cycle.server");
     const cycleStart = currentCycleStart();
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const payload = rows
+    let payload: any[] = rows
       .filter((r) => Number(r.time ?? 0) >= cycleStart)
       .map((r) => ({
         txn_id: r.id,
