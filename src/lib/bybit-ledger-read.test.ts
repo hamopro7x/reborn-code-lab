@@ -66,6 +66,12 @@ describe("saved Bybit movements remain readable in central and shift lists", () 
       "gte.2026-10-31T00:00:00.000Z", "lt.2026-11-30T00:00:00.000Z",
     ]);
     expect(query?.searchParams.get("kind")).toBe("in.(card,refund)");
+    // A side-2 reversal stays in the raw archive but must not be returned
+    // as an extra central purchase, including when success/failed filters apply.
+    expect(query?.searchParams.getAll("detail")).toEqual([
+      'not.cs.{"side":"2"}',
+      'not.cs.{"side":2}',
+    ]);
   });
 
   it("reads the same saved movement through the employee's existing shift assignment", async () => {
