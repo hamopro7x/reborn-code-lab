@@ -46,9 +46,16 @@ describe("immediate individual-to-central card mirror", () => {
     expect(save.mock.calls[0][0].map((r: any) => r.ref_id)).toEqual(["new"]);
   });
 
-  it("raw reversal wins over stale success in the central mirror", async () => {
+  it("never mirrors a side-2 reversal event as a third purchase", async () => {
     const save = vi.fn(async (rows: any[]) => rows.length);
-    await mirrorStoredCardRows(archive([row("reversed", "a", { side: "2", tradeStatus: "3" })]), "a", ["reversed"], save);
+    const count = await mirrorStoredCardRows(archive([row("reversal-event", "a", { side: "2", tradeStatus: "3" })]), "a", ["reversal-event"], save);
+    expect(count).toBe(0);
+    expect(save).not.toHaveBeenCalled();
+  });
+
+  it("still mirrors an original purchase explicitly reversed by Bybit", async () => {
+    const save = vi.fn(async (rows: any[]) => rows.length);
+    await mirrorStoredCardRows(archive([row("reversed-original", "a", { side: "1", tradeStatus: "3" })]), "a", ["reversed-original"], save);
     expect(save.mock.calls[0][0][0]).toMatchObject({ kind: "card", status: "reversed" });
   });
 
