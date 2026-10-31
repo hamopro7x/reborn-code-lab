@@ -2644,8 +2644,12 @@ export async function fetchLedgerPage(opts: {
     let out = q;
     if (opts.accountId) out = out.eq("account_id", opts.accountId);
     // side=2 is an authorisation-reversal EVENT, not a separate purchase.
-    // Also hides side-2 rows mirrored by earlier versions of the application.
-    if (g === "txns") out = out.or("detail->>side.is.null,detail->>side.neq.2");
+    // Use JSONB containment NOT filters: unlike .or(), these compose with the
+    // success/failed/refund OR filters instead of overwriting them in PostgREST.
+    // Handle both string and numeric side values in legacy stored rows.
+    if (g === "txns") out = out
+      .not("detail", "cs", '{"side":"2"}')
+      .not("detail", "cs", '{"side":2}');
     if (opts.hideReversed) out = out.or("status.is.null,status.neq.reversed");
     if (g === "txns" && st === "refund") out = out.in("kind", ["card", "refund"]).or(LEDGER_CARD_FILTERS.refund.slice(3, -1));
     // Same groups as cardPurchasePresenter: ناجحة = everything not failed/reversed
