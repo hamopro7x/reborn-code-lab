@@ -6,7 +6,7 @@
  * webauthn credentials). It never modifies a transaction's original fields.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { pageRange } from "./pagination";
+import { isPastLastPage, pageRange } from "./pagination";
 import { enforceRetentionSafe } from "./retention.server";
 
 type DB = SupabaseClient<any, any, any>;

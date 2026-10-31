@@ -1,4 +1,4 @@
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useUiState } from "@/lib/ui-state";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -367,6 +367,10 @@ export function BybitLedgerPanel() {
   
   const total = Number(q.data?.total ?? 0);
   const pages = Math.max(Math.ceil(total / pageSize), 1);
+  // لو القائمة قلّت (تصفير/أرشفة) والصفحة الحالية بقت بعد الآخر، ارجع لآخر صفحة.
+  useEffect(() => {
+    if (q.data && !q.isPlaceholderData && page > pages) setPage(pages);
+  }, [q.data, q.isPlaceholderData, page, pages, setPage]);
 
   const totalsFn = useServerFn(getBybitSpendTotals);
   const totalsQ = useQuery({
