@@ -460,7 +460,16 @@ export function mergeCardTypeResults(
     }
   });
   if (!ok && lastError) throw lastError;
-  return [...merged.values()].map(({ row }) => row);
+  return [...merged.values()].map(({ row }) => row).filter((row) => !isLateSettlementRecord(row));
+}
+
+/**
+ * Bybit's daily clearing re-sends every earlier purchase as a settlement
+ * record (side 3) with new ids and a new time. It is the same purchase that
+ * was already recorded at authorisation, so it is never ingested or shown.
+ */
+export function isLateSettlementRecord(row: any): boolean {
+  return String(row?.side ?? "") === "3";
 }
 
 /**
@@ -612,6 +621,7 @@ async function fetchCardPages(maxRows: number, creds: Creds, sinceMs?: number, b
 
   return [...merged.values()]
     .map(({ row }) => row)
+    .filter((row) => !isLateSettlementRecord(row))
     .sort((a, b) => Number(b?.txnCreate ?? 0) - Number(a?.txnCreate ?? 0));
 }
 
