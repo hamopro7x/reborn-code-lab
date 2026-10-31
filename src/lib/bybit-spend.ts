@@ -136,6 +136,11 @@ export function cryptoSoldOf(src: unknown): boolean | null {
 
 /** Bybit `side` "2" = Authorization Reversal (official docs). */
 export const AUTH_REVERSAL_SIDE = "2";
+
+/** A side-2 row is a provider reversal EVENT, not another card purchase. */
+export function isCardReversalEvent(side: unknown): boolean {
+  return text(side).trim() === AUTH_REVERSAL_SIDE;
+}
 /** Authorisation sides (empty = older rows stored without a side). */
 const AUTH_SIDES = new Set(["", "1"]);
 
@@ -237,39 +242,42 @@ export function findLinkedReversals(rows: Iterable<LinkCandidate>, usedReversals
     if ((o && keys.has(`${scope}|o:${o}`)) || (t && keys.has(`${scope}|t:${t}`))) out.add(r.id);
   }
 
-  // Bybit's side-2 reversal usually carries its OWN orderNo/txnId, so the ids
-  // above never meet. Fallback: each reversal that voided nothing by id voids
-  // the closest earlier, not-yet-voided authorisation in the same account, on
-  // the same card, for the same amount, within REVERSAL_LINK_WINDOW_MS.
+  // A side-2 event often has different IDs from the original authorisation.
+  // Never pick the "nearest pending" when more than one purchase could match:
+  // doing that wrongly reverses a legitimate retry (the 23:33:47/23:33:50 case).
+  // A unique, same-account/card/amount candidate may be linked. Ambiguous
+  // events stay in the raw archive for a later provider-ID/status reconciliation.
   const cents = (v: unknown) => Math.round(Math.abs(Number(v) || 0) * 100);
-  const byId = new Map(list.map((r) => [r.id, r]));
-  const idLinked = new Set<string>();
-  for (const id of out) {
-    const a = byId.get(id);
-    if (!a) continue;
-    for (const r of list) {
-      if (!reversalIds.has(r.id) || text(r.scope) !== text(a.scope)) continue;
-      const o = cleanId(r.orderNo), t = cleanId(r.txnId);
-      if ((o && o === cleanId(a.orderNo)) || (t && t === cleanId(a.txnId))) { idLinked.add(r.id); usedReversals?.add(r.id); }
+  const linkedReversals = new Set<string>();
+  for (const a of list) {
+    if (!out.has(a.id)) continue;
+    for (const rev of list) {
+      if (!reversalIds.has(rev.id) || text(rev.scope) !== text(a.scope)) continue;
+      if ((cleanId(rev.orderNo) && cleanId(rev.orderNo) === cleanId(a.orderNo)) ||
+          (cleanId(rev.txnId) && cleanId(rev.txnId) === cleanId(a.txnId))) {
+        linkedReversals.add(rev.id);
+        usedReversals?.add(rev.id);
+      }
     }
   }
-  const revs = list
-    .filter((r) => reversalIds.has(r.id) && !idLinked.has(r.id) && text(r.side).trim() === AUTH_REVERSAL_SIDE && text(r.pan4) && cents(r.amount) > 0 && Number(r.time) > 0)
-    .sort((a, b) => Number(a.time) - Number(b.time));
-  for (const rev of revs) {
-    const rt = Number(rev.time);
-    let best: LinkCandidate | null = null;
-    for (const a of list) {
-      if (reversalIds.has(a.id) || out.has(a.id)) continue;
-      if (!AUTH_SIDES.has(text(a.side).trim()) || text(a.tradeStatus).trim() === "2") continue;
-      if (text(a.scope) !== text(rev.scope) || text(a.pan4) !== text(rev.pan4) || cents(a.amount) !== cents(rev.amount)) continue;
+  for (const rev of list) {
+    if (!reversalIds.has(rev.id) || linkedReversals.has(rev.id) ||
+        !isCardReversalEvent(rev.side) || !text(rev.pan4) ||
+        cents(rev.amount) <= 0 || Number(rev.time) <= 0) continue;
+    const candidates = list.filter((a) => {
+      if (reversalIds.has(a.id) || out.has(a.id) ||
+          !AUTH_SIDES.has(text(a.side).trim()) ||
+          text(a.tradeStatus).trim() === "2" ||
+          text(a.scope) !== text(rev.scope) ||
+          text(a.pan4) !== text(rev.pan4) ||
+          cents(a.amount) !== cents(rev.amount)) return false;
       const at = Number(a.time);
-      if (!(at > 0) || at > rt || rt - at > REVERSAL_LINK_WINDOW_MS) continue;
-      // Bybit voids the still-pending attempt, not the completed one beside it.
-      const pend = (x: LinkCandidate) => text(x.tradeStatus).trim() === "0";
-      if (!best || (pend(a) && !pend(best)) || (pend(a) === pend(best) && at > Number(best.time))) best = a;
-    }
-    if (best) { out.add(best.id); usedReversals?.add(rev.id); }
+      const rt = Number(rev.time);
+      return at > 0 && at <= rt && rt - at <= REVERSAL_LINK_WINDOW_MS;
+    });
+    if (candidates.length !== 1) continue; // never guess between two purchases
+    out.add(candidates[0].id);
+    usedReversals?.add(rev.id);
   }
   return out;
 }
@@ -291,65 +299,17 @@ function linkCandidateOfSpendRow(row: SpendRow): LinkCandidate {
 }
 
 /**
- * Hung checkout retry («معكوسة»). When a PayPal/TikTok checkout hangs, the
- * merchant fires the SAME charge again seconds later and Bybit voids the first
- * authorisation. Bybit's API keeps returning that first record as a plain
- * pending purchase (tradeStatus "0"), so the void is recognised by its shape:
- * an unsettled authorisation followed, on the same card, by another purchase
- * at the same merchant for the exact same amount within this window.
+ * Kept for API compatibility only. Two matching purchases seconds apart DO NOT
+ * prove that the first was reversed. Only Bybit's explicit reversal records,
+ * statuses, and safely linked events are allowed to void a purchase.
  */
 export const HANG_RETRY_WINDOW_MS = 20_000;
-
 export type HangCandidate = {
-  id: string;
-  pan4: unknown;
-  merchant: unknown;
-  amount: number;
-  time: number;
-  tradeStatus: unknown;
-  side: unknown;
-  cryptoSold?: boolean | null;
+  id: string; pan4: unknown; merchant: unknown; amount: number; time: number;
+  tradeStatus: unknown; side: unknown; cryptoSold?: boolean | null;
 };
-
-/** Ids of the voided first attempts. Pure; shared by archive, ledger, sheet and spend. */
-export function findHangReversals(rows: Iterable<HangCandidate>, windowMs = HANG_RETRY_WINDOW_MS): Set<string> {
-  const groups = new Map<string, HangCandidate[]>();
-  for (const r of rows) {
-    if (!r.id || !Number.isFinite(r.time) || r.time <= 0) continue;
-    if (cardRecordOutcome(r.tradeStatus, r.side, r.cryptoSold ?? null) !== "ok") continue;
-    const cents = Math.round(Math.abs(Number(r.amount) || 0) * 100);
-    if (!cents) continue;
-    const key = `${text(r.pan4).trim()}|${text(r.merchant).trim().toUpperCase()}|${cents}`;
-    const list = groups.get(key) ?? [];
-    list.push(r);
-    groups.set(key, list);
-  }
-  const out = new Set<string>();
-  for (const list of groups.values()) {
-    if (list.length < 2) continue;
-    list.sort((a, b) => a.time - b.time);
-    for (let i = 0; i < list.length - 1; i++) {
-      const first = list[i];
-      if (text(first.tradeStatus).trim() !== "0") continue; // settled purchases are never voided
-      const next = list.slice(i + 1).find((r) => r.id !== first.id && r.time > first.time);
-      if (next && next.time - first.time <= windowMs) out.add(first.id);
-    }
-  }
-  return out;
-}
-
-function hangCandidateOfSpendRow(row: SpendRow): HangCandidate {
-  const d = row.detail ?? {};
-  return {
-    id: text(row.txnId),
-    pan4: row.pan4 ?? d["pan4"],
-    merchant: row.merchant ?? d["merchantName"] ?? d["merchName"],
-    amount: Math.abs(Number(row.amount) || 0),
-    time: Number(row.time ?? 0),
-    tradeStatus: d["tradeStatus"],
-    side: text(d["side"]) || text(row.type),
-    cryptoSold: cryptoSoldOf(d),
-  };
+export function findHangReversals(_rows: Iterable<HangCandidate>, _windowMs = HANG_RETRY_WINDOW_MS): Set<string> {
+  return new Set<string>();
 }
 
 /** Classifies a row using Bybit's own status fields, never a stored guess. */
@@ -563,7 +523,6 @@ export function canonicalize(rows: Iterable<SpendRow>): {
   let lastTxnTime = 0;
   const seenRaw = new Set<string>();
   const list = [...rows];
-  const hangVoided = findHangReversals(list.map(hangCandidateOfSpendRow));
   const linkVoided = findLinkedReversals(list.map(linkCandidateOfSpendRow));
 
   for (const row of list) {
@@ -571,7 +530,7 @@ export function canonicalize(rows: Iterable<SpendRow>): {
     if (time > lastTxnTime) lastTxnTime = time;
 
     const canonicalId = getCanonicalTransactionIdentity(row);
-    const kind = hangVoided.has(text(row.txnId)) || linkVoided.has(text(row.txnId)) ? "excluded" : spendKind(row);
+    const kind = linkVoided.has(text(row.txnId)) ? "excluded" : spendKind(row);
     if (kind === "excluded") {
       excluded.push({ row, canonicalId, reason: "refund/reversed/failed" });
       continue;
@@ -745,7 +704,7 @@ export function sumSpendByCard(
       spend: lifetime.monthSpend, // monthStart = 0, no end → every archived purchase
       monthSpend: cycle ? cycle.monthSpend : lifetime.monthSpend,
       countedTxns: lifetime.countedTxns,
-      totalTxns: list.length,
+      totalTxns: list.filter((row) => !isCardReversalEvent(row.detail?.["side"] || row.type)).length,
       lastUsed: lifetime.lastTxnTime,
     });
   }

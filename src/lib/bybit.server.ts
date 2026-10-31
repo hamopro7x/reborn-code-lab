@@ -6,7 +6,7 @@ import {
   auditSpend,
   getCanonicalTransactionIdentity,
   cardRecordOutcome,
-  findHangReversals,
+  isCardReversalEvent,
   type SpendRow,
   cryptoSoldOf,
   isExplicitReversal,
@@ -1216,11 +1216,10 @@ async function linkReversalsBeforeSave(db: any, payload: any[], accountId?: stri
   const all = new Map<string, LinkCandidate>();
   for (const r of stored.values()) all.set(String(r.txn_id), candidate(r));
   for (const r of payload) if (!r.__keepStored) all.set(String(r.txn_id), candidate(r));
-  const usedRevs = new Set<string>();
-  const voided = findLinkedReversals(all.values(), usedRevs);
-  // A side-2 record that voided its purchase is not a purchase row of its own:
-  // Bybit shows only the purchase as reversed.
-  for (const r of payload) if (usedRevs.has(String(r.txn_id)) && String(r.detail?.side ?? r.txn_type ?? "") === "2") r.__dropReversal = true;
+  // Reversal events are kept in the raw archive for subsequent reconciliation,
+  // including when the authorisation arrives in a later sync. They are excluded
+  // from purchase lists and the central ledger, NOT deleted from raw history.
+  const voided = findLinkedReversals(all.values());
   if (!voided.size) return [];
 
   const incoming = new Set(payload.map((r) => String(r.txn_id)));
@@ -1272,7 +1271,6 @@ async function persistCardTxns(rows: CardTxn[], accountId?: string, assign = tru
     if (!payload.length) return [];
 
     const extra = await linkReversalsBeforeSave(supabaseAdmin as any, payload, accountId);
-    payload = payload.filter((r: any) => !r.__dropReversal);
     // نكتب الجديد والمتغيّر فقط بدل إعادة كتابة الأرشيف بالكامل.
     const pending = await changedCardTxns(supabaseAdmin as any, payload.filter((r: any) => !r.__keepStored), accountId);
     for (let i = 0; i < pending.length; i += 500) {
@@ -1413,7 +1411,8 @@ export async function fetchCardTxnsPage(opts: {
   // A light projection of the cycle is classified first; only the page's
   // rows are then read in full.
   const light = await lightCycleRows(supabaseAdmin, opts.accountId, periodStart, periodEnd);
-  let classified = light.map((r) => ({ r, group: cardPurchaseGroup(r.t) }));
+  let classified = light.filter((r) => !isCardReversalEvent(r.t.detail?.side || r.t.type))
+    .map((r) => ({ r, group: cardPurchaseGroup(r.t) }));
   if (opts.hideReversed) classified = classified.filter((x) => !x.r.t.reversed);
   const matching = classified.filter((x) => cardFilterMatches(status, x.group));
   const total = matching.length;
@@ -1517,7 +1516,7 @@ export async function fetchCardTxnsLive(opts: {
     return markHangVoided(mapped);
   });
 
-  const current = currentBybitRows(rows);
+  const current = currentBybitRows(rows).filter((r) => !isCardReversalEvent(r.detail?.side || r.type));
   const visible = opts.hideReversed ? current.filter((r) => !r.reversed) : current;
   const filtered = visible.filter((r) => cardFilterMatches(status, cardPurchaseGroup(r)));
   const counts = { all: visible.length, success: 0, failed: 0, refund: 0 };
@@ -2231,7 +2230,6 @@ async function upsertLedger(rows: LedgerInsert[], assign = true) {
 
   const db = await admin();
   let saved = 0;
-  await applyHangReversals(db, clean);
   // نكتب الجديد والمتغيّر فقط: لا إعادة كتابة لكل السجل في كل دورة.
   const pending = await changedLedgerRows(db, clean);
   for (let i = 0; i < pending.length; i += 500) {
@@ -2261,19 +2259,8 @@ async function upsertLedger(rows: LedgerInsert[], assign = true) {
 
 
 /** Archive rows → hung-retry voids («معكوسة») shown as failed, like Bybit. */
+/** Classify only reversals evidenced by Bybit, never by a second similar charge. */
 function markHangVoided(rows: CardTxn[], scopes?: unknown[]): CardTxn[] {
-  const voided = findHangReversals(
-    rows.map((t) => ({
-      id: String(t.id),
-      pan4: t.pan4,
-      merchant: t.merchant,
-      amount: Math.abs(num(t.amount)),
-      time: Number(t.time ?? 0),
-      tradeStatus: t.detail?.["tradeStatus"],
-      side: t.detail?.["side"] ?? t.type,
-      cryptoSold: cryptoSoldOf(t.detail),
-    })),
-  );
   const linked = findLinkedReversals(
     rows.map((t, i) => {
       const ids = cardLinkIds(t.detail);
@@ -2290,74 +2277,12 @@ function markHangVoided(rows: CardTxn[], scopes?: unknown[]): CardTxn[] {
       };
     }),
   );
-  if (!voided.size && !linked.size) return rows;
+  if (!linked.size) return rows;
   return rows.map((t) =>
-    (voided.has(String(t.id)) || linked.has(String(t.id))) && t.status !== "refund"
+    linked.has(String(t.id)) && t.status !== "refund"
       ? { ...t, status: "failed", reversed: true }
       : t,
   );
-}
-
-const ledgerHangCandidate = (r: { account_id: string | null; ref_id: string; title?: unknown; amount?: unknown; occurred_at?: unknown; detail?: any }) => ({
-  id: `${r.account_id ?? ""}|${r.ref_id}`,
-  pan4: `${r.account_id ?? ""}|${String(r.detail?.pan4 ?? "")}`,
-  merchant: r.title ?? r.detail?.merchantName,
-  amount: Math.abs(num(r.amount)),
-  time: new Date(String(r.occurred_at ?? "")).getTime(),
-  tradeStatus: r.detail?.tradeStatus,
-  side: r.detail?.side ?? r.detail?.type,
-  cryptoSold: cryptoSoldOf(r.detail),
-});
-
-/**
- * Hung checkout retries: the first, voided attempt becomes «معكوسة» in the
- * central ledger (and therefore leaves the shift sheet). Compares the incoming
- * rows with recent stored rows so a pair split across two syncs is still found.
- */
-async function applyHangReversals(db: any, clean: LedgerInsert[]) {
-  const cards = clean.filter((r) => r.kind === "card");
-  if (!cards.length) return;
-  try {
-    // Always look back over the last 3 days of stored rows: the fast tick only
-    // carries the newest records, so a voided attempt saved earlier (e.g. this
-    // morning) must still be compared and fixed — not only rows near this batch.
-    const times = cards.map((r) => new Date(String(r.occurred_at)).getTime()).filter(Number.isFinite);
-    const since = Math.min(Math.min(...times) - 60_000, Date.now() - 3 * 86_400_000);
-    const accounts = [...new Set(cards.map((r) => r.account_id).filter(Boolean))] as string[];
-    const { data } = await db
-      .from("bybit_ledger")
-      .select("account_id, ref_id, title, amount, occurred_at, status, detail")
-      .eq("kind", "card")
-      .in("account_id", accounts)
-      .gte("occurred_at", new Date(since).toISOString())
-      .order("occurred_at", { ascending: false })
-      .limit(5000);
-    const stored = (data ?? []) as any[];
-    const byId = new Map<string, any>();
-    for (const r of stored) byId.set(`${r.account_id ?? ""}|${r.ref_id}`, r);
-    for (const r of cards) byId.set(`${r.account_id ?? ""}|${r.ref_id}`, r);
-    const voided = findHangReversals([...byId.values()].map(ledgerHangCandidate));
-    if (!voided.size) return;
-    const incoming = new Set<string>();
-    for (const r of cards) {
-      const id = `${r.account_id ?? ""}|${r.ref_id}`;
-      incoming.add(id);
-      if (voided.has(id)) (r as any).status = "reversed";
-    }
-    for (const r of stored) {
-      const id = `${r.account_id ?? ""}|${r.ref_id}`;
-      if (!voided.has(id) || incoming.has(id) || r.status === "reversed") continue;
-      const { error } = await db
-        .from("bybit_ledger")
-        .update({ status: "reversed" })
-        .eq("account_id", r.account_id)
-        .eq("kind", "card")
-        .eq("ref_id", r.ref_id);
-      if (error) console.error("bybit_ledger hang reversal failed:", error.message);
-    }
-  } catch (e) {
-    console.error("hang reversal check skipped:", (e as Error)?.message);
-  }
 }
 
 /** One central-ledger row built from one archived card record (single source of truth). */
@@ -2421,7 +2346,9 @@ export async function mirrorStoredCardRows(
       .gte("txn_time", periodStart).lt("txn_time", periodEnd)
       .in("txn_id", unique.slice(i, i + 200));
     if (error) throw new Error(`card ledger mirror read failed: ${error.message}`);
-    const rows = (data ?? []).map((row: any) => cardLedgerRow(accountId, row));
+    const rows = (data ?? [])
+      .filter((row: any) => !isCardReversalEvent(row.detail?.side || row.txn_type))
+      .map((row: any) => cardLedgerRow(accountId, row));
     if (rows.length) saved += await save(rows);
   }
   return saved;
@@ -2538,7 +2465,9 @@ export async function syncAccountLedger(accountId: string): Promise<number> {
       .order("txn_time", { ascending: false })
       .range(from, from + CHUNK - 1);
     const batch = cards ?? [];
-    for (const c of batch) rows.push(cardLedgerRow(accountId, c));
+    for (const c of batch) {
+      if (!isCardReversalEvent(c.detail?.side || c.txn_type)) rows.push(cardLedgerRow(accountId, c));
+    }
     if (batch.length < CHUNK) break;
   }
 
@@ -2714,6 +2643,13 @@ export async function fetchLedgerPage(opts: {
   const applyScope = (q: any, g: string, st: string) => {
     let out = q;
     if (opts.accountId) out = out.eq("account_id", opts.accountId);
+    // side=2 is an authorisation-reversal EVENT, not a separate purchase.
+    // Use JSONB containment NOT filters: unlike .or(), these compose with the
+    // success/failed/refund OR filters instead of overwriting them in PostgREST.
+    // Handle both string and numeric side values in legacy stored rows.
+    if (g === "txns") out = out
+      .not("detail", "cs", '{"side":"2"}')
+      .not("detail", "cs", '{"side":2}');
     if (opts.hideReversed) out = out.or("status.is.null,status.neq.reversed");
     if (g === "txns" && st === "refund") out = out.in("kind", ["card", "refund"]).or(LEDGER_CARD_FILTERS.refund.slice(3, -1));
     // Same groups as cardPurchasePresenter: ناجحة = everything not failed/reversed

@@ -40,7 +40,11 @@ export async function autoAssignLedger(db: any): Promise<number> {
   // Bybit's daily clearing posts settlements (side 3) for purchases that were
   // authorised earlier, often in a previous shift. They are not new purchases,
   // so they must never land in the currently open shift.
-  const rows = (fetched ?? []).filter((r: any) => !isCardSettlement(r));
+  const rows = (fetched ?? []).filter((r: any) =>
+    !isCardSettlement(r) &&
+    // A side-2 row is the provider's reversal event, NOT another purchase.
+    !(r.kind === "card" && String(r.detail?.side ?? "") === "2")
+  );
   if (!rows.length) return 0;
 
   const payload = rows.map((r: any) => ({
