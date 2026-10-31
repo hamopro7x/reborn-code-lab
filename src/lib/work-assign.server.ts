@@ -12,6 +12,11 @@
  */
 const P2P_KINDS = ["p2p_buy", "p2p_sell"];
 
+/** Settlement of an earlier card authorisation (Bybit side 3). */
+export function isCardSettlement(r: { kind?: string; detail?: any }): boolean {
+  return r.kind === "card" && String(r.detail?.side ?? "") === "3";
+}
+
 export async function autoAssignLedger(db: any): Promise<number> {
   // More than one open shift used to make this query error out (maybeSingle),
   // which silently stopped every transaction from reaching the shift sheet.
@@ -25,14 +30,18 @@ export async function autoAssignLedger(db: any): Promise<number> {
   if (!shift) return 0;
 
 
-  const { data: rows } = await db
+  const { data: fetched } = await db
     .from("bybit_ledger")
-    .select("id,kind,occurred_at")
+    .select("id,kind,occurred_at,detail")
     .not("kind", "in", `(${P2P_KINDS.join(",")})`)
     .gte("occurred_at", shift.started_at)
     .order("occurred_at", { ascending: false })
     .limit(5000);
-  if (!rows?.length) return 0;
+  // Bybit's daily clearing posts settlements (side 3) for purchases that were
+  // authorised earlier, often in a previous shift. They are not new purchases,
+  // so they must never land in the currently open shift.
+  const rows = (fetched ?? []).filter((r: any) => !isCardSettlement(r));
+  if (!rows.length) return 0;
 
   const payload = rows.map((r: any) => ({
     ledger_id: r.id,
