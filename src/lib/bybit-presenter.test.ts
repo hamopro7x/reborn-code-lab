@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { LEDGER_CARD_FILTERS, cardFilterMatches, cardPurchasePresenter, cardRecordOutcome, findLinkedReversals } from "./bybit-spend";
+import { LEDGER_CARD_FILTERS, cardFilterMatches, cardPurchasePresenter, cardRecordOutcome, findLinkedReversals, isCardReversalEvent } from "./bybit-spend";
 import { isUnsupportedCardTypeError, mergeCardTypeResults } from "./bybit.server";
 
 const label = (x: Parameters<typeof cardPurchasePresenter>[0]) => cardPurchasePresenter(x).text;
@@ -62,6 +62,15 @@ describe("filter grouping", () => {
     expect(groups.filter((g) => cardFilterMatches("failed", g)).length).toBe(3);
     expect(groups.filter((g) => cardFilterMatches("refund", g)).length).toBe(1);
     expect(groups.filter((g) => cardFilterMatches("all", g)).length).toBe(6);
+  });
+});
+
+describe("reversal events are not additional purchases", () => {
+  it("recognizes side 2 and preserves normal authorisations and refunds", () => {
+    expect(isCardReversalEvent("2")).toBe(true);
+    expect(isCardReversalEvent(2)).toBe(true);
+    expect(isCardReversalEvent("1")).toBe(false);
+    expect(isCardReversalEvent("5")).toBe(false);
   });
 });
 
