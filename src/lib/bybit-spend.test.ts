@@ -1,3 +1,4 @@
+import { findLinkedReversals } from "./bybit-spend";
 import { describe, expect, it } from "vitest";
 import { auditSpend, canonicalAmounts, canonicalize, cardRecordOutcome, getCanonicalTransactionIdentity, getMonthlySpendPeriod, sumSpend, sumSpendByCard, type SpendRow } from "./bybit-spend";
 
@@ -582,7 +583,15 @@ describe("side-2 reversal without a shared id", () => {
     expect(sumSpend([mk("a", "1", T), mk("b", "1", T + 1000), mk("r", "2", T + 6000)], 0, 0).monthSpend).toBeCloseTo(352.2);
   });
   it("ignores other cards, amounts and old authorisations", () => {
-    const l = [mk("a", "1", T, 352.2, "0540"), mk("b", "1", T, 10), mk("c", "1", T - 11 * 60_000), mk("r", "2", T + 6000)];
+    const l = [mk("a", "1", T, 352.2, "0540"), mk("b", "1", T, 10), mk("c", "1", T - 61 * 60_000), mk("r", "2", T + 6000)];
     expect(sumSpend(l, 0, 0).monthSpend).toBeCloseTo(352.2 * 2 + 10);
+  });
+  it("voids the pending retry, not the completed attempt, 21 minutes later", () => {
+    const done = mk("a", "1", T, 2.79, "0540");
+    const pend = row({ txnId: "b", amount: 2.79, time: T + 3000, pan4: "0540", type: "1", detail: { tradeStatus: "0", side: "1", orderNo: "ob", basicAmount: 2.79, basicCurrency: "USD" } });
+    const voided = findLinkedReversals([done, pend, mk("r", "2", T + 21 * 60_000, 2.79, "0540")].map((r: any) => ({
+      id: r.txnId, scope: "", orderNo: r.detail.orderNo, txnId: r.txnId, tradeStatus: r.detail.tradeStatus, side: r.detail.side, pan4: r.pan4, amount: r.amount, time: r.time,
+    })));
+    expect([...voided]).toEqual(["b"]);
   });
 });
