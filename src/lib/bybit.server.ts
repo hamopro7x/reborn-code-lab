@@ -1411,7 +1411,7 @@ export async function fetchCardTxnsPage(opts: {
   // A light projection of the cycle is classified first; only the page's
   // rows are then read in full.
   const light = await lightCycleRows(supabaseAdmin, opts.accountId, periodStart, periodEnd);
-  let classified = light.filter((r) => !isCardReversalEvent(r.t.detail?.side ?? r.t.type))
+  let classified = light.filter((r) => !isCardReversalEvent(r.t.detail?.side || r.t.type))
     .map((r) => ({ r, group: cardPurchaseGroup(r.t) }));
   if (opts.hideReversed) classified = classified.filter((x) => !x.r.t.reversed);
   const matching = classified.filter((x) => cardFilterMatches(status, x.group));
@@ -1516,7 +1516,7 @@ export async function fetchCardTxnsLive(opts: {
     return markHangVoided(mapped);
   });
 
-  const current = currentBybitRows(rows).filter((r) => !isCardReversalEvent(r.detail?.side ?? r.type));
+  const current = currentBybitRows(rows).filter((r) => !isCardReversalEvent(r.detail?.side || r.type));
   const visible = opts.hideReversed ? current.filter((r) => !r.reversed) : current;
   const filtered = visible.filter((r) => cardFilterMatches(status, cardPurchaseGroup(r)));
   const counts = { all: visible.length, success: 0, failed: 0, refund: 0 };
@@ -2347,7 +2347,7 @@ export async function mirrorStoredCardRows(
       .in("txn_id", unique.slice(i, i + 200));
     if (error) throw new Error(`card ledger mirror read failed: ${error.message}`);
     const rows = (data ?? [])
-      .filter((row: any) => !isCardReversalEvent(row.detail?.side ?? row.txn_type))
+      .filter((row: any) => !isCardReversalEvent(row.detail?.side || row.txn_type))
       .map((row: any) => cardLedgerRow(accountId, row));
     if (rows.length) saved += await save(rows);
   }
@@ -2466,7 +2466,7 @@ export async function syncAccountLedger(accountId: string): Promise<number> {
       .range(from, from + CHUNK - 1);
     const batch = cards ?? [];
     for (const c of batch) {
-      if (!isCardReversalEvent(c.detail?.side ?? c.txn_type)) rows.push(cardLedgerRow(accountId, c));
+      if (!isCardReversalEvent(c.detail?.side || c.txn_type)) rows.push(cardLedgerRow(accountId, c));
     }
     if (batch.length < CHUNK) break;
   }

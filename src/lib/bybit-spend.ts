@@ -704,7 +704,7 @@ export function sumSpendByCard(
       spend: lifetime.monthSpend, // monthStart = 0, no end → every archived purchase
       monthSpend: cycle ? cycle.monthSpend : lifetime.monthSpend,
       countedTxns: lifetime.countedTxns,
-      totalTxns: list.filter((row) => !isCardReversalEvent(row.detail?.["side"] ?? row.type)).length,
+      totalTxns: list.filter((row) => !isCardReversalEvent(row.detail?.["side"] || row.type)).length,
       lastUsed: lifetime.lastTxnTime,
     });
   }
