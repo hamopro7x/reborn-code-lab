@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { requests, response } = vi.hoisted(() => ({
   requests: [] as URL[],
-  response: { fail: false },
+  response: { fail: false, pastEnd: false },
 }));
 
 vi.mock("@/integrations/supabase/client.server", async () => {
@@ -17,6 +17,11 @@ vi.mock("@/integrations/supabase/client.server", async () => {
           const table = url.pathname.split("/").at(-1);
           if (table === "bybit_ledger" && response.fail) {
             return new Response(JSON.stringify({ message: "ledger read unavailable" }), { status: 400 });
+          }
+          if (response.pastEnd && Number(url.searchParams.get("offset") ?? 0) > 0) {
+            return new Response(JSON.stringify({ code: "PGRST103", message: "Requested range not satisfiable" }), {
+              status: 416, headers: { "content-type": "application/json", "content-range": "*/1" },
+            });
           }
           const ledger = {
             id: "movement", account_id: "account", kind: "card", status: "success", direction: "out",
@@ -47,6 +52,7 @@ describe("saved Bybit movements remain readable in central and shift lists", () 
     vi.setSystemTime(new Date("2026-10-31T18:21:00Z"));
     requests.length = 0;
     response.fail = false;
+    response.pastEnd = false;
   });
   afterEach(() => vi.useRealTimers());
 
@@ -74,5 +80,15 @@ describe("saved Bybit movements remain readable in central and shift lists", () 
   it("reports a ledger read failure rather than returning an empty successful page", async () => {
     response.fail = true;
     await expect(fetchLedgerPage({ group: "txns" })).rejects.toThrow("ledger read unavailable");
+  });
+
+  it("shows an empty page with the real total when the open page is past the end, not an error", async () => {
+    response.pastEnd = true;
+    const central = await fetchLedgerPage({ group: "txns", status: "all", page: 4, pageSize: 50 });
+    expect(central.rows).toEqual([]);
+    expect(central.total).toBe(1);
+    const shift = await workTable({ userId: "employee", shiftId: "shift", page: 4, pageSize: 50 });
+    expect(shift.rows).toEqual([]);
+    expect(shift.total).toBe(1);
   });
 });

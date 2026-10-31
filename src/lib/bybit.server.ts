@@ -19,6 +19,7 @@ import {
   LEDGER_CARD_FILTERS,
 } from "./bybit-spend";
 import { currentBybitCycle, currentBybitRows } from "./monthly-cycle.server";
+import { isPastLastPage } from "./pagination";
 
 
 const BASE = "https://api.bybit.com";
@@ -2727,13 +2728,27 @@ export async function fetchLedgerPage(opts: {
   // previous version issued ~15 extra exact-count scans per request (one per
   // group and sub-filter) even though the UI shows no counters — that alone
   // made every ledger read scan the whole table more than a dozen times.
-  const { data, error, count } = (await applyScope(base(), group, status)
+  let { data, error, count } = (await applyScope(base(), group, status)
     .order("occurred_at", { ascending: false })
     .range(from, from + pageSize - 1)) as {
     data: any[] | null;
-    error: { message: string } | null;
+    error: { code?: string; message: string } | null;
     count: number | null;
   };
+  if (isPastLastPage(error)) {
+    // The list shrank under an open page (reset, archive): empty page + real total.
+    const head = (await applyScope(
+      db.from("bybit_ledger").select("id", { count: "exact", head: true })
+        .gte("occurred_at", new Date(currentBybitCycle().periodStart).toISOString())
+        .lt("occurred_at", new Date(currentBybitCycle().periodEnd).toISOString()),
+      group,
+      status,
+    )) as { error: { message: string } | null; count: number | null };
+    if (head.error) throw new Error(head.error.message);
+    data = [];
+    error = null;
+    count = head.count ?? 0;
+  }
   if (error) throw new Error(error.message);
 
   const counts: Record<string, number> = {};

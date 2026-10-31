@@ -6,7 +6,7 @@
  * webauthn credentials). It never modifies a transaction's original fields.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { pageRange } from "./pagination";
+import { isPastLastPage, pageRange } from "./pagination";
 import { enforceRetentionSafe } from "./retention.server";
 
 type DB = SupabaseClient<any, any, any>;
@@ -217,7 +217,16 @@ export async function workTable(opts: {
     q = q.gte("occurred_at", start.toISOString()).lt("occurred_at", end.toISOString());
   }
 
-  const { data, error, count } = await q.range(from, from + pageSize - 1);
+  const res = await q.range(from, from + pageSize - 1);
+  let { data, error, count } = res;
+  if (isPastLastPage(error)) {
+    // Page past the end after the list shrank: an empty page, not a failure.
+    const head = await q.range(0, 0);
+    if (head.error) throw new Error(head.error.message);
+    data = [];
+    error = null;
+    count = head.count ?? 0;
+  }
   if (error) throw new Error(error.message);
 
   const rows = data ?? [];
