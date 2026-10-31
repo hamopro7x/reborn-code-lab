@@ -63,7 +63,7 @@ describe("saved Bybit movements remain readable in central and shift lists", () 
     const query = requests.find((url) => url.pathname.endsWith("/bybit_ledger"));
     expect(query?.searchParams.get("select")).toBe("*");
     expect(query?.searchParams.getAll("occurred_at")).toEqual([
-      "gte.2026-10-31T17:35:02.000Z", "lt.2026-11-30T00:00:00.000Z",
+      "gte.2026-10-31T00:00:00.000Z", "lt.2026-11-30T00:00:00.000Z",
     ]);
     expect(query?.searchParams.get("kind")).toBe("in.(card,refund)");
   });

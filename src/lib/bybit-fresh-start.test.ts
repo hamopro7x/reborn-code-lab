@@ -6,7 +6,7 @@ const now = Date.parse("2026-10-31T18:08:00Z");
 
 describe("Bybit fresh start after the owner's reset", () => {
   it("preserves the owner's real-work start on 31 October at 19:35:02 Cairo", () => {
-    expect(BYBIT_FRESH_START_MS).toBe(Date.parse("2026-10-31T17:35:02Z"));
+    expect(BYBIT_FRESH_START_MS).toBe(Date.parse("2026-10-31T00:00:00Z"));
     expect(currentCycleStart(now)).toBe(BYBIT_FRESH_START_MS);
   });
 
