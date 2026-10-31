@@ -1,43 +1,60 @@
-# تشخيص Bybit 2.79 (READ ONLY) + خطة patch
+# تصحيح انتقائي لمعاملات 2.79 (31/10) — جاهز، لم يُنفّذ
 
-## 1) النسخة المنشورة
-- `mag-pro1.com/api/public/build-version` → `{"build":"mvx04xfn"}` (HTTP 200).
-- `m-hamo.fly.dev/api/public/build-version` → HTTP 410 «Gone» (النطاق الافتراضي معطّل، فمش هيتقرأ منه).
-- آخر commit على `main`: `cd2082a1…` («إصلاح خلل Bybit في PR #1»).
-- الـbuild id بيتعمل وقت البناء من `Date.now().toString(36)` (`vite.config.ts`)، ومش مربوط بالـcommit. `mvx04xfn` بيقابل تقريبًا 31/10/2026 الساعة 20:38 UTC تقريبًا، وده أقدم من `cd2082a1` (اتعمل بعد الـCI بتاع 22:46 UTC). **يعني على الأغلب `cd2082a1` لسه مش منشور**، بس مقدرش أثبت ده بشكل قاطع لأن النسخة مش بتطبع رقم الـcommit.
+## الحقائق
+- `mvx04xfn` = 1793487476291 = **2026-10-31T22:57:56Z** (حسابك صح، وكلامي اللي قبله كان غلط). الـcommit `cd2082a1` اتعمل 22:53:25Z، فالنسخة اللي شغالة على الأرجح فيها PR #1. **تنبيه:** `main` دلوقتي فيه commit أحدث (23:03:49Z)، يعني أحدث من البناء الشغال.
+- إثبات إن commit معين منشور: مش ممكن. معرّف النسخة بيتعمل من وقت البناء بس، ومش مربوط بأي commit.
+- البيانات دلوقتي:
+  - 23:33:47 (…626441): المحفوظ success في المكانين، `side` 1، `tradeStatus` 1.
+  - 23:33:50 (…626471): الأرشيف failed و`linkedReversal=1`، والسجل المركزي reversed. `side` 1، `tradeStatus` 0.
+  - 23:55:06 (…640474): `side` 2، الأرشيف failed، والسجل المركزي reversed.
+  - التلاتة متسندين لشفت `82da1da4` تلقائيًا.
+- الكود الحالي **مش هيرجّع** 23:33:50 لحالة ناجحة لوحده. السبب إن علامة `linkedReversal` بتفضل ثابتة في الأرشيف (سطر 1200 في `bybit.server.ts`)، وفي السجل المركزي (سطر 2200)، وفي العرض (`mapStoredRow`، سطر 1352).
+- `tradeStatus=1` على 23:33:47 مش بيثبت ولا بينفي العكس. وسجل side 2 ملوش أي ID مشترك مع المعاملتين، فمفيش ربط تلقائي. التصحيح هيبقى **يدوي لمرة واحدة** معتمد على صورة Bybit، ومن غير ما نعممه على أي حالة تانية.
 
-## 2) البيانات المخزنة
-| txn | archive status | ledger status | side | tradeStatus | linkedReversal | shift |
-|---|---|---|---|---|---|---|
-| …626441 (23:33:47) | success | success | 1 | 1 | — | 82da1da4 (auto) |
-| …626471 (23:33:50) | failed | reversed | 1 | 0 | 1 | 82da1da4 (auto) |
-| …640474 (23:55:06) | failed | reversed | 2 | 1 | — | 82da1da4 (auto) |
+## SQL جاهز (ميتنفذش غير بموافقتك)
+```sql
+begin;
+-- نسخة احتياطية
+create table if not exists public.bybit_fix_backup_20261031 as
+  select 'card' src, to_jsonb(c) row from bybit_card_txns c where false;
+insert into public.bybit_fix_backup_20261031
+  select 'card', to_jsonb(c) from bybit_card_txns c
+   where txn_id in ('3000000683626441','3000000683626471','3000000683640474')
+  union all
+  select 'ledger', to_jsonb(l) from bybit_ledger l
+   where ref_id in ('3000000683626441','3000000683626471','3000000683640474');
 
-- الـAPI بيرجّع لـ47 `tradeStatus=1`، وتطبيق Bybit بيعرضها «معكوسة +2.79». يعني قيمة الـAPI مختلفة عن اللي التطبيق بيعرضه، ومش هنفترض أي معنى غير اللي فيه.
-- سجل side 2 (…640474) ملوش أي ID مشترك مع 47 أو 50 (اتأكدنا من الـraw الكامل)، فالـAPI لوحده ميقدرش يحدد هو عاكس أنهي واحدة.
-- `linkedReversal=1` على 50 اتكتب بتخمين قديم (أقرب «معلق»)، ده مش ربط رسمي.
-- التلات سجلات متسندين لنفس الشفت تلقائيًا.
+-- شروط مسبقة: لو أي حاجة اتغيرت، يتلغي كل حاجة
+do $$ begin
+  if (select count(*) from bybit_card_txns where
+        (txn_id='3000000683626441' and status='success' and detail->>'tradeStatus'='1' and detail->>'linkedReversal' is null) or
+        (txn_id='3000000683626471' and status='failed'  and detail->>'tradeStatus'='0' and detail->>'linkedReversal'='1') or
+        (txn_id='3000000683640474' and detail->>'side'='2')) <> 3
+  then raise exception 'precondition failed: archive changed'; end if;
+  if (select count(*) from bybit_ledger where
+        (ref_id='3000000683626441' and status='success') or
+        (ref_id='3000000683626471' and status='reversed')) <> 2
+  then raise exception 'precondition failed: ledger changed'; end if;
+end $$;
 
-## 3) الكود اللي بيمنع التصحيح (السبب إن الغلط بيرجع بعد كل sync)
-- `bybit.server.ts` حوالي سطر 1200: لو السجل المخزن عليه `linkedReversal`، أي sync جديد بيرجّعه `failed` و`linkedReversal:1` تاني.
-- حوالي سطر 1229 و1236: بيكتب `linkedReversal` في الأرشيف ومش بيسجل اتربط إزاي.
-- `mapStoredRow` حوالي سطر 1352: أي `linkedReversal` بيبقى «reversed» على طول، وبيكسب على `tradeStatus`.
-- حوالي سطر 2200 في الـledger: بيمنع رجوع success لو `prev.linkedReversal`.
-- فلتر «ناجحة» في المركزي (حوالي سطر 2659) بيستبعد أي `linkedReversal` مش null.
+-- 23:33:50 ترجع حسب Bybit (قيد التنفيذ = ناجحة)
+update bybit_card_txns set status='success', detail = detail - 'linkedReversal'
+ where txn_id='3000000683626471';
+update bybit_ledger set status='success', detail = detail - 'linkedReversal'
+ where ref_id='3000000683626471' and kind='card';
 
-## Patch المقترح (من غير ما نغير بيانات حد)
-1. نسجل مصدر الربط: `detail.linkedReversal` يتكتب بس لما الربط يكون بـID مشترك (`orderNo` أو `txnId`) أو بمرشح واحد مفيش غيره، ومعاه `detail.linkedBy = "id" | "unique"`.
-2. «الثبات»: مبدأ إن العكس ميرجعش لنجاح هيفضل، بس للعكس الصريح (`isExplicitReversal`) أو الربط اللي معاه `linkedBy`. أي `linkedReversal` قديم من غير `linkedBy` (اتكتب بالتخمين) ميتثبتش، وأول sync يرجّعه للحالة اللي `tradeStatus` بتقولها. ده بيصلّح 50 والـ21 صف من غير SQL يدوي، وبالكود بس.
-3. `mapStoredRow` وفلتر المركزي ميعتبروش `linkedReversal` من غير `linkedBy` عكس.
-4. الحالات اللي فيها أكتر من مرشح (زي 47 و50) متتربطش تلقائي. لو صاحب الموقع عايز يطابق شاشة Bybit (47 معكوسة)، يبقى نعمل تصحيح يدوي من الأدمن بيكتب `detail.manualOutcome` على المعاملة دي بالذات. ده هيبقى أعلى أولوية ومش بيتلمس في الـsync. ده إضافة اختيارية محتاجة موافقة.
-5. اختبارات regression: (أ) `linkedReversal` قديم من غير `linkedBy` يرجع حسب `tradeStatus` بعد الـsync. (ب) ربط بالـID يفضل ثابت. (ج) حالة 2.79 الحقيقية بمرشحين: مفيش ربط تلقائي. (د) `manualOutcome` يكسب ويفضل بعد الـsync.
+-- 23:33:47 معكوسة (تأكيد يدوي من صورة Bybit، لمرة واحدة)
+update bybit_card_txns set status='failed',
+       detail = detail || '{"linkedReversal":1,"linkedBy":"manual-20261031"}'
+ where txn_id='3000000683626441';
+update bybit_ledger set status='reversed',
+       detail = detail || '{"linkedReversal":1,"linkedBy":"manual-20261031"}'
+ where ref_id='3000000683626441' and kind='card';
+commit;
+```
+- مش هيلمس أي سجل غير التلات سجلات دول. سجل 23:55:06 هيفضل زي ما هو، والكود بيمنع إنه يظهر كشراء.
+- الخطأ مش هيرجع بعد المزامنة: نفس العلامة الثابتة اللي كانت مسببة المشكلة هي اللي هتحمي 23:33:47 كمعكوسة. ومعاملة 23:33:50 مفيهاش العلامة دي ولا عكس صريح، فهتمشي على `tradeStatus=0`، يعني ناجحة.
+- الرجوع للحالة القديمة: نرجّع الصفوف من `bybit_fix_backup_20261031`.
 
-النتيجة المتوقعة بعد النشر ومن غير تعديل يدوي: 47 و50 الاتنين «ناجحة» (لأن الـAPI مش بيدّي دليل)، ولو اتعمل التصحيح اليدوي في البند 4، 47 تبقى «فاشلة» زي تطبيق Bybit.
-
-## 4) مسار النشر
-- GitHub Actions: آخر «Deploy to Fly» (`deploy-20261029012939`) **فشل** يوم 28/10 الساعة 22:29 UTC، وآخر واحد نجح كان 26/10. فمسار الـtag مش مضمون غير لما نعرف سبب الفشل ده (غالبًا `FLY_API_TOKEN`).
-- من جوه Lovable: مفيش `flyctl` ولا `fly`، ومفيش أي متغير بيئة فيه FLY. يعني مقدرش أنشر على Fly من هنا.
-- النشر الآمن: من جهازك بـ`cd $HOME\hamo; .\deploy.ps1` (بيعمل pull لـmain، وبعدين `flyctl deploy -a m-hamo --strategy immediate`). بعدها نتأكد إن `build` على `mag-pro1.com/api/public/build-version` اتغير عن `mvx04xfn`.
-
-## الحدود
-مفيش كتابة SQL، ولا تعديل ملفات، ولا نشر في المرحلة دي. تنفيذ الـpatch (البنود 1 لـ3 و5) بعد الموافقة. والبند 4 محتاج موافقتك الصريحة عشان بيضيف تصحيح يدوي.
+## بعد التنفيذ
+قراءة بس للصفوف التلاتة في الأرشيف والسجل المركزي. وبعد المزامنة الجاية نقراها تاني ونتأكد إن 23:33:47 فاشلة و23:33:50 ناجحة.
