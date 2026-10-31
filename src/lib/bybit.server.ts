@@ -1272,6 +1272,7 @@ async function persistCardTxns(rows: CardTxn[], accountId?: string, assign = tru
     if (!payload.length) return [];
 
     const extra = await linkReversalsBeforeSave(supabaseAdmin as any, payload, accountId);
+    payload = payload.filter((r: any) => !r.__dropReversal);
     // نكتب الجديد والمتغيّر فقط بدل إعادة كتابة الأرشيف بالكامل.
     const pending = await changedCardTxns(supabaseAdmin as any, payload.filter((r: any) => !r.__keepStored), accountId);
     for (let i = 0; i < pending.length; i += 500) {
