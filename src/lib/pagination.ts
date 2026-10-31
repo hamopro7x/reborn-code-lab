@@ -50,6 +50,16 @@ export function pageCount(total: number, pageSize?: number): number {
   return Math.max(1, Math.ceil(Math.max(total, 0) / normalizePageSize(pageSize)));
 }
 
+/**
+ * PostgREST answers a page past the end (e.g. after records were cleared while
+ * a list was open) with 416 "Requested range not satisfiable". That is an empty
+ * page, not a failure — lists must show the real total instead of an error.
+ */
+export function isPastLastPage(error: { code?: string; message?: string } | null | undefined): boolean {
+  if (!error) return false;
+  return error.code === "PGRST103" || /range not satisfiable/i.test(String(error.message ?? ""));
+}
+
 /** أرقام الصفحات المعروضة حول الصفحة الحالية. */
 export function pageWindow(current: number, count: number, span = 5): number[] {
   const half = Math.floor(span / 2);
