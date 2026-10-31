@@ -205,14 +205,14 @@ export type LinkCandidate = {
 };
 
 /** Bybit posts the side-2 reversal seconds after the authorisation it voids. */
-export const REVERSAL_LINK_WINDOW_MS = 10 * 60 * 1000;
+export const REVERSAL_LINK_WINDOW_MS = 60 * 60 * 1000;
 
 /**
  * Authorisations voided by a SEPARATE Bybit reversal record that carries the
  * same orderNo or txnId inside the same account. Matching uses Bybit ids only,
  * never amount/time similarity. Returns ids of the voided purchase records.
  */
-export function findLinkedReversals(rows: Iterable<LinkCandidate>): Set<string> {
+export function findLinkedReversals(rows: Iterable<LinkCandidate>, usedReversals?: Set<string>): Set<string> {
   const list = [...rows];
   const keys = new Set<string>();
   const reversalIds = new Set<string>();
@@ -250,7 +250,7 @@ export function findLinkedReversals(rows: Iterable<LinkCandidate>): Set<string> 
     for (const r of list) {
       if (!reversalIds.has(r.id) || text(r.scope) !== text(a.scope)) continue;
       const o = cleanId(r.orderNo), t = cleanId(r.txnId);
-      if ((o && o === cleanId(a.orderNo)) || (t && t === cleanId(a.txnId))) idLinked.add(r.id);
+      if ((o && o === cleanId(a.orderNo)) || (t && t === cleanId(a.txnId))) { idLinked.add(r.id); usedReversals?.add(r.id); }
     }
   }
   const revs = list
@@ -265,9 +265,11 @@ export function findLinkedReversals(rows: Iterable<LinkCandidate>): Set<string> 
       if (text(a.scope) !== text(rev.scope) || text(a.pan4) !== text(rev.pan4) || cents(a.amount) !== cents(rev.amount)) continue;
       const at = Number(a.time);
       if (!(at > 0) || at > rt || rt - at > REVERSAL_LINK_WINDOW_MS) continue;
-      if (!best || at > Number(best.time)) best = a;
+      // Bybit voids the still-pending attempt, not the completed one beside it.
+      const pend = (x: LinkCandidate) => text(x.tradeStatus).trim() === "0";
+      if (!best || (pend(a) && !pend(best)) || (pend(a) === pend(best) && at > Number(best.time))) best = a;
     }
-    if (best) out.add(best.id);
+    if (best) { out.add(best.id); usedReversals?.add(rev.id); }
   }
   return out;
 }

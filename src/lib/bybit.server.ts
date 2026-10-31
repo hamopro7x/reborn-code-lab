@@ -1216,7 +1216,11 @@ async function linkReversalsBeforeSave(db: any, payload: any[], accountId?: stri
   const all = new Map<string, LinkCandidate>();
   for (const r of stored.values()) all.set(String(r.txn_id), candidate(r));
   for (const r of payload) if (!r.__keepStored) all.set(String(r.txn_id), candidate(r));
-  const voided = findLinkedReversals(all.values());
+  const usedRevs = new Set<string>();
+  const voided = findLinkedReversals(all.values(), usedRevs);
+  // A side-2 record that voided its purchase is not a purchase row of its own:
+  // Bybit shows only the purchase as reversed.
+  for (const r of payload) if (usedRevs.has(String(r.txn_id)) && String(r.detail?.side ?? r.txn_type ?? "") === "2") r.__dropReversal = true;
   if (!voided.size) return [];
 
   const incoming = new Set(payload.map((r) => String(r.txn_id)));
@@ -1251,7 +1255,7 @@ async function persistCardTxns(rows: CardTxn[], accountId?: string, assign = tru
     const { currentCycleStart } = await import("./monthly-cycle.server");
     const cycleStart = currentCycleStart();
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const payload = rows
+    let payload: any[] = rows
       .filter((r) => Number(r.time ?? 0) >= cycleStart)
       .map((r) => ({
         txn_id: r.id,
@@ -1268,6 +1272,7 @@ async function persistCardTxns(rows: CardTxn[], accountId?: string, assign = tru
     if (!payload.length) return [];
 
     const extra = await linkReversalsBeforeSave(supabaseAdmin as any, payload, accountId);
+    payload = payload.filter((r: any) => !r.__dropReversal);
     // نكتب الجديد والمتغيّر فقط بدل إعادة كتابة الأرشيف بالكامل.
     const pending = await changedCardTxns(supabaseAdmin as any, payload.filter((r: any) => !r.__keepStored), accountId);
     for (let i = 0; i < pending.length; i += 500) {
