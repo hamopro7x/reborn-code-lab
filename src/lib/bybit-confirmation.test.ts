@@ -188,6 +188,6 @@ describe("durable Bybit confirmation and atomic reconciliation",()=>{
     await db.query("select bybit_reconcile_dirty($1,ARRAY['boundary'])",[account]);
     expect((await db.query<any>("select confirmed_at from bybit_card_txns")).rows[0].confirmed_at).toBeNull();
     r.observed_at=new Date(Date.parse(created)+30000).toISOString(); await ingest([r]);
-    expect((await db.query<any>("select confirmed_at from bybit_card_txns")).rows[0].confirmed_at).toBe(r.observed_at);
+    expect(new Date((await db.query<any>("select confirmed_at from bybit_card_txns")).rows[0].confirmed_at).toISOString()).toBe(r.observed_at);
   });
 });

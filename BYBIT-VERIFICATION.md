@@ -2,7 +2,7 @@
 
 Base inspected: `5c49ede5048fdabb2cccb5c6b474acc66c87d2f2`. No commits are created by shell, no database tools are invoked, no production deployment is performed.
 
-Automated verification: complete Vitest suite passed 164 tests across 16 files, including the installation SQL executed solely inside an isolated PGlite database (not Supabase). The harness's latest TypeScript/build entry is `build OK`; no manual build/typecheck is run because the preview harness owns them. Existing inputValidator deprecation warnings remain, not failures.
+Automated verification: baseline 11 confirmation tests passed; updated suite covers 170 tests across 16 files, including the installation SQL executed solely inside an isolated PGlite database (not Supabase). Check the final test output for the actual result. The harness's latest TypeScript/build entry is `build OK`; no manual build/typecheck is run because the preview harness owns them. Existing inputValidator deprecation warnings remain, not failures.
 
 ## Installation order
 1. Review `supabase/manual/bybit_confirmation_reconciliation.sql` and apply it to the intended external database only after approval. This installation creates durable confirmation columns, admin-only cases/audit, transactional ingestion/decision RPCs, and protective triggers; it does not update historical rows.
@@ -14,7 +14,7 @@ Automated verification: complete Vitest suite passed 164 tests across 16 files, 
 ## Financial interpretation
 Pending and completed provider purchases retain the business display «ناجحة» after confirmation; pending does not prove settlement. When an unlinked reversal exists, matching candidates show «قيد مراجعة العكس» and are held OUTSIDE finalized spend/productivity (not an arbitrary one-amount deduction). Consequently these totals are provisional and may understate expenditure until an admin resolves the event. No candidate becomes failed by guesswork. Cases with no matching candidates remain visible in the admin queue.
 
-Admin decisions are immutable, account scoped, with raw evidence backup and auth.uid role validation. Legacy linkedReversal without trusted provenance creates a review case; no bulk flip to success. The manual-20261031 mark is preserved. Side-2 events remain archived; triggers reject new ledger inserts and the staff list excludes old side-2 rows without deletion. No provider purchase/refund is executed by a decision.
+Admin decisions are immutable, account scoped, with raw evidence backup and auth.uid role validation. Legacy linkedReversal without trusted provenance creates a review case; no bulk flip to success. The manual-20261031 mark and the two exact existing manual-user-20261101 marks are preserved. Side-2 events remain archived; triggers reject new ledger inserts and the staff list excludes old side-2 rows without deletion. No provider purchase/refund is executed by a decision.
 
 ## Limitations requiring production verification
 No authenticated end-to-end check is available for this external Supabase project; real admin queue, fresh Bybit responses and Fly scheduler execution are unverified here. Installation is mandatory: missing RPCs fail closed rather than reverting to unsafe legacy writes. Full-cycle follow-up is resumable but its latency grows with accounts/history/API failures; a hard maximum 60-minute refresh SLA is not yet established by production measurements. Newest-page polling remains every tick; history is revisited indefinitely within the effective cycle.
