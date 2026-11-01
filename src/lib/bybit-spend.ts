@@ -497,7 +497,7 @@ export function canonicalize(rows: Iterable<SpendRow>): {
     const time = Number(row.time ?? 0);
     if (time > lastTxnTime) lastTxnTime = time;
 
-    const canonicalId = `${text(row.scope)}|${getCanonicalTransactionIdentity(row)}`;
+    const canonicalId = text(row.scope) ? `${text(row.scope)}|${getCanonicalTransactionIdentity(row)}` : getCanonicalTransactionIdentity(row);
     const kind = linkVoided.has(text(row.txnId)) || reviewIds.has(text(row.txnId)) ? "excluded" : spendKind(row);
     if (kind === "excluded") {
       excluded.push({ row, canonicalId, reason: "refund/reversed/failed" });
@@ -537,7 +537,7 @@ export function canonicalize(rows: Iterable<SpendRow>): {
   // authorised (never settled) voids that purchase: Bybit shows it struck
   // through as «معكوسة» and nothing was charged.
   for (const ex of excluded) {
-    if (!isBusinessIdentity(ex.canonicalId.split("|").slice(1).join("|"))) continue;
+    if (!isBusinessIdentity(ex.canonicalId.includes("|") ? ex.canonicalId.split("|").slice(1).join("|") : ex.canonicalId)) continue;
     const d = ex.row.detail ?? {};
     if (cardRecordOutcome(d["tradeStatus"], text(d["side"]) || text(ex.row.type), cryptoSoldOf(d)) === "failed") continue;
     const txn = transactions.get(ex.canonicalId);
