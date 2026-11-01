@@ -90,6 +90,16 @@ BEGIN
       THEN 'resolved' ELSE 'needs_review' END) WHERE account_id=p_account AND txn_id=e.txn_id;
   END LOOP;
 
+  -- A confirmed event decision also settles any older legacy-only case for
+  -- its explicit candidate set. No other legacy rows are flipped.
+  UPDATE public.bybit_reversal_cases legacy SET state='resolved',target_id=resolved.target_id,
+    source=resolved.source,decided_by=resolved.decided_by,decided_at=resolved.decided_at
+    FROM public.bybit_reversal_cases resolved
+    WHERE legacy.account_id=p_account AND resolved.account_id=p_account
+      AND legacy.event_id LIKE 'legacy:%' AND legacy.state='needs_review'
+      AND resolved.event_id NOT LIKE 'legacy:%' AND resolved.state='resolved'
+      AND legacy.candidate_ids <@ resolved.candidate_ids;
+
   FOR c IN SELECT * FROM public.bybit_card_txns WHERE account_id=p_account
     AND COALESCE(NULLIF(detail->>'side',''),txn_type) NOT IN ('2','3')
   LOOP
