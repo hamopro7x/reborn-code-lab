@@ -1178,7 +1178,7 @@ function mapStoredRow(r: any): CardTxn {
   const stored: CardTxn["status"] | null =
     r.status === "success" || r.status === "failed" || r.status === "refund" ? r.status : null;
   const status: CardTxn["status"] =
-    detail.projectedStatus === "success" ? "success" : detail.reconciliationState === "needs_review" ? "review" : outcome === "refund"
+    detail.reconciliationState === "needs_review" ? "review" : outcome === "refund"
       ? "refund"
       : outcome === "reversed" || outcome === "failed"
         ? "failed"

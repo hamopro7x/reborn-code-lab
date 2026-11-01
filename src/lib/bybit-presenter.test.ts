@@ -121,6 +121,15 @@ describe("unsupported Bybit query types", () => {
 
 describe("raw Bybit codes win over a stale stored status", () => {
   const g = (status: string, detail: Record<string, unknown>, kind = "card") => cardPurchasePresenter({ kind, status, detail });
+  it("cached success cannot override Bybit's explicit reversed status 3", () => {
+    expect(g("success", { projectedStatus: "success", reconciliationState: "clear", tradeStatus: "3", side: "1" }).group).toBe("failed");
+  });
+  it("cached success cannot override Bybit's explicit declined status 2", () => {
+    expect(g("success", { projectedStatus: "success", reconciliationState: "clear", tradeStatus: "2", side: "1" }).group).toBe("failed");
+  });
+  it("cached success cannot override a durable manual reversal", () => {
+    expect(g("failed", { projectedStatus: "success", reconciliationState: "clear", linkedReversal: 1, linkedBy: "manual-user-20261101", tradeStatus: "1", side: "1" }).group).toBe("failed");
+  });
   it("stale success + tradeStatus 3 → فاشلة", () => expect(g("success", { tradeStatus: "3" }).text).toBe("فاشلة"));
   it("stale success + side 2 → فاشلة", () => expect(g("success", { tradeStatus: "1", side: "2" }).text).toBe("فاشلة"));
   it("stale success + tradeStatus 2 → فاشلة", () => expect(g("success", { tradeStatus: "2" }).text).toBe("فاشلة"));
