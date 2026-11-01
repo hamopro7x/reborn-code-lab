@@ -80,4 +80,39 @@ describe("durable Bybit confirmation and atomic reconciliation",()=>{
     await ingest([a]); await ingest([raw(ids[0][0])]);
     expect((await db.query<any>("select detail from bybit_card_txns")).rows[0].detail.linkedBy).toBe("manual-20261031");
   });
+  it("confirmation and ledger/shift status survive concurrent replay and admin resolution",async()=>{
+    // Fixture inserts model first_seen in the past; application updates cannot do this.
+    await db.query(`INSERT INTO bybit_card_txns(account_id,txn_id,merchant,amount,currency,status,txn_time,pan4,txn_type,detail,created_at)
+      VALUES($1,'a','PAYPAL *TIKTOK INC',3.61,'USD','success',1793482427000,'0540','1',
+      '{"side":"1","tradeStatus":"1"}',clock_timestamp()-interval '31 seconds'),
+      ($1,'b','PAYPAL *TIKTOK INC',3.61,'USD','failed',1793482430000,'0540','1',
+      '{"side":"1","tradeStatus":"0","linkedReversal":1}',clock_timestamp()-interval '31 seconds')`,[account]);
+    await ingest([raw("a"),raw("b","1","0",3.61,1793482430000),raw("e","2","1",3.61,1793482427000+21*60000)]);
+    await db.exec(`INSERT INTO bybit_ledger VALUES('${account}','a','card','success',-3.61,'{}'),('${account}','b','card','success',-3.61,'{}')`);
+    expect((await db.query<any>("select status from bybit_ledger")).rows.map((r)=>r.status)).toEqual(["review","review"]);
+    await db.query("SELECT set_config('test.actor',$1,false)",[adminId]);
+    await db.query("select bybit_resolve_case($1,'e','a',ARRAY['a','b'])",[account]);
+    await Promise.all([ingest([raw("a"),raw("b","1","0",3.61,1793482430000)]),ingest([raw("a")])]);
+    const statuses=(await db.query<any>("select ref_id,status,detail from bybit_ledger order by ref_id")).rows;
+    expect(statuses.map((r)=>[r.ref_id,r.status])).toEqual([["a","reversed"],["b","success"]]);
+    expect(statuses[1].detail.linkedReversal).toBeUndefined();
+    expect((await db.query("select * from bybit_ledger where status='success'")).rows).toHaveLength(1);
+    await db.query("select bybit_resolve_case($1,'e','a',ARRAY['a','b'])",[account]);
+    expect((await db.query("select * from bybit_reversal_audit")).rows).toHaveLength(1);
+    await expect(db.query("select bybit_resolve_case($1,'e','b',ARRAY['a','b'])",[account])).rejects.toThrow("decision already saved");
+  });
+  it("legacy sticky flags stay in review; no mass flip",async()=>{
+    const r=raw("legacy"); r.detail={...r.detail,linkedReversal:1} as any;
+    await ingest([r]);
+    const c=(await db.query<any>("select * from bybit_reversal_cases")).rows[0];
+    expect(c.event_id).toBe("legacy:legacy"); expect(c.state).toBe("needs_review");
+    expect((await db.query<any>("select detail from bybit_card_txns")).rows[0].detail.projectedStatus).toBe("review");
+  });
+  it("shared provider ID resolves only one authorization; side2 is never inserted in ledger",async()=>{
+    const a=raw("a"); const e=raw("e","2"); e.detail.orderNo=a.detail.orderNo;
+    await ingest([a,e]);
+    expect((await db.query<any>("select target_id,source from bybit_reversal_cases")).rows[0]).toEqual({target_id:"a",source:"provider-shared-id"});
+    await db.exec(`INSERT INTO bybit_ledger VALUES('${account}','e','card','failed',-3.61,'{}')`);
+    expect((await db.query("select * from bybit_ledger")).rows).toHaveLength(0);
+  });
 });

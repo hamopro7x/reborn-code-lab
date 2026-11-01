@@ -199,6 +199,7 @@ BEGIN
   IF NOT FOUND THEN RETURN NULL; END IF;
   IF COALESCE(NULLIF(a.detail->>'side',''),a.txn_type) IN ('2','3') THEN RETURN NULL; END IF;
   NEW.detail:=(NEW.detail-'linkedReversal'-'reconciliationState'-'confirmationState'-'resolutionTarget')||(a.detail-'raw');
+  IF a.detail->>'reconciliationState'='clear' THEN NEW.detail:=NEW.detail-'linkedReversal'; END IF;
   IF a.confirmed_at IS NULL OR a.confirmed_at<a.created_at+interval '30 seconds' THEN
     IF TG_OP='INSERT' THEN RETURN NULL; END IF;
     NEW.status:='holding';

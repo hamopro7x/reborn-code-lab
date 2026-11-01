@@ -40,6 +40,12 @@ describe("immediate individual-to-central card mirror", () => {
     expect(save).not.toHaveBeenCalled();
   });
 
+  it("never mirrors or assigns an unconfirmed archive row even after 30 seconds elapsed", async () => {
+    const save = vi.fn(async () => 1);
+    expect(await mirrorStoredCardRows(archive([{ ...row("waiting"), confirmed_at: null }]), "a", ["waiting"], save)).toBe(0);
+    expect(save).not.toHaveBeenCalled();
+  });
+
   it("does not mirror another account or any transaction before the reset", async () => {
     const db = archive([row("other", "b"), { ...row("old"), txn_time: Date.parse("2026-10-29T19:00:00Z") }, row("new")]);
     const save = vi.fn(async (rows: any[]) => rows.length);
