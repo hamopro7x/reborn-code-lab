@@ -34,6 +34,7 @@ describe("durable Bybit confirmation and atomic reconciliation",()=>{
       INSERT INTO bybit_accounts VALUES('${account}'),('${other}'),('${correctedAccount}');
       INSERT INTO auth.users VALUES('${adminId}'); INSERT INTO user_roles VALUES('${adminId}','admin');`);
     await db.exec(readFileSync(new URL("../../supabase/manual/bybit_confirmation_reconciliation.sql",import.meta.url),"utf8"));
+    await db.exec(readFileSync(new URL("../../supabase/manual/bybit_scalar_detail_fix.sql",import.meta.url),"utf8"));
   });
   afterAll(async()=>{await db.close();});
   beforeEach(async()=>{await db.exec("TRUNCATE bybit_ingest_fences,bybit_reversal_audit,bybit_reversal_cases,bybit_ledger,bybit_card_txns; SELECT set_config('test.actor','',false)");});
@@ -200,5 +201,31 @@ describe("durable Bybit confirmation and atomic reconciliation",()=>{
     expect((await db.query<any>("select confirmed_at from bybit_card_txns")).rows[0].confirmed_at).toBeNull();
     r.observed_at=new Date(Date.parse(created)+30000).toISOString(); await ingest([r]);
     expect(new Date((await db.query<any>("select confirmed_at from bybit_card_txns")).rows[0].confirmed_at).toISOString()).toBe(r.observed_at);
+  });
+  it("shared provider ID still resolves after 61 minutes with corrected amount and merchant", async()=>{
+    const a=raw("explicit-a"); const e=raw("explicit-e","2","1",4.12,a.txn_time+61*60000);
+    e.merchant="CORRECTED MERCHANT"; e.pan4="6938"; e.detail.orderNo=a.detail.orderNo;
+    await ingest([e]); await ingest([a]);
+    expect((await db.query<any>("select target_id,source from bybit_reversal_cases where event_id='explicit-e'")).rows[0])
+      .toEqual({target_id:"explicit-a",source:"provider-shared-id"});
+  });
+  it("October manual decision never resolves an unrelated matching event", async()=>{
+    const a=raw("3000000683626441"); a.detail={...a.detail,linkedBy:"manual-20261031",linkedReversal:1} as any;
+    await ingest([a,raw("unrelated-event","2","1",3.61,a.txn_time+21*60000)],correctedAccount);
+    const c=(await db.query<any>("select state,target_id from bybit_reversal_cases where event_id='unrelated-event'")).rows[0];
+    expect(c).toEqual({state:"needs_review",target_id:null});
+    expect((await db.query<any>("select detail from bybit_card_txns where txn_id=$1",[a.txn_id])).rows[0].detail.projectedStatus).toBe("reversed");
+  });
+  it("explicit provider failure replaces review projection without deciding ambiguous neighbors", async()=>{
+    const a=raw("a"); await ingest([a,raw("b"),raw("e","2","1",3.61,a.txn_time+21*60000)]);
+    const fresh={...raw("a","1","3"),observed_at:new Date(Date.now()+100).toISOString()};
+    await ingest([fresh]);
+    expect((await db.query<any>("select detail from bybit_card_txns where txn_id='a'")).rows[0].detail.projectedStatus).toBe("reversed");
+    expect((await db.query<any>("select detail from bybit_card_txns where txn_id='b'")).rows[0].detail.projectedStatus).toBe("review");
+  });
+  it("scalar historical detail does not crash a fresh ingest", async()=>{
+    await db.query(`INSERT INTO bybit_card_txns(account_id,txn_id,detail,created_at) VALUES($1,'scalar','"old payload"'::jsonb,clock_timestamp()-interval '31 seconds')`,[account]);
+    await ingest([raw("scalar")]);
+    expect((await db.query<any>("select detail from bybit_card_txns where txn_id='scalar'")).rows[0].detail.confirmationState).toBe("confirmed");
   });
 });
