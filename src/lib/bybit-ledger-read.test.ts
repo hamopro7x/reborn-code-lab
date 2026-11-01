@@ -34,7 +34,11 @@ vi.mock("@/integrations/supabase/client.server", async () => {
           const readable = !visibility || response.confirmationState === "confirmed" ||
             (visibility.includes("created_at.lt.2026-11-01T02:24:55Z") && response.confirmationState == null &&
               Date.parse(response.createdAt) < Date.parse("2026-11-01T02:24:55Z"));
-          const rows = !readable ? [] : table === "bybit_ledger" ? [ledger]
+          const rows = table === "bybit_card_txns" ? [{
+            txn_id:"txn",account_id:"account",created_at:response.createdAt,confirmed_at:null,
+            txn_time:Date.parse(ledger.occurred_at),status:"success",amount:12,currency:"USD",pan4:"0540",txn_type:"1",
+            merchant:"TikTok",side:"1",tradeStatus:"1",confirmationState:response.confirmationState,detail:ledger.detail,
+          }] : !readable ? [] : table === "bybit_ledger" ? [ledger]
             : table === "work_txn_assignments" ? [{
               id: "assignment", ledger_id: "movement", shift_id: "shift", user_id: "employee",
               kind: "card", assign_mode: "auto", assigned_at: ledger.occurred_at,
@@ -49,7 +53,7 @@ vi.mock("@/integrations/supabase/client.server", async () => {
   };
 });
 
-import { fetchLedgerPage } from "./bybit.server";
+import { fetchLedgerPage, fetchCardTxnsPage } from "./bybit.server";
 import { workTable } from "./work.server";
 
 describe("saved Bybit movements remain readable in central and shift lists", () => {
@@ -100,6 +104,13 @@ describe("saved Bybit movements remain readable in central and shift lists", () 
     response.createdAt="2026-11-01T02:24:55Z";
     expect((await fetchLedgerPage({group:"txns"})).total).toBe(0);
     expect((await workTable({userId:"employee",shiftId:"shift"})).total).toBe(0);
+    expect((await fetchCardTxnsPage({accountId:"account"})).total).toBe(0);
+  });
+
+  it("restores the existing individual archive purchase with the same amount",async()=>{
+    const page=await fetchCardTxnsPage({accountId:"account"});
+    expect(page.total).toBe(1);
+    expect(page.rows[0]).toMatchObject({id:"txn",amount:12,status:"success"});
   });
 
   it("never restores an explicitly waiting legacy card as successful work",async()=>{
