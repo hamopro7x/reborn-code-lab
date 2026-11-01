@@ -231,7 +231,7 @@ CREATE OR REPLACE FUNCTION public.bybit_ingest_confirmed(p_account uuid,p_rows j
 RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
 DECLARE r jsonb; prev public.bybit_card_txns; observed timestamptz; fence timestamptz;
   newest timestamptz; n integer:=0; dirty text[]:='{}'; prior_events text[]:='{}';
-  next_detail jsonb; next_status text; next_confirmed timestamptz;
+  next_detail jsonb; next_status text; next_confirmed timestamptz; raw_detail jsonb;
 BEGIN
   IF p_account IS NULL THEN RAISE EXCEPTION 'account required'; END IF;
   IF p_rows IS NULL OR jsonb_typeof(p_rows)<>'array' OR jsonb_array_length(p_rows)>500 THEN RAISE EXCEPTION 'invalid batch'; END IF;
@@ -250,7 +250,17 @@ BEGIN
       -- Equality is allowed: different pages/types can share one request timestamp.
       IF observed<coalesce(fence,'-infinity'::timestamptz) OR observed<=coalesce(prev.last_observed_at,'-infinity'::timestamptz) THEN CONTINUE; END IF;
       next_detail:=CASE WHEN jsonb_typeof(r->'detail')='object' THEN (r->'detail')-'observedAt' ELSE '{}'::jsonb END;
-      IF jsonb_typeof(next_detail->'raw')='object' THEN next_detail:=jsonb_set(next_detail,'{raw}',(next_detail->'raw')-'__observedAt'); END IF;
+      IF jsonb_typeof(next_detail->'raw')='object' THEN
+        next_detail:=jsonb_set(next_detail,'{raw}',(next_detail->'raw')-'__observedAt');
+      ELSIF jsonb_typeof(next_detail->'raw')='string' THEN
+        BEGIN
+          raw_detail:=(next_detail->>'raw')::jsonb;
+          IF jsonb_typeof(raw_detail)='object' THEN
+            next_detail:=jsonb_set(next_detail,'{raw}',to_jsonb((raw_detail-'__observedAt')::text));
+          END IF;
+        EXCEPTION WHEN invalid_text_representation THEN NULL;
+        END;
+      END IF;
       -- Preserve derived flags, not stale provider fields; strip request timestamps
       -- so an unchanged response cannot dirty every row on every polling tick.
       SELECT next_detail || coalesce(jsonb_object_agg(key,value),'{}') INTO next_detail
@@ -270,7 +280,17 @@ BEGIN
     ELSE
       -- Never lose a newly discovered ID just because another page finished first.
       next_detail:=CASE WHEN jsonb_typeof(r->'detail')='object' THEN (r->'detail')-'observedAt' ELSE '{}'::jsonb END;
-      IF jsonb_typeof(next_detail->'raw')='object' THEN next_detail:=jsonb_set(next_detail,'{raw}',(next_detail->'raw')-'__observedAt'); END IF;
+      IF jsonb_typeof(next_detail->'raw')='object' THEN
+        next_detail:=jsonb_set(next_detail,'{raw}',(next_detail->'raw')-'__observedAt');
+      ELSIF jsonb_typeof(next_detail->'raw')='string' THEN
+        BEGIN
+          raw_detail:=(next_detail->>'raw')::jsonb;
+          IF jsonb_typeof(raw_detail)='object' THEN
+            next_detail:=jsonb_set(next_detail,'{raw}',to_jsonb((raw_detail-'__observedAt')::text));
+          END IF;
+        EXCEPTION WHEN invalid_text_representation THEN NULL;
+        END;
+      END IF;
       INSERT INTO public.bybit_card_txns(account_id,txn_id,merchant,amount,currency,status,txn_time,pan4,txn_type,detail,last_observed_at)
         VALUES(p_account,r->>'txn_id',r->>'merchant',(r->>'amount')::numeric,r->>'currency',r->>'status',
           (r->>'txn_time')::bigint,r->>'pan4',r->>'txn_type',next_detail,observed);
