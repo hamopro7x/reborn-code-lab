@@ -123,15 +123,13 @@ BEGIN
       AND a.txn_time BETWEEN e.txn_time-3600000 AND e.txn_time
       AND COALESCE(a.detail->>'tradeStatus','') NOT IN ('2','3','4');
     -- Shared named identifiers only; no nearest/unique-amount heuristic.
-    SELECT COALESCE(array_agg(a.txn_id),'{}') INTO strong_ids
-    FROM public.bybit_card_txns a WHERE a.account_id=p_account
-      AND COALESCE(NULLIF(a.detail->>'side',''),a.txn_type)='1'
+    SELECT COALESCE(array_agg(DISTINCT a.txn_id),'{}') INTO strong_ids
+    FROM unnest(ARRAY['txnId','orderNo','paymentId']) k JOIN public.bybit_card_txns a
+      ON a.detail @> jsonb_build_object(k,e.detail->k)
+    WHERE a.account_id=p_account AND COALESCE(NULLIF(a.detail->>'side',''),a.txn_type)='1'
       AND a.pan4=e.pan4 AND a.merchant=e.merchant AND abs(a.amount)=abs(e.amount)
-      AND a.txn_time<=e.txn_time
-      AND EXISTS (SELECT 1 FROM unnest(ARRAY['txnId','orderNo','paymentId']) k
-        WHERE NULLIF(e.detail->>k,'') IS NOT NULL
-        AND lower(e.detail->>k) NOT IN ('0','null','undefined','none','-','n/a')
-        AND a.detail->>k=e.detail->>k);
+      AND a.txn_time<=e.txn_time AND NULLIF(e.detail->>k,'') IS NOT NULL
+      AND lower(e.detail->>k) NOT IN ('0','null','undefined','none','-','n/a');
     chosen := NULL;
     -- Preserve the explicitly confirmed 31 October correction without relinking it.
     SELECT a.txn_id INTO chosen FROM public.bybit_card_txns a
@@ -188,11 +186,11 @@ BEGIN
     SELECT target_id INTO chosen FROM public.bybit_reversal_cases
       WHERE account_id=p_account AND state='resolved' AND target_id=c.txn_id LIMIT 1;
     pending_review := EXISTS(SELECT 1 FROM public.bybit_reversal_cases
-      WHERE account_id=p_account AND state='needs_review' AND c.txn_id=ANY(candidate_ids));
+      WHERE account_id=p_account AND state='needs_review' AND candidate_ids @> ARRAY[c.txn_id]);
     -- Unproven legacy flags are held for review, never silently flipped to success.
     IF d->>'linkedReversal'='1' AND NULLIF(d->>'linkedBy','') IS NULL AND chosen IS NULL
       AND NOT EXISTS(SELECT 1 FROM public.bybit_reversal_cases
-        WHERE account_id=p_account AND state='resolved' AND c.txn_id=ANY(candidate_ids)) THEN
+        WHERE account_id=p_account AND state='resolved' AND candidate_ids @> ARRAY[c.txn_id]) THEN
       INSERT INTO public.bybit_reversal_cases(account_id,event_id,candidate_ids,source)
       VALUES(p_account,'legacy:'||c.txn_id,ARRAY[c.txn_id],'legacy-unproven')
       ON CONFLICT(account_id,event_id) DO NOTHING;
