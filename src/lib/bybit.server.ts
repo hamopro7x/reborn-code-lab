@@ -17,6 +17,8 @@ import {
   cardPurchaseGroup,
   cardFilterMatches,
   LEDGER_CARD_FILTERS,
+  legacyReversalUnproven,
+  durableCardReversal,
 } from "./bybit-spend";
 import { currentBybitCycle, currentBybitRows } from "./monthly-cycle.server";
 import { isPastLastPage } from "./pagination";
@@ -1001,7 +1003,7 @@ function mapCardTxn(t: any): CardTxn {
 
         orderId: pick(t, ["orderNo", "orderId", "referenceId", "refId"]),
         orderNo: t.orderNo ?? null,
-        paymentId: pick(t, ["paymentId", "orderNo"]),
+        paymentId: pick(t, ["paymentId"]),
         authCode: pick(t, ["authCode", "authorizationCode"]),
         // ---- status ----
         stage: stageOf(t),
@@ -1168,21 +1170,21 @@ async function storedCardTxns(limit: number, accountId?: string): Promise<CardTx
 }
 
 /** Maps one archived row to the shape the UI reads. */
-function mapStoredRow(r: any): CardTxn {
+export function mapStoredRow(r: any): CardTxn {
   const detail = (r.detail ?? {}) as Record<string, string | number | null>;
   const side = String(detail.side ?? r.txn_type ?? "");
-  const linked = Boolean(detail.resolutionTarget) || (detail.reconciliationState !== "clear" && Boolean(detail.linkedReversal));
+  const linked = durableCardReversal(detail);
   const outcome = linked ? "reversed" : cardRecordOutcome(detail.tradeStatus, side, cryptoSoldOf(detail));
   // Bybit's own raw status wins whenever it says refund / reversed / failed:
   // older rows were stored as "success" while Bybit had reversed them.
   const stored: CardTxn["status"] | null =
     r.status === "success" || r.status === "failed" || r.status === "refund" ? r.status : null;
   const status: CardTxn["status"] =
-    detail.reconciliationState === "needs_review" ? "review" : outcome === "refund"
+    outcome === "refund"
       ? "refund"
       : outcome === "reversed" || outcome === "failed"
         ? "failed"
-        : (stored ?? "success");
+        : legacyReversalUnproven(detail) || detail.reconciliationState === "needs_review" ? "review" : (stored ?? "success");
 
 
 
@@ -1197,7 +1199,7 @@ function mapStoredRow(r: any): CardTxn {
     pan4: r.pan4 ?? "",
     type: r.txn_type ?? "",
     detail,
-    reversed: detail.projectedStatus === "success" ? false : outcome === "reversed" || r.status === "reversed",
+    reversed: outcome === "reversed" || (!legacyReversalUnproven(detail) && r.status === "reversed"),
   };
 }
 
@@ -1278,7 +1280,7 @@ async function lightCycleRows(db: any, accountId: string | undefined, periodStar
       .select(
         "txn_id, account_id, created_at, confirmed_at, merchant, amount, currency, status, txn_time, pan4, txn_type, " +
           "tradeStatus:detail->>tradeStatus, side:detail->>side, cryptoSold:detail->>cryptoSold, " +
-          "linkedReversal:detail->>linkedReversal, projectedStatus:detail->>projectedStatus, confirmationState:detail->>confirmationState, reconciliationState:detail->>reconciliationState, resolutionTarget:detail->>resolutionTarget, orderNo:detail->>orderNo, orderId:detail->>orderId, dTxnId:detail->>txnId",
+          "linkedBy:detail->>linkedBy, linkedReversal:detail->>linkedReversal, projectedStatus:detail->>projectedStatus, confirmationState:detail->>confirmationState, reconciliationState:detail->>reconciliationState, resolutionTarget:detail->>resolutionTarget, orderNo:detail->>orderNo, orderId:detail->>orderId, dTxnId:detail->>txnId",
       )
       .gte("txn_time", periodStart)
       .lt("txn_time", periodEnd);
@@ -1303,6 +1305,7 @@ async function lightCycleRows(db: any, accountId: string | undefined, periodStar
         reconciliationState: r.reconciliationState ?? null,
         resolutionTarget: r.resolutionTarget ?? null,
         linkedReversal: r.linkedReversal ?? null,
+        linkedBy: r.linkedBy ?? null,
         orderNo: r.orderNo ?? null,
         orderId: r.orderId ?? null,
         txnId: r.dTxnId ?? null,
@@ -2075,8 +2078,11 @@ function markHangVoided(rows: CardTxn[], scopes?: unknown[]): CardTxn[] {
     }),
   );
   if (!linked.size) return rows;
-  return rows.map((t) =>
-    linked.has(String(t.id)) && t.status !== "refund"
+  return rows.map((t, i) =>
+    linked.has(String(t.id)) && t.status !== "refund" && rows.some((other, j) => j !== i &&
+      String(scopes?.[j] ?? "") === String(scopes?.[i] ?? "") && isCardReversalEvent(other.detail?.side ?? other.type) &&
+      ((cardLinkIds(other.detail).orderNo && cardLinkIds(other.detail).orderNo === cardLinkIds(t.detail).orderNo) ||
+        (cardLinkIds(other.detail).txnId && cardLinkIds(other.detail).txnId === cardLinkIds(t.detail).txnId)))
       ? { ...t, status: "failed", reversed: true }
       : t,
   );
@@ -2413,15 +2419,15 @@ export async function fetchLedgerPage(opts: {
       .not("detail", "cs", '{"side":"2"}')
       .not("detail", "cs", '{"side":2}');
     if (opts.hideReversed) out = out.or("status.is.null,status.neq.reversed");
-    if (g === "txns" && st === "review") out = out.eq("kind", "card").eq("status", "review");
+    if (g === "txns" && st === "review") out = out.eq("kind", "card").or(LEDGER_CARD_FILTERS.review.slice(3, -1));
     else if (g === "txns" && st === "refund") out = out.in("kind", ["card", "refund"]).or(LEDGER_CARD_FILTERS.refund.slice(3, -1));
     // Same groups as cardPurchasePresenter: ناجحة = everything not failed/reversed
     // (pending included), فاشلة = failed/reversed/linkedReversal.
     else if (g === "txns" && st === "success") {
       out = out.eq("kind", "card");
-      for (const f of LEDGER_CARD_FILTERS.success) out = f.startsWith("or(") ? out.or(f.slice(3, -1)) : out.is("detail->>linkedReversal", null);
+      for (const f of LEDGER_CARD_FILTERS.success) out = f.startsWith("or(") ? out.or(f.slice(3, -1)) : out.is("detail->>resolutionTarget", null);
     } else if (g === "txns" && st === "failed")
-      out = out.eq("kind", "card").neq("status", "review").or(LEDGER_CARD_FILTERS.failed.slice(3, -1));
+      out = out.eq("kind", "card").or(LEDGER_CARD_FILTERS.failed.slice(3, -1));
     else if (g !== "txns" && SUB_KIND[st] && (GROUP_KINDS[g] as string[]).includes(SUB_KIND[st]))
       out = out.eq("kind", SUB_KIND[st]);
     else out = out.in("kind", GROUP_KINDS[g] as string[]);

@@ -94,13 +94,26 @@ export function getCanonicalTransactionIdentity(row: SpendRow): string {
   }
   const txn = cleanId(d["txnId"]) || cleanId(row.txnId);
   if (txn) return `txnId:${txn}`;
-  // Nothing identifying at all: fall back to the purchase's own coordinates so
-  // the same row arriving from two pages still collapses into one transaction.
-  return `composite:${row.time}|${text(d["merchantName"] ?? d["merchName"])}|${Math.abs(row.amount)}`;
+  // Missing provider identity is quarantined by spendKind, never manufactured
+  // from amount/time/merchant coordinates.
+  return "missing-provider-id";
 }
 
 /** Backwards-compatible alias; there is only ONE identity function. */
 export const spendIdentity = getCanonicalTransactionIdentity;
+
+const scopedRowId = (row: SpendRow) => JSON.stringify([text(row.scope), text(row.txnId)]);
+
+/** Unsourced sticky flags are evidence to review, never a proven reversal. */
+export function legacyReversalUnproven(d: Record<string, unknown>): boolean {
+  return (d["linkedReversal"] === 1 || d["linkedReversal"] === "1") &&
+    !text(d["linkedBy"]).trim() && !d["resolutionTarget"] && d["reconciliationState"] !== "clear";
+}
+
+export function durableCardReversal(d: Record<string, unknown>): boolean {
+  return Boolean(d["resolutionTarget"]) || Boolean(d["linkedReversal"] &&
+    ["manual-20261031", "manual-user-20261101", "admin-review", "provider-shared-id"].includes(text(d["linkedBy"])));
+}
 
 type Kind = "settled" | "authorised" | "excluded";
 
@@ -238,7 +251,7 @@ function linkCandidateOfSpendRow(row: SpendRow): LinkCandidate {
   const d = row.detail ?? {};
   const ids = cardLinkIds(d);
   return {
-    id: text(row.txnId),
+    id: scopedRowId(row),
     scope: row.scope ?? "",
     orderNo: ids.orderNo,
     txnId: ids.txnId || text(row.txnId),
@@ -267,6 +280,8 @@ export function findHangReversals(_rows: Iterable<HangCandidate>, _windowMs = HA
 /** Classifies a row using Bybit's own status fields, never a stored guess. */
 export function spendKind(row: SpendRow): Kind {
   const d = row.detail ?? {};
+  if (getCanonicalTransactionIdentity(row) === "missing-provider-id") return "excluded";
+  if (durableCardReversal(d) || legacyReversalUnproven(d)) return "excluded";
   if (row.status === "review" || d["reconciliationState"] === "needs_review") return "excluded";
   if (d["confirmationState"] === "waiting") return "excluded";
   const side = text(d["side"]) || text(row.type);
@@ -477,6 +492,11 @@ export function canonicalize(rows: Iterable<SpendRow>): {
   let lastTxnTime = 0;
   const seenRaw = new Set<string>();
   const list = [...rows];
+  // Multiple snapshots of the SAME account/record: an explicit terminal
+  // failure cannot leave a stale pending/success copy in the totals.
+  const terminalIds = new Set(list.filter((r) =>
+    cardRecordOutcome(r.detail?.["tradeStatus"], r.detail?.["side"] ?? r.type) !== "ok" ||
+    durableCardReversal(r.detail ?? {})).map(scopedRowId));
   // Persisted projections already include immutable decisions. Never override
   // an admin decision with a second read-time association.
   const linkVoided = findLinkedReversals(list.filter((r) => !r.detail?.["confirmationState"]).map(linkCandidateOfSpendRow));
@@ -488,9 +508,8 @@ export function canonicalize(rows: Iterable<SpendRow>): {
       String(r.detail?.["side"] || r.type) === "1" && String(r.pan4 ?? "") === String(event.pan4 ?? "") &&
       String(r.merchant ?? r.detail?.["merchantName"] ?? "") === String(event.merchant ?? event.detail?.["merchantName"] ?? "") &&
       Math.abs(r.amount) === Math.abs(event.amount) && r.time <= event.time && event.time-r.time <= REVERSAL_LINK_WINDOW_MS);
-    if (candidates.some((r) => linkVoided.has(r.txnId) || r.detail?.["resolutionTarget"] ||
-      r.detail?.["linkedBy"] === "manual-20261031")) continue;
-    for (const r of candidates) reviewIds.add(r.txnId);
+    if (candidates.some((r) => linkVoided.has(scopedRowId(r)) || durableCardReversal(r.detail ?? {}))) continue;
+    for (const r of candidates) reviewIds.add(scopedRowId(r));
   }
 
   for (const row of list) {
@@ -498,7 +517,7 @@ export function canonicalize(rows: Iterable<SpendRow>): {
     if (time > lastTxnTime) lastTxnTime = time;
 
     const canonicalId = text(row.scope) ? `${text(row.scope)}|${getCanonicalTransactionIdentity(row)}` : getCanonicalTransactionIdentity(row);
-    const kind = linkVoided.has(text(row.txnId)) || reviewIds.has(text(row.txnId)) ? "excluded" : spendKind(row);
+    const kind = terminalIds.has(scopedRowId(row)) || linkVoided.has(scopedRowId(row)) || reviewIds.has(scopedRowId(row)) ? "excluded" : spendKind(row);
     if (kind === "excluded") {
       excluded.push({ row, canonicalId, reason: "refund/reversed/failed" });
       continue;
@@ -544,61 +563,14 @@ export function canonicalize(rows: Iterable<SpendRow>): {
     if (txn && txn.kind === "authorised") transactions.delete(ex.canonicalId);
   }
 
-  dropSettledAuthorisations(transactions);
+  // Different record IDs with no shared business identity are not merged by
+  // amount, card or time. Preserve both rather than guessing a settlement link.
 
   return { transactions, excluded, lastTxnTime };
 }
 
 /** Settlement (side 3/7) may arrive this long after its authorisation. */
 export const SETTLEMENT_WINDOW_MS = 10 * 24 * 60 * 60 * 1000;
-/** Clock skew tolerance: a settlement stamped slightly before its authorisation. */
-const SETTLEMENT_EARLY_MS = 60 * 60 * 1000;
-const SETTLEMENT_SIDES = new Set(["3", "7"]);
-
-/**
- * Bybit returns the authorisation (side 1) and its settlement (side 3/7) as two
- * records with DIFFERENT orderNo/txnId, so identity dedup cannot join them and
- * both were summed (double spend). Each settlement consumes at most one
- * authorisation on the same card for the same amount, made up to
- * {@link SETTLEMENT_WINDOW_MS} earlier; the settlement is kept, the
- * authorisation dropped. Unsettled authorisations (pending or recent) still
- * count. Callers pass one account's rows at a time.
- */
-function dropSettledAuthorisations(transactions: Map<string, CanonicalTxn>): void {
-  const sideOf = (r: SpendRow) => text(r.detail?.["side"]) || text(r.type);
-  const cardOf = (r: SpendRow) => text(r.pan4 ?? r.detail?.["pan4"]);
-  const cents = (r: SpendRow) => Math.round(Math.abs(Number(r.amount) || 0) * 100);
-  const auths = new Map<string, CanonicalTxn[]>();
-  const settlements: CanonicalTxn[] = [];
-  for (const t of transactions.values()) {
-    const side = sideOf(t.winner);
-    const key = `${cardOf(t.winner)}|${cents(t.winner)}`;
-    if (SETTLEMENT_SIDES.has(side)) settlements.push(t);
-    else if (AUTH_SIDES.has(side)) {
-      const list = auths.get(key) ?? [];
-      list.push(t);
-      auths.set(key, list);
-    }
-  }
-  for (const list of auths.values()) list.sort((a, b) => Number(a.winner.time) - Number(b.winner.time));
-  settlements.sort((a, b) => Number(a.winner.time) - Number(b.winner.time));
-  for (const s of settlements) {
-    const list = auths.get(`${cardOf(s.winner)}|${cents(s.winner)}`);
-    if (!list?.length) continue;
-    const st = Number(s.winner.time ?? 0);
-    // Closest earlier authorisation inside the window.
-    let pick = -1;
-    for (let i = 0; i < list.length; i++) {
-      const at = Number(list[i].winner.time ?? 0);
-      if (at > st + SETTLEMENT_EARLY_MS) break;
-      if (st - at <= SETTLEMENT_WINDOW_MS) pick = i;
-    }
-    if (pick < 0) continue;
-    transactions.delete(list[pick].canonicalId);
-    list.splice(pick, 1);
-  }
-}
-
 /**
  * Collapses duplicates into canonical transactions, then sums each window
  * independently from the transaction's OWN timestamp.
@@ -712,9 +684,9 @@ export function auditSpend(
   for (const t of transactions.values()) winnerRawIds.add(`${t.canonicalId}|${text(t.winner.txnId)}`);
 
   const entries: SpendAuditEntry[] = rows.map((row) => {
-    const canonicalId = getCanonicalTransactionIdentity(row);
+    const canonicalId = text(row.scope) ? `${text(row.scope)}|${getCanonicalTransactionIdentity(row)}` : getCanonicalTransactionIdentity(row);
     const d = row.detail ?? {};
-    const kind = spendKind(row);
+    const kind = excluded.some((ex) => ex.row === row) ? "excluded" : spendKind(row);
     const isWinner = winnerRawIds.has(`${canonicalId}|${text(row.txnId)}`);
     const amounts = canonicalAmounts(row);
     const rowTime = Number(row.time ?? 0);
@@ -770,16 +742,16 @@ export function cardPurchaseGroup(input: { kind?: unknown; status?: unknown; rev
   const s = text(input.status).trim().toLowerCase();
   if (text(input.kind) === "refund" || s === "refund" || s === "مسترد") return "refund";
   const d = (input.detail && typeof input.detail === "object" ? input.detail : {}) as Record<string, unknown>;
-  if (s === "review" || d["reconciliationState"] === "needs_review") return "review";
-  if (input.reversed || d["resolutionTarget"] || d["linkedReversal"]) return "failed";
+  const raw = cardRecordOutcome(d["tradeStatus"], d["side"] ?? d["type"], null);
+  if (durableCardReversal(d) || raw === "reversed" || raw === "failed") return "failed";
+  if (raw === "refund") return "refund";
+  if (legacyReversalUnproven(d) || s === "review" || d["reconciliationState"] === "needs_review") return "review";
+  if (input.reversed) return "failed";
   // A stored failure (incl. hang-voided) is never lifted to success by raw pending.
   if (FAILED_STATUS_TEXT.has(s)) return "failed";
   // Raw Bybit codes win over a stale stored "success" (same rule as
   // cardRecordOutcome, without the cryptoSold heuristic so the ledger SQL
   // filter can reproduce it exactly).
-  const raw = cardRecordOutcome(d["tradeStatus"], d["side"] ?? d["type"], null);
-  if (raw === "reversed" || raw === "failed") return "failed";
-  if (raw === "refund") return "refund";
   return "success";
 }
 
@@ -789,13 +761,19 @@ export function cardPurchaseGroup(input: { kind?: unknown; status?: unknown; rev
  */
 const LEDGER_REFUND_SIDES = "(4,5,6,8,9,10,11)";
 const notRefundSide = `or(detail->>side.is.null,detail->>side.not.in.${LEDGER_REFUND_SIDES})`;
+const noLegacyReview = "or(detail->>linkedReversal.is.null,detail->>linkedReversal.neq.1,detail->>linkedBy.not.is.null,detail->>resolutionTarget.not.is.null,detail->>reconciliationState.eq.clear)";
+const durableReversalFilter = "or(detail->>resolutionTarget.not.is.null,and(detail->>linkedReversal.eq.1,detail->>linkedBy.in.(manual-20261031,manual-user-20261101,admin-review,provider-shared-id)))";
+const noRawFailure = `and(or(detail->>tradeStatus.is.null,detail->>tradeStatus.not.in.(2,3,4)),or(detail->>side.is.null,detail->>side.neq.2))`;
 export const LEDGER_CARD_FILTERS = {
   failed:
-    "or(status.in.(failed,reversed),detail->>linkedReversal.not.is.null,detail->>side.eq.2," +
+    `or(and(status.in.(failed,reversed),${noLegacyReview},or(detail->>reconciliationState.is.null,detail->>reconciliationState.neq.needs_review)),${durableReversalFilter},detail->>side.eq.2,` +
     `and(detail->>tradeStatus.in.(2,3,4),${notRefundSide}))`,
+  review: `or(and(status.eq.review,${noRawFailure}),and(detail->>reconciliationState.eq.needs_review,${noRawFailure}),and(detail->>linkedReversal.eq.1,or(detail->>linkedBy.is.null,detail->>linkedBy.eq.),detail->>resolutionTarget.is.null,or(detail->>reconciliationState.is.null,detail->>reconciliationState.neq.clear),${noRawFailure}))`,
   success: [
     "or(status.is.null,status.not.in.(failed,reversed,refund,review,holding))",
-    "detail->>linkedReversal.is.null",
+    `or(detail->>linkedReversal.is.null,and(detail->>reconciliationState.eq.clear,detail->>resolutionTarget.is.null,or(detail->>linkedBy.is.null,detail->>linkedBy.not.in.(manual-20261031,manual-user-20261101,admin-review,provider-shared-id))))`,
+    "or(detail->>reconciliationState.is.null,detail->>reconciliationState.neq.needs_review)",
+    "detail->>resolutionTarget.is.null",
     `or(detail->>side.is.null,detail->>side.not.in.(2,4,5,6,8,9,10,11))`,
     "or(detail->>tradeStatus.is.null,detail->>tradeStatus.not.in.(2,3,4,5))",
   ],

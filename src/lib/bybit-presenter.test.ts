@@ -26,8 +26,8 @@ describe("card purchase presenter (one rule for every Bybit purchase screen)", (
     expect(label({ kind: "card", status: "reversed" })).toBe("فاشلة");
     expect(label({ status: "failed", reversed: true })).toBe("فاشلة");
   });
-  it("linkedReversal shows «فاشلة» even if stored success", () => {
-    expect(label({ kind: "card", status: "success", detail: { linkedReversal: 1 } })).toBe("فاشلة");
+  it("unsourced linkedReversal stays review rather than a proven failure", () => {
+    expect(cardPurchasePresenter({ kind: "card", status: "success", detail: { linkedReversal: 1 } }).group).toBe("review");
   });
   it("a real refund shows «مسترد»", () => {
     expect(label({ kind: "refund", status: "refund" })).toBe("مسترد");
@@ -59,7 +59,8 @@ describe("filter grouping", () => {
     ];
     const groups = rows.map((r) => cardPurchasePresenter(r).group);
     expect(groups.filter((g) => cardFilterMatches("success", g)).length).toBe(2);
-    expect(groups.filter((g) => cardFilterMatches("failed", g)).length).toBe(3);
+    expect(groups.filter((g) => cardFilterMatches("failed", g)).length).toBe(2);
+    expect(groups.filter((g) => cardFilterMatches("review", g)).length).toBe(1);
     expect(groups.filter((g) => cardFilterMatches("refund", g)).length).toBe(1);
     expect(groups.filter((g) => cardFilterMatches("all", g)).length).toBe(6);
   });
@@ -158,6 +159,6 @@ describe("central ledger badge", () => {
     const { statusBadge } = await import("@/components/admin/BybitLedgerPanel");
     expect(statusBadge("card", "success", "3", { tradeStatus: "3" }).text).toBe("فاشلة");
     expect(statusBadge("card", "success", "0", { tradeStatus: "0" }).text).toBe("ناجحة");
-    expect(statusBadge("card", "success", undefined, { linkedReversal: 1 }).text).toBe("فاشلة");
+    expect(statusBadge("card", "success", undefined, { linkedReversal: 1 }).text).toBe("قيد مراجعة العكس");
   });
 });
