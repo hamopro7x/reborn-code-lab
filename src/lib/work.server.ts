@@ -199,7 +199,10 @@ export async function workTable(opts: {
 
   let q: any = db
     .from("work_txn_assignments")
-    .select(opts.successOnly ? "*, bybit_ledger!inner(*)" : "*, bybit_ledger(*)", { count: "exact" })
+    .select("*, bybit_ledger!inner(*)", { count: "exact" })
+    .not("bybit_ledger.detail", "cs", '{"side":"2"}')
+    .not("bybit_ledger.detail", "cs", '{"side":2}')
+    .or("kind.not.in.(card,refund),detail->>confirmationState.eq.confirmed", { referencedTable: "bybit_ledger" })
     .order("occurred_at", { ascending: false });
 
   if (opts.successOnly) q = q.in("bybit_ledger.status", SUCCESS_STATUSES as unknown as string[]);

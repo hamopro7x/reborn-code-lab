@@ -11,6 +11,7 @@
  * - A transaction can only ever have one assignment (unique ledger_id).
  */
 const P2P_KINDS = ["p2p_buy", "p2p_sell"];
+import { cardProjectionVisible } from "./bybit-confirmation";
 
 /** Settlement of an earlier card authorisation (Bybit side 3). */
 export function isCardSettlement(r: { kind?: string; detail?: any }): boolean {
@@ -41,6 +42,7 @@ export async function autoAssignLedger(db: any): Promise<number> {
   // authorised earlier, often in a previous shift. They are not new purchases,
   // so they must never land in the currently open shift.
   const rows = (fetched ?? []).filter((r: any) =>
+    (r.kind !== "card" && r.kind !== "refund" || cardProjectionVisible(r.detail)) &&
     !isCardSettlement(r) &&
     // A side-2 row is the provider's reversal event, NOT another purchase.
     !(r.kind === "card" && String(r.detail?.side ?? "") === "2")

@@ -38,6 +38,7 @@
  */
 
 export type SpendRow = {
+  scope?: unknown;
   txnId: string;
   amount: number;
   time: number;
@@ -165,7 +166,7 @@ export function cardRecordOutcome(tradeStatus: unknown, side: unknown, cryptoSol
   if (ts === "2" || /FAIL|DECLIN|REJECT|CANCEL|EXPIRE/.test(up)) return "failed";
   // Legacy fallback for accounts whose API still reports the voided
   // authorisation as "1": Bybit took nothing from the wallet (cryptoSold false).
-  if (ts === "1" && cryptoSold === false && AUTH_SIDES.has(sd)) return "reversed";
+  // cryptoSold=false is not a documented reversal link or final status.
   return "ok";
 }
 
@@ -260,7 +261,7 @@ export function findLinkedReversals(rows: Iterable<LinkCandidate>, usedReversals
       }
     }
   }
-  for (const rev of list) {
+  for (const rev of [] as LinkCandidate[]) {
     if (!reversalIds.has(rev.id) || linkedReversals.has(rev.id) ||
         !isCardReversalEvent(rev.side) || !text(rev.pan4) ||
         cents(rev.amount) <= 0 || Number(rev.time) <= 0) continue;
@@ -287,7 +288,7 @@ function linkCandidateOfSpendRow(row: SpendRow): LinkCandidate {
   const ids = cardLinkIds(d);
   return {
     id: text(row.txnId),
-    scope: "",
+    scope: row.scope ?? "",
     orderNo: ids.orderNo,
     txnId: ids.txnId || text(row.txnId),
     tradeStatus: d["tradeStatus"],
@@ -315,6 +316,8 @@ export function findHangReversals(_rows: Iterable<HangCandidate>, _windowMs = HA
 /** Classifies a row using Bybit's own status fields, never a stored guess. */
 export function spendKind(row: SpendRow): Kind {
   const d = row.detail ?? {};
+  if (row.status === "review" || d["reconciliationState"] === "needs_review") return "excluded";
+  if (d["confirmationState"] === "waiting") return "excluded";
   const side = text(d["side"]) || text(row.type);
   if (cardRecordOutcome(d["tradeStatus"], side, cryptoSoldOf(d)) !== "ok") return "excluded";
 
@@ -791,7 +794,7 @@ export function auditSpend(
 // Raw tradeStatus/side/stage stay in detail for audits; this only decides the
 // group + label. Pending is NOT turned into a settled purchase for spend.
 // ---------------------------------------------------------------------------
-export type CardPurchaseGroup = "success" | "failed" | "refund";
+export type CardPurchaseGroup = "success" | "failed" | "refund" | "review";
 
 const FAILED_STATUS_TEXT = new Set([
   "failed", "fail", "failure", "declined", "reversed", "rejected", "cancelled", "canceled", "expired",
@@ -802,6 +805,7 @@ export function cardPurchaseGroup(input: { kind?: unknown; status?: unknown; rev
   const s = text(input.status).trim().toLowerCase();
   if (text(input.kind) === "refund" || s === "refund" || s === "مسترد") return "refund";
   const d = (input.detail && typeof input.detail === "object" ? input.detail : {}) as Record<string, unknown>;
+  if (s === "review" || d["reconciliationState"] === "needs_review") return "review";
   if (input.reversed || d["linkedReversal"]) return "failed";
   // A stored failure (incl. hang-voided) is never lifted to success by raw pending.
   if (FAILED_STATUS_TEXT.has(s)) return "failed";
@@ -825,7 +829,7 @@ export const LEDGER_CARD_FILTERS = {
     "or(status.in.(failed,reversed),detail->>linkedReversal.not.is.null,detail->>side.eq.2," +
     `and(detail->>tradeStatus.in.(2,3,4),${notRefundSide}))`,
   success: [
-    "or(status.is.null,status.not.in.(failed,reversed,refund))",
+    "or(status.is.null,status.not.in.(failed,reversed,refund,review,holding))",
     "detail->>linkedReversal.is.null",
     `or(detail->>side.is.null,detail->>side.not.in.(2,4,5,6,8,9,10,11))`,
     "or(detail->>tradeStatus.is.null,detail->>tradeStatus.not.in.(2,3,4,5))",
@@ -836,6 +840,7 @@ export const LEDGER_CARD_FILTERS = {
 } as const;
 
 export const CARD_PURCHASE_LABEL: Record<CardPurchaseGroup, { text: string; cls: string }> = {
+  review: { text: "قيد مراجعة العكس", cls: "bg-accent text-accent-foreground" },
   success: { text: "ناجحة", cls: "bg-emerald-500/15 text-emerald-400" },
   failed: { text: "فاشلة", cls: "bg-red-500/15 text-red-400" },
   refund: { text: "مسترد", cls: "bg-muted text-muted-foreground" },
