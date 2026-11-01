@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { auditSpend, cardPurchaseGroup, canonicalize, sumSpend, type SpendRow } from "./bybit-spend";
+import { mapStoredRow, mirrorStoredCardRows } from "./bybit.server";
 
 const T = Date.UTC(2026, 10, 1, 6, 8, 47);
 const purchase = (scope: string, txnId: string, detail: Record<string, unknown> = {}, time = T): SpendRow => ({
@@ -49,5 +50,19 @@ describe("strict financial evidence regressions", () => {
     const audit = auditSpend([a]);
     expect(audit.totals.monthSpend).toBe(20.55);
     expect(audit.entries[0].fee).toBe(0);
+  });
+  it("archive mapping preserves explicit reversal despite a stale success projection",()=>{
+    const row=mapStoredRow({txn_id:"a",status:"success",detail:{side:"1",tradeStatus:"3",projectedStatus:"success"}});
+    expect(row.status).toBe("failed"); expect(row.reversed).toBe(true);
+  });
+  it("archive mapping retains unsourced flags as review, not failed",()=>{
+    expect(mapStoredRow({txn_id:"a",status:"failed",detail:{linkedReversal:1,tradeStatus:"1",side:"1"}}).status).toBe("review");
+  });
+  it("central mirror never publishes a confirmed side2 event",async()=>{
+    const rows=[{txn_id:"event",created_at:"2026-11-01T00:00Z",confirmed_at:"2026-11-01T00:01Z",txn_time:T,detail:{side:"2"}}];
+    const q:any={select:()=>q,eq:()=>q,gte:()=>q,lt:()=>q,in:async()=>({data:rows,error:null})};
+    let submitted=0;
+    await mirrorStoredCardRows({from:()=>q},"A",["event"],async r=>{submitted+=r.length;return r.length;});
+    expect(submitted).toBe(0);
   });
 });
