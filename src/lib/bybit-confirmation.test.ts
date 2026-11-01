@@ -121,6 +121,7 @@ describe("durable Bybit confirmation and atomic reconciliation",()=>{
       VALUES($1,'stable','PAYPAL *TIKTOK INC',3.61,'USD','success',1793482427000,'0540','1',
       '{"side":"1","tradeStatus":"1"}',clock_timestamp()-interval '31 seconds')`,[account]);
     const first=raw("stable"); first.observed_at=new Date(Date.now()-1000).toISOString();
+    first.detail={...first.detail,observedAt:first.observed_at,raw:{side:"1",__observedAt:first.observed_at}} as any;
     await ingest([first]);
     await db.query("INSERT INTO bybit_ledger VALUES($1,'stable','card','success',-3.61,'{}')",[account]);
     await db.exec(`CREATE TEMP TABLE write_counts(t text);
@@ -129,7 +130,9 @@ describe("durable Bybit confirmation and atomic reconciliation",()=>{
       CREATE TRIGGER count_ledger AFTER UPDATE ON bybit_ledger FOR EACH ROW EXECUTE FUNCTION count_bybit_write();
       CREATE TRIGGER count_cases AFTER UPDATE ON bybit_reversal_cases FOR EACH ROW EXECUTE FUNCTION count_bybit_write();`);
     try {
-      const result=await db.query<any>("select bybit_ingest_confirmed($1,$2::jsonb) as n",[account,JSON.stringify([raw("stable")])]);
+      const fresh=raw("stable");
+      fresh.detail={...fresh.detail,observedAt:fresh.observed_at,raw:{side:"1",__observedAt:fresh.observed_at}} as any;
+      const result=await db.query<any>("select bybit_ingest_confirmed($1,$2::jsonb) as n",[account,JSON.stringify([fresh])]);
       expect(result.rows[0].n).toBe(0);
       await db.query("select bybit_reconcile_dirty($1,ARRAY['stable'])",[account]);
       expect((await db.query("select * from write_counts")).rows).toHaveLength(0);
@@ -175,5 +178,16 @@ describe("durable Bybit confirmation and atomic reconciliation",()=>{
       await db.query("INSERT INTO bybit_ledger VALUES($1,'no-archive',$2,'success',1,'{}')",[account,kind]);
     }
     expect((await db.query<any>("select kind from bybit_ledger")).rows.map(r=>r.kind)).toEqual(["internal_in","internal_out","deposit","withdraw","p2p_buy","p2p_sell","manual"]);
+  });
+  it("SQL confirms only a fresh request at 30 seconds; no age-only repair",async()=>{
+    const created=new Date(Date.now()-60000).toISOString();
+    await db.query(`INSERT INTO bybit_card_txns(account_id,txn_id,merchant,amount,currency,status,txn_time,pan4,txn_type,detail,created_at)
+      VALUES($1,'boundary','PAYPAL *TIKTOK INC',3.61,'USD','success',1793482427000,'0540','1','{"side":"1","tradeStatus":"1"}',$2)`,[account,created]);
+    const r=raw("boundary"); r.observed_at=new Date(Date.parse(created)+29999).toISOString();
+    await ingest([r]);
+    await db.query("select bybit_reconcile_dirty($1,ARRAY['boundary'])",[account]);
+    expect((await db.query<any>("select confirmed_at from bybit_card_txns")).rows[0].confirmed_at).toBeNull();
+    r.observed_at=new Date(Date.parse(created)+30000).toISOString(); await ingest([r]);
+    expect((await db.query<any>("select confirmed_at from bybit_card_txns")).rows[0].confirmed_at).toBe(r.observed_at);
   });
 });
