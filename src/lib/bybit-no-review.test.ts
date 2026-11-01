@@ -30,4 +30,20 @@ describe("Bybit ambiguous reversals are held, never guessed", () => {
     ));
     expect([...findLinkedReversals(rows)]).toEqual([]);
   });
+
+  it("identical provider identities on two accounts count independently", () => {
+    const rows = ["account-a", "account-b"].map((scope): SpendRow => ({
+      scope, txnId: "same-id", amount: 3.61, time, status: "success", type: "1", currency: "USD",
+      detail: { tradeStatus: "1", side: "1", orderNo: "same-order", basicAmount: 3.61, basicCurrency: "USD" },
+    }));
+    expect(sumSpend(rows, 0, 0).monthSpend).toBeCloseTo(7.22);
+  });
+
+  it("one shared-ID event never voids two authorizations", () => {
+    const common = { scope: "account-a", orderNo: "shared", tradeStatus: "1", side: "1" };
+    expect([...findLinkedReversals([
+      { ...common, id: "a", txnId: "a" }, { ...common, id: "b", txnId: "b" },
+      { ...common, id: "event", txnId: "event", side: "2" },
+    ])]).toEqual([]);
+  });
 });

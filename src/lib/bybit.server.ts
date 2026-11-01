@@ -2064,7 +2064,7 @@ function markHangVoided(rows: CardTxn[], scopes?: unknown[]): CardTxn[] {
         scope: scopes?.[i] ?? "",
         orderNo: ids.orderNo,
         txnId: ids.txnId || String(t.id),
-        tradeStatus: t.detail?.["tradeStatus"],
+        tradeStatus: t.detail?.["confirmationState"] ? null : t.detail?.["tradeStatus"],
         side: t.detail?.["side"] ?? t.type,
         pan4: t.pan4 ?? t.detail?.["pan4"],
         amount: t.amount,

@@ -205,6 +205,7 @@ RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
 DECLARE a public.bybit_card_txns; decision text;
 BEGIN
   IF NEW.kind NOT IN ('card','refund') THEN RETURN NEW; END IF;
+  PERFORM pg_advisory_xact_lock(hashtextextended(NEW.account_id::text,0));
   SELECT * INTO a FROM public.bybit_card_txns WHERE account_id=NEW.account_id AND txn_id=NEW.ref_id;
   IF NOT FOUND THEN RETURN NULL; END IF;
   IF COALESCE(NULLIF(a.detail->>'side',''),a.txn_type) IN ('2','3') THEN RETURN NULL; END IF;
@@ -218,7 +219,7 @@ BEGIN
     (a.detail->>'linkedBy'='manual-20261031' AND a.detail->>'linkedReversal'='1') THEN NEW.status:='reversed';
   ELSIF a.detail->>'tradeStatus' IN ('3','4') THEN NEW.status:='reversed';
   ELSIF a.detail->>'tradeStatus'='2' THEN NEW.status:='failed';
-  ELSIF COALESCE(a.detail->>'side',a.txn_type) IN ('4','5','6','8','9','10','11') THEN NEW.status:='refund';
+  ELSIF COALESCE(a.detail->>'side',a.txn_type) IN ('4','5','6','8','9','10','11') OR a.detail->>'tradeStatus'='5' THEN NEW.status:='refund';
   ELSE NEW.status:='success'; END IF;
   RETURN NEW;
 END $$;
