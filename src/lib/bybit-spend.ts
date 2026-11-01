@@ -207,79 +207,125 @@ export type LinkCandidate = {
   pan4?: unknown;
   amount?: unknown;
   time?: unknown;
+  /** reversal only: admin decision — the voided purchase id, or "none" */
+  resolvedVoid?: unknown;
+  /** purchase only: already voided before this pass (manual confirmation or legacy mark) */
+  presetVoid?: "manual" | "legacy" | null;
 };
 
 /** Bybit posts the side-2 reversal seconds after the authorisation it voids. */
 export const REVERSAL_LINK_WINDOW_MS = 60 * 60 * 1000;
 
-/**
- * Authorisations voided by a SEPARATE Bybit reversal record that carries the
- * same orderNo or txnId inside the same account. Matching uses Bybit ids only,
- * never amount/time similarity. Returns ids of the voided purchase records.
- */
-export function findLinkedReversals(rows: Iterable<LinkCandidate>, usedReversals?: Set<string>): Set<string> {
-  const list = [...rows];
-  const keys = new Set<string>();
-  const reversalIds = new Set<string>();
-  for (const r of list) {
-    if (!isExplicitReversal(r.tradeStatus, r.side)) continue;
-    reversalIds.add(r.id);
-    const scope = text(r.scope);
-    const o = cleanId(r.orderNo);
-    const t = cleanId(r.txnId);
-    if (o) keys.add(`${scope}|o:${o}`);
-    if (t) keys.add(`${scope}|t:${t}`);
-  }
-  const out = new Set<string>();
-  if (!keys.size) return out;
-  for (const r of list) {
-    if (reversalIds.has(r.id)) continue;
-    if (!AUTH_SIDES.has(text(r.side).trim())) continue; // clearings/refunds are never voided here
-    if (text(r.tradeStatus).trim() === "2") continue; // declined already failed
-    const scope = text(r.scope);
-    const o = cleanId(r.orderNo);
-    const t = cleanId(r.txnId);
-    if ((o && keys.has(`${scope}|o:${o}`)) || (t && keys.has(`${scope}|t:${t}`))) out.add(r.id);
-  }
+/** A reversal that Bybit does not tie to one purchase: an admin must choose. */
+export type ReversalReview = {
+  reversalId: string;
+  scope: string;
+  amount: number;
+  time: number;
+  pan4: string;
+  candidateIds: string[];
+  /** a candidate already carries an old automatic mark that was never confirmed */
+  legacyId: string | null;
+};
 
-  // A side-2 event often has different IDs from the original authorisation.
-  // Never pick the "nearest pending" when more than one purchase could match:
-  // doing that wrongly reverses a legitimate retry (the 23:33:47/23:33:50 case).
-  // A unique, same-account/card/amount candidate may be linked. Ambiguous
-  // events stay in the raw archive for a later provider-ID/status reconciliation.
+/** Marker stored on a purchase that an admin/owner confirmed as reversed. */
+export function presetVoidOf(d: Record<string, unknown> | null | undefined): "manual" | "legacy" | null {
+  const x = d ?? {};
+  if (!x["linkedReversal"]) return null;
+  return text(x["linkedBy"]).trim() ? "manual" : "legacy";
+}
+
+/**
+ * Resolve every separate Bybit reversal record, strongest evidence first:
+ *  1. admin decision stored on the reversal (resolvedVoid);
+ *  2. shared orderNo/txnId inside the same account;
+ *  3. a single same-account/card/amount purchase within the window
+ *     (a purchase already confirmed manually consumes the reversal);
+ *  4. otherwise → review queue; nothing is marked failed.
+ * Each reversal voids at most one purchase.
+ */
+export function resolveReversals(rows: Iterable<LinkCandidate>): {
+  voided: Set<string>;
+  consumed: Set<string>;
+  review: ReversalReview[];
+} {
+  const list = [...rows];
+  const voided = new Set<string>();
+  const consumed = new Set<string>();
+  const review: ReversalReview[] = [];
+  const reversals = list.filter((r) => isExplicitReversal(r.tradeStatus, r.side));
+  const reversalIds = new Set(reversals.map((r) => r.id));
+  const purchases = list.filter((r) =>
+    !reversalIds.has(r.id) && AUTH_SIDES.has(text(r.side).trim()) && text(r.tradeStatus).trim() !== "2");
+  const byId = new Map(purchases.map((p) => [`${text(p.scope)}|${p.id}`, p]));
   const cents = (v: unknown) => Math.round(Math.abs(Number(v) || 0) * 100);
-  const linkedReversals = new Set<string>();
-  for (const a of list) {
-    if (!out.has(a.id)) continue;
-    for (const rev of list) {
-      if (!reversalIds.has(rev.id) || text(rev.scope) !== text(a.scope)) continue;
-      if ((cleanId(rev.orderNo) && cleanId(rev.orderNo) === cleanId(a.orderNo)) ||
-          (cleanId(rev.txnId) && cleanId(rev.txnId) === cleanId(a.txnId))) {
-        linkedReversals.add(rev.id);
-        usedReversals?.add(rev.id);
-      }
+  // Purchases voided by a manual confirmation stay voided whatever else happens.
+  for (const p of purchases) if (p.presetVoid === "manual") voided.add(p.id);
+
+  // 1. admin decisions
+  const taken = new Set<string>();
+  for (const rev of reversals) {
+    const dec = text(rev.resolvedVoid).trim();
+    if (!dec) continue;
+    consumed.add(rev.id);
+    if (dec !== "none" && byId.has(`${text(rev.scope)}|${dec}`)) {
+      voided.add(dec);
+      taken.add(`${text(rev.scope)}|${dec}`);
     }
   }
-  for (const rev of list) {
-    if (!reversalIds.has(rev.id) || linkedReversals.has(rev.id) ||
-        !isCardReversalEvent(rev.side) || !text(rev.pan4) ||
-        cents(rev.amount) <= 0 || Number(rev.time) <= 0) continue;
-    const candidates = list.filter((a) => {
-      if (reversalIds.has(a.id) || out.has(a.id) ||
-          !AUTH_SIDES.has(text(a.side).trim()) ||
-          text(a.tradeStatus).trim() === "2" ||
-          text(a.scope) !== text(rev.scope) ||
-          text(a.pan4) !== text(rev.pan4) ||
-          cents(a.amount) !== cents(rev.amount)) return false;
+  // 2. shared provider ids
+  for (const rev of reversals) {
+    if (consumed.has(rev.id)) continue;
+    const o = cleanId(rev.orderNo);
+    const t = cleanId(rev.txnId);
+    const hit = purchases.find((p) => text(p.scope) === text(rev.scope) &&
+      ((o && cleanId(p.orderNo) === o) || (t && cleanId(p.txnId) === t)));
+    if (hit) {
+      voided.add(hit.id);
+      taken.add(`${text(hit.scope)}|${hit.id}`);
+      consumed.add(rev.id);
+    }
+  }
+  // 3/4. card + amount + time candidates
+  const ordered = reversals.filter((r) => !consumed.has(r.id)).sort((a, b) => Number(a.time) - Number(b.time));
+  for (const rev of ordered) {
+    if (!isCardReversalEvent(rev.side) || !text(rev.pan4) || cents(rev.amount) <= 0 || Number(rev.time) <= 0) continue;
+    const rt = Number(rev.time);
+    const cands = purchases.filter((a) => {
+      if (taken.has(`${text(a.scope)}|${a.id}`)) return false;
+      if (text(a.scope) !== text(rev.scope) || text(a.pan4) !== text(rev.pan4) || cents(a.amount) !== cents(rev.amount)) return false;
       const at = Number(a.time);
-      const rt = Number(rev.time);
       return at > 0 && at <= rt && rt - at <= REVERSAL_LINK_WINDOW_MS;
     });
-    if (candidates.length !== 1) continue; // never guess between two purchases
-    out.add(candidates[0].id);
-    usedReversals?.add(rev.id);
+    if (!cands.length) continue;
+    const manual = cands.find((c) => c.presetVoid === "manual");
+    if (cands.length === 1 || manual) {
+      const c = manual ?? cands[0];
+      voided.add(c.id);
+      taken.add(`${text(c.scope)}|${c.id}`);
+      consumed.add(rev.id);
+      continue;
+    }
+    const legacy = cands.find((c) => c.presetVoid === "legacy");
+    if (legacy) {
+      // keep the old mark (never silently flipped) but ask for confirmation
+      voided.add(legacy.id);
+      taken.add(`${text(legacy.scope)}|${legacy.id}`);
+      consumed.add(rev.id);
+    }
+    review.push({
+      reversalId: rev.id, scope: text(rev.scope), amount: cents(rev.amount) / 100, time: rt,
+      pan4: text(rev.pan4), candidateIds: cands.map((c) => c.id), legacyId: legacy?.id ?? null,
+    });
   }
-  return out;
+  return { voided, consumed, review };
+}
+
+/** Purchase ids voided by a Bybit reversal record with strong evidence (see resolveReversals). */
+export function findLinkedReversals(rows: Iterable<LinkCandidate>, usedReversals?: Set<string>): Set<string> {
+  const r = resolveReversals(rows);
+  if (usedReversals) for (const id of r.consumed) usedReversals.add(id);
+  return r.voided;
 }
 
 function linkCandidateOfSpendRow(row: SpendRow): LinkCandidate {
@@ -295,6 +341,8 @@ function linkCandidateOfSpendRow(row: SpendRow): LinkCandidate {
     pan4: row.pan4 ?? d["pan4"],
     amount: row.amount,
     time: row.time,
+    resolvedVoid: d["resolvedVoid"],
+    presetVoid: presetVoidOf(d),
   };
 }
 
