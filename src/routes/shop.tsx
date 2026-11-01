@@ -23,6 +23,7 @@ export const Route = createFileRoute("/shop")({
       { property: "og:title", content: "المتجر — كل المنتجات الرقمية | متجر الاشتراكات" },
       { property: "og:description", content: "تصفح كل الاشتراكات الرقمية وأدوات الذكاء الاصطناعي وقوالب التصميم مرتبة حسب الفئة مع البحث والأسعار بعملتك." },
       { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { property: "og:url", content: "https://mag-pro1.com/shop" },
       { name: "twitter:title", content: "المتجر — كل المنتجات الرقمية | متجر الاشتراكات" },
       { name: "twitter:description", content: "تصفح كل الاشتراكات الرقمية وأدوات الذكاء الاصطناعي وقوالب التصميم مرتبة حسب الفئة مع البحث والأسعار بعملتك." },

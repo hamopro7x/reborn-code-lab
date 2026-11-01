@@ -8,7 +8,17 @@ import { getCachedFingerprint } from "@/lib/device-session";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Loader2, PlayCircle, ShieldAlert, CheckCircle2 } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/courses/$id")({ component: CourseView });
+export const Route = createFileRoute("/_authenticated/courses/$id")({
+  component: CourseView,
+  head: ({ params }) => ({ meta: [
+    { title: `MG Pro | الدورة ${params.id}` },
+    { name: "description", content: "دروس الدورة الرقمية الخاصة بك على MG Pro." },
+    { property: "og:title", content: `MG Pro | الدورة ${params.id}` },
+    { property: "og:description", content: "دروس الدورة الرقمية الخاصة بك على MG Pro." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
+});
 
 function CourseView() {
   const { id } = Route.useParams();
