@@ -228,4 +228,12 @@ describe("durable Bybit confirmation and atomic reconciliation",()=>{
     await ingest([raw("scalar")]);
     expect((await db.query<any>("select detail from bybit_card_txns where txn_id='scalar'")).rows[0].detail.confirmationState).toBe("confirmed");
   });
+  it("JSON-string raw replay changes zero archive rows when only request time differs",async()=>{
+    await db.query(`INSERT INTO bybit_card_txns(account_id,txn_id,detail,created_at) VALUES($1,'string-raw','{}',clock_timestamp()-interval '31 seconds')`,[account]);
+    const first=raw("string-raw"); first.observed_at=new Date(Date.now()-1000).toISOString();
+    first.detail={...first.detail,raw:JSON.stringify({side:"1",__observedAt:first.observed_at})} as any;
+    await ingest([first]);
+    const fresh=raw("string-raw"); fresh.detail={...fresh.detail,raw:JSON.stringify({side:"1",__observedAt:fresh.observed_at})} as any;
+    expect((await db.query<any>("select bybit_ingest_confirmed($1,$2::jsonb) n",[account,JSON.stringify([fresh])])).rows[0].n).toBe(0);
+  });
 });
