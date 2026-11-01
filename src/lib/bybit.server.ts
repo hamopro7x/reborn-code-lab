@@ -1214,7 +1214,7 @@ export type CardTxnPage = {
  */
 export async function fetchCardTxnsPage(opts: {
   accountId?: string;
-  status?: "all" | "success" | "failed" | "refund";
+  status?: "all" | "success" | "failed" | "refund" | "review";
   page?: number;
   pageSize?: number;
   /** Employees never see reversed («معكوسة») attempts. */
@@ -1314,7 +1314,7 @@ async function lightCycleRows(db: any, accountId: string | undefined, periodStar
 
 export async function fetchCardTxnsLive(opts: {
   accountId?: string;
-  status?: "all" | "success" | "failed" | "refund";
+  status?: "all" | "success" | "failed" | "refund" | "review";
   page?: number;
   pageSize?: number;
   hideReversed?: boolean;
@@ -2555,4 +2555,55 @@ export async function cardBrandsByPan(): Promise<Record<string, string>> {
     if (brand) out[pan4] = brand;
   }
   return out;
+}
+
+export function clearBybitSpendCache() { spendCache.clear(); }
+
+export async function listReversalCases() {
+  const db = await admin();
+  const { data, error } = await db.from("bybit_reversal_cases").select("account_id,event_id,candidate_ids,source")
+    .eq("state", "needs_review").limit(100);
+  if (error) throw new Error(error.message);
+  const cases = [];
+  for (const c of data ?? []) {
+    const { data: rows, error: readError } = await db.from("bybit_card_txns")
+      .select("txn_id,amount,txn_time,pan4,merchant,status,tradeStatus:detail->>tradeStatus,orderNo:detail->>orderNo")
+      .eq("account_id", c.account_id).in("txn_id", [...c.candidate_ids, c.event_id]);
+    if (readError) throw new Error(readError.message);
+    cases.push({ ...c, rows: rows ?? [] });
+  }
+  return { cases };
+}
+
+/** One history page per tick, durable cursor; full cycle is walked repeatedly.
+ * No timeout sleeping for confirmation, no dependence on an open browser. */
+export async function resumeCardFollowup() {
+  const db = await admin();
+  const accounts = await listAccounts();
+  const { data: state, error } = await db.from("site_settings").select("value").eq("key", "bybit-confirm-followup-v1").maybeSingle();
+  if (error) throw new Error(error.message);
+  let index = Number(state?.value?.account ?? 0);
+  let type = Number(state?.value?.type ?? 0);
+  let page = Math.max(1, Number(state?.value?.page ?? 1));
+  if (index >= accounts.length) index = 0;
+  if (type >= CARD_QUERY_TYPES.length) type = 0;
+  const account = accounts[index];
+  if (!account) return;
+  if (!(await bybitConfigured(account.id))) { index++; type=0; page=1; }
+  else {
+    try {
+      const result = await callCardPage({ limit: 100, page, type: CARD_QUERY_TYPES[type] }, await getCreds(account.id));
+      const raw = result.data ?? [];
+      await persistCardTxns(currentBybitRows(raw.filter((r: any) => !isLateSettlementRecord(r)).map(mapCardTxn)), account.id);
+      const exhausted = !raw.length || raw.some((r: any) => Number(r.txnCreate) < currentBybitCycle().periodStart) ||
+        (Number(result.totalCount) > 0 && page*100 >= Number(result.totalCount));
+      if (exhausted) { type++; page=1; } else page++;
+    } catch (e) {
+      if (!isUnsupportedCardTypeError(e)) throw e;
+      type++; page=1;
+    }
+    if (type >= CARD_QUERY_TYPES.length) { index++; type=0; }
+  }
+  const { error: saveError } = await db.from("site_settings").upsert({ key: "bybit-confirm-followup-v1", value: { account: index, type, page } }, { onConflict: "key" });
+  if (saveError) throw new Error(saveError.message);
 }

@@ -243,43 +243,7 @@ export function findLinkedReversals(rows: Iterable<LinkCandidate>, usedReversals
     if ((o && keys.has(`${scope}|o:${o}`)) || (t && keys.has(`${scope}|t:${t}`))) out.add(r.id);
   }
 
-  // A side-2 event often has different IDs from the original authorisation.
-  // Never pick the "nearest pending" when more than one purchase could match:
-  // doing that wrongly reverses a legitimate retry (the 23:33:47/23:33:50 case).
-  // A unique, same-account/card/amount candidate may be linked. Ambiguous
-  // events stay in the raw archive for a later provider-ID/status reconciliation.
-  const cents = (v: unknown) => Math.round(Math.abs(Number(v) || 0) * 100);
-  const linkedReversals = new Set<string>();
-  for (const a of list) {
-    if (!out.has(a.id)) continue;
-    for (const rev of list) {
-      if (!reversalIds.has(rev.id) || text(rev.scope) !== text(a.scope)) continue;
-      if ((cleanId(rev.orderNo) && cleanId(rev.orderNo) === cleanId(a.orderNo)) ||
-          (cleanId(rev.txnId) && cleanId(rev.txnId) === cleanId(a.txnId))) {
-        linkedReversals.add(rev.id);
-        usedReversals?.add(rev.id);
-      }
-    }
-  }
-  for (const rev of [] as LinkCandidate[]) {
-    if (!reversalIds.has(rev.id) || linkedReversals.has(rev.id) ||
-        !isCardReversalEvent(rev.side) || !text(rev.pan4) ||
-        cents(rev.amount) <= 0 || Number(rev.time) <= 0) continue;
-    const candidates = list.filter((a) => {
-      if (reversalIds.has(a.id) || out.has(a.id) ||
-          !AUTH_SIDES.has(text(a.side).trim()) ||
-          text(a.tradeStatus).trim() === "2" ||
-          text(a.scope) !== text(rev.scope) ||
-          text(a.pan4) !== text(rev.pan4) ||
-          cents(a.amount) !== cents(rev.amount)) return false;
-      const at = Number(a.time);
-      const rt = Number(rev.time);
-      return at > 0 && at <= rt && rt - at <= REVERSAL_LINK_WINDOW_MS;
-    });
-    if (candidates.length !== 1) continue; // never guess between two purchases
-    out.add(candidates[0].id);
-    usedReversals?.add(rev.id);
-  }
+
   return out;
 }
 
@@ -527,13 +491,25 @@ export function canonicalize(rows: Iterable<SpendRow>): {
   const seenRaw = new Set<string>();
   const list = [...rows];
   const linkVoided = findLinkedReversals(list.map(linkCandidateOfSpendRow));
+  const reviewIds = new Set<string>();
+  for (const event of list) {
+    if (!isCardReversalEvent(event.detail?.["side"] || event.type)) continue;
+    if (event.detail?.["reconciliationState"] === "resolved") continue;
+    const candidates = list.filter((r) => r !== event && String(r.scope ?? "") === String(event.scope ?? "") &&
+      String(r.detail?.["side"] || r.type) === "1" && String(r.pan4 ?? "") === String(event.pan4 ?? "") &&
+      String(r.merchant ?? r.detail?.["merchantName"] ?? "") === String(event.merchant ?? event.detail?.["merchantName"] ?? "") &&
+      Math.abs(r.amount) === Math.abs(event.amount) && r.time <= event.time && event.time-r.time <= REVERSAL_LINK_WINDOW_MS);
+    if (candidates.some((r) => linkVoided.has(r.txnId) || r.detail?.["resolutionTarget"] ||
+      r.detail?.["linkedBy"] === "manual-20261031")) continue;
+    for (const r of candidates) reviewIds.add(r.txnId);
+  }
 
   for (const row of list) {
     const time = Number(row.time ?? 0);
     if (time > lastTxnTime) lastTxnTime = time;
 
     const canonicalId = getCanonicalTransactionIdentity(row);
-    const kind = linkVoided.has(text(row.txnId)) ? "excluded" : spendKind(row);
+    const kind = linkVoided.has(text(row.txnId)) || reviewIds.has(text(row.txnId)) ? "excluded" : spendKind(row);
     if (kind === "excluded") {
       excluded.push({ row, canonicalId, reason: "refund/reversed/failed" });
       continue;
