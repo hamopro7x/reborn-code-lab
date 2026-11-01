@@ -1003,7 +1003,7 @@ function mapCardTxn(t: any): CardTxn {
 
         orderId: pick(t, ["orderNo", "orderId", "referenceId", "refId"]),
         orderNo: t.orderNo ?? null,
-        paymentId: pick(t, ["paymentId", "orderNo"]),
+        paymentId: pick(t, ["paymentId"]),
         authCode: pick(t, ["authCode", "authorizationCode"]),
         // ---- status ----
         stage: stageOf(t),
