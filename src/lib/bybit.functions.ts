@@ -484,3 +484,31 @@ export const getBybitCardBrands = createServerFn({ method: "POST" })
     const mod = await import("./bybit.server");
     return { brands: await mod.cardBrandsByPan() };
   });
+
+export const listBybitReversalReviews = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const mod = await import("./bybit.server");
+    return { items: await mod.listReversalReviews() };
+  });
+
+export const resolveBybitReversalReview = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { accountId: string; reversalId: string; voidedId: string | null }) => {
+    const id = (v: unknown) => {
+      const s = String(v ?? "").trim();
+      if (!/^[\w-]{1,80}$/.test(s)) throw new Error("invalid id");
+      return s;
+    };
+    return {
+      accountId: id(input?.accountId),
+      reversalId: id(input?.reversalId),
+      voidedId: input?.voidedId == null ? null : id(input.voidedId),
+    };
+  })
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const mod = await import("./bybit.server");
+    return mod.resolveReversalReview({ ...data, userId: context.userId });
+  });
