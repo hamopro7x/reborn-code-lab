@@ -94,9 +94,9 @@ export function getCanonicalTransactionIdentity(row: SpendRow): string {
   }
   const txn = cleanId(d["txnId"]) || cleanId(row.txnId);
   if (txn) return `txnId:${txn}`;
-  // Nothing identifying at all: fall back to the purchase's own coordinates so
-  // the same row arriving from two pages still collapses into one transaction.
-  return `composite:${row.time}|${text(d["merchantName"] ?? d["merchName"])}|${Math.abs(row.amount)}`;
+  // Missing provider identity is quarantined by spendKind, never manufactured
+  // from amount/time/merchant coordinates.
+  return "missing-provider-id";
 }
 
 /** Backwards-compatible alias; there is only ONE identity function. */
@@ -280,6 +280,7 @@ export function findHangReversals(_rows: Iterable<HangCandidate>, _windowMs = HA
 /** Classifies a row using Bybit's own status fields, never a stored guess. */
 export function spendKind(row: SpendRow): Kind {
   const d = row.detail ?? {};
+  if (getCanonicalTransactionIdentity(row) === "missing-provider-id") return "excluded";
   if (durableCardReversal(d) || legacyReversalUnproven(d)) return "excluded";
   if (row.status === "review" || d["reconciliationState"] === "needs_review") return "excluded";
   if (d["confirmationState"] === "waiting") return "excluded";

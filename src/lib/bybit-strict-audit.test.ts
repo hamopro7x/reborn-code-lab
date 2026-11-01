@@ -65,4 +65,8 @@ describe("strict financial evidence regressions", () => {
     await mirrorStoredCardRows({from:()=>q},"A",["event"],async r=>{submitted+=r.length;return r.length;});
     expect(submitted).toBe(0);
   });
+  it("missing provider IDs never create an invented amount/time identity",()=>{
+    const a=purchase("A", "", {});
+    expect(sumSpend([a,{...a}],0,0).countedTxns).toBe(0);
+  });
 });

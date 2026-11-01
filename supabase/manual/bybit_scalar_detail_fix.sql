@@ -231,12 +231,12 @@ BEGIN
   IF a.confirmed_at IS NULL OR a.confirmed_at<a.created_at+interval '30 seconds' THEN
     IF TG_OP='INSERT' THEN RETURN NULL; END IF;
     NEW.status:='holding';
-  ELSIF a.detail->>'reconciliationState'='needs_review' THEN NEW.status:='review';
   ELSIF a.detail->>'resolutionTarget'=a.txn_id OR
     public.bybit_trusted_manual(a) THEN NEW.status:='reversed';
   ELSIF a.detail->>'tradeStatus' IN ('3','4') THEN NEW.status:='reversed';
   ELSIF a.detail->>'tradeStatus'='2' THEN NEW.status:='failed';
   ELSIF COALESCE(a.detail->>'side',a.txn_type) IN ('4','5','6','8','9','10','11') OR a.detail->>'tradeStatus'='5' THEN NEW.status:='refund';
+  ELSIF a.detail->>'reconciliationState'='needs_review' THEN NEW.status:='review';
   ELSE NEW.status:='success'; END IF;
   IF TG_OP='UPDATE' AND NEW IS NOT DISTINCT FROM OLD THEN RETURN NULL; END IF;
   RETURN NEW;

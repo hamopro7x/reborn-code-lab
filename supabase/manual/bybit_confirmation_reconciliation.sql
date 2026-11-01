@@ -335,17 +335,18 @@ BEGIN
   SELECT * INTO a FROM public.bybit_card_txns WHERE account_id=NEW.account_id AND txn_id=NEW.ref_id;
   IF NOT FOUND THEN RETURN NULL; END IF;
   IF COALESCE(NULLIF(a.detail->>'side',''),a.txn_type) IN ('2','3') THEN RETURN NULL; END IF;
-  NEW.detail:=(NEW.detail-'linkedReversal'-'reconciliationState'-'confirmationState'-'resolutionTarget')||(a.detail-'raw');
+  NEW.detail:=((CASE WHEN jsonb_typeof(NEW.detail)='object' THEN NEW.detail ELSE '{}'::jsonb END)-'linkedReversal'-'reconciliationState'-'confirmationState'-'resolutionTarget')
+    ||((CASE WHEN jsonb_typeof(a.detail)='object' THEN a.detail ELSE '{}'::jsonb END)-'raw');
   IF a.detail->>'reconciliationState'='clear' THEN NEW.detail:=NEW.detail-'linkedReversal'; END IF;
   IF a.confirmed_at IS NULL OR a.confirmed_at<a.created_at+interval '30 seconds' THEN
     IF TG_OP='INSERT' THEN RETURN NULL; END IF;
     NEW.status:='holding';
-  ELSIF a.detail->>'reconciliationState'='needs_review' THEN NEW.status:='review';
   ELSIF a.detail->>'resolutionTarget'=a.txn_id OR
     public.bybit_trusted_manual(a) THEN NEW.status:='reversed';
   ELSIF a.detail->>'tradeStatus' IN ('3','4') THEN NEW.status:='reversed';
   ELSIF a.detail->>'tradeStatus'='2' THEN NEW.status:='failed';
   ELSIF COALESCE(a.detail->>'side',a.txn_type) IN ('4','5','6','8','9','10','11') OR a.detail->>'tradeStatus'='5' THEN NEW.status:='refund';
+  ELSIF a.detail->>'reconciliationState'='needs_review' THEN NEW.status:='review';
   ELSE NEW.status:='success'; END IF;
   IF TG_OP='UPDATE' AND NEW IS NOT DISTINCT FROM OLD THEN RETURN NULL; END IF;
   RETURN NEW;
