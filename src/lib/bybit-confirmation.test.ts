@@ -36,6 +36,7 @@ describe("durable Bybit confirmation and atomic reconciliation",()=>{
     await db.exec(readFileSync(new URL("../../supabase/manual/bybit_confirmation_reconciliation.sql",import.meta.url),"utf8"));
     await db.exec(readFileSync(new URL("../../supabase/manual/bybit_scalar_detail_fix.sql",import.meta.url),"utf8"));
     await db.exec(readFileSync(new URL("../../supabase/manual/bybit_strict_evidence_rollout.sql",import.meta.url),"utf8"));
+    await db.exec(readFileSync(new URL("../../supabase/manual/bybit_quick_void.sql",import.meta.url),"utf8"));
   });
   afterAll(async()=>{await db.close();});
   beforeEach(async()=>{await db.exec("TRUNCATE bybit_ingest_fences,bybit_reversal_audit,bybit_reversal_cases,bybit_ledger,bybit_card_txns; SELECT set_config('test.actor','',false)");});
@@ -236,5 +237,24 @@ describe("durable Bybit confirmation and atomic reconciliation",()=>{
     await ingest([first]);
     const fresh=raw("string-raw"); fresh.detail={...fresh.detail,raw:JSON.stringify({side:"1",__observedAt:fresh.observed_at})} as any;
     expect((await db.query<any>("select bybit_ingest_confirmed($1,$2::jsonb) n",[account,JSON.stringify([fresh])])).rows[0].n).toBe(0);
+  });
+
+  const cs=(r:any,v:boolean)=>({...r,detail:{...r.detail,cryptoSold:v}});
+  const quickCase=async()=>(await db.query<any>("select state,target_id,source from bybit_reversal_cases")).rows[0];
+  it("quick void: single purchase reversed within 6s with no funds taken resolves to that purchase",async()=>{
+    await ingest([cs(raw("p","1","1",5.15),false),cs(raw("v","2","1",5.15,1793482433000),false)]);
+    expect(await quickCase()).toMatchObject({state:"resolved",target_id:"p",source:"provider-quick-void"});
+  });
+  it("quick void does not apply when Bybit took funds for the purchase",async()=>{
+    await ingest([cs(raw("p","1","1",51.29),true),cs(raw("v","2","1",51.29,1793482430000),false)]);
+    expect(await quickCase()).toMatchObject({state:"needs_review",target_id:null});
+  });
+  it("quick void never picks between two candidates (20.55 pair stays in review)",async()=>{
+    await ingest([cs(raw("p1","1","1",20.55),false),cs(raw("p2","1","1",20.55,1793482429000),false),cs(raw("v","2","1",20.55,1793482435000),false)]);
+    expect(await quickCase()).toMatchObject({state:"needs_review",target_id:null});
+  });
+  it("quick void does not apply when the reversal comes after 60 seconds",async()=>{
+    await ingest([cs(raw("p","1","1",5.15),false),cs(raw("v","2","1",5.15,1793482427000+61000),false)]);
+    expect(await quickCase()).toMatchObject({state:"needs_review",target_id:null});
   });
 });
