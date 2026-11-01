@@ -12,6 +12,8 @@ import {
   isExplicitReversal,
   cardLinkIds,
   findLinkedReversals,
+  presetVoidOf,
+  resolveReversals,
   REVERSAL_LINK_WINDOW_MS,
   type LinkCandidate,
   cardPurchaseGroup,
@@ -1195,6 +1197,16 @@ async function linkReversalsBeforeSave(db: any, payload: any[], accountId?: stri
   for (const r of payload) {
     const prev = stored.get(String(r.txn_id));
     const pd = prev?.detail ?? {};
+    // Admin decisions and manual confirmations live on the stored detail and
+    // must survive every resync that returns a fresh Bybit snapshot.
+    if (prev && (pd.resolvedVoid || pd.linkedBy || pd.reviewCleared)) {
+      r.detail = {
+        ...(r.detail ?? {}),
+        ...(pd.resolvedVoid ? { resolvedVoid: pd.resolvedVoid, resolvedBy: pd.resolvedBy ?? null, resolvedAt: pd.resolvedAt ?? null } : {}),
+        ...(pd.linkedBy ? { linkedBy: pd.linkedBy } : {}),
+        ...(pd.reviewCleared ? { reviewCleared: pd.reviewCleared } : {}),
+      };
+    }
     if (prev && isExplicitReversal(pd.tradeStatus, pd.side) && !isExplicitReversal(r.detail?.tradeStatus, r.detail?.side)) {
       r.__keepStored = true;
     } else if (prev && pd.linkedReversal && r.status !== "refund") {
@@ -1211,6 +1223,7 @@ async function linkReversalsBeforeSave(db: any, payload: any[], accountId?: stri
     return {
       id, scope: accountId ?? "", orderNo: ids.orderNo, txnId: ids.txnId || id, tradeStatus: d?.tradeStatus, side: d?.side ?? r.txn_type,
       pan4: r.pan4 ?? d?.pan4, amount: r.amount, time: r.txn_time,
+      resolvedVoid: d?.resolvedVoid, presetVoid: presetVoidOf(d),
     };
   };
   const all = new Map<string, LinkCandidate>();
@@ -2197,6 +2210,7 @@ async function changedLedgerRows(db: any, rows: LedgerInsert[]): Promise<LedgerI
       if (
         prev &&
         row.kind === "card" &&
+        !d["reviewCleared"] &&
         (prev.linkedReversal || isExplicitReversal(prev.tradeStatus, prev.side)) &&
         (prev.status === "reversed" || prev.status === "failed") &&
         row.status === "success"
@@ -2274,6 +2288,8 @@ function markHangVoided(rows: CardTxn[], scopes?: unknown[]): CardTxn[] {
         pan4: t.pan4 ?? t.detail?.["pan4"],
         amount: t.amount,
         time: t.time,
+        resolvedVoid: t.detail?.["resolvedVoid"],
+        presetVoid: presetVoidOf(t.detail as any),
       };
     }),
   );
@@ -2757,4 +2773,131 @@ export async function cardBrandsByPan(): Promise<Record<string, string>> {
     if (brand) out[pan4] = brand;
   }
   return out;
+}
+
+
+/* ───────── Reversal review queue (admin) ───────── */
+
+export type ReversalReviewItem = {
+  accountId: string;
+  accountName: string;
+  reversalId: string;
+  amount: number;
+  time: number;
+  pan4: string;
+  merchant: string;
+  legacyId: string | null;
+  candidates: Array<{ txnId: string; time: number; tradeStatus: string; status: string; orderNo: string }>;
+};
+
+async function cycleCardRowsByAccount(db: any, accountId?: string) {
+  const { periodStart, periodEnd } = currentBybitCycle();
+  const out: any[] = [];
+  for (let from = 0; from < 20000; from += 1000) {
+    let q = db.from("bybit_card_txns")
+      .select("txn_id, account_id, merchant, amount, status, txn_time, pan4, txn_type, detail")
+      .gte("txn_time", periodStart).lt("txn_time", periodEnd);
+    if (accountId) q = q.eq("account_id", accountId);
+    const { data, error } = await q.order("txn_time", { ascending: true }).range(from, from + 999);
+    if (error) throw new Error(error.message);
+    out.push(...(data ?? []));
+    if ((data ?? []).length < 1000) break;
+  }
+  return out;
+}
+
+function reviewCandidate(r: any): LinkCandidate {
+  const d = r.detail ?? {};
+  const ids = cardLinkIds(d);
+  return {
+    id: String(r.txn_id), scope: r.account_id ?? "", orderNo: ids.orderNo, txnId: ids.txnId || String(r.txn_id),
+    tradeStatus: d.tradeStatus, side: d.side ?? r.txn_type, pan4: r.pan4 ?? d.pan4, amount: r.amount, time: r.txn_time,
+    resolvedVoid: d.resolvedVoid, presetVoid: presetVoidOf(d),
+  };
+}
+
+export async function listReversalReviews(): Promise<ReversalReviewItem[]> {
+  const db = await admin();
+  const rows = await cycleCardRowsByAccount(db);
+  const { data: accts } = await db.from("bybit_accounts").select("id, name");
+  const names = new Map((accts ?? []).map((a: any) => [a.id, a.name]));
+  const byAcc = new Map<string, any[]>();
+  for (const r of rows) {
+    const k = r.account_id ?? "";
+    if (!byAcc.has(k)) byAcc.set(k, []);
+    byAcc.get(k)!.push(r);
+  }
+  const out: ReversalReviewItem[] = [];
+  for (const [acc, list] of byAcc) {
+    const byId = new Map(list.map((r) => [String(r.txn_id), r]));
+    for (const rv of resolveReversals(list.map(reviewCandidate)).review) {
+      const rev = byId.get(rv.reversalId);
+      out.push({
+        accountId: acc, accountName: String(names.get(acc) ?? ""), reversalId: rv.reversalId,
+        amount: rv.amount, time: rv.time, pan4: rv.pan4, merchant: String(rev?.merchant ?? ""), legacyId: rv.legacyId,
+        candidates: rv.candidateIds.map((id) => {
+          const c = byId.get(id);
+          return {
+            txnId: id, time: Number(c?.txn_time ?? 0), tradeStatus: String(c?.detail?.tradeStatus ?? ""),
+            status: String(c?.status ?? ""), orderNo: cardLinkIds(c?.detail).orderNo,
+          };
+        }),
+      });
+    }
+  }
+  return out.sort((a, b) => b.time - a.time);
+}
+
+/** Admin decision: which purchase (or none) a reversal voided. Survives every sync. */
+export async function resolveReversalReview(input: {
+  accountId: string; reversalId: string; voidedId: string | null; userId: string;
+}): Promise<{ ok: true }> {
+  const db = await admin();
+  const rows = await cycleCardRowsByAccount(db, input.accountId);
+  const byId = new Map(rows.map((r) => [String(r.txn_id), r]));
+  const rev = byId.get(input.reversalId);
+  if (!rev || !isExplicitReversal(rev.detail?.tradeStatus, rev.detail?.side ?? rev.txn_type)) {
+    throw new Error("سجل العكس غير موجود");
+  }
+  // Candidates: same account/card/amount purchases within the link window.
+  const cents = (v: unknown) => Math.round(Math.abs(Number(v) || 0) * 100);
+  const rt = Number(rev.txn_time);
+  const cands = rows.filter((a) => {
+    const side = String(a.detail?.side ?? a.txn_type ?? "");
+    if (side !== "1" && side !== "") return false;
+    if (String(a.detail?.tradeStatus ?? "") === "2") return false;
+    if (String(a.pan4 ?? "") !== String(rev.pan4 ?? "") || cents(a.amount) !== cents(rev.amount)) return false;
+    const at = Number(a.txn_time);
+    return at > 0 && at <= rt && rt - at <= REVERSAL_LINK_WINDOW_MS;
+  });
+  if (input.voidedId && !cands.some((c) => String(c.txn_id) === input.voidedId)) {
+    throw new Error("العملية المختارة ليست من المرشحات");
+  }
+  const now = new Date().toISOString();
+  const by = `admin:${input.userId}`;
+  const upd = async (id: string, patch: any) => {
+    const { error } = await db.from("bybit_card_txns").update(patch).eq("txn_id", id).eq("account_id", input.accountId);
+    if (error) throw new Error(error.message);
+  };
+  await upd(input.reversalId, {
+    detail: { ...(rev.detail ?? {}), resolvedVoid: input.voidedId ?? "none", resolvedBy: by, resolvedAt: now },
+  });
+  for (const c of cands) {
+    const id = String(c.txn_id);
+    const d = { ...(c.detail ?? {}) };
+    if (id === input.voidedId) {
+      await upd(id, { status: "failed", detail: { ...d, linkedReversal: 1, linkedBy: by, reviewCleared: null } });
+    } else if (d.linkedReversal && !(String(d.linkedBy ?? "") && !String(d.linkedBy).startsWith("admin:"))) {
+      // undo an automatic (or earlier admin) mark; a manual owner confirmation is never touched
+      delete d.linkedReversal; delete d.linkedBy;
+      const outcome = cardRecordOutcome(d.tradeStatus, String(d.side ?? c.txn_type ?? ""), cryptoSoldOf(d));
+      await upd(id, {
+        status: outcome === "ok" ? "success" : outcome === "refund" ? "refund" : "failed",
+        detail: { ...d, reviewCleared: now },
+      });
+    }
+  }
+  await mirrorStoredCardRows(db, input.accountId, [input.reversalId, ...cands.map((c) => String(c.txn_id))]);
+  spendCache.clear();
+  return { ok: true };
 }

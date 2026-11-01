@@ -579,8 +579,8 @@ describe("side-2 reversal without a shared id", () => {
   it("voids the authorisation it follows seconds later", () => {
     expect(sumSpend([mk("a", "1", T), mk("r", "2", T + 6000)], 0, 0).monthSpend).toBe(0);
   });
-  it("does not guess which of two authorisations a side-2 event reverses", () => {
-    expect(sumSpend([mk("a", "1", T), mk("b", "1", T + 1000), mk("r", "2", T + 6000)], 0, 0).monthSpend).toBeCloseTo(704.4);
+  it("ambiguous side-2 event subtracts its amount once from spend without picking a purchase", () => {
+    expect(sumSpend([mk("a", "1", T), mk("b", "1", T + 1000), mk("r", "2", T + 6000)], 0, 0).monthSpend).toBeCloseTo(352.2);
   });
   it("ignores other cards, amounts and old authorisations", () => {
     const l = [mk("a", "1", T, 352.2, "0540"), mk("b", "1", T, 10), mk("c", "1", T - 61 * 60_000), mk("r", "2", T + 6000)];
