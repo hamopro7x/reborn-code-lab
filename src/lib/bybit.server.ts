@@ -12,6 +12,8 @@ import {
   isExplicitReversal,
   cardLinkIds,
   findLinkedReversals,
+  presetVoidOf,
+  resolveReversals,
   REVERSAL_LINK_WINDOW_MS,
   type LinkCandidate,
   cardPurchaseGroup,
@@ -1195,6 +1197,16 @@ async function linkReversalsBeforeSave(db: any, payload: any[], accountId?: stri
   for (const r of payload) {
     const prev = stored.get(String(r.txn_id));
     const pd = prev?.detail ?? {};
+    // Admin decisions and manual confirmations live on the stored detail and
+    // must survive every resync that returns a fresh Bybit snapshot.
+    if (prev && (pd.resolvedVoid || pd.linkedBy || pd.reviewCleared)) {
+      r.detail = {
+        ...(r.detail ?? {}),
+        ...(pd.resolvedVoid ? { resolvedVoid: pd.resolvedVoid, resolvedBy: pd.resolvedBy ?? null, resolvedAt: pd.resolvedAt ?? null } : {}),
+        ...(pd.linkedBy ? { linkedBy: pd.linkedBy } : {}),
+        ...(pd.reviewCleared ? { reviewCleared: pd.reviewCleared } : {}),
+      };
+    }
     if (prev && isExplicitReversal(pd.tradeStatus, pd.side) && !isExplicitReversal(r.detail?.tradeStatus, r.detail?.side)) {
       r.__keepStored = true;
     } else if (prev && pd.linkedReversal && r.status !== "refund") {
@@ -1211,6 +1223,7 @@ async function linkReversalsBeforeSave(db: any, payload: any[], accountId?: stri
     return {
       id, scope: accountId ?? "", orderNo: ids.orderNo, txnId: ids.txnId || id, tradeStatus: d?.tradeStatus, side: d?.side ?? r.txn_type,
       pan4: r.pan4 ?? d?.pan4, amount: r.amount, time: r.txn_time,
+      resolvedVoid: d?.resolvedVoid, presetVoid: presetVoidOf(d),
     };
   };
   const all = new Map<string, LinkCandidate>();
@@ -2274,6 +2287,8 @@ function markHangVoided(rows: CardTxn[], scopes?: unknown[]): CardTxn[] {
         pan4: t.pan4 ?? t.detail?.["pan4"],
         amount: t.amount,
         time: t.time,
+        resolvedVoid: t.detail?.["resolvedVoid"],
+        presetVoid: presetVoidOf(t.detail as any),
       };
     }),
   );
