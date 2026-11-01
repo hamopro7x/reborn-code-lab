@@ -5,7 +5,7 @@ import { resolveReversals, type LinkCandidate } from "./bybit-spend";
 // R side-2 reversal ~21 min later with its own ids. Two accounts synced together.
 function group(scope: string, base: number, amt: number, tag: string, extra: Partial<Record<"A"|"B"|"R", Partial<LinkCandidate>>> = {}): LinkCandidate[] {
   const row = (id: string, side: string, ts: string, t: number, k: "A"|"B"|"R"): LinkCandidate => ({
-    id, scope, orderNo: `o-${id}`, txnId: id, side, tradeStatus: ts, pan4: "0540", amount: amt, time: base + t, ...extra[k],
+    id, scope, orderNo: `o-${id}`, txnId: id, side, tradeStatus: ts, pan4: "0540", amount: amt, time: 1_793_000_000_000 + base + t, ...extra[k],
   });
   return [row(`${tag}A`, "1", "1", 0, "A"), row(`${tag}B`, "1", "0", 3000, "B"), row(`${tag}R`, "2", "1", 21 * 60_000, "R")];
 }
