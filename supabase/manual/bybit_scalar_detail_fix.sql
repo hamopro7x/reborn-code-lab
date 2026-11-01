@@ -33,15 +33,15 @@ BEGIN
     FROM unnest(ARRAY['txnId','orderNo','paymentId']) k JOIN public.bybit_card_txns a
       ON a.detail @> jsonb_build_object(k,e.detail->k)
     WHERE a.account_id=p_account AND COALESCE(NULLIF(a.detail->>'side',''),a.txn_type)='1'
-      AND a.pan4=e.pan4 AND a.merchant=e.merchant AND abs(a.amount)=abs(e.amount)
-      AND a.txn_time<=e.txn_time AND NULLIF(e.detail->>k,'') IS NOT NULL
+      AND NULLIF(e.detail->>k,'') IS NOT NULL
       AND lower(e.detail->>k) NOT IN ('0','null','undefined','none','-','n/a');
     chosen := NULL;
     -- Preserve the explicitly confirmed 31 October correction without relinking it.
     SELECT a.txn_id INTO chosen FROM public.bybit_card_txns a
       WHERE a.account_id=p_account AND a.txn_id=ANY(ids)
       AND public.bybit_trusted_manual(a)
-      AND (a.detail->>'linkedBy'='manual-20261031'
+      AND ((a.txn_id='3000000683626441' AND e.txn_id='3000000683640474'
+          AND a.account_id='fffe1106-4336-446d-bb51-ad9ff9596d42'::uuid)
         OR (a.txn_id='3000000683749966' AND e.txn_id='3000000683764413')
         OR (a.txn_id='3000000683935780' AND e.txn_id='3000000683972959'))
       ORDER BY a.txn_id LIMIT 1;
@@ -109,6 +109,8 @@ BEGIN
     IF chosen IS NOT NULL OR public.bybit_trusted_manual(c) THEN
       result_status := 'reversed';
       result_detail := result_detail || jsonb_build_object('reconciliationState','resolved','resolutionTarget',c.txn_id);
+    ELSIF baseline IN ('reversed','failed','refund') THEN
+      result_detail := result_detail || jsonb_build_object('reconciliationState','clear');
     ELSIF pending_review THEN
       result_status := 'review';
       result_detail := result_detail || jsonb_build_object('reconciliationState','needs_review');
@@ -159,7 +161,7 @@ BEGIN
       -- Preserve derived flags, not stale provider fields; strip request timestamps
       -- so an unchanged response cannot dirty every row on every polling tick.
       SELECT next_detail || coalesce(jsonb_object_agg(key,value),'{}') INTO next_detail
-        FROM jsonb_each(prev.detail) WHERE key IN
+        FROM jsonb_each(CASE WHEN jsonb_typeof(prev.detail)='object' THEN prev.detail ELSE '{}'::jsonb END) WHERE key IN
           ('reconciliationState','confirmationState','resolutionTarget','projectedStatus','linkedBy','linkedReversal');
       IF prev.detail ? 'linkedBy' THEN next_detail:=next_detail||jsonb_build_object('linkedBy',prev.detail->'linkedBy'); END IF;
       IF prev.detail ? 'linkedReversal' THEN next_detail:=next_detail||jsonb_build_object('linkedReversal',prev.detail->'linkedReversal'); END IF;

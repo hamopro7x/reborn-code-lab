@@ -88,8 +88,7 @@ RETURNS text[] LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public AS $$
    UNION
    SELECT e.txn_id FROM public.bybit_card_txns a CROSS JOIN unnest(ARRAY['txnId','orderNo','paymentId']) k
      JOIN public.bybit_card_txns e ON e.detail @> jsonb_build_object(k,a.detail->k)
-       AND e.account_id=a.account_id AND e.pan4=a.pan4 AND e.merchant=a.merchant AND abs(e.amount)=abs(a.amount)
-       AND e.txn_time>=a.txn_time
+       AND e.account_id=a.account_id
      WHERE a.account_id=p_account AND a.txn_id=ANY(p_ids)
        AND nullif(a.detail->>k,'') IS NOT NULL
        AND lower(a.detail->>k) NOT IN ('0','null','undefined','none','-','n/a')
@@ -127,15 +126,15 @@ BEGIN
     FROM unnest(ARRAY['txnId','orderNo','paymentId']) k JOIN public.bybit_card_txns a
       ON a.detail @> jsonb_build_object(k,e.detail->k)
     WHERE a.account_id=p_account AND COALESCE(NULLIF(a.detail->>'side',''),a.txn_type)='1'
-      AND a.pan4=e.pan4 AND a.merchant=e.merchant AND abs(a.amount)=abs(e.amount)
-      AND a.txn_time<=e.txn_time AND NULLIF(e.detail->>k,'') IS NOT NULL
+      AND NULLIF(e.detail->>k,'') IS NOT NULL
       AND lower(e.detail->>k) NOT IN ('0','null','undefined','none','-','n/a');
     chosen := NULL;
     -- Preserve the explicitly confirmed 31 October correction without relinking it.
     SELECT a.txn_id INTO chosen FROM public.bybit_card_txns a
       WHERE a.account_id=p_account AND a.txn_id=ANY(ids)
       AND public.bybit_trusted_manual(a)
-      AND (a.detail->>'linkedBy'='manual-20261031'
+      AND ((a.txn_id='3000000683626441' AND e.txn_id='3000000683640474'
+          AND a.account_id='fffe1106-4336-446d-bb51-ad9ff9596d42'::uuid)
         OR (a.txn_id='3000000683749966' AND e.txn_id='3000000683764413')
         OR (a.txn_id='3000000683935780' AND e.txn_id='3000000683972959'))
       ORDER BY a.txn_id LIMIT 1;
@@ -175,7 +174,7 @@ BEGIN
   FOR c IN SELECT * FROM public.bybit_card_txns WHERE account_id=p_account AND txn_id=ANY(dirty)
     AND COALESCE(NULLIF(detail->>'side',''),txn_type) NOT IN ('2','3')
   LOOP
-    d := c.detail;
+    d := CASE WHEN jsonb_typeof(c.detail)='object' THEN c.detail ELSE '{}'::jsonb END;
     baseline := CASE
       WHEN COALESCE(d->>'side',c.txn_type) IN ('4','5','6','8','9','10','11') OR d->>'tradeStatus'='5' THEN 'refund'
       WHEN d->>'tradeStatus' IN ('3','4') THEN 'reversed'
@@ -203,6 +202,8 @@ BEGIN
     IF chosen IS NOT NULL OR public.bybit_trusted_manual(c) THEN
       result_status := 'reversed';
       result_detail := result_detail || jsonb_build_object('reconciliationState','resolved','resolutionTarget',c.txn_id);
+    ELSIF baseline IN ('reversed','failed','refund') THEN
+      result_detail := result_detail || jsonb_build_object('reconciliationState','clear');
     ELSIF pending_review THEN
       result_status := 'review';
       result_detail := result_detail || jsonb_build_object('reconciliationState','needs_review');
@@ -248,12 +249,12 @@ BEGIN
       -- The account fence rejects stale in-flight responses even after a no-op poll.
       -- Equality is allowed: different pages/types can share one request timestamp.
       IF observed<coalesce(fence,'-infinity'::timestamptz) OR observed<=coalesce(prev.last_observed_at,'-infinity'::timestamptz) THEN CONTINUE; END IF;
-      next_detail:=(r->'detail')-'observedAt';
-      IF next_detail ? 'raw' THEN next_detail:=jsonb_set(next_detail,'{raw}',(next_detail->'raw')-'__observedAt'); END IF;
+      next_detail:=CASE WHEN jsonb_typeof(r->'detail')='object' THEN (r->'detail')-'observedAt' ELSE '{}'::jsonb END;
+      IF jsonb_typeof(next_detail->'raw')='object' THEN next_detail:=jsonb_set(next_detail,'{raw}',(next_detail->'raw')-'__observedAt'); END IF;
       -- Preserve derived flags, not stale provider fields; strip request timestamps
       -- so an unchanged response cannot dirty every row on every polling tick.
       SELECT next_detail || coalesce(jsonb_object_agg(key,value),'{}') INTO next_detail
-        FROM jsonb_each(prev.detail) WHERE key IN
+        FROM jsonb_each(CASE WHEN jsonb_typeof(prev.detail)='object' THEN prev.detail ELSE '{}'::jsonb END) WHERE key IN
           ('reconciliationState','confirmationState','resolutionTarget','projectedStatus','linkedBy','linkedReversal');
       IF prev.detail ? 'linkedBy' THEN next_detail:=next_detail||jsonb_build_object('linkedBy',prev.detail->'linkedBy'); END IF;
       IF prev.detail ? 'linkedReversal' THEN next_detail:=next_detail||jsonb_build_object('linkedReversal',prev.detail->'linkedReversal'); END IF;
@@ -268,8 +269,8 @@ BEGIN
         WHERE account_id=p_account AND txn_id=r->>'txn_id';
     ELSE
       -- Never lose a newly discovered ID just because another page finished first.
-      next_detail:=(r->'detail')-'observedAt';
-      IF next_detail ? 'raw' THEN next_detail:=jsonb_set(next_detail,'{raw}',(next_detail->'raw')-'__observedAt'); END IF;
+      next_detail:=CASE WHEN jsonb_typeof(r->'detail')='object' THEN (r->'detail')-'observedAt' ELSE '{}'::jsonb END;
+      IF jsonb_typeof(next_detail->'raw')='object' THEN next_detail:=jsonb_set(next_detail,'{raw}',(next_detail->'raw')-'__observedAt'); END IF;
       INSERT INTO public.bybit_card_txns(account_id,txn_id,merchant,amount,currency,status,txn_time,pan4,txn_type,detail,last_observed_at)
         VALUES(p_account,r->>'txn_id',r->>'merchant',(r->>'amount')::numeric,r->>'currency',r->>'status',
           (r->>'txn_time')::bigint,r->>'pan4',r->>'txn_type',next_detail,observed);
