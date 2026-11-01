@@ -220,30 +220,17 @@ export const REVERSAL_LINK_WINDOW_MS = 60 * 60 * 1000;
  */
 export function findLinkedReversals(rows: Iterable<LinkCandidate>, usedReversals?: Set<string>): Set<string> {
   const list = [...rows];
-  const keys = new Set<string>();
-  const reversalIds = new Set<string>();
-  for (const r of list) {
-    if (!isExplicitReversal(r.tradeStatus, r.side)) continue;
-    reversalIds.add(r.id);
-    const scope = text(r.scope);
-    const o = cleanId(r.orderNo);
-    const t = cleanId(r.txnId);
-    if (o) keys.add(`${scope}|o:${o}`);
-    if (t) keys.add(`${scope}|t:${t}`);
-  }
   const out = new Set<string>();
-  if (!keys.size) return out;
-  for (const r of list) {
-    if (reversalIds.has(r.id)) continue;
-    if (!AUTH_SIDES.has(text(r.side).trim())) continue; // clearings/refunds are never voided here
-    if (text(r.tradeStatus).trim() === "2") continue; // declined already failed
-    const scope = text(r.scope);
-    const o = cleanId(r.orderNo);
-    const t = cleanId(r.txnId);
-    if ((o && keys.has(`${scope}|o:${o}`)) || (t && keys.has(`${scope}|t:${t}`))) out.add(r.id);
+  for (const event of list) {
+    if (!isExplicitReversal(event.tradeStatus, event.side)) continue;
+    const candidates = list.filter((r) => r.id !== event.id && text(r.scope) === text(event.scope) &&
+      AUTH_SIDES.has(text(r.side).trim()) && !isExplicitReversal(r.tradeStatus, r.side) && text(r.tradeStatus) !== "2" &&
+      ((cleanId(event.orderNo) && cleanId(event.orderNo) === cleanId(r.orderNo)) ||
+       (cleanId(event.txnId) && cleanId(event.txnId) === cleanId(r.txnId))));
+    if (candidates.length !== 1) continue;
+    out.add(candidates[0].id);
+    usedReversals?.add(event.id);
   }
-
-
   return out;
 }
 
@@ -490,7 +477,9 @@ export function canonicalize(rows: Iterable<SpendRow>): {
   let lastTxnTime = 0;
   const seenRaw = new Set<string>();
   const list = [...rows];
-  const linkVoided = findLinkedReversals(list.map(linkCandidateOfSpendRow));
+  // Persisted projections already include immutable decisions. Never override
+  // an admin decision with a second read-time association.
+  const linkVoided = findLinkedReversals(list.filter((r) => !r.detail?.["confirmationState"]).map(linkCandidateOfSpendRow));
   const reviewIds = new Set<string>();
   for (const event of list) {
     if (!isCardReversalEvent(event.detail?.["side"] || event.type)) continue;
@@ -508,7 +497,7 @@ export function canonicalize(rows: Iterable<SpendRow>): {
     const time = Number(row.time ?? 0);
     if (time > lastTxnTime) lastTxnTime = time;
 
-    const canonicalId = getCanonicalTransactionIdentity(row);
+    const canonicalId = `${text(row.scope)}|${getCanonicalTransactionIdentity(row)}`;
     const kind = linkVoided.has(text(row.txnId)) || reviewIds.has(text(row.txnId)) ? "excluded" : spendKind(row);
     if (kind === "excluded") {
       excluded.push({ row, canonicalId, reason: "refund/reversed/failed" });
@@ -548,7 +537,7 @@ export function canonicalize(rows: Iterable<SpendRow>): {
   // authorised (never settled) voids that purchase: Bybit shows it struck
   // through as «معكوسة» and nothing was charged.
   for (const ex of excluded) {
-    if (!isBusinessIdentity(ex.canonicalId)) continue;
+    if (!isBusinessIdentity(ex.canonicalId.split("|").slice(1).join("|"))) continue;
     const d = ex.row.detail ?? {};
     if (cardRecordOutcome(d["tradeStatus"], text(d["side"]) || text(ex.row.type), cryptoSoldOf(d)) === "failed") continue;
     const txn = transactions.get(ex.canonicalId);

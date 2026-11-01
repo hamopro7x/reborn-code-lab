@@ -145,6 +145,7 @@ CREATE OR REPLACE FUNCTION public.bybit_ingest_confirmed(p_account uuid,p_rows j
 RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
 DECLARE r jsonb; prev public.bybit_card_txns; observed timestamptz; n integer:=0;
 BEGIN
+  IF p_account IS NULL THEN RAISE EXCEPTION 'account required'; END IF;
   IF jsonb_typeof(p_rows)<>'array' OR jsonb_array_length(p_rows)>2000 THEN RAISE EXCEPTION 'invalid batch'; END IF;
   PERFORM pg_advisory_xact_lock(hashtextextended(p_account::text,0));
   FOR r IN SELECT value FROM jsonb_array_elements(p_rows) LOOP

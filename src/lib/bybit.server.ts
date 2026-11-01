@@ -770,7 +770,7 @@ async function computeSpendUncached(
       for (const row of rows) {
         // Guards against a row appearing in two pages when the archive grows
         // between requests; the spend engine de-duplicates purchases separately.
-        const rowKey = `${row.txn_id ?? ""}|${row.txn_time ?? ""}`;
+        const rowKey = `${row.account_id ?? ""}|${row.txn_id ?? ""}|${row.txn_time ?? ""}`;
         if (seenRows.has(rowKey)) continue;
         seenRows.add(rowKey);
         if (isCardReversalEvent(row.detail?.side || row.txn_type) || cardConfirmed(row)) collected.push(row);
@@ -786,7 +786,7 @@ async function computeSpendUncached(
     txnId: String(row.txn_id ?? ""),
     amount: num(row.amount),
     time: Number(row.txn_time ?? 0),
-    status: row.detail?.reconciliationState === "needs_review" ? "review" : row.detail?.resolutionTarget ? "reversed" : row.status,
+    status: row.detail?.projectedStatus ?? row.status,
     type: row.txn_type,
     currency: row.currency,
     pan4: row.pan4,
@@ -1197,7 +1197,7 @@ function mapStoredRow(r: any): CardTxn {
     pan4: r.pan4 ?? "",
     type: r.txn_type ?? "",
     detail,
-    reversed: outcome === "reversed" || r.status === "reversed",
+    reversed: detail.projectedStatus === "success" ? false : outcome === "reversed" || r.status === "reversed",
   };
 }
 
@@ -2456,7 +2456,7 @@ export async function fetchLedgerPage(opts: {
       out = out.eq("kind", "card");
       for (const f of LEDGER_CARD_FILTERS.success) out = f.startsWith("or(") ? out.or(f.slice(3, -1)) : out.is("detail->>linkedReversal", null);
     } else if (g === "txns" && st === "failed")
-      out = out.eq("kind", "card").or(LEDGER_CARD_FILTERS.failed.slice(3, -1));
+      out = out.eq("kind", "card").neq("status", "review").or(LEDGER_CARD_FILTERS.failed.slice(3, -1));
     else if (g !== "txns" && SUB_KIND[st] && (GROUP_KINDS[g] as string[]).includes(SUB_KIND[st]))
       out = out.eq("kind", SUB_KIND[st]);
     else out = out.in("kind", GROUP_KINDS[g] as string[]);
