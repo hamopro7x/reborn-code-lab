@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { cardConfirmed } from "./bybit-confirmation";
+import { cardConfirmed, archivedCardReadable, legacyCardReadable } from "./bybit-confirmation";
 
 const account = "00000000-0000-0000-0000-000000000001";
 const other = "00000000-0000-0000-0000-000000000002";
@@ -49,6 +49,17 @@ describe("durable Bybit confirmation and atomic reconciliation",()=>{
     expect(cardConfirmed({created_at,confirmed_at:"2026-11-01T00:00:29.999Z"},Date.parse("2026-11-01T00:01Z"))).toBe(false);
     expect(cardConfirmed({created_at,confirmed_at:"2026-11-01T00:00:30.000Z"},Date.parse("2026-11-01T00:01Z"))).toBe(true);
     expect(cardConfirmed({created_at},Date.parse("2026-11-01T01:00Z"))).toBe(false);
+  });
+  it("restores pre-rollout saved records without falsely confirming them",()=>{
+    const legacy={created_at:"2026-11-01T02:14:16.360441Z",confirmed_at:null,detail:{side:"1",linkedBy:"manual-user-20261101",linkedReversal:1}};
+    expect(archivedCardReadable(legacy,Date.parse("2026-11-01T02:46Z"))).toBe(true);
+    expect(cardConfirmed(legacy,Date.parse("2026-11-01T02:46Z"))).toBe(false);
+    expect(legacy.detail.linkedBy).toBe("manual-user-20261101");
+  });
+  it("does not admit a new purchase or an explicitly waiting old purchase through legacy reads",()=>{
+    expect(legacyCardReadable({created_at:"2026-11-01T02:24:55Z",detail:{}})).toBe(false);
+    expect(archivedCardReadable({created_at:"2026-11-01T02:14:16Z",detail:{confirmationState:"waiting"}})).toBe(false);
+    expect(archivedCardReadable({detail:{}})).toBe(false);
   });
   it("replay preserves first_seen and stale fetch cannot replace status",async()=>{
     const r=raw("a"); await ingest([r]);

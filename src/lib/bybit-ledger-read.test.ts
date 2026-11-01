@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { requests, response } = vi.hoisted(() => ({
   requests: [] as URL[],
-  response: { fail: false, pastEnd: false },
+  response: { fail: false, pastEnd: false, createdAt: "2026-10-31T18:17:50Z", confirmationState: null as string | null },
 }));
 
 vi.mock("@/integrations/supabase/client.server", async () => {
@@ -26,9 +26,15 @@ vi.mock("@/integrations/supabase/client.server", async () => {
           const ledger = {
             id: "movement", account_id: "account", kind: "card", status: "success", direction: "out",
             ref_id: "txn", title: "TikTok", amount: -12, currency: "USD", fee: 0,
-            occurred_at: "2026-10-31T18:17:50Z", detail: { side: "1", tradeStatus: "1" },
+            created_at: response.createdAt,
+            occurred_at: "2026-10-31T18:17:50Z", detail: { side: "1", tradeStatus: "1", confirmationState: response.confirmationState },
           };
-          const rows = table === "bybit_ledger" ? [ledger]
+          const filterKey = table === "bybit_ledger" ? "or" : "bybit_ledger.or";
+          const visibility = url.searchParams.getAll(filterKey).find((f) => f.includes("confirmationState"));
+          const readable = !visibility || response.confirmationState === "confirmed" ||
+            (visibility.includes("created_at.lt.2026-11-01T02:24:55Z") && response.confirmationState == null &&
+              Date.parse(response.createdAt) < Date.parse("2026-11-01T02:24:55Z"));
+          const rows = !readable ? [] : table === "bybit_ledger" ? [ledger]
             : table === "work_txn_assignments" ? [{
               id: "assignment", ledger_id: "movement", shift_id: "shift", user_id: "employee",
               kind: "card", assign_mode: "auto", assigned_at: ledger.occurred_at,
@@ -53,6 +59,8 @@ describe("saved Bybit movements remain readable in central and shift lists", () 
     requests.length = 0;
     response.fail = false;
     response.pastEnd = false;
+    response.createdAt = "2026-10-31T18:17:50Z";
+    response.confirmationState = null;
   });
   afterEach(() => vi.useRealTimers());
 
@@ -86,6 +94,18 @@ describe("saved Bybit movements remain readable in central and shift lists", () 
   it("reports a ledger read failure rather than returning an empty successful page", async () => {
     response.fail = true;
     await expect(fetchLedgerPage({ group: "txns" })).rejects.toThrow("ledger read unavailable");
+  });
+
+  it("keeps new unconfirmed cards out of central and employee reads",async()=>{
+    response.createdAt="2026-11-01T02:24:55Z";
+    expect((await fetchLedgerPage({group:"txns"})).total).toBe(0);
+    expect((await workTable({userId:"employee",shiftId:"shift"})).total).toBe(0);
+  });
+
+  it("never restores an explicitly waiting legacy card as successful work",async()=>{
+    response.confirmationState="waiting";
+    expect((await fetchLedgerPage({group:"txns"})).rows).toEqual([]);
+    expect((await workTable({userId:"employee",shiftId:"shift"})).rows).toEqual([]);
   });
 
   it("shows an empty page with the real total when the open page is past the end, not an error", async () => {
