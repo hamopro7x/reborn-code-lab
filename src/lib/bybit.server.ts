@@ -2419,15 +2419,15 @@ export async function fetchLedgerPage(opts: {
       .not("detail", "cs", '{"side":"2"}')
       .not("detail", "cs", '{"side":2}');
     if (opts.hideReversed) out = out.or("status.is.null,status.neq.reversed");
-    if (g === "txns" && st === "review") out = out.eq("kind", "card").eq("status", "review");
+    if (g === "txns" && st === "review") out = out.eq("kind", "card").or(LEDGER_CARD_FILTERS.review.slice(3, -1));
     else if (g === "txns" && st === "refund") out = out.in("kind", ["card", "refund"]).or(LEDGER_CARD_FILTERS.refund.slice(3, -1));
     // Same groups as cardPurchasePresenter: ناجحة = everything not failed/reversed
     // (pending included), فاشلة = failed/reversed/linkedReversal.
     else if (g === "txns" && st === "success") {
       out = out.eq("kind", "card");
-      for (const f of LEDGER_CARD_FILTERS.success) out = f.startsWith("or(") ? out.or(f.slice(3, -1)) : out.is("detail->>linkedReversal", null);
+      for (const f of LEDGER_CARD_FILTERS.success) out = f.startsWith("or(") ? out.or(f.slice(3, -1)) : out.is("detail->>resolutionTarget", null);
     } else if (g === "txns" && st === "failed")
-      out = out.eq("kind", "card").neq("status", "review").or(LEDGER_CARD_FILTERS.failed.slice(3, -1));
+      out = out.eq("kind", "card").or(LEDGER_CARD_FILTERS.failed.slice(3, -1));
     else if (g !== "txns" && SUB_KIND[st] && (GROUP_KINDS[g] as string[]).includes(SUB_KIND[st]))
       out = out.eq("kind", SUB_KIND[st]);
     else out = out.in("kind", GROUP_KINDS[g] as string[]);

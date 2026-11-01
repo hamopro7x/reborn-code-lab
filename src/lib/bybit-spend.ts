@@ -760,13 +760,19 @@ export function cardPurchaseGroup(input: { kind?: unknown; status?: unknown; rev
  */
 const LEDGER_REFUND_SIDES = "(4,5,6,8,9,10,11)";
 const notRefundSide = `or(detail->>side.is.null,detail->>side.not.in.${LEDGER_REFUND_SIDES})`;
+const noLegacyReview = "or(detail->>linkedReversal.is.null,detail->>linkedReversal.neq.1,detail->>linkedBy.not.is.null,detail->>resolutionTarget.not.is.null,detail->>reconciliationState.eq.clear)";
+const durableReversalFilter = "or(detail->>resolutionTarget.not.is.null,and(detail->>linkedReversal.eq.1,detail->>linkedBy.in.(manual-20261031,manual-user-20261101,admin-review,provider-shared-id)))";
+const noRawFailure = `and(or(detail->>tradeStatus.is.null,detail->>tradeStatus.not.in.(2,3,4)),or(detail->>side.is.null,detail->>side.neq.2))`;
 export const LEDGER_CARD_FILTERS = {
   failed:
-    "or(status.in.(failed,reversed),detail->>linkedReversal.not.is.null,detail->>side.eq.2," +
+    `or(and(status.in.(failed,reversed),${noLegacyReview},or(detail->>reconciliationState.is.null,detail->>reconciliationState.neq.needs_review)),${durableReversalFilter},detail->>side.eq.2,` +
     `and(detail->>tradeStatus.in.(2,3,4),${notRefundSide}))`,
+  review: `or(and(status.eq.review,${noRawFailure}),and(detail->>reconciliationState.eq.needs_review,${noRawFailure}),and(detail->>linkedReversal.eq.1,or(detail->>linkedBy.is.null,detail->>linkedBy.eq.),detail->>resolutionTarget.is.null,or(detail->>reconciliationState.is.null,detail->>reconciliationState.neq.clear),${noRawFailure}))`,
   success: [
     "or(status.is.null,status.not.in.(failed,reversed,refund,review,holding))",
-    "detail->>linkedReversal.is.null",
+    `or(detail->>linkedReversal.is.null,and(detail->>reconciliationState.eq.clear,detail->>resolutionTarget.is.null,or(detail->>linkedBy.is.null,detail->>linkedBy.not.in.(manual-20261031,manual-user-20261101,admin-review,provider-shared-id))))`,
+    "or(detail->>reconciliationState.is.null,detail->>reconciliationState.neq.needs_review)",
+    "detail->>resolutionTarget.is.null",
     `or(detail->>side.is.null,detail->>side.not.in.(2,4,5,6,8,9,10,11))`,
     "or(detail->>tradeStatus.is.null,detail->>tradeStatus.not.in.(2,3,4,5))",
   ],
