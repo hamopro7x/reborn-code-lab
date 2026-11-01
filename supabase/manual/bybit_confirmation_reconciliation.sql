@@ -101,7 +101,7 @@ GRANT EXECUTE ON FUNCTION public.bybit_affected_events(uuid,text[]) TO service_r
 
 CREATE OR REPLACE FUNCTION public.bybit_reconcile_dirty(p_account uuid,p_ids text[])
 RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
-DECLARE e record; ids text[]; strong_ids text[]; chosen text; c record; d jsonb;
+DECLARE e record; ids text[]; strong_ids text[]; chosen text; c public.bybit_card_txns; d jsonb;
         result_status text; result_detail jsonb; baseline text; pending_review boolean; dirty text[]; events text[]; old_ids text[];
 BEGIN
   IF cardinality(p_ids)=0 OR p_ids IS NULL THEN RETURN; END IF;
@@ -136,7 +136,11 @@ BEGIN
     -- Preserve the explicitly confirmed 31 October correction without relinking it.
     SELECT a.txn_id INTO chosen FROM public.bybit_card_txns a
       WHERE a.account_id=p_account AND a.txn_id=ANY(ids)
-      AND public.bybit_trusted_manual(a) ORDER BY a.txn_id LIMIT 1;
+      AND public.bybit_trusted_manual(a)
+      AND (a.detail->>'linkedBy'='manual-20261031'
+        OR (a.txn_id='3000000683749966' AND e.txn_id='3000000683764413')
+        OR (a.txn_id='3000000683935780' AND e.txn_id='3000000683972959'))
+      ORDER BY a.txn_id LIMIT 1;
     IF chosen IS NOT NULL THEN
       INSERT INTO public.bybit_reversal_cases(account_id,event_id,candidate_ids,state,target_id,source)
       VALUES(p_account,e.txn_id,ids,'resolved',chosen,(SELECT detail->>'linkedBy' FROM public.bybit_card_txns WHERE account_id=p_account AND txn_id=chosen))
@@ -248,9 +252,11 @@ BEGIN
       IF observed<coalesce(fence,'-infinity'::timestamptz) OR observed<=coalesce(prev.last_observed_at,'-infinity'::timestamptz) THEN CONTINUE; END IF;
       next_detail:=(r->'detail')-'observedAt';
       IF next_detail ? 'raw' THEN next_detail:=jsonb_set(next_detail,'{raw}',(next_detail->'raw')-'__observedAt'); END IF;
-      next_detail:=next_detail || (prev.detail - ARRAY['raw','observedAt','side','tradeStatus','txnId','orderNo','paymentId']);
-      -- Provider fields must win over stored fields; only provenance/projection flags survive.
-      next_detail:=next_detail || ((r->'detail') - ARRAY['raw','observedAt']);
+      -- Preserve derived flags, not stale provider fields; strip request timestamps
+      -- so an unchanged response cannot dirty every row on every polling tick.
+      SELECT next_detail || coalesce(jsonb_object_agg(key,value),'{}') INTO next_detail
+        FROM jsonb_each(prev.detail) WHERE key IN
+          ('reconciliationState','confirmationState','resolutionTarget','projectedStatus','linkedBy','linkedReversal');
       IF prev.detail ? 'linkedBy' THEN next_detail:=next_detail||jsonb_build_object('linkedBy',prev.detail->'linkedBy'); END IF;
       IF prev.detail ? 'linkedReversal' THEN next_detail:=next_detail||jsonb_build_object('linkedReversal',prev.detail->'linkedReversal'); END IF;
       next_status:=CASE WHEN public.bybit_trusted_manual(prev) THEN prev.status ELSE r->>'status' END;
@@ -306,7 +312,7 @@ RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
 DECLARE a public.bybit_card_txns; decision text;
 BEGIN
   IF NEW.kind NOT IN ('card','refund') THEN RETURN NEW; END IF;
-  PERFORM pg_advisory_xact_lock(hashtextextended(NEW.account_id::text,0));
+  IF NOT pg_try_advisory_xact_lock(hashtextextended(NEW.account_id::text,0)) THEN RAISE EXCEPTION 'account busy; retry' USING ERRCODE='55P03'; END IF;
   SELECT * INTO a FROM public.bybit_card_txns WHERE account_id=NEW.account_id AND txn_id=NEW.ref_id;
   IF NOT FOUND THEN RETURN NULL; END IF;
   IF COALESCE(NULLIF(a.detail->>'side',''),a.txn_type) IN ('2','3') THEN RETURN NULL; END IF;

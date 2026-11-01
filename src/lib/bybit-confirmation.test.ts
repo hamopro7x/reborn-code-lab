@@ -35,7 +35,7 @@ describe("durable Bybit confirmation and atomic reconciliation",()=>{
     await db.exec(readFileSync(new URL("../../supabase/manual/bybit_confirmation_reconciliation.sql",import.meta.url),"utf8"));
   });
   afterAll(async()=>{await db.close();});
-  beforeEach(async()=>{await db.exec("TRUNCATE bybit_reversal_audit,bybit_reversal_cases,bybit_ledger,bybit_card_txns; SELECT set_config('test.actor','',false)");});
+  beforeEach(async()=>{await db.exec("TRUNCATE bybit_ingest_fences,bybit_reversal_audit,bybit_reversal_cases,bybit_ledger,bybit_card_txns; SELECT set_config('test.actor','',false)");});
   it("holds an ancient payment first fetched now; no ledger entry",async()=>{
     await ingest([raw("a")]);
     const r=(await db.query<any>("select * from bybit_card_txns")).rows[0];
