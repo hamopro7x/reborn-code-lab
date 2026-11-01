@@ -1118,8 +1118,8 @@ async function persistCardTxns(rows: CardTxn[], accountId?: string, assign = tru
     if (accountId) {
       await mirrorStoredCardRows(supabaseAdmin, accountId, payload.map((r) => r.txn_id),
         (ledger) => upsertLedger(ledger, assign));
-      const { error: reconcileError } = await (supabaseAdmin as any).rpc("bybit_reconcile_account", { p_account: accountId });
-      if (reconcileError) throw new Error(reconcileError.message);
+      // Ingest reconciles dirty IDs and older affected candidates atomically.
+      // The ledger trigger projects newly mirrored rows; no second account scan.
     }
     spendCache.clear();
     return [];
@@ -2031,7 +2031,7 @@ async function upsertLedger(rows: LedgerInsert[], assign = true) {
     const { error } = await db
       .from("bybit_ledger")
       .upsert(pending.slice(i, i + 500), { onConflict: "account_id,kind,ref_id" });
-    if (error) console.error("bybit_ledger upsert failed:", error.message);
+    if (error) throw new Error(`bybit ledger save failed: ${error.message}`);
     else saved += Math.min(500, pending.length - i);
   }
 
@@ -2208,69 +2208,32 @@ async function assetLedgerRows(accountId: string): Promise<LedgerInsert[]> {
 export async function syncAccountLedger(accountId: string): Promise<number> {
   const db = await admin();
   const rows: LedgerInsert[] = [];
-
-  // 1) card movements (purchases / refunds / fees) from the archive.
-  // READ-ONLY: never refresh/modify the account's own archive from here.
-  // Incremental: the first run for an account walks the whole archive, later
-  // runs only re-read rows at or after the newest already-mirrored movement
-  // (minus a 48h overlap window so late status changes — pending -> success —
-  // are still picked up). Nothing is skipped, but a routine sync no longer
-  // re-reads and re-upserts tens of thousands of unchanged rows.
-  const { data: wm } = await db
-    .from("bybit_ledger")
-    .select("occurred_at")
-    .eq("account_id", accountId)
-    .in("kind", ["card", "refund"])
-    .order("occurred_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  let sinceMs = wm?.occurred_at ? new Date(wm.occurred_at).getTime() - 48 * 3600_000 : 0;
-
-  // Self-healing guard: the watermark above only re-reads recent rows, so any
-  // archive row that arrived with an OLDER timestamp (history backfill, late
-  // provider rows) would never be mirrored again. Whenever the archive holds
-  // more rows than the mirrored ledger for this account, fall back to a full
-  // pass so nothing is left behind. This is why transactions kept going
-  // missing from the central ledger and from the employee shift sheet.
-  if (sinceMs > 0) {
-    const [{ count: archiveCount }, { count: ledgerCount }] = await Promise.all([
-      db
-        .from("bybit_card_txns")
-        .select("txn_id", { count: "exact", head: true })
-        .eq("account_id", accountId),
-      db
-        .from("bybit_ledger")
-        .select("ref_id", { count: "exact", head: true })
-        .eq("account_id", accountId)
-        .in("kind", ["card", "refund"]),
-    ]);
-    if ((archiveCount ?? 0) > (ledgerCount ?? 0)) sinceMs = 0;
+  // Bounded repair, not archive/ledger count equality (side2 can never match).
+  // Stable ID cursor survives late inserts; restart the cycle after exhaustion.
+  const { periodStart, periodEnd } = currentBybitCycle();
+  const key = `bybit-ledger-repair-v2:${accountId}`;
+  const { data: state, error: stateError } = await db.from("site_settings")
+    .select("value").eq("key", key).maybeSingle();
+  if (stateError) throw new Error(stateError.message);
+  const cursor = state?.value?.cycle === periodStart ? String(state.value.after ?? "") : "";
+  let q = db.from("bybit_card_txns")
+    .select("txn_id, created_at, confirmed_at, merchant, amount, currency, status, txn_time, pan4, txn_type, detail")
+    .eq("account_id", accountId).gte("txn_time", periodStart).lt("txn_time", periodEnd);
+  if (cursor) q = q.gt("txn_id", cursor);
+  const { data: cards, error: cardError } = await q.order("txn_id", { ascending: true }).limit(200);
+  if (cardError) throw new Error(cardError.message);
+  const batch = cards ?? [];
+  for (const c of batch) {
+    if (cardConfirmed(c) && !isCardReversalEvent(c.detail?.side || c.txn_type)) rows.push(cardLedgerRow(accountId, c));
   }
-
-
-  const CHUNK = 1000;
-  const HARD_CAP = 200_000;
-  for (let from = 0; from < HARD_CAP; from += CHUNK) {
-    let cardQ = db
-      .from("bybit_card_txns")
-      .select("txn_id, created_at, confirmed_at, merchant, amount, currency, status, txn_time, pan4, txn_type, detail")
-      .eq("account_id", accountId);
-    if (sinceMs > 0) cardQ = cardQ.gte("txn_time", sinceMs);
-    const { data: cards } = await cardQ
-      .order("txn_time", { ascending: false })
-      .range(from, from + CHUNK - 1);
-    const batch = cards ?? [];
-    for (const c of batch) {
-      if (cardConfirmed(c) && !isCardReversalEvent(c.detail?.side || c.txn_type)) rows.push(cardLedgerRow(accountId, c));
-    }
-    if (batch.length < CHUNK) break;
-  }
-
+  const cardSaved = await upsertLedger(rows);
+  const { error: cursorError } = await db.from("site_settings").upsert({ key,
+    value: { cycle: periodStart, after: batch.length === 200 ? batch[batch.length - 1]?.txn_id : "" },
+  }, { onConflict: "key" });
+  if (cursorError) throw new Error(cursorError.message);
 
   // 2) on-chain + internal transfers + P2P (live from Bybit)
-  rows.push(...(await assetLedgerRows(accountId)));
-
-  return upsertLedger(rows);
+  return cardSaved + await upsertLedger(await assetLedgerRows(accountId));
 }
 
 /** Runs the ledger sync for every linked account. */
@@ -2582,9 +2545,12 @@ export async function resumeCardFollowup() {
   const accounts = await listAccounts();
   const { data: state, error } = await db.from("site_settings").select("value").eq("key", "bybit-confirm-followup-v1").maybeSingle();
   if (error) throw new Error(error.message);
-  let index = Number(state?.value?.account ?? 0);
-  let type = Number(state?.value?.type ?? 0);
-  let page = Math.max(1, Number(state?.value?.page ?? 1));
+  const cycle = currentBybitCycle().periodStart;
+  const sameCycle = state?.value?.cycle === cycle;
+  let index = sameCycle ? accounts.findIndex((a) => a.id === state?.value?.accountId) : 0;
+  if (index < 0) index = 0;
+  let type = sameCycle ? Number(state?.value?.type ?? 0) : 0;
+  let page = sameCycle ? Math.max(1, Number(state?.value?.page ?? 1)) : 1;
   if (index >= accounts.length) index = 0;
   if (type >= CARD_QUERY_TYPES.length) type = 0;
   const account = accounts[index];
@@ -2604,6 +2570,6 @@ export async function resumeCardFollowup() {
     }
     if (type >= CARD_QUERY_TYPES.length) { index++; type=0; }
   }
-  const { error: saveError } = await db.from("site_settings").upsert({ key: "bybit-confirm-followup-v1", value: { account: index, type, page } }, { onConflict: "key" });
+  const { error: saveError } = await db.from("site_settings").upsert({ key: "bybit-confirm-followup-v1", value: { cycle, accountId: accounts[index % accounts.length]?.id, type, page } }, { onConflict: "key" });
   if (saveError) throw new Error(saveError.message);
 }
