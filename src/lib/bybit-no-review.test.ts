@@ -8,15 +8,15 @@ const groups = [
   { amount: 3.08, ids: ["3000000683935780", "3000000683935812", "3000000683972959"] },
 ];
 
-describe("Bybit accounting without the removed review system", () => {
+describe("Bybit ambiguous reversals are held, never guessed", () => {
   for (const { amount, ids } of groups) {
-    it(`keeps both ${amount} purchases counted when the reversal is ambiguous`, () => {
+    it(`holds the ${amount} pair outside finalized spend until review`, () => {
       const rows: SpendRow[] = ids.map((txnId, i) => ({
         txnId, amount, pan4: "0540", time: time + [0, 3000, 21 * 60_000][i],
         status: i === 2 ? "failed" : "success", type: i === 2 ? "2" : "1",
         detail: { side: i === 2 ? "2" : "1", tradeStatus: i === 1 ? "0" : "1", orderNo: `order-${txnId}`, basicAmount: amount, basicCurrency: "USD" },
       }));
-      expect(sumSpend(rows, 0, 0).monthSpend).toBeCloseTo(amount * 2);
+      expect(sumSpend(rows, 0, 0).monthSpend).toBe(0);
     });
   }
 

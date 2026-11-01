@@ -19,6 +19,7 @@ function archive(rows: any[], error: { message: string } | null = null) {
 const row = (txn_id: string, account_id = "a", detail = { side: "1", tradeStatus: "1" }) => ({
   txn_id, account_id, detail, amount: 12, currency: "USD", txn_time: Date.parse("2026-10-31T18:00:00Z"),
   merchant: "TikTok", pan4: "1234", txn_type: detail.side, status: "success",
+  created_at: "2026-10-31T18:00:00Z", confirmed_at: "2026-10-31T18:00:30Z",
 });
 
 describe("immediate individual-to-central card mirror", () => {

@@ -85,6 +85,9 @@ BEGIN
       ON CONFLICT(account_id,event_id) DO UPDATE SET candidate_ids=EXCLUDED.candidate_ids
       WHERE bybit_reversal_cases.state='needs_review';
     END IF;
+    UPDATE public.bybit_card_txns SET detail=detail || jsonb_build_object('reconciliationState',
+      CASE WHEN EXISTS(SELECT 1 FROM public.bybit_reversal_cases WHERE account_id=p_account AND event_id=e.txn_id AND state='resolved')
+      THEN 'resolved' ELSE 'needs_review' END) WHERE account_id=p_account AND txn_id=e.txn_id;
   END LOOP;
 
   FOR c IN SELECT * FROM public.bybit_card_txns WHERE account_id=p_account

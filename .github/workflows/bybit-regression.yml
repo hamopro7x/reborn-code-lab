@@ -17,4 +17,4 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
       - name: Card status, reversal, mirror and ledger regressions
-        run: bunx vitest run src/lib/bybit-spend.test.ts src/lib/bybit-reversal.test.ts src/lib/bybit-presenter.test.ts src/lib/bybit-ledger-sync.test.ts src/lib/bybit-ledger-read.test.ts src/lib/bybit-fresh-start.test.ts
+        run: bunx vitest run
