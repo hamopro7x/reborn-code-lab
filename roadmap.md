@@ -170,3 +170,12 @@
 
 ## خطة حل مشكلة خطوة بخطوة (طلب 27 أكتوبر)
 - [ ] توضيح طلب المستخدم: «بناء خطة/شجرة حل لرقم» — لم يُوضح بعد ما يعنيه الرقم أو الشكل المطلوب.
+
+## Staged Bybit rollout (approved plan 2026-11-01)
+- [x] Step 1: review `bybit_strict_evidence_rollout.sql` (function replacements only, single transaction, service_role-only grants; 24 PGlite tests pass)
+- [ ] Step 2: owner backup + row counts — blocked on owner
+- [ ] Step 3: owner runs SQL in Supabase SQL Editor — blocked on owner
+- [ ] Step 4: owner deploys Fly via deploy.ps1, then admin-session verification
+- [ ] Step 5: 1h scheduler/late-reversal observation
+- [ ] Step 6: live audit of the 9 unaudited accounts
+- [ ] Steps 7-8: exact-ID audited corrections (incl. 15 historical side-2 ledger rows) — need owner approval
