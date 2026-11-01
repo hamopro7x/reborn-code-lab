@@ -7,7 +7,6 @@ import { getBybitCardBrands, getBybitLedger, getBybitSpendTotals } from "@/lib/b
 import { formatDateTime } from "@/lib/format";
 import { cardPurchasePresenter } from "@/lib/bybit-spend";
 import { useLedgerAutoSync } from "@/lib/use-ledger-sync";
-import { BybitReversalCases } from "./BybitReversalCases";
 
 /** Official USDT token logo from TrustWallet (works on Fly and Lovable). */
 const USDT_LOGO = "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xdAC17F958D2ee523a2206206994597C13D831ec7/logo.png";
@@ -438,7 +437,6 @@ export function BybitLedgerPanel() {
 
 
 
-      {group === "txns" && <BybitReversalCases />}
       <div className="rounded-3xl border border-border/60 bg-card/70 overflow-hidden">
         <div className="flex flex-wrap items-center justify-start gap-1 p-4">
           {(SUB_FILTERS[group] ?? []).map((s) => (
