@@ -1118,8 +1118,8 @@ async function persistCardTxns(rows: CardTxn[], accountId?: string, assign = tru
     if (accountId) {
       await mirrorStoredCardRows(supabaseAdmin, accountId, payload.map((r) => r.txn_id),
         (ledger) => upsertLedger(ledger, assign));
-      const { error: reconcileError } = await (supabaseAdmin as any).rpc("bybit_reconcile_account", { p_account: accountId });
-      if (reconcileError) throw new Error(reconcileError.message);
+      // Ingest reconciles dirty IDs and older affected candidates atomically.
+      // The ledger trigger projects newly mirrored rows; no second account scan.
     }
     spendCache.clear();
     return [];
