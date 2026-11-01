@@ -1125,7 +1125,7 @@ async function persistCardTxns(rows: CardTxn[], accountId?: string, assign = tru
     return [];
   } catch (e) {
     console.error("bybit_card_txns persist failed:", (e as any)?.message ?? e);
-    return [];
+    throw e;
   }
 
 }

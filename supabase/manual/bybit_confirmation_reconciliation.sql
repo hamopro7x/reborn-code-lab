@@ -174,6 +174,42 @@ END $$;
 REVOKE ALL ON FUNCTION public.bybit_ingest_confirmed(uuid,jsonb) FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.bybit_ingest_confirmed(uuid,jsonb) TO service_role;
 
+CREATE OR REPLACE FUNCTION public.bybit_preserve_first_seen()
+RETURNS trigger LANGUAGE plpgsql SET search_path=public AS $$
+BEGIN
+  NEW.created_at:=OLD.created_at;
+  RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS bybit_first_seen_immutable ON public.bybit_card_txns;
+CREATE TRIGGER bybit_first_seen_immutable BEFORE UPDATE ON public.bybit_card_txns
+FOR EACH ROW EXECUTE FUNCTION public.bybit_preserve_first_seen();
+
+-- Protect projections from stale in-flight sync overwriting a later admin decision.
+CREATE OR REPLACE FUNCTION public.bybit_guard_ledger_projection()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
+DECLARE a public.bybit_card_txns; decision text;
+BEGIN
+  IF NEW.kind NOT IN ('card','refund') THEN RETURN NEW; END IF;
+  SELECT * INTO a FROM public.bybit_card_txns WHERE account_id=NEW.account_id AND txn_id=NEW.ref_id;
+  IF NOT FOUND THEN RETURN NULL; END IF;
+  IF COALESCE(NULLIF(a.detail->>'side',''),a.txn_type) IN ('2','3') THEN RETURN NULL; END IF;
+  NEW.detail:=(NEW.detail-'linkedReversal'-'reconciliationState'-'confirmationState'-'resolutionTarget')||(a.detail-'raw');
+  IF a.confirmed_at IS NULL OR a.confirmed_at<a.created_at+interval '30 seconds' THEN
+    IF TG_OP='INSERT' THEN RETURN NULL; END IF;
+    NEW.status:='holding';
+  ELSIF a.detail->>'reconciliationState'='needs_review' THEN NEW.status:='review';
+  ELSIF a.detail->>'resolutionTarget'=a.txn_id OR
+    (a.detail->>'linkedBy'='manual-20261031' AND a.detail->>'linkedReversal'='1') THEN NEW.status:='reversed';
+  ELSIF a.detail->>'tradeStatus' IN ('3','4') THEN NEW.status:='reversed';
+  ELSIF a.detail->>'tradeStatus'='2' THEN NEW.status:='failed';
+  ELSIF COALESCE(a.detail->>'side',a.txn_type) IN ('4','5','6','8','9','10','11') THEN NEW.status:='refund';
+  ELSE NEW.status:='success'; END IF;
+  RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS bybit_ledger_projection_guard ON public.bybit_ledger;
+CREATE TRIGGER bybit_ledger_projection_guard BEFORE INSERT OR UPDATE ON public.bybit_ledger
+FOR EACH ROW EXECUTE FUNCTION public.bybit_guard_ledger_projection();
+
 CREATE OR REPLACE FUNCTION public.bybit_resolve_case(p_account uuid,p_event text,p_target text,p_expected text[],p_source text DEFAULT 'admin-review')
 RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
 DECLARE c public.bybit_reversal_cases; evidence jsonb;
