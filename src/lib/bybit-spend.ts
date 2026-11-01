@@ -782,7 +782,8 @@ export function cardPurchaseGroup(input: { kind?: unknown; status?: unknown; rev
   if (text(input.kind) === "refund" || s === "refund" || s === "مسترد") return "refund";
   const d = (input.detail && typeof input.detail === "object" ? input.detail : {}) as Record<string, unknown>;
   if (s === "review" || d["reconciliationState"] === "needs_review") return "review";
-  if (input.reversed || d["linkedReversal"]) return "failed";
+  if (d["projectedStatus"] === "success" && d["reconciliationState"] === "clear") return "success";
+  if (input.reversed || d["resolutionTarget"] || d["linkedReversal"]) return "failed";
   // A stored failure (incl. hang-voided) is never lifted to success by raw pending.
   if (FAILED_STATUS_TEXT.has(s)) return "failed";
   // Raw Bybit codes win over a stale stored "success" (same rule as

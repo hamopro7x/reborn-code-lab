@@ -1171,14 +1171,14 @@ async function storedCardTxns(limit: number, accountId?: string): Promise<CardTx
 function mapStoredRow(r: any): CardTxn {
   const detail = (r.detail ?? {}) as Record<string, string | number | null>;
   const side = String(detail.side ?? r.txn_type ?? "");
-  const linked = Boolean(detail.resolutionTarget) || Boolean(detail.linkedReversal);
+  const linked = Boolean(detail.resolutionTarget) || (detail.reconciliationState !== "clear" && Boolean(detail.linkedReversal));
   const outcome = linked ? "reversed" : cardRecordOutcome(detail.tradeStatus, side, cryptoSoldOf(detail));
   // Bybit's own raw status wins whenever it says refund / reversed / failed:
   // older rows were stored as "success" while Bybit had reversed them.
   const stored: CardTxn["status"] | null =
     r.status === "success" || r.status === "failed" || r.status === "refund" ? r.status : null;
   const status: CardTxn["status"] =
-    detail.reconciliationState === "needs_review" ? "review" : outcome === "refund"
+    detail.projectedStatus === "success" ? "success" : detail.reconciliationState === "needs_review" ? "review" : outcome === "refund"
       ? "refund"
       : outcome === "reversed" || outcome === "failed"
         ? "failed"
@@ -1278,7 +1278,7 @@ async function lightCycleRows(db: any, accountId: string | undefined, periodStar
       .select(
         "txn_id, account_id, created_at, confirmed_at, merchant, amount, currency, status, txn_time, pan4, txn_type, " +
           "tradeStatus:detail->>tradeStatus, side:detail->>side, cryptoSold:detail->>cryptoSold, " +
-          "linkedReversal:detail->>linkedReversal, confirmationState:detail->>confirmationState, reconciliationState:detail->>reconciliationState, resolutionTarget:detail->>resolutionTarget, orderNo:detail->>orderNo, orderId:detail->>orderId, dTxnId:detail->>txnId",
+          "linkedReversal:detail->>linkedReversal, projectedStatus:detail->>projectedStatus, confirmationState:detail->>confirmationState, reconciliationState:detail->>reconciliationState, resolutionTarget:detail->>resolutionTarget, orderNo:detail->>orderNo, orderId:detail->>orderId, dTxnId:detail->>txnId",
       )
       .gte("txn_time", periodStart)
       .lt("txn_time", periodEnd);
@@ -1299,6 +1299,7 @@ async function lightCycleRows(db: any, accountId: string | undefined, periodStar
         side: r.side ?? null,
         cryptoSold: r.cryptoSold ?? null,
         confirmationState: cardConfirmed(r) ? "confirmed" : "waiting",
+        projectedStatus: r.projectedStatus ?? null,
         reconciliationState: r.reconciliationState ?? null,
         resolutionTarget: r.resolutionTarget ?? null,
         linkedReversal: r.linkedReversal ?? null,
@@ -1358,8 +1359,7 @@ export async function syncAllCardTxns(): Promise<{ added: number; accounts: numb
     // Purge first, before any provider network calls. This guarantees that merely
     // opening the central ledger removes closed-cycle rows immediately even when
     // Bybit is slow or unavailable.
-    const { runCyclePurgeSafe } = await import("./monthly-cycle.server");
-    await runCyclePurgeSafe();
+    // Keep historical evidence. All reads/ingestion already enforce cycle cutoff.
     const accounts = await listAccounts();
     // Sequential: parallel account syncs multiplied both provider rate limits
     // and worker load.

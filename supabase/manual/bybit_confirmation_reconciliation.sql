@@ -114,7 +114,7 @@ BEGIN
       ON CONFLICT(account_id,event_id) DO NOTHING;
       pending_review := true;
     END IF;
-    result_detail := d - 'reconciliationState' - 'confirmationState' - 'resolutionTarget';
+    result_detail := d - 'reconciliationState' - 'confirmationState' - 'resolutionTarget' - 'projectedStatus';
     result_detail := result_detail || jsonb_build_object('confirmationState',
       CASE WHEN c.confirmed_at >= c.created_at+interval '30 seconds' THEN 'confirmed' ELSE 'waiting' END);
     result_status := baseline;
@@ -126,8 +126,9 @@ BEGIN
       result_detail := result_detail || jsonb_build_object('reconciliationState','needs_review');
     ELSE
       -- A resolved retry follows the raw status; remove only the derived projection flag.
-      result_detail := result_detail - 'linkedReversal';
+      result_detail := result_detail || jsonb_build_object('reconciliationState','clear');
     END IF;
+    result_detail := result_detail || jsonb_build_object('projectedStatus',result_status);
     IF c.confirmed_at IS NULL OR c.confirmed_at<c.created_at+interval '30 seconds' THEN result_status:='holding'; END IF;
     UPDATE public.bybit_card_txns SET detail=result_detail WHERE account_id=p_account AND txn_id=c.txn_id
       AND detail IS DISTINCT FROM result_detail;
