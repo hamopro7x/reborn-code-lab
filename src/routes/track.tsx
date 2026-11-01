@@ -19,6 +19,7 @@ export const Route = createFileRoute("/track")({
       { property: "og:title", content: "تتبع طلبك | متجر الاشتراكات الرقمية" },
       { property: "og:description", content: "أدخل كود الطلب لمتابعة حالة طلبك الرقمي لحظة بلحظة، أو استعرض طلباتك السابقة على هذا الجهاز." },
       { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { property: "og:url", content: "https://mag-pro1.com/track" },
       { name: "twitter:title", content: "تتبع طلبك | متجر الاشتراكات الرقمية" },
       { name: "twitter:description", content: "أدخل كود الطلب لمتابعة حالة طلبك الرقمي لحظة بلحظة، أو استعرض طلباتك السابقة على هذا الجهاز." },

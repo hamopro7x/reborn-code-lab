@@ -38,6 +38,7 @@
  */
 
 export type SpendRow = {
+  scope?: unknown;
   txnId: string;
   amount: number;
   time: number;
@@ -165,7 +166,7 @@ export function cardRecordOutcome(tradeStatus: unknown, side: unknown, cryptoSol
   if (ts === "2" || /FAIL|DECLIN|REJECT|CANCEL|EXPIRE/.test(up)) return "failed";
   // Legacy fallback for accounts whose API still reports the voided
   // authorisation as "1": Bybit took nothing from the wallet (cryptoSold false).
-  if (ts === "1" && cryptoSold === false && AUTH_SIDES.has(sd)) return "reversed";
+  // cryptoSold=false is not a documented reversal link or final status.
   return "ok";
 }
 
@@ -219,65 +220,16 @@ export const REVERSAL_LINK_WINDOW_MS = 60 * 60 * 1000;
  */
 export function findLinkedReversals(rows: Iterable<LinkCandidate>, usedReversals?: Set<string>): Set<string> {
   const list = [...rows];
-  const keys = new Set<string>();
-  const reversalIds = new Set<string>();
-  for (const r of list) {
-    if (!isExplicitReversal(r.tradeStatus, r.side)) continue;
-    reversalIds.add(r.id);
-    const scope = text(r.scope);
-    const o = cleanId(r.orderNo);
-    const t = cleanId(r.txnId);
-    if (o) keys.add(`${scope}|o:${o}`);
-    if (t) keys.add(`${scope}|t:${t}`);
-  }
   const out = new Set<string>();
-  if (!keys.size) return out;
-  for (const r of list) {
-    if (reversalIds.has(r.id)) continue;
-    if (!AUTH_SIDES.has(text(r.side).trim())) continue; // clearings/refunds are never voided here
-    if (text(r.tradeStatus).trim() === "2") continue; // declined already failed
-    const scope = text(r.scope);
-    const o = cleanId(r.orderNo);
-    const t = cleanId(r.txnId);
-    if ((o && keys.has(`${scope}|o:${o}`)) || (t && keys.has(`${scope}|t:${t}`))) out.add(r.id);
-  }
-
-  // A side-2 event often has different IDs from the original authorisation.
-  // Never pick the "nearest pending" when more than one purchase could match:
-  // doing that wrongly reverses a legitimate retry (the 23:33:47/23:33:50 case).
-  // A unique, same-account/card/amount candidate may be linked. Ambiguous
-  // events stay in the raw archive for a later provider-ID/status reconciliation.
-  const cents = (v: unknown) => Math.round(Math.abs(Number(v) || 0) * 100);
-  const linkedReversals = new Set<string>();
-  for (const a of list) {
-    if (!out.has(a.id)) continue;
-    for (const rev of list) {
-      if (!reversalIds.has(rev.id) || text(rev.scope) !== text(a.scope)) continue;
-      if ((cleanId(rev.orderNo) && cleanId(rev.orderNo) === cleanId(a.orderNo)) ||
-          (cleanId(rev.txnId) && cleanId(rev.txnId) === cleanId(a.txnId))) {
-        linkedReversals.add(rev.id);
-        usedReversals?.add(rev.id);
-      }
-    }
-  }
-  for (const rev of list) {
-    if (!reversalIds.has(rev.id) || linkedReversals.has(rev.id) ||
-        !isCardReversalEvent(rev.side) || !text(rev.pan4) ||
-        cents(rev.amount) <= 0 || Number(rev.time) <= 0) continue;
-    const candidates = list.filter((a) => {
-      if (reversalIds.has(a.id) || out.has(a.id) ||
-          !AUTH_SIDES.has(text(a.side).trim()) ||
-          text(a.tradeStatus).trim() === "2" ||
-          text(a.scope) !== text(rev.scope) ||
-          text(a.pan4) !== text(rev.pan4) ||
-          cents(a.amount) !== cents(rev.amount)) return false;
-      const at = Number(a.time);
-      const rt = Number(rev.time);
-      return at > 0 && at <= rt && rt - at <= REVERSAL_LINK_WINDOW_MS;
-    });
-    if (candidates.length !== 1) continue; // never guess between two purchases
+  for (const event of list) {
+    if (!isExplicitReversal(event.tradeStatus, event.side)) continue;
+    const candidates = list.filter((r) => r.id !== event.id && text(r.scope) === text(event.scope) &&
+      AUTH_SIDES.has(text(r.side).trim()) && !isExplicitReversal(r.tradeStatus, r.side) && text(r.tradeStatus) !== "2" &&
+      ((cleanId(event.orderNo) && cleanId(event.orderNo) === cleanId(r.orderNo)) ||
+       (cleanId(event.txnId) && cleanId(event.txnId) === cleanId(r.txnId))));
+    if (candidates.length !== 1) continue;
     out.add(candidates[0].id);
-    usedReversals?.add(rev.id);
+    usedReversals?.add(event.id);
   }
   return out;
 }
@@ -287,7 +239,7 @@ function linkCandidateOfSpendRow(row: SpendRow): LinkCandidate {
   const ids = cardLinkIds(d);
   return {
     id: text(row.txnId),
-    scope: "",
+    scope: row.scope ?? "",
     orderNo: ids.orderNo,
     txnId: ids.txnId || text(row.txnId),
     tradeStatus: d["tradeStatus"],
@@ -315,6 +267,8 @@ export function findHangReversals(_rows: Iterable<HangCandidate>, _windowMs = HA
 /** Classifies a row using Bybit's own status fields, never a stored guess. */
 export function spendKind(row: SpendRow): Kind {
   const d = row.detail ?? {};
+  if (row.status === "review" || d["reconciliationState"] === "needs_review") return "excluded";
+  if (d["confirmationState"] === "waiting") return "excluded";
   const side = text(d["side"]) || text(row.type);
   if (cardRecordOutcome(d["tradeStatus"], side, cryptoSoldOf(d)) !== "ok") return "excluded";
 
@@ -523,14 +477,28 @@ export function canonicalize(rows: Iterable<SpendRow>): {
   let lastTxnTime = 0;
   const seenRaw = new Set<string>();
   const list = [...rows];
-  const linkVoided = findLinkedReversals(list.map(linkCandidateOfSpendRow));
+  // Persisted projections already include immutable decisions. Never override
+  // an admin decision with a second read-time association.
+  const linkVoided = findLinkedReversals(list.filter((r) => !r.detail?.["confirmationState"]).map(linkCandidateOfSpendRow));
+  const reviewIds = new Set<string>();
+  for (const event of list) {
+    if (!isCardReversalEvent(event.detail?.["side"] || event.type)) continue;
+    if (event.detail?.["reconciliationState"] === "resolved") continue;
+    const candidates = list.filter((r) => r !== event && String(r.scope ?? "") === String(event.scope ?? "") &&
+      String(r.detail?.["side"] || r.type) === "1" && String(r.pan4 ?? "") === String(event.pan4 ?? "") &&
+      String(r.merchant ?? r.detail?.["merchantName"] ?? "") === String(event.merchant ?? event.detail?.["merchantName"] ?? "") &&
+      Math.abs(r.amount) === Math.abs(event.amount) && r.time <= event.time && event.time-r.time <= REVERSAL_LINK_WINDOW_MS);
+    if (candidates.some((r) => linkVoided.has(r.txnId) || r.detail?.["resolutionTarget"] ||
+      r.detail?.["linkedBy"] === "manual-20261031")) continue;
+    for (const r of candidates) reviewIds.add(r.txnId);
+  }
 
   for (const row of list) {
     const time = Number(row.time ?? 0);
     if (time > lastTxnTime) lastTxnTime = time;
 
-    const canonicalId = getCanonicalTransactionIdentity(row);
-    const kind = linkVoided.has(text(row.txnId)) ? "excluded" : spendKind(row);
+    const canonicalId = text(row.scope) ? `${text(row.scope)}|${getCanonicalTransactionIdentity(row)}` : getCanonicalTransactionIdentity(row);
+    const kind = linkVoided.has(text(row.txnId)) || reviewIds.has(text(row.txnId)) ? "excluded" : spendKind(row);
     if (kind === "excluded") {
       excluded.push({ row, canonicalId, reason: "refund/reversed/failed" });
       continue;
@@ -569,7 +537,7 @@ export function canonicalize(rows: Iterable<SpendRow>): {
   // authorised (never settled) voids that purchase: Bybit shows it struck
   // through as «معكوسة» and nothing was charged.
   for (const ex of excluded) {
-    if (!isBusinessIdentity(ex.canonicalId)) continue;
+    if (!isBusinessIdentity(ex.canonicalId.includes("|") ? ex.canonicalId.split("|").slice(1).join("|") : ex.canonicalId)) continue;
     const d = ex.row.detail ?? {};
     if (cardRecordOutcome(d["tradeStatus"], text(d["side"]) || text(ex.row.type), cryptoSoldOf(d)) === "failed") continue;
     const txn = transactions.get(ex.canonicalId);
@@ -791,7 +759,7 @@ export function auditSpend(
 // Raw tradeStatus/side/stage stay in detail for audits; this only decides the
 // group + label. Pending is NOT turned into a settled purchase for spend.
 // ---------------------------------------------------------------------------
-export type CardPurchaseGroup = "success" | "failed" | "refund";
+export type CardPurchaseGroup = "success" | "failed" | "refund" | "review";
 
 const FAILED_STATUS_TEXT = new Set([
   "failed", "fail", "failure", "declined", "reversed", "rejected", "cancelled", "canceled", "expired",
@@ -802,7 +770,9 @@ export function cardPurchaseGroup(input: { kind?: unknown; status?: unknown; rev
   const s = text(input.status).trim().toLowerCase();
   if (text(input.kind) === "refund" || s === "refund" || s === "مسترد") return "refund";
   const d = (input.detail && typeof input.detail === "object" ? input.detail : {}) as Record<string, unknown>;
-  if (input.reversed || d["linkedReversal"]) return "failed";
+  if (s === "review" || d["reconciliationState"] === "needs_review") return "review";
+  if (d["projectedStatus"] === "success" && d["reconciliationState"] === "clear") return "success";
+  if (input.reversed || d["resolutionTarget"] || d["linkedReversal"]) return "failed";
   // A stored failure (incl. hang-voided) is never lifted to success by raw pending.
   if (FAILED_STATUS_TEXT.has(s)) return "failed";
   // Raw Bybit codes win over a stale stored "success" (same rule as
@@ -825,7 +795,7 @@ export const LEDGER_CARD_FILTERS = {
     "or(status.in.(failed,reversed),detail->>linkedReversal.not.is.null,detail->>side.eq.2," +
     `and(detail->>tradeStatus.in.(2,3,4),${notRefundSide}))`,
   success: [
-    "or(status.is.null,status.not.in.(failed,reversed,refund))",
+    "or(status.is.null,status.not.in.(failed,reversed,refund,review,holding))",
     "detail->>linkedReversal.is.null",
     `or(detail->>side.is.null,detail->>side.not.in.(2,4,5,6,8,9,10,11))`,
     "or(detail->>tradeStatus.is.null,detail->>tradeStatus.not.in.(2,3,4,5))",
@@ -836,6 +806,7 @@ export const LEDGER_CARD_FILTERS = {
 } as const;
 
 export const CARD_PURCHASE_LABEL: Record<CardPurchaseGroup, { text: string; cls: string }> = {
+  review: { text: "قيد مراجعة العكس", cls: "bg-accent text-accent-foreground" },
   success: { text: "ناجحة", cls: "bg-emerald-500/15 text-emerald-400" },
   failed: { text: "فاشلة", cls: "bg-red-500/15 text-red-400" },
   refund: { text: "مسترد", cls: "bg-muted text-muted-foreground" },

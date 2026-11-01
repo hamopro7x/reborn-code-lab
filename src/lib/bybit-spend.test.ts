@@ -535,8 +535,8 @@ describe("Bybit completed purchases (tradeStatus 1)", () => {
 
 import { cardRecordOutcome as outcomeRule, cryptoSoldOf as soldOf } from "./bybit-spend";
 describe("reversed = completed with nothing charged", () => {
-  it("completed with cryptoSold false is reversed", () => {
-    expect(outcomeRule("1", "1", false)).toBe("reversed");
+  it("cryptoSold false alone never proves a reversal", () => {
+    expect(outcomeRule("1", "1", false)).toBe("ok");
   });
   it("completed with cryptoSold true stays a purchase", () => {
     expect(outcomeRule("1", "1", true)).toBe("ok");
@@ -579,8 +579,8 @@ describe("side-2 reversal without a shared id", () => {
   it("voids the authorisation it follows seconds later", () => {
     expect(sumSpend([mk("a", "1", T), mk("r", "2", T + 6000)], 0, 0).monthSpend).toBe(0);
   });
-  it("ambiguous side-2 event does not deduct either purchase from spend", () => {
-    expect(sumSpend([mk("a", "1", T), mk("b", "1", T + 1000), mk("r", "2", T + 6000)], 0, 0).monthSpend).toBeCloseTo(704.4);
+  it("ambiguous pair is held outside finalized spend without choosing a purchase", () => {
+    expect(sumSpend([mk("a", "1", T), mk("b", "1", T + 1000), mk("r", "2", T + 6000)], 0, 0).monthSpend).toBe(0);
   });
   it("ignores other cards, amounts and old authorisations", () => {
     const l = [mk("a", "1", T, 352.2, "0540"), mk("b", "1", T, 10), mk("c", "1", T - 61 * 60_000), mk("r", "2", T + 6000)];

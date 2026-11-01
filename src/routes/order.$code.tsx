@@ -18,6 +18,7 @@ export const Route = createFileRoute("/order/$code")({
       { property: "og:title", content: "تفاصيل الطلب | متجر الاشتراكات الرقمية" },
       { property: "og:description", content: "صفحة متابعة تفاصيل طلبك وحالة التسليم وبيانات الاشتراك الخاصة بك." },
       { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { property: "og:url", content: "https://mag-pro1.com/order" },
       { name: "twitter:title", content: "تفاصيل الطلب | متجر الاشتراكات الرقمية" },
       { name: "twitter:description", content: "صفحة متابعة تفاصيل طلبك وحالة التسليم وبيانات الاشتراك الخاصة بك." },

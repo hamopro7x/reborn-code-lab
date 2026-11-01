@@ -29,6 +29,7 @@ export const Route = createFileRoute("/auth")({
       { property: "og:title", content: "تسجيل الدخول | لوحة إدارة المتجر" },
       { property: "og:description", content: "صفحة تسجيل دخول مخصصة لإدارة المتجر فقط." },
       { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { property: "og:url", content: "https://mag-pro1.com/auth" },
       { name: "twitter:title", content: "تسجيل الدخول | لوحة إدارة المتجر" },
       { name: "twitter:description", content: "صفحة تسجيل دخول مخصصة لإدارة المتجر فقط." },

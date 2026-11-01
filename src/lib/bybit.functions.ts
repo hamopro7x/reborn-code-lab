@@ -103,8 +103,8 @@ export const getBybitCardTxns = createServerFn({ method: "POST" })
   .inputValidator((input: { accountId?: string; status?: string; page?: number; pageSize?: number }) => ({
     ...accountInput(input),
     status:
-      input?.status === "success" || input?.status === "failed" || input?.status === "refund"
-        ? (input.status as "success" | "failed" | "refund")
+      input?.status === "success" || input?.status === "failed" || input?.status === "refund" || input?.status === "review"
+        ? (input.status as "success" | "failed" | "refund" | "review")
         : ("all" as const),
     page: Math.max(Number(input?.page ?? 1) || 1, 1),
     pageSize: Math.min(Math.max(Number(input?.pageSize ?? 150) || 150, 10), 500),
@@ -483,4 +483,33 @@ export const getBybitCardBrands = createServerFn({ method: "POST" })
     await assertAccess(context.supabase, context.userId);
     const mod = await import("./bybit.server");
     return { brands: await mod.cardBrandsByPan() };
+  });
+
+export const getBybitReversalCases = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const mod = await import("./bybit.server");
+    return mod.listReversalCases();
+  });
+
+export const resolveBybitReversalCase = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { accountId: string; eventId: string; targetId: string | null; candidates: string[] }) => {
+    if (!/^[0-9a-f-]{36}$/i.test(input?.accountId ?? "") || !/^(legacy:)?[\w-]{1,200}$/.test(input?.eventId ?? "")) throw new Error("معرف غير صالح");
+    if (!Array.isArray(input.candidates) || input.candidates.length > 100 || input.candidates.some((id) => !/^[\w-]{1,200}$/.test(id))) throw new Error("مرشحون غير صالحين");
+    if (input.targetId !== null && !input.candidates.includes(input.targetId)) throw new Error("اختيار غير صالح");
+    return input;
+  })
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    // User-scoped RPC rechecks auth.uid() and admin in the same transaction.
+    const { error } = await (context.supabase as any).rpc("bybit_resolve_case", {
+      p_account: data.accountId, p_event: data.eventId, p_target: data.targetId,
+      p_expected: data.candidates, p_source: "admin-review",
+    });
+    if (error) throw new Error(error.message);
+    const mod = await import("./bybit.server");
+    mod.clearBybitSpendCache();
+    return { ok: true };
   });

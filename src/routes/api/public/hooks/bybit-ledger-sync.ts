@@ -54,16 +54,13 @@ export const Route = createFileRoute("/api/public/hooks/bybit-ledger-sync")({
           // Fast path only: newest page per account, all accounts in parallel.
           // The heavy month walk runs separately in the background.
           const recent = await mod.syncAllRecent();
+          await mod.resumeCardFollowup();
           result = { saved: recent.saved, accounts: recent.accounts };
         } catch (e) {
           result = { error: e instanceof Error ? e.message : "sync failed" };
         }
 
-        // Monthly-cycle cleanup runs even when the sync above failed, so old
-        // cycles are always removed from the database. Work-sheet data is never
-        // touched (see monthly-cycle.server.ts).
-        const { runCyclePurgeSafe } = await import("@/lib/monthly-cycle.server");
-        await runCyclePurgeSafe();
+        // Confirmation/reconciliation never deletes provider evidence.
 
 
         await supabaseAdmin

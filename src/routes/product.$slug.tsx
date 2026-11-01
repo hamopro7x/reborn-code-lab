@@ -36,6 +36,7 @@ export const Route = createFileRoute("/product/$slug")({
       { property: "og:type", content: "product" },
       { property: "og:url", content: url },
       { name: "twitter:title", content: title },
+      { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:description", content: desc },
     ];
     if (p?.main_image?.startsWith("https://")) {
