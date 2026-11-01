@@ -287,9 +287,11 @@ export type Database = {
         Row: {
           account_id: string | null
           amount: number | null
+          confirmed_at: string | null
           created_at: string
           currency: string | null
           detail: Json
+          last_observed_at: string | null
           merchant: string | null
           pan4: string | null
           status: string | null
@@ -300,9 +302,11 @@ export type Database = {
         Insert: {
           account_id?: string | null
           amount?: number | null
+          confirmed_at?: string | null
           created_at?: string
           currency?: string | null
           detail?: Json
+          last_observed_at?: string | null
           merchant?: string | null
           pan4?: string | null
           status?: string | null
@@ -313,9 +317,11 @@ export type Database = {
         Update: {
           account_id?: string | null
           amount?: number | null
+          confirmed_at?: string | null
           created_at?: string
           currency?: string | null
           detail?: Json
+          last_observed_at?: string | null
           merchant?: string | null
           pan4?: string | null
           status?: string | null
@@ -389,6 +395,29 @@ export type Database = {
           },
         ]
       }
+      bybit_ingest_fences: {
+        Row: {
+          account_id: string
+          observed_at: string
+        }
+        Insert: {
+          account_id: string
+          observed_at: string
+        }
+        Update: {
+          account_id?: string
+          observed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bybit_ingest_fences_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "bybit_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bybit_ledger: {
         Row: {
           account_id: string | null
@@ -438,6 +467,80 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "bybit_ledger_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "bybit_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bybit_reversal_audit: {
+        Row: {
+          account_id: string
+          decided_at: string
+          decided_by: string
+          event_id: string
+          evidence: Json
+          id: number
+          source: string
+          target_id: string | null
+        }
+        Insert: {
+          account_id: string
+          decided_at?: string
+          decided_by: string
+          event_id: string
+          evidence: Json
+          id?: never
+          source: string
+          target_id?: string | null
+        }
+        Update: {
+          account_id?: string
+          decided_at?: string
+          decided_by?: string
+          event_id?: string
+          evidence?: Json
+          id?: never
+          source?: string
+          target_id?: string | null
+        }
+        Relationships: []
+      }
+      bybit_reversal_cases: {
+        Row: {
+          account_id: string
+          candidate_ids: string[]
+          decided_at: string | null
+          decided_by: string | null
+          event_id: string
+          source: string | null
+          state: string
+          target_id: string | null
+        }
+        Insert: {
+          account_id: string
+          candidate_ids?: string[]
+          decided_at?: string | null
+          decided_by?: string | null
+          event_id: string
+          source?: string | null
+          state?: string
+          target_id?: string | null
+        }
+        Update: {
+          account_id?: string
+          candidate_ids?: string[]
+          decided_at?: string | null
+          decided_by?: string | null
+          event_id?: string
+          source?: string | null
+          state?: string
+          target_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bybit_reversal_cases_account_id_fkey"
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "bybit_accounts"
@@ -2448,6 +2551,36 @@ export type Database = {
           p_key: string
           p_secret: string
         }
+        Returns: boolean
+      }
+      bybit_affected_events: {
+        Args: { p_account: string; p_ids: string[] }
+        Returns: string[]
+      }
+      bybit_ingest_confirmed: {
+        Args: { p_account: string; p_rows: Json }
+        Returns: number
+      }
+      bybit_reconcile_account: {
+        Args: { p_account: string }
+        Returns: undefined
+      }
+      bybit_reconcile_dirty: {
+        Args: { p_account: string; p_ids: string[] }
+        Returns: undefined
+      }
+      bybit_resolve_case: {
+        Args: {
+          p_account: string
+          p_event: string
+          p_expected: string[]
+          p_source?: string
+          p_target: string
+        }
+        Returns: undefined
+      }
+      bybit_trusted_manual: {
+        Args: { a: Database["public"]["Tables"]["bybit_card_txns"]["Row"] }
         Returns: boolean
       }
       gen_order_code: { Args: never; Returns: string }
