@@ -558,11 +558,11 @@ describe("authorisation + settlement double count", () => {
     row({ txnId: id, amount: amt, time: t, pan4: "0540", type: "3", detail: { tradeStatus: "1", side: "3", orderNo: `s${id}`, basicAmount: amt, basicCurrency: "USD" } });
   const T = Date.UTC(2026, 7, 10);
 
-  it("counts a settled purchase once", () => {
-    expect(sumSpend([auth("1", T), settle("2", T + 3 * H)], 0, MONTH_START).monthSpend).toBeCloseTo(26.78);
+  it("does not merge unrelated IDs from equal amount and time alone", () => {
+    expect(sumSpend([auth("1", T), settle("2", T + 3 * H)], 0, MONTH_START).monthSpend).toBeCloseTo(53.56);
   });
   it("still counts an authorisation that has not settled yet", () => {
-    expect(sumSpend([auth("1", T), auth("3", T + H), settle("2", T + 3 * H)], 0, MONTH_START).monthSpend).toBeCloseTo(53.56);
+    expect(sumSpend([auth("1", T), auth("3", T + H), settle("2", T + 3 * H)], 0, MONTH_START).monthSpend).toBeCloseTo(80.34);
   });
   it("does not pair different amounts or cards", () => {
     expect(sumSpend([auth("1", T, 10), settle("2", T + H, 11)], 0, MONTH_START).monthSpend).toBeCloseTo(21);

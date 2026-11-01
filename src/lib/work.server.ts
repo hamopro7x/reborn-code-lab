@@ -1201,6 +1201,9 @@ export async function myWorkState(userId: string) {
   const { count } = await db
     .from("work_txn_assignments")
     .select("id, bybit_ledger!inner(status)", { count: "exact", head: true })
+    .not("bybit_ledger.detail", "cs", '{"side":"2"}')
+    .not("bybit_ledger.detail", "cs", '{"side":2}')
+    .or(`kind.not.in.(card,refund),${CARD_READ_FILTER}`, { referencedTable: "bybit_ledger" })
     .eq("shift_id", data.id)
     .in("bybit_ledger.status", SUCCESS_STATUSES as unknown as string[]);
   return {
@@ -1259,6 +1262,9 @@ export async function adminEmployeeWorkState(userId: string) {
   const { data: assigns } = await db
     .from("work_txn_assignments")
     .select("shift_id, bybit_ledger!inner(status)")
+    .not("bybit_ledger.detail", "cs", '{"side":"2"}')
+    .not("bybit_ledger.detail", "cs", '{"side":2}')
+    .or(`kind.not.in.(card,refund),${CARD_READ_FILTER}`, { referencedTable: "bybit_ledger" })
     .in(
       "shift_id",
       list.map((s) => s.id),
@@ -1797,6 +1803,9 @@ export async function shiftHistory(userId: string, limit = 100, archivedOnly = f
     const { data: asg } = await db
       .from("work_txn_assignments")
       .select("shift_id, bybit_ledger!inner(status)")
+      .not("bybit_ledger.detail", "cs", '{"side":"2"}')
+      .not("bybit_ledger.detail", "cs", '{"side":2}')
+      .or(`kind.not.in.(card,refund),${CARD_READ_FILTER}`, { referencedTable: "bybit_ledger" })
       .in("shift_id", ids)
       .in("bybit_ledger.status", SUCCESS_STATUSES as unknown as string[]);
     for (const a of (asg ?? []) as any[]) {
