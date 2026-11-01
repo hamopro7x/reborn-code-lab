@@ -20,7 +20,7 @@ import {
 } from "./bybit-spend";
 import { currentBybitCycle, currentBybitRows } from "./monthly-cycle.server";
 import { isPastLastPage } from "./pagination";
-import { cardConfirmed, cardProjectionVisible } from "./bybit-confirmation";
+import { cardConfirmed, archivedCardReadable, legacyCardReadable, CARD_READ_FILTER } from "./bybit-confirmation";
 
 
 const BASE = "https://api.bybit.com";
@@ -773,7 +773,7 @@ async function computeSpendUncached(
         const rowKey = `${row.account_id ?? ""}|${row.txn_id ?? ""}|${row.txn_time ?? ""}`;
         if (seenRows.has(rowKey)) continue;
         seenRows.add(rowKey);
-        if (isCardReversalEvent(row.detail?.side || row.txn_type) || cardConfirmed(row)) collected.push(row);
+        if (isCardReversalEvent(row.detail?.side || row.txn_type) || archivedCardReadable(row)) collected.push(row);
       }
       if (rows.length < CHUNK) break;
     }
@@ -1160,7 +1160,7 @@ async function storedCardTxns(limit: number, accountId?: string): Promise<CardTx
       data.push(...rows);
       if (rows.length < CHUNK * BATCH) break;
     }
-    const eligible = data.filter((r: any) => isCardReversalEvent(r.detail?.side || r.txn_type) || cardConfirmed(r));
+    const eligible = data.filter((r: any) => isCardReversalEvent(r.detail?.side || r.txn_type) || archivedCardReadable(r));
     return markHangVoided(eligible.map(mapStoredRow), eligible.map((r: any) => r.account_id ?? ""));
   } catch {
     return [];
@@ -1233,7 +1233,7 @@ export async function fetchCardTxnsPage(opts: {
   // A light projection of the cycle is classified first; only the page's
   // rows are then read in full.
   const light = await lightCycleRows(supabaseAdmin, opts.accountId, periodStart, periodEnd);
-  let classified = light.filter((r) => cardProjectionVisible(r.t.detail) && !isCardReversalEvent(r.t.detail?.side || r.t.type))
+  let classified = light.filter((r) => r.readable && !isCardReversalEvent(r.t.detail?.side || r.t.type))
     .map((r) => ({ r, group: cardPurchaseGroup(r.t) }));
   if (opts.hideReversed) classified = classified.filter((x) => !x.r.t.reversed);
   const matching = classified.filter((x) => cardFilterMatches(status, x.group));
@@ -1298,7 +1298,7 @@ async function lightCycleRows(db: any, accountId: string | undefined, periodStar
         tradeStatus: r.tradeStatus ?? null,
         side: r.side ?? null,
         cryptoSold: r.cryptoSold ?? null,
-        confirmationState: cardConfirmed(r) ? "confirmed" : "waiting",
+        confirmationState: cardConfirmed(r) ? "confirmed" : legacyCardReadable({ ...r, detail: { confirmationState: r.confirmationState } }) ? null : "waiting",
         projectedStatus: r.projectedStatus ?? null,
         reconciliationState: r.reconciliationState ?? null,
         resolutionTarget: r.resolutionTarget ?? null,
@@ -1310,7 +1310,9 @@ async function lightCycleRows(db: any, accountId: string | undefined, periodStar
     }),
   );
   const marked = markHangVoided(mapped, data.map((r: any) => r.account_id ?? ""));
-  return marked.map((t, i) => ({ txn_id: String(data[i].txn_id), account_id: data[i].account_id ?? null, t }));
+  return marked.map((t, i) => ({ txn_id: String(data[i].txn_id), account_id: data[i].account_id ?? null, t,
+    readable: archivedCardReadable({ ...data[i], detail: { confirmationState: data[i].confirmationState } }),
+  }));
 }
 
 export async function fetchCardTxnsLive(opts: {
@@ -2406,7 +2408,7 @@ export async function fetchLedgerPage(opts: {
     // success/failed/refund OR filters instead of overwriting them in PostgREST.
     // Handle both string and numeric side values in legacy stored rows.
     if (g === "txns") out = out
-      .eq("detail->>confirmationState", "confirmed")
+      .or(CARD_READ_FILTER)
       .neq("status", "holding")
       .not("detail", "cs", '{"side":"2"}')
       .not("detail", "cs", '{"side":2}');

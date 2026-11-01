@@ -8,6 +8,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { isPastLastPage, pageRange } from "./pagination";
 import { enforceRetentionSafe } from "./retention.server";
+import { CARD_READ_FILTER } from "./bybit-confirmation";
 
 type DB = SupabaseClient<any, any, any>;
 
@@ -202,7 +203,7 @@ export async function workTable(opts: {
     .select("*, bybit_ledger!inner(*)", { count: "exact" })
     .not("bybit_ledger.detail", "cs", '{"side":"2"}')
     .not("bybit_ledger.detail", "cs", '{"side":2}')
-    .or("kind.not.in.(card,refund),detail->>confirmationState.eq.confirmed", { referencedTable: "bybit_ledger" })
+    .or(`kind.not.in.(card,refund),${CARD_READ_FILTER}`, { referencedTable: "bybit_ledger" })
     .order("occurred_at", { ascending: false });
 
   if (opts.successOnly) q = q.in("bybit_ledger.status", SUCCESS_STATUSES as unknown as string[]);
