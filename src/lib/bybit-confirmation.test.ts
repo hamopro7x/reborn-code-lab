@@ -35,6 +35,7 @@ describe("durable Bybit confirmation and atomic reconciliation",()=>{
       INSERT INTO auth.users VALUES('${adminId}'); INSERT INTO user_roles VALUES('${adminId}','admin');`);
     await db.exec(readFileSync(new URL("../../supabase/manual/bybit_confirmation_reconciliation.sql",import.meta.url),"utf8"));
     await db.exec(readFileSync(new URL("../../supabase/manual/bybit_scalar_detail_fix.sql",import.meta.url),"utf8"));
+    await db.exec(readFileSync(new URL("../../supabase/manual/bybit_strict_evidence_rollout.sql",import.meta.url),"utf8"));
   });
   afterAll(async()=>{await db.close();});
   beforeEach(async()=>{await db.exec("TRUNCATE bybit_ingest_fences,bybit_reversal_audit,bybit_reversal_cases,bybit_ledger,bybit_card_txns; SELECT set_config('test.actor','',false)");});
