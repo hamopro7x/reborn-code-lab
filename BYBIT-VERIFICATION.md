@@ -2,7 +2,7 @@
 
 Base inspected: `5c49ede5048fdabb2cccb5c6b474acc66c87d2f2`. No commits are created by shell, no database tools are invoked, no production deployment is performed.
 
-Automated verification: complete Vitest suite passed 162 tests across 16 files, including the installation SQL executed solely inside an isolated PGlite database (not Supabase). The harness's latest TypeScript/build entry is `build OK`; no manual build/typecheck is run because the preview harness owns them. Existing inputValidator deprecation warnings remain, not failures.
+Automated verification: complete Vitest suite passed 164 tests across 16 files, including the installation SQL executed solely inside an isolated PGlite database (not Supabase). The harness's latest TypeScript/build entry is `build OK`; no manual build/typecheck is run because the preview harness owns them. Existing inputValidator deprecation warnings remain, not failures.
 
 ## Installation order
 1. Review `supabase/manual/bybit_confirmation_reconciliation.sql` and apply it to the intended external database only after approval. This installation creates durable confirmation columns, admin-only cases/audit, transactional ingestion/decision RPCs, and protective triggers; it does not update historical rows.
