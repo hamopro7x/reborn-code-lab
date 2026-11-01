@@ -571,7 +571,8 @@ export function canonicalize(rows: Iterable<SpendRow>): {
   let lastTxnTime = 0;
   const seenRaw = new Set<string>();
   const list = [...rows];
-  const linkVoided = findLinkedReversals(list.map(linkCandidateOfSpendRow));
+  const resolved = resolveReversals(list.map(linkCandidateOfSpendRow));
+  const linkVoided = resolved.voided;
 
   for (const row of list) {
     const time = Number(row.time ?? 0);
@@ -625,6 +626,16 @@ export function canonicalize(rows: Iterable<SpendRow>): {
   }
 
   dropSettledAuthorisations(transactions);
+
+  // A reversal awaiting admin review still returned its amount: subtract it
+  // once from the totals (by dropping the latest candidate) without labelling
+  // either purchase as reversed.
+  for (const rv of resolved.review) {
+    if (rv.legacyId) continue;
+    const byTxn = [...transactions.values()].filter((t) => t.rawTxnIds.some((id) => rv.candidateIds.includes(id)));
+    byTxn.sort((a, b) => Number(b.winner.time ?? 0) - Number(a.winner.time ?? 0));
+    if (byTxn[0]) transactions.delete(byTxn[0].canonicalId);
+  }
 
   return { transactions, excluded, lastTxnTime };
 }
