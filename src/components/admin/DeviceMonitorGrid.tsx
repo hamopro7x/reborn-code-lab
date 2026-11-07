@@ -9,6 +9,7 @@ import { KeyRound, Loader2, Maximize2, Minimize2, Monitor, MonitorOff, MousePoin
 
 import { getScreenSession, type ScreenSession, type SessionState } from "@/lib/screen-session";
 import { StreamDoctorPanel } from "@/components/admin/StreamDoctorPanel";
+import { livePoll } from "@/lib/live-poll";
 
 type Device = {
   id: string;
@@ -372,7 +373,7 @@ const DEVICE_COLUMNS =
 function useAgentDevices() {
   return useQuery({
     queryKey: ["agent-devices"],
-    refetchInterval: 5_000,
+    refetchInterval: livePoll(5_000),
     refetchIntervalInBackground: false,
     staleTime: 0,
     queryFn: async () => {

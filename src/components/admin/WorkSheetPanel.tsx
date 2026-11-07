@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { listEmployees } from "@/lib/admin.functions";
 import { getEmployeeShiftList, deleteEmployeeShift, getSharedShiftId, setSharedShift, getMySharedShift, markShiftReviewed, archiveEmployeeShifts } from "@/lib/work.functions";
 import employeesBg from "@/assets/employees-bg.png.asset.json";
+import { livePoll } from "@/lib/live-poll";
 
 /** ألوان مجموعات ربط P2P — الشفتات اللي اتربطو بنفس الطلب تاخد لون واحد، وكل مجموعة لون مختلف. */
 const GROUP_COLOR_CLASSES = [
@@ -626,7 +627,7 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
 /** الموظف يختار الشفت الذي أتاحته الإدارة من قائمة أعلى اليسار. */
 function EmployeeSide() {
   const fn = useServerFn(getMySharedShift);
-  const q = useQuery({ queryKey: ["my-shared-shift"], queryFn: () => fn(), refetchInterval: 15_000 });
+  const q = useQuery({ queryKey: ["my-shared-shift"], queryFn: () => fn(), refetchInterval: livePoll(15_000) });
   const [menuOpen, setMenuOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const shared = q.data as Shift | null | undefined;

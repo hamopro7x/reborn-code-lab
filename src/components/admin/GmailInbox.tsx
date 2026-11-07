@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { safeEmailDocument } from "@/lib/mail/mime";
 import { formatDateTime } from "@/lib/format";
 import { refreshQueries } from "@/lib/refresh-queries";
+import { livePoll } from "@/lib/live-poll";
 import {
   listMailAccounts, startMailLink, setMailAccountPaused, deleteMailAccount, syncMailNow, listMailMessages,
   getMailThread, setMailRead, organizeMail, listMailLabels, saveMailLabel, downloadMailAttachment, sendMail,
@@ -93,7 +94,7 @@ function useMailRealtime() {
 /** Mounted once in the admin shell: in-site + system notifications, de-duplicated per user on the server. */
 export function MailNotifier({ onOpen }: { onOpen?: (messageId: string) => void }) {
   const claimFn = useServerFn(claimMailNotifications);
-  const q = useQuery({ queryKey: ["mail-notif"], queryFn: () => claimFn(), refetchInterval: 15000, retry: false, staleTime: 0 });
+  const q = useQuery({ queryKey: ["mail-notif"], queryFn: () => claimFn(), refetchInterval: livePoll(15000), retry: false, staleTime: 0 });
   const handled = useRef(new Set<string>());
   useMailRealtime();
   useEffect(() => {
@@ -109,7 +110,7 @@ export function MailNotifier({ onOpen }: { onOpen?: (messageId: string) => void 
 
 export function useMailUnread() {
   const fn = useServerFn(mailUnreadCount);
-  return useQuery({ queryKey: ["mail-unread"], queryFn: () => fn(), refetchInterval: 15000, retry: false }).data?.unread ?? 0;
+  return useQuery({ queryKey: ["mail-unread"], queryFn: () => fn(), refetchInterval: livePoll(15000), retry: false }).data?.unread ?? 0;
 }
 
 function Accounts({ isAdmin }: { isAdmin: boolean }) {
@@ -119,7 +120,7 @@ function Accounts({ isAdmin }: { isAdmin: boolean }) {
   const pauseFn = useServerFn(setMailAccountPaused);
   const delFn = useServerFn(deleteMailAccount);
   const syncFn = useServerFn(syncMailNow);
-  const q = useQuery({ queryKey: ["mail-accounts"], queryFn: () => listFn(), refetchInterval: 30000 });
+  const q = useQuery({ queryKey: ["mail-accounts"], queryFn: () => listFn(), refetchInterval: livePoll(30000) });
   const [busy, setBusy] = useState<string | null>(null);
   const popupRef = useRef<Window | null>(null);
   const refresh = () => qc.invalidateQueries({ queryKey: ["mail-accounts"] });
@@ -357,7 +358,7 @@ function ThreadView({ id, isAdmin, accounts, labels, onBack }: { id: string; isA
 
 function ActivityLog() {
   const fn = useServerFn(listMailActivity);
-  const q = useQuery({ queryKey: ["mail-activity"], queryFn: () => fn(), refetchInterval: 30000 });
+  const q = useQuery({ queryKey: ["mail-activity"], queryFn: () => fn(), refetchInterval: livePoll(30000) });
   const AR: Record<string, string> = { read: "قرأ", marked_read: "علّم كمقروء", marked_unread: "علّم كغير مقروء", sent: "أرسل", replied: "رد", account_linked: "ربط حساب", account_relinked: "أعاد ربط حساب", account_unlinked: "حذف حساب", account_paused: "أوقف حساب", account_resumed: "شغّل حساب", star: "ميّز", unstar: "ألغى التمييز", archive: "أرشف", unarchive: "ألغى الأرشفة", trash: "نقل للمحذوفات", restore: "استعاد", delete: "حذف نهائي", add_label: "أضاف تصنيف", remove_label: "أزال تصنيف", label_created: "أنشأ تصنيف", label_deleted: "حذف تصنيف" };
   if (q.isLoading) return <Loader2 className="h-5 w-5 animate-spin" />;
   return (
@@ -399,7 +400,7 @@ export function GmailInbox({ isAdmin = false }: { isAdmin?: boolean }) {
 
   useEffect(() => { const t = setTimeout(() => setTerm(search), 350); return () => clearTimeout(t); }, [search]);
 
-  const accounts = useQuery({ queryKey: ["mail-accounts"], queryFn: () => accFn(), refetchInterval: 30000 });
+  const accounts = useQuery({ queryKey: ["mail-accounts"], queryFn: () => accFn(), refetchInterval: livePoll(30000) });
   const labels = useQuery({ queryKey: ["mail-labels"], queryFn: () => labelsFn() });
   const drafts = useQuery({ queryKey: ["mail-drafts"], queryFn: () => draftsFn(), enabled: view === "drafts" });
   const msgs = useInfiniteQuery({
@@ -407,7 +408,7 @@ export function GmailInbox({ isAdmin = false }: { isAdmin?: boolean }) {
     initialPageParam: undefined as string | undefined,
     queryFn: ({ pageParam }) => listFn({ data: { view, labelId, accountId, search: term || undefined, before: pageParam } }),
     getNextPageParam: (p) => p.nextBefore ?? undefined,
-    refetchInterval: 20000,
+    refetchInterval: livePoll(20000),
     retry: 4,
     retryDelay: (n) => Math.min(1000 * 2 ** n, 8000),
     refetchOnWindowFocus: true,

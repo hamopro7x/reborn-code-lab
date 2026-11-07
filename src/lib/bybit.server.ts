@@ -2331,7 +2331,9 @@ function runRecentAssetSync(accounts: BybitAccount[]): void {
 
 /** Fast card sync; each account links its shift as soon as its own rows land. */
 export async function syncAllRecent(): Promise<{ saved: number; accounts: number }> {
-  return heavyOnce("recent:all", 2_000, async () => {
+  // Screens and the server loop all ask for this; one pass per 5 s per server
+  // is as fresh as the 5 s loop and stops open screens from multiplying load.
+  return heavyOnce("recent:all", 5_000, async () => {
     const accounts = await listAccounts();
     let saved = 0;
     await mapLimit(accounts, 1, async (a) => {

@@ -4,6 +4,7 @@ import { getRequest } from '@tanstack/react-start/server'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from './types'
 import { DATABASE_PUBLISHABLE_KEY, DATABASE_URL, requireCurrentDatabaseUrl } from './config'
+import { SERVER_DB_TIMEOUT_MS, withRequestTimeout } from './timeout-fetch'
 
 
 
@@ -27,9 +28,11 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
     }
 
     headers.set('apikey', supabaseKey);
-    return fetch(input, { ...init, headers });
+    return timedFetch(input, { ...init, headers });
   };
 }
+
+const timedFetch = withRequestTimeout((input, init) => fetch(input, init), SERVER_DB_TIMEOUT_MS);
 
 export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server(
   async ({ next }) => {
