@@ -5,6 +5,7 @@ import { getBybitReversalCases, resolveBybitReversalCase } from "@/lib/bybit.fun
 import { Button } from "@/components/ui/button";
 import { formatDateTime } from "@/lib/format";
 import { Check, X } from "lucide-react";
+import { livePoll } from "@/lib/live-poll";
 
 export function BybitReversalCases() {
   const list = useServerFn(getBybitReversalCases);
@@ -12,7 +13,7 @@ export function BybitReversalCases() {
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const q = useQuery({ queryKey: ["bybit-reversal-cases"], queryFn: () => list(), refetchInterval: 5000, retry: false });
+  const q = useQuery({ queryKey: ["bybit-reversal-cases"], queryFn: () => list(), refetchInterval: livePoll(5000), retry: false });
   async function decide(c: any, targetId: string | null) {
     if (!window.confirm(targetId ? `تأكيد عكس العملية ${targetId}؟` : "تأكيد إن ولا واحدة من العمليات دي اتعكست؟")) return;
     setBusy(true); setError("");

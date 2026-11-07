@@ -58,6 +58,7 @@ import { EmployeeDevices } from "@/components/admin/DeviceMonitorGrid";
 import { HeroBannerManager } from "@/components/admin/HeroBannerManager";
 import { FooterManager } from "@/components/admin/FooterManager";
 import { ensureSlug } from "@/lib/slug";
+import { livePoll } from "@/lib/live-poll";
 import { getPaymentIconUrl, preparePaymentIconUpload } from "@/lib/payments.functions";
 
 
@@ -138,7 +139,7 @@ function Admin() {
     // Panel sharing changes rarely; a 5s poll on every admin session was pure
     // overhead. Still automatic, just far cheaper and only while visible.
     staleTime: 30_000,
-    refetchInterval: 30_000,
+    refetchInterval: livePoll(30_000),
     refetchIntervalInBackground: false,
   });
   const shared = sharedQ.data ?? [];
@@ -686,7 +687,7 @@ function EmployeesTab() {
       if (!r.ok) return { version: null, notes: null };
       return (await r.json()) as { version: string | null; notes: string | null };
     },
-    refetchInterval: 60_000,
+    refetchInterval: livePoll(60_000),
   });
 
 

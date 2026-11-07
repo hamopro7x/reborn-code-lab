@@ -82,6 +82,7 @@ import { usePinClaim } from "@/components/admin/PinGate";
 import { BrandBadge, LedgerRowDetails, statusBadge } from "@/components/admin/BybitLedgerPanel";
 import { useWorkRealtime } from "@/lib/use-work-realtime";
 import { useLedgerAutoSync } from "@/lib/use-ledger-sync";
+import { livePoll } from "@/lib/live-poll";
 import { useUiState } from "@/lib/ui-state";
 
 type ManualKind = "wrong" | "employee" | "receive" | "transfer";
@@ -1213,7 +1214,7 @@ function ManualSection({
     // الصفر مع كل فتح للقسم — كان ذلك أحد أسباب بطء ظهور البيانات.
     staleTime: 3_000,
     // عرض الأدمن: تحديث دوري كاحتياطي لو التحديث اللحظي فوّت تغيير.
-    refetchInterval: readOnly ? 5_000 : false,
+    refetchInterval: readOnly ? livePoll(5_000) : false,
     refetchIntervalInBackground: false,
   });
 
@@ -1670,7 +1671,7 @@ export function EmployeeWorkView({
     // resolve the relevant shift themselves, so waiting for `st` created an
     // avoidable request waterfall for admins and employees.
     enabled: !blank,
-    refetchInterval: 5_000,
+    refetchInterval: livePoll(5_000),
     refetchIntervalInBackground: false,
   });
   // The rows response includes the shift state, avoiding a second authenticated
@@ -1693,7 +1694,7 @@ export function EmployeeWorkView({
           : myP2PFn({ data: undefined as any }),
     // الأدمن: لا تُحمّل بيانات P2P إلا بعد اختيار شفت محدد.
     enabled: !blank && (!viewUserId || shiftMode),
-    refetchInterval: 5_000,
+    refetchInterval: livePoll(5_000),
     refetchIntervalInBackground: false,
   });
 
@@ -1703,7 +1704,7 @@ export function EmployeeWorkView({
     queryKey: ["work-p2p-open"],
     queryFn: () => openP2PFn({ data: undefined as any }),
     enabled: !blank && !viewUserId && !shiftMode,
-    refetchInterval: 5_000,
+    refetchInterval: livePoll(5_000),
     refetchIntervalInBackground: false,
   });
 
@@ -1724,7 +1725,7 @@ export function EmployeeWorkView({
         ? shiftTransfersFn({ data: { shiftId: viewShiftId!, scope: "external" as const } })
         : transfersFn({ data: { scope: "external" as const } }),
     enabled: tab === "ext" && !blank,
-    refetchInterval: 5_000,
+    refetchInterval: livePoll(5_000),
     refetchIntervalInBackground: false,
   });
   const intQ = useQuery({
@@ -1734,7 +1735,7 @@ export function EmployeeWorkView({
         ? shiftTransfersFn({ data: { shiftId: viewShiftId!, scope: "internal" as const } })
         : transfersFn({ data: { scope: "internal" as const } }),
     enabled: tab === "int" && !blank,
-    refetchInterval: 5_000,
+    refetchInterval: livePoll(5_000),
     refetchIntervalInBackground: false,
   });
 
@@ -1796,7 +1797,7 @@ export function EmployeeWorkView({
           ? manualEmpFn({ data: { userId: viewUserId } })
           : manualCardFn({ data: undefined as any }),
     enabled: !blank && tab === "all",
-    refetchInterval: 5_000,
+    refetchInterval: livePoll(5_000),
     refetchIntervalInBackground: false,
   });
   const manualRows: any[] = blank || tab !== "all" ? [] : ((manualCardQ.data as any)?.rows ?? []);

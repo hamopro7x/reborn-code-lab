@@ -7,6 +7,7 @@ import { getBybitCardBrands, getBybitLedger, getBybitSpendTotals } from "@/lib/b
 import { formatDateTime } from "@/lib/format";
 import { cardPurchasePresenter } from "@/lib/bybit-spend";
 import { useLedgerAutoSync } from "@/lib/use-ledger-sync";
+import { livePoll } from "@/lib/live-poll";
 
 /** Official USDT token logo from TrustWallet (works on Fly and Lovable). */
 const USDT_LOGO = "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xdAC17F958D2ee523a2206206994597C13D831ec7/logo.png";
@@ -360,7 +361,7 @@ export function BybitLedgerPanel() {
     staleTime: 2_000,
     // التحديث اللحظي (Realtime) يحدّث السجل فور أي تغيير؛ هذا الفاصل مجرد
     // احتياطي عند انقطاع الاتصال اللحظي. كل ثانيتين كان يُثقل الصفحة.
-    refetchInterval: 5_000,
+    refetchInterval: livePoll(5_000),
     refetchIntervalInBackground: false,
   });
 
@@ -378,7 +379,7 @@ export function BybitLedgerPanel() {
     queryKey: ["bybit-spend-totals"],
     queryFn: () => totalsFn({ data: undefined as any }),
     staleTime: 2_000,
-    refetchInterval: 5_000,
+    refetchInterval: livePoll(5_000),
     refetchIntervalInBackground: false,
   });
 
