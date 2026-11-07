@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { syncAllBybitCardTxns } from "./bybit.functions";
 import { refreshQueries } from "./refresh-queries";
+import { pollDelay } from "./live-poll";
 
 const LOCK_KEY = "bybit-auto-sync-at";
 
@@ -19,6 +20,8 @@ export function useLedgerAutoSync(enabled = true, intervalMs = 5_000) {
   const qc = useQueryClient();
   const syncFn = useServerFn(syncAllBybitCardTxns);
   const running = useRef(false);
+  const failures = useRef(0);
+  const nextAt = useRef(0);
 
   useEffect(() => {
     if (!enabled) return;
@@ -38,10 +41,15 @@ export function useLedgerAutoSync(enabled = true, intervalMs = 5_000) {
     const run = async () => {
       if (cancelled || running.current) return;
       if (document.visibilityState === "hidden") return;
+      // بعد فشل متكرر نستنى أطول قبل المحاولة التالية بدل الضغط كل 5 ثواني.
+      if (Date.now() < nextAt.current) return;
       if (!claim()) return;
       running.current = true;
       try {
-        await syncFn({ data: undefined as any });
+        const res: any = await syncFn({ data: undefined as any });
+        if (res && res.ok === false) throw new Error(res.error ?? "sync failed");
+        failures.current = 0;
+        nextAt.current = 0;
         if (cancelled) return;
         for (const key of [
           ["bybit-ledger"],
@@ -57,7 +65,8 @@ export function useLedgerAutoSync(enabled = true, intervalMs = 5_000) {
           void refreshQueries(qc, [key]);
         }
       } catch {
-        /* transient failures are retried on the next tick */
+        failures.current += 1;
+        nextAt.current = Date.now() + pollDelay(intervalMs, failures.current);
       } finally {
         running.current = false;
       }
