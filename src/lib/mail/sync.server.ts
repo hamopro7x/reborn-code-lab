@@ -152,7 +152,9 @@ async function syncAccount(admin: any, account: any) {
       if (r.complete) newHistoryId = r.historyId;
     }
   }
-  if (complete) await reconcileSample(admin, token, account.id, deadline);
+  // The deletion safety net checks a rotating slice once per minute per account,
+  // not on every few-second run (it costs a count query plus Gmail calls).
+  if (complete && reconcileDue(account.last_sync_at)) await reconcileSample(admin, token, account.id, deadline);
   const patch: any = { last_sync_at: new Date().toISOString(), status: "active", last_error: null, sync_lease_until: null, updated_at: new Date().toISOString() };
   if (newHistoryId) patch.history_id = newHistoryId; // never advanced past unprocessed items
   const { error } = await admin.from("mail_accounts").update(patch).eq("id", account.id);
@@ -192,7 +194,14 @@ async function recoverExpiredCursor(admin: any, token: string, account: any, dea
   return { imported, complete: true, historyId };
 }
 
-/** Bounded safety net for source deletions history might miss: checks a rotating slice each run. */
+export function reconcileDue(lastSyncAt: string | null | undefined, now = Date.now()): boolean {
+  if (!lastSyncAt) return true;
+  const last = new Date(lastSyncAt).getTime();
+  if (!Number.isFinite(last)) return true;
+  return Math.floor(last / 60_000) !== Math.floor(now / 60_000);
+}
+
+/** Bounded safety net for source deletions history might miss: checks a rotating slice each minute. */
 async function reconcileSample(admin: any, token: string, accountId: string, deadline: number) {
   const { count } = await admin.from("mail_messages").select("id", { count: "exact", head: true }).eq("account_id", accountId);
   if (!count) return;
