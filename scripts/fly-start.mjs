@@ -60,17 +60,23 @@ if (!serviceRoleKey?.startsWith("sb_secret_") && serviceRoleKey?.split(".").leng
   process.exit(1);
 }
 
+// Only a rejected key stops startup. A slow or temporarily unreachable
+// database must not keep the whole site (store pages included) offline and
+// stuck in a restart loop; the server reconnects on its own once it answers.
 try {
   const response = await fetch(`${DATABASE_URL}/rest/v1/user_roles?select=id&limit=1`, {
     headers: { apikey: serviceRoleKey },
+    signal: AbortSignal.timeout(10_000),
   });
-  if (!response.ok) {
+  if (response.status === 401 || response.status === 403) {
     console.error(`[fly-start] Database server credential was rejected (${response.status}).`);
     process.exit(1);
   }
+  if (!response.ok) {
+    console.warn(`[fly-start] Database answered ${response.status} at startup; starting anyway.`);
+  }
 } catch (error) {
-  console.error("[fly-start] Could not validate the database server credential.", error);
-  process.exit(1);
+  console.warn("[fly-start] Database not reachable at startup; starting anyway.", error?.message ?? error);
 }
 
 // سر داخلي لمزامنة Bybit في الخلفية لو مش مضبوط كسر على Fly.
@@ -83,20 +89,29 @@ await import("../.output/server/index.mjs");
 
 // مزامنة دائمة على السيرفر: المعاملات تدخل المركز العام وشفت الموظف
 // حتى لو مفيش حد فاتح صفحة المعاملات.
+// عند فشل المزامنة (قاعدة بطيئة أو واقفة) نبطّئ تدريجيًا بدل ما نضغط عليها
+// كل 5 ثواني، ونرجع للسرعة العادية أول ما تنجح دورة واحدة.
 const SYNC_EVERY_MS = Number(process.env["SYNC_INTERVAL_MS"] || 5_000);
+const SYNC_MAX_BACKOFF_MS = 120_000;
 const syncUrl = `http://127.0.0.1:${process.env["PORT"]}/api/public/hooks/bybit-ledger-sync`;
+let syncDelay = SYNC_EVERY_MS;
 const tick = async () => {
+  let healthy = false;
   try {
-    await fetch(syncUrl, {
+    const res = await fetch(syncUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-sync-secret": process.env["SYNC_HOOK_SECRET"] },
       body: "{}",
       signal: AbortSignal.timeout(60_000),
     });
+    const body = await res.json().catch(() => ({}));
+    healthy = res.ok && body?.ok !== false;
+    if (!healthy) console.warn(`[fly-start] bybit sync unhealthy (${res.status}): ${JSON.stringify(body).slice(0, 200)}`);
   } catch (e) {
     console.error("[fly-start] background bybit sync failed:", e?.message ?? e);
   } finally {
-    setTimeout(tick, SYNC_EVERY_MS);
+    syncDelay = healthy ? SYNC_EVERY_MS : Math.min(syncDelay * 2, SYNC_MAX_BACKOFF_MS);
+    setTimeout(tick, syncDelay);
   }
 };
 setTimeout(tick, 15_000);
