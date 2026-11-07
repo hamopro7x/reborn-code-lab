@@ -5,6 +5,7 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 import { requireCurrentDatabaseUrl } from './config';
+import { SERVER_DB_TIMEOUT_MS, withRequestTimeout } from './timeout-fetch';
 
 function isNewSupabaseApiKey(value: string): boolean {
   return value.startsWith('sb_publishable_') || value.startsWith('sb_secret_');
@@ -26,9 +27,11 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
     }
 
     headers.set('apikey', supabaseKey);
-    return fetch(input, { ...init, headers });
+    return timedFetch(input, { ...init, headers });
   };
 }
+
+const timedFetch = withRequestTimeout((input, init) => fetch(input, init), SERVER_DB_TIMEOUT_MS);
 
 function createSupabaseAdminClient() {
   const SUPABASE_URL = requireCurrentDatabaseUrl(process.env.SUPABASE_URL);
