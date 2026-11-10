@@ -51,7 +51,7 @@ import { FileBarChart, MonitorPlay, Image as ImageIcon, ChevronUp, ChevronDown, 
 import { WorkSheetPanel } from "@/components/admin/WorkSheetPanel";
 import { AdminSheet } from "@/components/admin/AdminSheet";
 import { GmailInbox, MailNotifier } from "@/components/admin/GmailInbox";
-import { Mail } from "lucide-react";
+import { Mail, Wallet } from "lucide-react";
 
 import { LessonUploader } from "@/components/admin/LessonUploader";
 import { DeviceMonitorGrid } from "@/components/admin/DeviceMonitorGrid";
