@@ -251,6 +251,7 @@ export type Database = {
           id: string
           monthly_cashback: number
           name: string
+          provider: string
           sort_order: number
           uid: string | null
           updated_at: string
@@ -264,6 +265,7 @@ export type Database = {
           id?: string
           monthly_cashback?: number
           name?: string
+          provider?: string
           sort_order?: number
           uid?: string | null
           updated_at?: string
@@ -277,6 +279,7 @@ export type Database = {
           id?: string
           monthly_cashback?: number
           name?: string
+          provider?: string
           sort_order?: number
           uid?: string | null
           updated_at?: string
