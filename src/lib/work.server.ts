@@ -271,10 +271,8 @@ export async function workTable(opts: {
 }
 
 async function accountNames(db: DB): Promise<Map<string, string>> {
-  const { data } = await db.from("bybit_accounts").select("id,name,sort_order").order("sort_order");
-  return new Map(
-    (data ?? []).map((a: any, i: number) => [a.id, `${a.name} (فيزا ${a.sort_order || i + 1})`]),
-  );
+  const { accountLabels } = await import("./account-labels.server");
+  return accountLabels(db);
 }
 
 /* ------------------------- P2P: manual linking ------------------------- */
