@@ -32,6 +32,8 @@ export function OkxTab({ isAdmin }: { isAdmin: boolean }) {
 
   const addAccount = useMutation({
     mutationFn: (data: { apiKey: string; apiSecret: string; passphrase: string; name: string }) => addFn({ data }),
+    // Clear the previous attempt's error so a stale message is never mistaken for the new result.
+    onMutate: () => setAddError(null),
     onSuccess: (res: any) => {
       if (res?.ok === false) {
         setAddError({ message: res.error || "تعذر ربط الحساب", serverIp: res.serverIp ?? null });
