@@ -53,7 +53,7 @@ function Stat({ label, value, hint }: { label: string; value: string; hint?: str
   );
 }
 
-function Chip({ active, children, onClick }: { active?: boolean; children: React.ReactNode; onClick?: () => void }) {
+export function Chip({ active, children, onClick }: { active?: boolean; children: React.ReactNode; onClick?: () => void }) {
   return (
     <button
       onClick={onClick}
@@ -260,7 +260,7 @@ function CryptoLogo({ name, iconUrl }: { name: string; iconUrl: string | null })
   );
 }
 
-function CoinLogo({ coin }: { coin: string }) {
+export function CoinLogo({ coin }: { coin: string }) {
   return <CryptoLogo name={coin} iconUrl={coinIconUrl(coin)} />;
 }
 
@@ -822,7 +822,7 @@ function validateBybitCreds({ name, apiKey, apiSecret }: { name: string; apiKey:
   return e;
 }
 
-function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
+export function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1">
       <label className="text-[11px] text-muted-foreground block">{label}</label>
@@ -2143,7 +2143,7 @@ function TxnDetails({ txn }: { txn: any }) {
 
 
 
-function AssetTable({
+export function AssetTable({
   q, title, inChip, outChip, showAddress, icon, hideFeeOnDeposit, hideChain,
 }: { q: any; title: string; inChip: string; outChip: string; showAddress: boolean; icon?: boolean; hideFeeOnDeposit?: boolean; hideChain?: boolean }) {
   const [dir, setDir] = usePersistentState<"out" | "in">(`bybit.asset.${title}.dir`, "out");
