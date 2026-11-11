@@ -44,9 +44,7 @@ export const addOkxAccount = createServerFn({ method: "POST" })
       return { ok: true as const, account };
     } catch (e) {
       const { code, raw } = errorText(e);
-      const bybit = await import("./bybit.server");
-      const ip = code === "50110" ? await bybit.serverIp() : null;
-      return { ok: false as const, error: core.okxErrorMessage(code, raw), errorCode: code, serverIp: ip };
+      return { ok: false as const, error: core.okxErrorMessage(code, raw), errorCode: code };
     }
   });
 

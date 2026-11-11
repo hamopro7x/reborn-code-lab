@@ -24,7 +24,7 @@ export function OkxTab({ isAdmin }: { isAdmin: boolean }) {
   const renameFn = useServerFn(renameOkxAccount);
   const [selected, setSelected] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
-  const [addError, setAddError] = useState<{ message: string; serverIp?: string | null } | null>(null);
+  const [addError, setAddError] = useState<{ message: string } | null>(null);
   const [renameTarget, setRenameTarget] = useState<OkxAccountRow | null>(null);
 
   const accounts = useQuery({ queryKey: ["okx-accounts"], queryFn: () => listFn() });
@@ -36,7 +36,7 @@ export function OkxTab({ isAdmin }: { isAdmin: boolean }) {
     onMutate: () => setAddError(null),
     onSuccess: (res: any) => {
       if (res?.ok === false) {
-        setAddError({ message: res.error || "تعذر ربط الحساب", serverIp: res.serverIp ?? null });
+        setAddError({ message: res.error || "تعذر ربط الحساب" });
         return;
       }
       setAddError(null);
@@ -284,7 +284,7 @@ function AddOkxDialog({
   onClose: () => void;
   onSubmit: (d: { apiKey: string; apiSecret: string; passphrase: string; name: string }) => void;
   busy: boolean;
-  error?: { message: string; serverIp?: string | null } | null;
+  error?: { message: string } | null;
 }) {
   const [name, setName] = useState("");
   const [apiKey, setApiKey] = useState("");
@@ -330,7 +330,6 @@ function AddOkxDialog({
           {error && (
             <div className="space-y-1 rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-[11px] text-destructive">
               <div>{error.message}</div>
-              {error.serverIp && <div className="text-muted-foreground" dir="ltr">Server IP: {error.serverIp}</div>}
             </div>
           )}
           <Button className="w-full rounded-xl" disabled={busy} onClick={submit}>
