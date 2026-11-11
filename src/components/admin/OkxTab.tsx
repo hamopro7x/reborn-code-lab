@@ -11,6 +11,7 @@ import { useAdminBack } from "@/components/admin/back-nav";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { OkxHistoryTable } from "./OkxHistoryTable";
 
 type OkxAccountRow = { id: string; name: string; uid: string | null; sortOrder: number };
 
@@ -206,7 +207,7 @@ function OkxAccountView({ account, onBack }: { account: OkxAccountRow; onBack: (
   const qc = useQueryClient();
   const balFn = useServerFn(getOkxBalances);
   const movFn = useServerFn(getOkxMovements);
-  const [tab, setTab] = useState<"internal" | "onchain">("internal");
+  const [tab, setTab] = useState<"internal" | "onchain" | "funding" | "bills" | "orders">("internal");
   const bal = useQuery({ queryKey: ["okx-balances", account.id], queryFn: () => balFn({ data: { accountId: account.id } }) });
   const mov = useQuery({
     queryKey: ["okx-movements", account.id],
@@ -217,11 +218,12 @@ function OkxAccountView({ account, onBack }: { account: OkxAccountRow; onBack: (
   const internalQ = { isLoading: mov.isLoading, data: m.internal };
   const onchainQ = { isLoading: mov.isLoading, data: m.onchain };
   const coins = (((bal.data as any)?.coins ?? []) as any[]);
-  const failed = (bal.data as any)?.failed || m.failed;
+  const failed = (bal.data as any)?.failed || m.failed || (bal.error || mov.error ? "تعذر تحميل البيانات، حاول تاني." : null);
 
   function refresh() {
     qc.invalidateQueries({ queryKey: ["okx-balances", account.id] });
     qc.invalidateQueries({ queryKey: ["okx-movements", account.id] });
+    qc.invalidateQueries({ queryKey: ["okx-history", account.id] });
   }
 
   return (
@@ -267,12 +269,17 @@ function OkxAccountView({ account, onBack }: { account: OkxAccountRow; onBack: (
         )}
       </div>
 
-      <div className="flex items-center justify-start gap-2">
+      <div className="flex flex-wrap items-center justify-start gap-2">
         <Chip active={tab === "internal"} onClick={() => setTab("internal")}>السحب والإيداع الداخلي</Chip>
         <Chip active={tab === "onchain"} onClick={() => setTab("onchain")}>السحب والإيداع الخارجي</Chip>
+        <Chip active={tab === "funding"} onClick={() => setTab("funding")}>سجل التمويل</Chip>
+        <Chip active={tab === "bills"} onClick={() => setTab("bills")}>سجل التداول</Chip>
+        <Chip active={tab === "orders"} onClick={() => setTab("orders")}>طلبات التداول</Chip>
       </div>
-      {tab === "internal" && <AssetTable q={internalQ} title="" inChip="إيداع" outChip="سحب" showAddress hideChain />}
-      {tab === "onchain" && <AssetTable q={onchainQ} title="" icon inChip="الاستلام" outChip="التحويل على السلسلة" showAddress={false} hideFeeOnDeposit />}
+      {(tab === "internal" || tab === "onchain") && <div className="text-xs text-muted-foreground">الدورة الحالية · {((tab === "internal" ? m.internal : m.onchain)?.deposits?.length ?? 0)} إيداع · {((tab === "internal" ? m.internal : m.onchain)?.withdrawals?.length ?? 0)} سحب</div>}
+      {tab === "internal" && !failed && <AssetTable q={internalQ} title="" inChip="إيداع" outChip="سحب" showAddress hideChain />}
+      {tab === "onchain" && !failed && <AssetTable q={onchainQ} title="" icon inChip="الاستلام" outChip="التحويل على السلسلة" showAddress={false} hideFeeOnDeposit />}
+      {(tab === "funding" || tab === "bills" || tab === "orders") && <OkxHistoryTable key={`${account.id}:${tab}`} accountId={account.id} kind={tab} />}
     </div>
   );
 }

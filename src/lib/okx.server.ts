@@ -16,6 +16,7 @@ import {
   type OkxAssetRow,
 } from "./okx-core";
 import { currentBybitCycle, currentBybitRows } from "./monthly-cycle.server";
+import { mapOkxHistory, okxHistoryCursor, type OkxHistoryKind, type OkxInstrument } from "./okx-history";
 
 const BASE = "https://www.okx.com";
 
@@ -274,6 +275,26 @@ export function okxLedgerRows(accountId: string, m: OkxMovements) {
 }
 
 /* ---------------- background sync ---------------- */
+
+/** Read-only detail views; never project bills/orders into the transfer ledger. */
+export async function fetchOkxHistory(accountId: string, kind: OkxHistoryKind, instrument: OkxInstrument, after?: string) {
+  const c = await okxCreds(accountId);
+  const { periodStart, periodEnd } = currentBybitCycle();
+  const start = kind === "funding" ? Math.max(periodStart, Date.now() - 30 * 86400_000) : periodStart;
+  const path = kind === "funding" ? "/api/v5/asset/bills" : kind === "bills" ? "/api/v5/account/bills-archive" : "/api/v5/trade/orders-history-archive";
+  const raw = await okxCall("GET", path, {
+    limit: 100, after,
+    ...(kind === "funding" ? {} : { begin: start, end: Math.min(periodEnd, Date.now()), ...(kind === "orders" ? { instType: instrument } : {}) }),
+  }, c);
+  const rows = raw.map((r) => mapOkxHistory(r, kind)).filter((r) => r.id && r.time >= start && r.time < periodEnd);
+  const last = raw[raw.length - 1];
+  const lastTime = Number(last?.[kind === "orders" ? "cTime" : "ts"] ?? 0);
+  const cursor = lastTime >= start ? okxHistoryCursor(raw, kind) : null;
+  return {
+    rows, nextCursor: cursor === after ? null : cursor,
+    periodLabel: `${new Date(start).toLocaleDateString("en-GB", { timeZone: "Africa/Cairo" })} — ${new Date().toLocaleDateString("en-GB", { timeZone: "Africa/Cairo" })}`,
+  };
+}
 
 let inflight: Promise<number> | null = null;
 let lastRecent = 0;

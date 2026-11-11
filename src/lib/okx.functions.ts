@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertAccess, assertAdmin, requiredId } from "./bybit-access";
+import type { OkxHistoryKind, OkxInstrument } from "./okx-history";
 
 function errorText(e: unknown) {
   const code = String((e as any)?.code ?? "");
@@ -105,5 +106,27 @@ export const getOkxMovements = createServerFn({ method: "POST" })
     } catch (e) {
       const { code, raw } = errorText(e);
       return { internal: empty, onchain: empty, failed: core.okxErrorMessage(code, raw) };
+    }
+  });
+
+export const getOkxHistory = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { accountId: string; kind: OkxHistoryKind; instrument?: OkxInstrument; after?: string }) => {
+    const accountId = requiredId({ id: input?.accountId }, "معرف الحساب مطلوب");
+    if (!["funding", "bills", "orders"].includes(input?.kind)) throw new Error("نوع السجل غير صالح");
+    const instrument = input.instrument ?? "SPOT";
+    if (!["SPOT", "MARGIN", "SWAP", "FUTURES", "OPTION", "EVENTS"].includes(instrument)) throw new Error("نوع التداول غير صالح");
+    if (input.after !== undefined && !/^\d{1,40}$/.test(input.after)) throw new Error("صفحة غير صالحة");
+    return { accountId, kind: input.kind, instrument, after: input.after };
+  })
+  .handler(async ({ data, context }) => {
+    await assertAccess(context.supabase, context.userId);
+    const mod = await import("./okx.server");
+    const core = await import("./okx-core");
+    try {
+      return { ...(await mod.fetchOkxHistory(data.accountId, data.kind, data.instrument, data.after)), failed: null as string | null };
+    } catch (e) {
+      const { code, raw } = errorText(e);
+      return { rows: [], nextCursor: null, periodLabel: "", failed: core.okxErrorMessage(code, raw) };
     }
   });
