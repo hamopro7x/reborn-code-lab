@@ -153,7 +153,7 @@ function OkxAccountCard({
     staleTime: 60_000,
   });
   const d = (q.data as any) ?? {};
-  const usdt = ((d.coins ?? []) as any[]).find((c) => c.coin === "USDT");
+  const coins = (d.coins ?? []) as { coin: string; total: number }[];
   const no = account.sortOrder > 0 ? account.sortOrder : index + 1;
   return (
     <article className="rounded-3xl border border-border/60 bg-card/70 p-5">
@@ -187,10 +187,13 @@ function OkxAccountCard({
           <div className="space-y-2 min-w-0">
             <div className="text-xs text-muted-foreground">القيمة الإجمالية المقدّرة</div>
             <div dir="ltr" className="text-3xl font-black tabular-nums break-all">{usd(Number(d.totalUsd ?? 0))}</div>
-            {usdt && <div dir="ltr" className="flex items-center gap-2 text-sm text-muted-foreground">
-              <CoinLogo coin="USDT" /><span>USDT</span>
-              <span className="tabular-nums">{Number(usdt.total).toLocaleString("en-US", { maximumFractionDigits: 6 })}</span>
-            </div>}
+            {coins.length ? coins.map((coin) => (
+              <div key={coin.coin} dir="ltr" className="flex min-w-0 items-start gap-2 text-sm text-muted-foreground">
+                <span className="shrink-0"><CoinLogo coin={coin.coin} /></span>
+                <span className="shrink-0">{coin.coin}</span>
+                <span className="min-w-0 break-all tabular-nums">{Number(coin.total).toLocaleString("en-US", { maximumFractionDigits: 8 })}</span>
+              </div>
+            )) : <div className="text-xs text-muted-foreground">لا يوجد رصيد</div>}
           </div>
         )}
       </div>
@@ -255,15 +258,15 @@ function OkxAccountView({ account, onBack }: { account: OkxAccountRow; onBack: (
           <div className="flex flex-wrap items-stretch gap-3">
             {coins.map((c) => (
               <div key={c.coin} className="inline-flex flex-col gap-1 rounded-xl border border-border/60 bg-background/60 p-3">
-                <div dir="ltr" className="flex items-center gap-2">
+                <div dir="ltr" className="flex min-w-0 flex-wrap items-center gap-2">
                   <CoinLogo coin={c.coin} />
                   <span className="text-sm font-bold text-muted-foreground">{c.coin}</span>
-                  <span className="text-3xl font-black tabular-nums">
-                    {Number(c.total).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 6 })}
+                  <span className="min-w-0 break-all text-3xl font-black tabular-nums">
+                    {Number(c.total).toLocaleString("en-US", { maximumFractionDigits: 8 })}
                   </span>
                 </div>
                 <div className="text-[11px] text-muted-foreground">
-                  التمويل {Number(c.funding).toFixed(2)} · التداول {Number(c.trading).toFixed(2)}
+                  التمويل {Number(c.funding).toLocaleString("en-US", { maximumFractionDigits: 8 })} · التداول {Number(c.trading).toLocaleString("en-US", { maximumFractionDigits: 8 })}
                 </div>
               </div>
             ))}
