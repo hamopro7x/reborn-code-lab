@@ -162,6 +162,17 @@ export async function fetchOkxBalances(accountId: string): Promise<{ coins: OkxC
     okxCall("GET", "/api/v5/account/balance", {}, c),
   ]);
   if (funding.status === "rejected" && trading.status === "rejected") throw funding.reason;
+  // Official overview valuation includes funding, trading and Earn; never add it
+  // to the component balances or infer an undocumented Pay balance from it.
+  let overviewUsd: number | null = null;
+  try {
+    const valuation = await okxCall("GET", "/api/v5/asset/asset-valuation", { ccy: "USD" }, c);
+    const raw = valuation[0]?.totalBal;
+    const value = Number(raw);
+    if (raw !== undefined && raw !== null && raw !== "" && Number.isFinite(value) && value >= 0) overviewUsd = value;
+  } catch {
+    // Keep the available component balances if overview valuation is unavailable.
+  }
   const map = new Map<string, OkxCoin>();
   const get = (coin: string) => {
     let row = map.get(coin);
@@ -184,7 +195,7 @@ export async function fetchOkxBalances(accountId: string): Promise<{ coins: OkxC
       row.usd += Number(d.eqUsd ?? 0) || 0;
     }
   }
-  const stable = new Set(["USDT", "USDC", "USD", "FDUSD", "DAI"]);
+  const stable = new Set(["USDT", "USDC", "USD", "USDG", "FDUSD", "DAI"]);
   const coins = [...map.values()]
     .map((r) => {
       const total = r.funding + r.trading;
@@ -196,7 +207,7 @@ export async function fetchOkxBalances(accountId: string): Promise<{ coins: OkxC
   if (funding.status === "fulfilled") {
     totalUsd += coins.filter((r) => stable.has(r.coin)).reduce((s, r) => s + r.funding, 0);
   }
-  return { coins, totalUsd };
+  return { coins, totalUsd: overviewUsd ?? totalUsd };
 }
 
 /* ---------------- movements ---------------- */

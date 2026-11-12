@@ -181,18 +181,16 @@ function OkxAccountCard({
       <div className="mt-4 rounded-2xl border border-border/60 bg-background/60 p-4">
         {q.isLoading ? (
           <Loader2 className="size-5 animate-spin text-muted-foreground" />
-        ) : d.failed ? (
-          <div className="text-xs text-destructive">{d.failed}</div>
+        ) : d.failed || q.error ? (
+          <div className="text-xs text-destructive">{d.failed || "تعذر تحميل الرصيد، حاول تاني."}</div>
         ) : (
-          <div className="flex items-end justify-between gap-3">
-            <div dir="ltr" className="flex items-center gap-2">
-              <CoinLogo coin="USDT" />
-              <span className="text-sm font-bold text-muted-foreground">USDT</span>
-              <span className="text-3xl font-black tabular-nums">
-                {Number(usdt?.total ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </span>
-            </div>
-            <div className="text-[11px] text-muted-foreground" dir="ltr">≈ {usd(Number(d.totalUsd ?? 0))}</div>
+          <div className="space-y-2 min-w-0">
+            <div className="text-xs text-muted-foreground">القيمة الإجمالية المقدّرة</div>
+            <div dir="ltr" className="text-3xl font-black tabular-nums break-all">{usd(Number(d.totalUsd ?? 0))}</div>
+            {usdt && <div dir="ltr" className="flex items-center gap-2 text-sm text-muted-foreground">
+              <CoinLogo coin="USDT" /><span>USDT</span>
+              <span className="tabular-nums">{Number(usdt.total).toLocaleString("en-US", { maximumFractionDigits: 6 })}</span>
+            </div>}
           </div>
         )}
       </div>
@@ -245,6 +243,10 @@ function OkxAccountView({ account, onBack }: { account: OkxAccountRow; onBack: (
       )}
 
       <div className="rounded-2xl border border-border/60 bg-card/70 p-4">
+        {!bal.isLoading && !(bal.data as any)?.failed && !bal.error && <div className="mb-3">
+          <div className="text-xs text-muted-foreground">القيمة الإجمالية المقدّرة</div>
+          <div dir="ltr" className="text-3xl font-black tabular-nums break-all">{usd(Number((bal.data as any)?.totalUsd ?? 0))}</div>
+        </div>}
         {bal.isLoading ? (
           <Loader2 className="size-5 animate-spin text-muted-foreground" />
         ) : !coins.length ? (
