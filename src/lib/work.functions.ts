@@ -71,9 +71,9 @@ export const getWorkP2PPending = createServerFn({ method: "POST" })
 export const getWorkP2PCompleted = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await assertAccess(context.supabase, context.userId);
+    const role = await assertAccess(context.supabase, context.userId);
     const mod = await import("./work.server");
-    return mod.completedP2P(200);
+    return mod.completedP2P(200, context.userId, role === "admin");
   });
 
 /**
@@ -126,10 +126,11 @@ export const getStaffShifts = createServerFn({ method: "POST" })
 /** The caller's OWN shifts only — resolved from the authenticated session. */
 export const getMyShiftsForLink = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator((input: unknown) => z.object({ hiddenOnly: z.boolean().optional() }).parse(input ?? {}))
+  .handler(async ({ data, context }) => {
     await assertAccess(context.supabase, context.userId);
     const mod = await import("./work.server");
-    return mod.myShiftsForLink(context.userId);
+    return mod.myShiftsForLink(context.userId, data.hiddenOnly ?? false);
   });
 
 /** Employee-side P2P linking: order → employee → shift. */
@@ -139,16 +140,28 @@ export const linkP2POrder = createServerFn({ method: "POST" })
     z
       .object({
         ledgerId: z.string().uuid(),
-        shiftId: z.string().uuid(),
-        // Every shift the employee ticked; all of them leave the link menu.
+        shiftIds: z.array(z.string().uuid()).min(1).max(100).optional(),
+        // Compatibility for callers using the prior API; no shift consumption.
+        shiftId: z.string().uuid().optional(),
         usedShiftIds: z.array(z.string().uuid()).max(100).optional(),
       })
+      .refine((v) => !!v.shiftIds?.length || !!v.shiftId, "اختار شفتًا واحدًا على الأقل")
       .parse(input),
   )
   .handler(async ({ data, context }) => {
     await assertAccess(context.supabase, context.userId);
     const mod = await import("./work.server");
-    return mod.linkP2P(data.ledgerId, data.shiftId, context.userId, data.usedShiftIds ?? []);
+    const ids = data.shiftIds ?? (data.shiftId ? [data.shiftId, ...(data.usedShiftIds ?? [])] : []);
+    return mod.linkP2P(data.ledgerId, ids, context.userId);
+  });
+
+export const setMyP2PShiftHidden = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ shiftId: z.string().uuid(), hidden: z.boolean() }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAccess(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    return mod.setP2PShiftHidden(context.userId, data.shiftId, data.hidden);
   });
 
 
@@ -493,8 +506,19 @@ export const getShiftP2P = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => shiftSchema.parse(input))
   .handler(async ({ data, context }) => {
     await assertShiftView(context.supabase, context.userId, data.shiftId);
+    const role = await assertAccess(context.supabase, context.userId);
     const mod = await import("./work.server");
-    return mod.shiftP2P(data.shiftId);
+    return mod.shiftP2P(data.shiftId, role === "admin" ? undefined : context.userId);
+  });
+
+/** Link details are owner-scoped even when the central order itself is shared. */
+export const getP2POrderLinks = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ ledgerId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const role = await assertAccess(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    return mod.p2pOrderLinks(data.ledgerId, role === "admin" ? undefined : context.userId);
   });
 
 /** طلبات P2P المرتبطة بالشفت المفتوح للموظف الحالي. */

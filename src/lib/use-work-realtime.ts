@@ -42,11 +42,12 @@ export function useWorkRealtime(opts: {
             : [["my-shift-txns"]];
       }
       if (group === "p2p") {
-        return shiftMode
+        const keys: QueryKey[] = shiftMode
           ? [["shift-p2p", shiftId]]
           : viewUserId
             ? [["emp-shift-p2p", viewUserId]]
             : [["my-shift-p2p"], ["work-p2p-open"]];
+        return [...keys, ["p2p-order-links"], ["emp-archive"]];
       }
       if (group === "transfers") {
         return shiftMode
@@ -101,6 +102,11 @@ export function useWorkRealtime(opts: {
           if (shiftId && row["shift_id"] && row["shift_id"] !== shiftId) return;
           schedule("txns", "p2p", "transfers");
         },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "work_p2p_shift_links" },
+        () => schedule("p2p", "shifts"),
       )
       .on(
         "postgres_changes",

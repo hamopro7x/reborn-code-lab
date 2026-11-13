@@ -5,6 +5,7 @@ vi.mock("@/integrations/supabase/client.server",async()=>{
   return {supabaseAdmin:createClient("https://shift-test.supabase.co","test-key",{
     auth:{persistSession:false,autoRefreshToken:false},global:{fetch:async(input)=>{
       const url=new URL(String(input));
+      if(url.pathname.endsWith("/work_p2p_effective_links")) return new Response("[]",{headers:{"content-type":"application/json"}});
       if(url.pathname.endsWith("/work_shifts")){
         const shift={id:"shift",user_id:"employee",started_at:"2026-11-01T00:00Z",ended_at:null};
         return new Response(JSON.stringify(url.searchParams.get("ended_at")==="is.null"?shift:[shift]),{headers:{"content-type":"application/json"}});

@@ -40,6 +40,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { MerchantLogo } from "./MerchantLogo";
+import { P2PShiftLinkMenu } from "./P2PShiftLinkMenu";
 import { formatDateTime } from "@/lib/format";
 import { PAGE_SIZE } from "@/lib/pagination";
 import { PaginationBar } from "@/components/ui/pagination-bar";
@@ -60,8 +61,6 @@ import {
   getWorkP2PCompleted,
   getWorkTransfers,
 
-  getMyShiftsForLink,
-  linkP2POrder,
   getEmployeeShiftTxns,
   getEmployeeManualTxns,
   getEmployeeShiftP2P,
@@ -169,171 +168,6 @@ const P2P_COLUMNS = [
   "صاحب الطلب",
 ];
 
-/**
- * Shift picker for the current employee only.
- * Shows only shifts that have NO P2P order linked yet.
- * Employee can select multiple shifts; the order links to the newest one.
- * After linking, selected shifts disappear on refetch.
- */
-function P2PLinkMenu({ ledgerId, onLinked }: { ledgerId: string; onLinked?: () => void }) {
-  const myShiftsFn = useServerFn(getMyShiftsForLink);
-  const linkFn = useServerFn(linkP2POrder);
-  const [open, setOpen] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-
-  const mine = useQuery({
-    queryKey: ["work-my-shifts-link"],
-    queryFn: () => myShiftsFn({ data: undefined as any }),
-    enabled: open,
-  });
-
-  // Reset selection when popover opens
-  useEffect(() => {
-    if (open) setSelected(new Set());
-  }, [open]);
-
-  const myName = (mine.data as any)?.name ?? "";
-  const shiftRows = ((mine.data as any)?.shifts ?? []) as any[];
-
-  const toggle = (id: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const linkSelected = async () => {
-    if (busy || selected.size === 0) return;
-    // Pick the newest shift among selected (latest startedAt)
-    const picked = shiftRows
-      .filter((s) => selected.has(s.id))
-      .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
-    if (!picked.length) return;
-    const newestShiftId = picked[0].id;
-
-    setBusy(true);
-    try {
-      const res: any = await linkFn({
-        data: { ledgerId, shiftId: newestShiftId, usedShiftIds: picked.map((s) => s.id) },
-      });
-      if (!res?.ok) {
-        toast.error(res?.error ?? "تعذر حفظ الربط.");
-        void mine.refetch();
-        return;
-      }
-      toast.success("تم ربط الطلب بالشفت");
-      setOpen(false);
-      void mine.refetch();
-      onLinked?.();
-    } catch (e: any) {
-      toast.error(e?.message ?? "فشل الربط");
-      onLinked?.();
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          className="rounded-full border border-[oklch(0.82_0.15_85/0.5)] bg-[oklch(0.82_0.15_85/0.12)] px-4 py-1 text-xs font-bold text-[oklch(0.82_0.15_85)] transition hover:bg-[oklch(0.82_0.15_85/0.22)]"
-        >
-          ربط
-        </button>
-      </PopoverTrigger>
-      <PopoverContent
-        dir="rtl"
-        align="center"
-        className="w-auto max-w-[92vw] border-0 bg-transparent p-0 shadow-none"
-      >
-        <div className="w-[330px] overflow-hidden rounded-xl border border-border/50 bg-[oklch(0.135_0_0)] shadow-2xl">
-          <div className="data-table-head truncate px-3 py-1.5 text-center text-[11px] font-bold">
-            شفتات {myName || "الموظف"}
-          </div>
-          <div className="max-h-52 overflow-y-auto">
-            {mine.isLoading ? (
-              <Loader2 className="mx-auto my-4 size-4 animate-spin text-muted-foreground" />
-            ) : shiftRows.length ? (
-              <table className="data-table w-full text-right">
-                <thead className="data-table-head">
-                  <tr>
-                    <th className="w-8 px-2 py-1 text-[10px]">✓</th>
-                    <th className="w-10 px-2 py-1 text-[10px]">#</th>
-                    <th className="px-2 py-1 text-[10px]">الحالة</th>
-                    <th className="px-2 py-1 text-[10px]">الشفت</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {shiftRows.map((s, i) => {
-                    const d = new Date(s.startedAt);
-                    const p = (n: number) => String(n).padStart(2, "0");
-                    const h24 = d.getHours();
-                    const h = ((h24 + 11) % 12) + 1;
-                    const isChecked = selected.has(s.id);
-                    return (
-                      <tr
-                        key={s.id}
-                        className={`cursor-pointer transition ${isChecked ? "bg-white/10" : "hover:bg-white/5"}`}
-                        onClick={() => toggle(s.id)}
-                      >
-                        <td className="px-2 py-0.5 text-center">
-                          <span
-                            className={`inline-flex size-4 items-center justify-center rounded border text-[10px] font-bold transition ${
-                              isChecked
-                                ? "border-emerald-500 bg-emerald-500/20 text-emerald-400"
-                                : "border-muted-foreground/40 text-transparent"
-                            }`}
-                          >
-                            ✓
-                          </span>
-                        </td>
-                        <td className="px-2 py-0.5 text-[10px] font-bold tabular-nums">{i + 1}</td>
-                        <td className="px-2 py-0.5 text-[10px] font-bold">
-                          {s.endedAt ? "منتهي" : "مفتوح"}
-                        </td>
-                        <td className="px-2 py-0.5 text-[10px] leading-4 text-muted-foreground">
-                          <span className="font-bold text-foreground">
-                            {AR_DAYS[d.getDay()]}
-                          </span>
-                          <span className="block tabular-nums">
-                            {`${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} - ${p(h)}:${p(d.getMinutes())} ${h24 < 12 ? "ص" : "م"}`}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            ) : (
-              <p className="py-4 text-center text-[11px] text-muted-foreground">لا توجد شفتات بدون طلبات</p>
-            )}
-          </div>
-          {shiftRows.length > 0 && (
-            <div className="border-t border-border/30 px-3 py-2 text-center">
-              <button
-                type="button"
-                disabled={busy || selected.size === 0}
-                onClick={linkSelected}
-                className="rounded-full border border-[oklch(0.82_0.15_85/0.5)] bg-[oklch(0.82_0.15_85/0.12)] px-5 py-1 text-[11px] font-bold text-[oklch(0.82_0.15_85)] transition hover:bg-[oklch(0.82_0.15_85/0.22)] disabled:opacity-40"
-              >
-                {busy ? (
-                  <Loader2 className="inline size-3 animate-spin" />
-                ) : (
-                  `ربط (${selected.size})`
-                )}
-              </button>
-            </div>
-          )}
-        </div>
-      </PopoverContent>
-    </Popover>
-  );
-}
 
 
 function P2POrdersTable({
@@ -351,9 +185,7 @@ function P2POrdersTable({
   readOnly?: boolean;
 }) {
   const emptyRows = Math.max(8 - rows.length, 0);
-  const columns = readOnly
-    ? P2P_COLUMNS.filter((c) => c !== "صاحب الطلب")
-    : P2P_COLUMNS;
+  const columns = [...P2P_COLUMNS.filter((c) => c !== "صاحب الطلب"), "الشفتات المرتبطة", ...(!readOnly ? ["الإجراء"] : [])];
 
   return (
     <div className="data-surface">
@@ -403,15 +235,16 @@ function P2POrdersTable({
                         {badge.text}
                       </span>
                     </td>
-                    {!readOnly && (
-                      <td>
-                        {r.assignmentId ? (
-                          <span className="text-[11px] font-bold text-emerald-400">مرتبط</span>
-                        ) : (
-                          <P2PLinkMenu ledgerId={String(r.ledgerId)} onLinked={onLinked} />
-                        )}
-                      </td>
-                    )}
+                    <td className="min-w-48 text-xs">
+                      {(r.relatedShifts ?? []).length ? (r.relatedShifts ?? []).map((link: any, index: number) => (
+                        <div key={`${link.shiftId ?? "deleted"}-${index}`} className="py-1">
+                          <span>{link.name} · {link.startedAt ? formatDateTime(link.startedAt) : "شفت سابق"}</span>
+                          {!link.shiftId && <span className="block text-muted-foreground">الشفت محذوف — الرابط محفوظ</span>}
+                          {link.legacyGroup && link.source === "legacy-assignment" && <span className="block text-muted-foreground">مجموعة تاريخية: {link.legacyGroup}</span>}
+                        </div>
+                      )) : "—"}
+                    </td>
+                    {!readOnly && <td><P2PShiftLinkMenu ledgerId={String(r.ledgerId)} onLinked={onLinked} /></td>}
 
                   </tr>
                 );

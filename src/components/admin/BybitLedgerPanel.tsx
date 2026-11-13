@@ -8,6 +8,7 @@ import { formatDateTime } from "@/lib/format";
 import { cardPurchasePresenter } from "@/lib/bybit-spend";
 import { useLedgerAutoSync } from "@/lib/use-ledger-sync";
 import { livePoll } from "@/lib/live-poll";
+import { P2POrderLinks } from "./P2POrderLinks";
 
 /** Official USDT token logo from TrustWallet (works on Fly and Lovable). */
 const USDT_LOGO = "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xdAC17F958D2ee523a2206206994597C13D831ec7/logo.png";
@@ -707,6 +708,7 @@ export function LedgerRowDetails({ row, badgeText }: { row: any; badgeText: stri
     <div className="rounded-2xl border border-border/50 bg-muted/10 p-4" dir="rtl">
       <div className="mb-3 text-sm font-black">ملخص المعاملة</div>
       <FieldGrid rows={summary} />
+      {/^(p2p_buy|p2p_sell)$/.test(String(row.kind)) && row.ledgerId && <P2POrderLinks ledgerId={String(row.ledgerId)} />}
     </div>
   );
 }

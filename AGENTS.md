@@ -23,7 +23,7 @@
 - Storefront appearance is controlled by one root context and semantic CSS token overrides; read the device-local explicit choice after hydration, never infer it from OS settings, and keep staff palette overrides independent.
 - Homepage banners and category rails switch to desktop composition at 1280px; smaller widths share the mobile composition to prevent tablet collisions, while forced banner-editor device previews remain unchanged.
 - Employee previous-shift selection uses a controlled popover and only the existing admin-shared shift response; this preserves server access restrictions and keeps opening the menu separate from opening a shift.
-- P2P assignment, selected-ended-shift consumption, and colour grouping use one service-role-only database transaction invoked after server authentication; partial saves must never report success and reused open shifts retain their existing group.
+- P2P uses atomic service-role RPCs for many-to-many links and owner-only picker hiding; retain legacy assignments and never infer links from colour groups. Why: reuse must preserve shifts and history.
 - Shift archiving is a soft-hide via `work_shifts.archived_at`: history excludes archived rows by default and offers an admin-only archived view through the same authenticated endpoint; missing-column fallback never labels unarchived records as archived. Only ended shifts can be archived — never delete records to tidy a list.
 
 - TikTok coin auto-charge: website only queues jobs and shows QR/status (`tiktok_jobs`, `/api/public/tiktok-worker` with admin-generated token); the browser automation runs in `worker/tiktok-charger` on the VPS and card data lives only in its env. Why: workerd cannot run a browser and card data must never reach the site.

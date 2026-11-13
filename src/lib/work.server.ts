@@ -9,6 +9,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { isPastLastPage, pageRange } from "./pagination";
 import { enforceRetentionSafe } from "./retention.server";
 import { CARD_READ_FILTER } from "./bybit-confirmation";
+import { readP2PLinks, P2P_SCHEMA_MESSAGE } from "./p2p-links.server";
 
 type DB = SupabaseClient<any, any, any>;
 
@@ -312,7 +313,7 @@ export async function pendingP2P(limit = 100) {
  * Read-only: no shift/assignment filter, so any newly completed order shows up
  * for everybody in «طلبات P2P».
  */
-export async function completedP2P(limit = 200) {
+export async function completedP2P(limit = 200, viewerId?: string, isAdmin = false) {
   const db = await admin();
 
   // Only orders that happened after the admin reset point are shown to employees.
@@ -334,16 +335,14 @@ export async function completedP2P(limit = 200) {
     .order("occurred_at", { ascending: false })
     .limit(Math.min(Math.max(limit, 1), 500));
 
-  // Already linked to an employee/shift → no longer offered for linking.
-  const { data: assigned } = await db
-    .from("work_txn_assignments")
-    .select("ledger_id")
-    .in("kind", P2P_KINDS);
-  const taken = new Set((assigned ?? []).map((a: any) => a.ledger_id));
+  const links = await readP2PLinks(db, {
+    ledgerIds: (data ?? []).map((r: any) => String(r.id)),
+    ...(!isAdmin && viewerId ? { userId: viewerId } : {}),
+  });
+  const linkNames = await namesFor(db, links.map((l) => l.user_id));
 
   const accounts = await accountNames(db);
   return (data ?? [])
-    .filter((r: any) => !taken.has(r.id))
     .map((r: any) => ({
       ledgerId: r.id as string,
       kind: r.kind as string,
@@ -355,6 +354,12 @@ export async function completedP2P(limit = 200) {
       time: new Date(r.occurred_at).getTime(),
       accountName: accounts.get(r.account_id) ?? "—",
       detail: (r.detail ?? {}) as Record<string, string | number | boolean | null>,
+      relatedShifts: links.filter((l) => l.ledger_id === r.id).map((l) => ({
+        shiftId: l.shift_id, userId: l.user_id, name: linkNames.get(l.user_id) ?? "موظف",
+        startedAt: l.started_at ? new Date(l.started_at).getTime() : null,
+        endedAt: l.ended_at ? new Date(l.ended_at).getTime() : null,
+        legacyGroup: l.legacy_group, source: l.source,
+      })),
     }));
 }
 
@@ -548,55 +553,62 @@ export async function shiftsOfUser(userId: string, limit = 40) {
 }
 
 /** Caller's own shifts + his display name — the P2P «ربط» picker source. */
-export async function myShiftsForLink(userId: string, limit = 40) {
+export async function myShiftsForLink(userId: string, hiddenOnly = false) {
   const db = await admin();
-  const [shifts, names] = await Promise.all([
-    shiftsOfUser(userId, limit),
-    namesFor(db, [userId]),
-  ]);
-  // Only return shifts that were NOT already used for a P2P order: either the
-  // order was linked to them, or they were ticked together in a multi-select
-  // link (marked with ended_reason = P2P_USED_REASON).
-  const ids = shifts.map((s) => s.id);
-  const linked = new Set<string>();
-  if (ids.length) {
-    const [{ data, error }, { data: used, error: usedError }] = await Promise.all([
-      db.from("work_txn_assignments").select("shift_id").in("shift_id", ids).in("kind", P2P_KINDS),
-      db.from("work_shifts").select("id").in("id", ids).eq("ended_reason", P2P_USED_REASON),
-    ]);
-    if (error || usedError) throw new Error("تعذر التأكد من الشفتات المتاحة للربط. حاول مرة أخرى.");
-    for (const r of data ?? []) if ((r as any).shift_id) linked.add(String((r as any).shift_id));
-    for (const r of used ?? []) linked.add(String((r as any).id));
+  const names = await namesFor(db, [userId]);
+  const hiddenIds = new Set<string>();
+  // Read all hidden ids before filtering, so older shifts can still be restored.
+  for (let from = 0; ; from += 500) {
+    const { data, error } = await db.from("work_p2p_hidden_shifts").select("shift_id")
+      .eq("user_id", userId).eq("hidden", true).order("shift_id").range(from, from + 499);
+    if (error) throw new Error(["42P01", "PGRST205"].includes(error.code) ? P2P_SCHEMA_MESSAGE : "تعذر تحميل الشفتات المخفية.");
+    for (const r of data ?? []) hiddenIds.add(String(r.shift_id));
+    if ((data ?? []).length < 500) break;
+  }
+  const shifts: { id: string; userId: string; startedAt: number; endedAt: number | null }[] = [];
+  for (let from = 0; ; from += 500) {
+    const { data, error } = await db.from("work_shifts").select("id,user_id,started_at,ended_at")
+      .eq("user_id", userId).order("started_at", { ascending: false }).order("id").range(from, from + 499);
+    if (error) throw new Error("تعذر تحميل الشفتات. حاول مرة أخرى.");
+    for (const s of data ?? []) if (hiddenIds.has(String(s.id)) === hiddenOnly) shifts.push({
+      id: String(s.id), userId, startedAt: new Date(s.started_at).getTime(),
+      endedAt: s.ended_at ? new Date(s.ended_at).getTime() : null,
+    });
+    if ((data ?? []).length < 500) break;
   }
   return {
     name: names.get(userId) ?? "موظف",
-    // The currently open shift always stays available (can be linked many times).
-    shifts: shifts.filter((s) => s.endedAt == null || !linked.has(s.id)),
+    shifts,
   };
 }
 
-const P2P_USED_REASON = "p2p_used";
-
-/** Atomic assignment + consumption + colour grouping; never partial success. */
-export async function linkP2P(ledgerId: string, shiftId: string, actorId: string, usedShiftIds: string[] = []) {
+/** All selected links are saved atomically; neither ledger nor shift state changes. */
+export async function linkP2P(ledgerId: string, shiftIds: string[], actorId: string) {
   const db = await admin();
-  const { data, error } = await db.rpc("work_link_p2p_atomic", {
+  const { data, error } = await db.rpc("work_link_p2p_many", {
     p_ledger_id: ledgerId,
-    p_shift_id: shiftId,
     p_actor_id: actorId,
-    p_used_shift_ids: [...new Set([shiftId, ...usedShiftIds])],
+    p_shift_ids: [...new Set(shiftIds)],
   });
   if (error) {
-    if (error.code === "23505") {
-      return { ok: false as const, error: "هذا الطلب تم ربطه بالفعل." };
-    }
     console.error("P2P atomic link failed", { code: error.code });
     return { ok: false as const, error: error.code === "PGRST202" || error.code === "42883"
-      ? "تحديث ربط P2P لسه مش متطبق على قاعدة الموقع. لازم تطبيق تحديث الربط الأول."
+      ? P2P_SCHEMA_MESSAGE
       : "تعذر حفظ الربط بالكامل. لم يتم تأكيد الربط؛ حاول مرة أخرى." };
   }
   if (data?.ok === true) return { ok: true as const };
   return { ok: false as const, error: typeof data?.error === "string" ? data.error : "تعذر تأكيد حفظ الربط." };
+}
+
+export async function setP2PShiftHidden(actorId: string, shiftId: string, hidden: boolean) {
+  const db = await admin();
+  const { data, error } = await db.rpc("work_set_p2p_shift_hidden", {
+    p_actor_id: actorId, p_shift_id: shiftId, p_hidden: hidden,
+  });
+  if (error) return { ok: false as const, error: ["PGRST202", "42883"].includes(error.code)
+    ? P2P_SCHEMA_MESSAGE : "تعذر حفظ إظهار أو إخفاء الشفت. حاول مرة أخرى." };
+  if (data?.ok === true) return { ok: true as const };
+  return { ok: false as const, error: data?.error ?? "تعذر تأكيد الحفظ." };
 }
 
 /** Shift options offered by the "ربط بالشفت" button. */
@@ -1797,6 +1809,15 @@ export async function shiftHistory(userId: string, limit = 100, archivedOnly = f
   const shifts = (data ?? []) as any[];
   const ids = shifts.map((s) => String(s.id));
   const tally = new Map<string, number>();
+  const p2pLinks = ids.length ? await readP2PLinks(db, { shiftIds: ids, userId }) : [];
+  const p2pIds = [...new Set(p2pLinks.map((l) => l.ledger_id))];
+  const successfulP2P = new Set<string>();
+  for (let from = 0; from < p2pIds.length; from += 100) {
+    const result = await db.from("bybit_ledger").select("id").in("id", p2pIds.slice(from, from + 100))
+      .in("status", SUCCESS_STATUSES as unknown as string[]);
+    if (result.error) throw new Error("تعذر تحميل روابط الشفتات.");
+    for (const row of result.data ?? []) successfulP2P.add(String(row.id));
+  }
   if (ids.length) {
     const { data: asg } = await db
       .from("work_txn_assignments")
@@ -1805,11 +1826,15 @@ export async function shiftHistory(userId: string, limit = 100, archivedOnly = f
       .not("bybit_ledger.detail", "cs", '{"side":2}')
       .or(`kind.not.in.(card,refund),${CARD_READ_FILTER}`, { referencedTable: "bybit_ledger" })
       .in("shift_id", ids)
+      .not("kind", "in", "(p2p_buy,p2p_sell)")
       .in("bybit_ledger.status", SUCCESS_STATUSES as unknown as string[]);
     for (const a of (asg ?? []) as any[]) {
       const k = String(a.shift_id);
       tally.set(k, (tally.get(k) ?? 0) + 1);
     }
+  }
+  for (const link of p2pLinks) if (link.shift_id && successfulP2P.has(link.ledger_id)) {
+    tally.set(link.shift_id, (tally.get(link.shift_id) ?? 0) + 1);
   }
 
   return shifts.map((s) => ({
@@ -1822,6 +1847,7 @@ export async function shiftHistory(userId: string, limit = 100, archivedOnly = f
     reviewed: !!s.reviewed_at,
     // مجموعة الربط — الشفتات اللي اتربطو بنفس طلب P2P تحمل نفس المعرف.
     linkGroup: (s.link_group ?? null) as string | null,
+    p2pOrderIds: p2pLinks.filter((l) => l.shift_id === String(s.id)).map((l) => l.ledger_id),
   }));
 }
 
@@ -1951,26 +1977,30 @@ export async function shiftTransfers(shiftId: string, scope: "external" | "inter
  * طلبات P2P المرتبطة بشفت معيّن أو بكل شفتات موظف — المرجع هو الربط الفعلي
  * (shift_id/user_id) وليس وقت وصول الطلب.
  */
-async function p2pByAssignment(where: { shiftId?: string; userId?: string }) {
+async function p2pByAssignment(where: { shiftId?: string; userId?: string }, viewerId?: string) {
   const db = await admin();
-  let q: any = db
-    .from("work_txn_assignments")
-    .select("id, ledger_id, bybit_ledger!inner(*)")
-    .in("bybit_ledger.kind", P2P_KINDS);
-  if (where.shiftId) q = q.eq("shift_id", where.shiftId);
-  if (where.userId) q = q.eq("user_id", where.userId);
-  const { data } = await q;
+  const links = await readP2PLinks(db, { ...where, ...(viewerId ? { userId: viewerId } : {}) });
+  const ledgerIds = [...new Set(links.map((l) => l.ledger_id))];
+  if (!ledgerIds.length) return [];
+  const allLinks = await readP2PLinks(db, { ledgerIds, ...(viewerId ? { userId: viewerId } : {}) });
+  const names = await namesFor(db, allLinks.map((l) => l.user_id));
+  const data: any[] = [];
+  for (let from = 0; from < ledgerIds.length; from += 100) {
+    const result = await db.from("bybit_ledger").select("*").in("kind", P2P_KINDS)
+      .in("id", ledgerIds.slice(from, from + 100));
+    if (result.error) throw new Error("تعذر تحميل طلبات P2P المرتبطة.");
+    data.push(...(result.data ?? []));
+  }
 
   const accounts = await accountNames(db);
   const seen = new Set<string>();
   const out: any[] = [];
-  for (const a of (data ?? []) as any[]) {
-    const r = a.bybit_ledger ?? {};
-    const id = String(r.id ?? a.ledger_id);
+  for (const r of data) {
+    const id = String(r.id);
     if (seen.has(id)) continue;
     seen.add(id);
     out.push({
-      assignmentId: String(a.id),
+      assignmentId: links.find((l) => l.ledger_id === id)?.id ?? id,
       ledgerId: id,
       kind: String(r.kind ?? ""),
       refId: String(r.ref_id ?? ""),
@@ -1981,13 +2011,30 @@ async function p2pByAssignment(where: { shiftId?: string; userId?: string }) {
       time: r.occurred_at ? new Date(r.occurred_at).getTime() : 0,
       accountName: accounts.get(r.account_id) ?? "—",
       detail: (r.detail ?? {}) as Record<string, string | number | boolean | null>,
+      relatedShifts: allLinks.filter((l) => l.ledger_id === id).map((l) => ({
+        shiftId: l.shift_id, userId: l.user_id, name: names.get(l.user_id) ?? "موظف",
+        startedAt: l.started_at ? new Date(l.started_at).getTime() : null,
+        endedAt: l.ended_at ? new Date(l.ended_at).getTime() : null,
+        source: l.source, legacyGroup: l.legacy_group,
+      })),
     });
   }
   return out.sort((a, b) => b.time - a.time);
 }
 
-export async function shiftP2P(shiftId: string) {
-  return p2pByAssignment({ shiftId });
+export async function shiftP2P(shiftId: string, viewerId?: string) {
+  return p2pByAssignment({ shiftId }, viewerId);
+}
+
+export async function p2pOrderLinks(ledgerId: string, viewerId?: string) {
+  const db = await admin();
+  const links = await readP2PLinks(db, { ledgerIds: [ledgerId], ...(viewerId ? { userId: viewerId } : {}) });
+  const names = await namesFor(db, links.map((l) => l.user_id));
+  return links.map((l) => ({
+    shiftId: l.shift_id, userId: l.user_id, name: names.get(l.user_id) ?? "موظف",
+    startedAt: l.started_at ? new Date(l.started_at).getTime() : null,
+    legacyGroup: l.legacy_group, source: l.source,
+  }));
 }
 
 
@@ -2001,7 +2048,7 @@ export async function myShiftP2P(userId: string) {
     .is("ended_at", null)
     .maybeSingle();
   if (!data) return [];
-  return shiftP2P(data.id as string);
+  return shiftP2P(data.id as string, userId);
 }
 
 /** طلبات P2P المرتبطة بآخر شفت منتهي للموظف المختار (للأدمن). */
