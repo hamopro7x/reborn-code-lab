@@ -1,3 +1,4 @@
+import { SETTLEMENT_COPY_SIDES, SETTLEMENT_COPY_FILTER } from "./bybit-settlement";
 import { createHmac } from "crypto";
 import { normalizeBybitError, type BybitError } from "./bybit-errors";
 import {
@@ -479,7 +480,7 @@ export function mergeCardTypeResults(
  * was already recorded at authorisation, so it is never ingested or shown.
  */
 export function isLateSettlementRecord(row: any): boolean {
-  return String(row?.side ?? "") === "3";
+  return SETTLEMENT_COPY_SIDES.has(String(row?.side ?? ""));
 }
 
 /**
@@ -769,6 +770,7 @@ async function computeSpendUncached(
         .from("bybit_card_txns")
         .select("txn_id, account_id, created_at, confirmed_at, amount, currency, txn_time, status, txn_type, pan4, merchant, detail")
         .gte("txn_time", from)
+        .or(SETTLEMENT_COPY_FILTER)
         .order("txn_time", { ascending: false })
         .order("txn_id", { ascending: true })
         .range(offset, offset + CHUNK - 1);
@@ -1170,7 +1172,8 @@ async function storedCardTxns(limit: number, accountId?: string): Promise<CardTx
           .from("bybit_card_txns")
           .select("txn_id, account_id, created_at, confirmed_at, merchant, amount, currency, status, txn_time, pan4, txn_type, detail")
           .gte("txn_time", periodStart)
-          .lt("txn_time", periodEnd);
+          .lt("txn_time", periodEnd)
+          .or(SETTLEMENT_COPY_FILTER);
         if (accountId) query = query.eq("account_id", accountId);
         requests.push(query.order("txn_time", { ascending: false }).range(from, from + CHUNK - 1));
       }
@@ -1300,7 +1303,8 @@ async function lightCycleRows(db: any, accountId: string | undefined, periodStar
           "linkedBy:detail->>linkedBy, linkedReversal:detail->>linkedReversal, projectedStatus:detail->>projectedStatus, confirmationState:detail->>confirmationState, reconciliationState:detail->>reconciliationState, resolutionTarget:detail->>resolutionTarget, orderNo:detail->>orderNo, orderId:detail->>orderId, dTxnId:detail->>txnId",
       )
       .gte("txn_time", periodStart)
-      .lt("txn_time", periodEnd);
+      .lt("txn_time", periodEnd)
+      .or(SETTLEMENT_COPY_FILTER);
     if (accountId) q = q.eq("account_id", accountId);
     const { data: chunk, error } = await q
       .order("txn_time", { ascending: false })
@@ -2172,7 +2176,7 @@ export async function mirrorStoredCardRows(
       .in("txn_id", unique.slice(i, i + 200));
     if (error) throw new Error(`card ledger mirror read failed: ${error.message}`);
     const rows = (data ?? [])
-      .filter((row: any) => cardConfirmed(row) && !isCardReversalEvent(row.detail?.side || row.txn_type))
+      .filter((row: any) => cardConfirmed(row) && !isCardReversalEvent(row.detail?.side || row.txn_type) && !SETTLEMENT_COPY_SIDES.has(String(row.detail?.side ?? "")))
       .map((row: any) => cardLedgerRow(accountId, row));
     if (rows.length) saved += await save(rows);
   }
@@ -2248,7 +2252,7 @@ export async function syncAccountLedger(accountId: string): Promise<number> {
   const cursor = state?.value?.cycle === periodStart ? String(state.value.after ?? "") : "";
   let q = db.from("bybit_card_txns")
     .select("txn_id, created_at, confirmed_at, merchant, amount, currency, status, txn_time, pan4, txn_type, detail")
-    .eq("account_id", accountId).gte("txn_time", periodStart).lt("txn_time", periodEnd);
+    .eq("account_id", accountId).gte("txn_time", periodStart).lt("txn_time", periodEnd).or(SETTLEMENT_COPY_FILTER);
   if (cursor) q = q.gt("txn_id", cursor);
   const { data: cards, error: cardError } = await q.order("txn_id", { ascending: true }).limit(200);
   if (cardError) throw new Error(cardError.message);

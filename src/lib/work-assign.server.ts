@@ -11,11 +11,12 @@
  * - A transaction can only ever have one assignment (unique ledger_id).
  */
 const P2P_KINDS = ["p2p_buy", "p2p_sell"];
+import { SETTLEMENT_COPY_SIDES } from "./bybit-settlement";
 import { cardProjectionVisible } from "./bybit-confirmation";
 
 /** Settlement of an earlier card authorisation (Bybit side 3). */
 export function isCardSettlement(r: { kind?: string; detail?: any }): boolean {
-  return r.kind === "card" && String(r.detail?.side ?? "") === "3";
+  return r.kind === "card" && SETTLEMENT_COPY_SIDES.has(String(r.detail?.side ?? ""));
 }
 
 export async function autoAssignLedger(db: any): Promise<number> {
