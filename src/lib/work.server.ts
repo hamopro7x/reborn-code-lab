@@ -335,14 +335,18 @@ export async function completedP2P(limit = 200, viewerId?: string, isAdmin = fal
     .order("occurred_at", { ascending: false })
     .limit(Math.min(Math.max(limit, 1), 500));
 
-  const links = await readP2PLinks(db, {
+  // Match the pre-rollout linking inbox: linked orders stay in history,
+  // not in the list of recent orders offered for a first link.
+  const allLinks = await readP2PLinks(db, {
     ledgerIds: (data ?? []).map((r: any) => String(r.id)),
-    ...(!isAdmin && viewerId ? { userId: viewerId } : {}),
   });
+  const taken = new Set(allLinks.map((l) => l.ledger_id));
+  const links = allLinks.filter((l) => isAdmin || l.user_id === viewerId);
   const linkNames = await namesFor(db, links.map((l) => l.user_id));
 
   const accounts = await accountNames(db);
   return (data ?? [])
+    .filter((r: any) => isAdmin || !taken.has(r.id))
     .map((r: any) => ({
       ledgerId: r.id as string,
       kind: r.kind as string,

@@ -25,19 +25,36 @@ vi.mock("@/integrations/supabase/client.server", () => ({ supabaseAdmin: createC
     if (table === "work_p2p_hidden_shifts") data = state.hidden ? [{user_id:"employee",shift_id:"old",hidden:true}] : [];
     if (table === "work_p2p_effective_links") data = links;
     if (table === "work_txn_assignments") data = state.missing ? [{...links[0],kind:"p2p_buy",work_shifts:shifts[0]}] : [];
-    if (table === "bybit_ledger") data = [{id:"order",kind:"p2p_buy",status:"اكتملت",amount:20,occurred_at:"2026-11-13T10:00Z",detail:{}}];
+    if (table === "bybit_ledger") data = [{id:"order",kind:"p2p_buy",status:"اكتملت",amount:20,occurred_at:"2026-11-13T10:00Z",detail:{}}, {id:"recent",kind:"p2p_buy",status:"اكتملت",amount:30,occurred_at:"2026-11-13T11:00Z",detail:{}}];
     for (const field of ["user_id","shift_id"]) {
       const filter=url.searchParams.get(field); if(filter?.startsWith("eq.")) data=data.filter(row=>row[field]===filter.slice(3));
+    }
+    for (const field of ["id","ledger_id"]) {
+      const filter=url.searchParams.get(field);
+      if(filter?.startsWith("in.(")) {
+        const ids=filter.slice(4,-1).split(",");
+        data=data.filter(row=>ids.includes(row[field]));
+      }
     }
     return new Response(JSON.stringify(data),{headers:{"content-type":"application/json"}});
   } },
 }) }));
 vi.mock("./retention.server",()=>({ enforceRetentionSafe:vi.fn() }));
 vi.mock("./account-labels.server",()=>({ accountLabels:async()=>new Map() }));
-import { myShiftsForLink, shiftHistory, shiftP2P, linkP2P, setP2PShiftHidden } from "./work.server";
+import { completedP2P, myShiftsForLink, shiftHistory, shiftP2P, linkP2P, setP2PShiftHidden } from "./work.server";
 
 describe("P2P application reads",()=>{
   beforeEach(()=>{state.hidden=false;state.missing=false;state.calls=[];});
+  it("recent employee inbox excludes previously linked orders as before the rollout",async()=>{
+    expect((await completedP2P(200,"employee")).map(r=>r.ledgerId)).toEqual(["recent"]);
+    expect((await completedP2P(200,"unrelated")).map(r=>r.ledgerId)).toEqual(["recent"]);
+  });
+  it("admin and legacy history retain previously linked orders",async()=>{
+    expect((await completedP2P(200,"admin",true)).map(r=>r.ledgerId)).toEqual(["order","recent"]);
+    state.missing=true;
+    expect((await completedP2P(200,"employee")).map(r=>r.ledgerId)).toEqual(["recent"]);
+    expect(await shiftP2P("old","employee")).toHaveLength(1);
+  });
   it("picker hides only explicit hidden shifts, including restoration of previously used shifts",async()=>{
     expect((await myShiftsForLink("employee")).shifts.map(s=>s.id)).toEqual(["old","open"]);
     state.hidden=true;
