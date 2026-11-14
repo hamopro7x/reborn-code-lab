@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { EyeOff, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { getMyShiftsForLink, linkP2POrder, setMyP2PShiftHidden } from "@/lib/work.functions";
 import { Button } from "@/components/ui/button";
@@ -15,32 +15,35 @@ export function P2PShiftLinkMenu({ ledgerId, onLinked }: { ledgerId: string; onL
   const setHidden = useServerFn(setMyP2PShiftHidden);
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [hiddenOnly, setHiddenOnly] = useState(false);
   const [busy, setBusy] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const mine = useQuery({
-    queryKey: ["work-my-shifts-link", hiddenOnly],
-    queryFn: () => getShifts({ data: { hiddenOnly } }),
+    queryKey: ["work-my-shifts-link", false],
+    queryFn: () => getShifts({ data: {} }),
     enabled: open,
   });
-  useEffect(() => { setSelected(new Set()); }, [open, hiddenOnly]);
+  useEffect(() => { setSelected(new Set()); }, [open]);
   const refresh = () => qc.invalidateQueries({ queryKey: ["work-my-shifts-link"] });
   const saveVisibility = async (shiftId: string) => {
     if (busy) return;
     setBusy(true);
     try {
-      const result = await setHidden({ data: { shiftId, hidden: !hiddenOnly } });
+      const result = await setHidden({ data: { shiftId, hidden: true } });
       if (!result.ok) { toast.error(result.error); return; }
       setSelected((previous) => { const next = new Set(previous); next.delete(shiftId); return next; });
+      await qc.cancelQueries({ queryKey: ["work-my-shifts-link"] });
+      qc.setQueriesData<NonNullable<typeof mine.data>>({ queryKey: ["work-my-shifts-link"] }, (previous) => previous ? {
+        ...previous, shifts: previous.shifts.filter((shift) => shift.id !== shiftId),
+      } : previous);
       await refresh();
-      toast.success(hiddenOnly ? "تم إظهار الشفت" : "تم إخفاء الشفت من قائمة الربط");
+      toast.success("تم إخفاء الشفت من قائمة الربط");
     } catch (error) { toast.error(error instanceof Error ? error.message : "تعذر حفظ الاختيار"); }
     finally { setBusy(false); }
   };
   const linkSelected = async () => {
     const available = new Set((mine.data?.shifts ?? []).map((s) => s.id));
     const shiftIds = [...selected].filter((id) => available.has(id));
-    if (busy || hiddenOnly || !shiftIds.length) return;
+    if (busy || !shiftIds.length) return;
     setBusy(true);
     try {
       const result = await link({ data: { ledgerId, shiftIds } });
@@ -57,30 +60,26 @@ export function P2PShiftLinkMenu({ ledgerId, onLinked }: { ledgerId: string; onL
       <PopoverTrigger asChild><Button variant="outline" size="sm">ربط</Button></PopoverTrigger>
       <PopoverContent dir="rtl" className="w-[420px] max-w-[92vw] p-0" align="center">
         <div className="data-table-head px-3 py-2 text-center text-xs font-bold">شفتات {mine.data?.name ?? "الموظف"}</div>
-        <div className="flex gap-2 border-b border-border p-2">
-          <Button size="sm" variant={!hiddenOnly ? "secondary" : "ghost"} aria-pressed={!hiddenOnly} onClick={() => setHiddenOnly(false)}>الشفتات</Button>
-          <Button size="sm" variant={hiddenOnly ? "secondary" : "ghost"} aria-pressed={hiddenOnly} onClick={() => setHiddenOnly(true)}><EyeOff />المخفية</Button>
-        </div>
         <div className="max-h-72 overflow-y-auto">
           {mine.isPending ? <Loader2 className="mx-auto my-4 size-4 animate-spin" /> : mine.isError ? (
             <div className="p-3 text-xs text-destructive" role="alert">{mine.error.message}<Button size="sm" variant="ghost" onClick={() => void mine.refetch()}>إعادة المحاولة</Button></div>
           ) : mine.data.shifts.length ? (
             <table className="data-table w-full text-right text-xs">
-              <thead><tr><th className="w-8">{!hiddenOnly && "✓"}</th><th>الحالة</th><th>الشفت</th><th>الإجراء</th></tr></thead>
+              <thead><tr><th className="w-8">✓</th><th>الحالة</th><th>الشفت</th><th>الإجراء</th></tr></thead>
               <tbody>{mine.data.shifts.map((shift) => (
                 <tr key={shift.id}>
-                  <td className="p-2">{!hiddenOnly && <Checkbox aria-label={`اختيار شفت ${formatDateTime(shift.startedAt)}`} checked={selected.has(shift.id)} disabled={busy || (!selected.has(shift.id) && selected.size >= 100)} onCheckedChange={(checked) => setSelected((previous) => {
+                  <td className="p-2"><Checkbox aria-label={`اختيار شفت ${formatDateTime(shift.startedAt)}`} checked={selected.has(shift.id)} disabled={busy || (!selected.has(shift.id) && selected.size >= 100)} onCheckedChange={(checked) => setSelected((previous) => {
                     const next = new Set(previous); if (checked === true) next.add(shift.id); else next.delete(shift.id); return next;
-                  })} />}</td>
+                  })} /></td>
                   <td className="p-2">{shift.endedAt ? "منتهي" : "مفتوح"}</td>
                   <td className="p-2 text-xs tabular-nums">{formatDateTime(shift.startedAt)}</td>
-                  <td className="p-2"><Button size="sm" variant="ghost" disabled={busy} onClick={() => void saveVisibility(shift.id)}>{hiddenOnly ? <Eye /> : <EyeOff />}{hiddenOnly ? "إظهار" : "إخفاء"}</Button></td>
+                  <td className="p-2"><Button size="sm" variant="ghost" disabled={busy} onClick={() => void saveVisibility(shift.id)}><EyeOff />إخفاء</Button></td>
                 </tr>
               ))}</tbody>
             </table>
-          ) : <p className="py-4 text-center text-xs text-muted-foreground">{hiddenOnly ? "لا توجد شفتات مخفية" : "لا توجد شفتات"}</p>}
+          ) : <p className="py-4 text-center text-xs text-muted-foreground">لا توجد شفتات</p>}
         </div>
-        {!hiddenOnly && <div className="border-t border-border p-2 text-center"><Button size="sm" disabled={busy || !selected.size || mine.isError} onClick={() => void linkSelected()}>{busy && <Loader2 className="animate-spin" />}ربط ({selected.size})</Button></div>}
+        <div className="border-t border-border p-2 text-center"><Button size="sm" disabled={busy || !selected.size || mine.isError} onClick={() => void linkSelected()}>{busy && <Loader2 className="animate-spin" />}ربط ({selected.size})</Button></div>
       </PopoverContent>
     </Popover>
   );

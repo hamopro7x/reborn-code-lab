@@ -126,7 +126,7 @@ export const getStaffShifts = createServerFn({ method: "POST" })
 /** The caller's OWN shifts only — resolved from the authenticated session. */
 export const getMyShiftsForLink = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ hiddenOnly: z.boolean().optional() }).parse(input ?? {}))
+  .inputValidator((input: unknown) => z.object({ hiddenOnly: z.literal(false).optional() }).parse(input ?? {}))
   .handler(async ({ data, context }) => {
     await assertAccess(context.supabase, context.userId);
     const mod = await import("./work.server");
@@ -157,7 +157,7 @@ export const linkP2POrder = createServerFn({ method: "POST" })
 
 export const setMyP2PShiftHidden = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ shiftId: z.string().uuid(), hidden: z.boolean() }).parse(input))
+  .inputValidator((input: unknown) => z.object({ shiftId: z.string().uuid(), hidden: z.literal(true) }).parse(input))
   .handler(async ({ data, context }) => {
     await assertAccess(context.supabase, context.userId);
     const mod = await import("./work.server");

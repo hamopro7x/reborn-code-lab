@@ -1,5 +1,7 @@
 # P2P shift linking rollout (not applied)
 
+Latest owner change: employee hiding is permanent in the employee P2P picker. The hidden/restoration tabs have been removed and employee server endpoints reject hidden-list and unhide requests. The row is removed from cached pickers immediately after a successful save. Database history and admin reads remain unchanged; existing restoration records are preserved for compatibility. Authenticated path: UNVERIFIED (external Supabase session unavailable).
+
 ## Inspected live schema
 `work_txn_assignments.ledger_id` has a UNIQUE constraint. `work_link_p2p_atomic` is service-role-only and previously chose the newest selected shift and consumed ended shifts. Read-only inspection found 40 historical P2P assignments, 61 grouped shifts, and 56 `p2p_used` shifts. One colour group contains two orders, so colour membership cannot reconstruct an exact order-to-shift selection.
 

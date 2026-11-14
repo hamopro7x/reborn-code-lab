@@ -68,6 +68,12 @@ describe("P2P application reads",()=>{
     state.restored=true;
     expect((await myShiftsForLink("employee")).shifts.map(s=>s.id)).toEqual(["old","open","new-linked"]);
   });
+  it("persisted hiding survives reopening the employee picker without removing admin history",async()=>{
+    state.hidden=true;
+    expect((await myShiftsForLink("employee")).shifts.map(s=>s.id)).not.toContain("open");
+    expect((await myShiftsForLink("employee")).shifts.map(s=>s.id)).not.toContain("open");
+    expect((await shiftHistory("employee")).map(s=>s.id)).toContain("open");
+  });
   it("admin history never queries employee visibility and counts links on every shift",async()=>{
     state.hidden=true;
     const history=await shiftHistory("employee");
