@@ -561,23 +561,34 @@ export async function myShiftsForLink(userId: string, hiddenOnly = false) {
   const db = await admin();
   const names = await namesFor(db, [userId]);
   const hiddenIds = new Set<string>();
+  const restoredIds = new Set<string>();
   // Read all hidden ids before filtering, so older shifts can still be restored.
   for (let from = 0; ; from += 500) {
-    const { data, error } = await db.from("work_p2p_hidden_shifts").select("shift_id")
-      .eq("user_id", userId).eq("hidden", true).order("shift_id").range(from, from + 499);
+    const { data, error } = await db.from("work_p2p_hidden_shifts").select("shift_id,hidden")
+      .eq("user_id", userId).order("shift_id").range(from, from + 499);
     if (error) throw new Error(["42P01", "PGRST205"].includes(error.code) ? P2P_SCHEMA_MESSAGE : "تعذر تحميل الشفتات المخفية.");
-    for (const r of data ?? []) hiddenIds.add(String(r.shift_id));
+    for (const r of data ?? []) (r.hidden ? hiddenIds : restoredIds).add(String(r.shift_id));
     if ((data ?? []).length < 500) break;
   }
+  const legacyIds = new Set((await readP2PLinks(db, { userId }))
+    .filter((l) => l.source === "legacy-assignment" && l.shift_id)
+    .map((l) => l.shift_id));
   const shifts: { id: string; userId: string; startedAt: number; endedAt: number | null }[] = [];
   for (let from = 0; ; from += 500) {
-    const { data, error } = await db.from("work_shifts").select("id,user_id,started_at,ended_at")
+    const { data, error } = await db.from("work_shifts").select("id,user_id,started_at,ended_at,ended_reason")
       .eq("user_id", userId).order("started_at", { ascending: false }).order("id").range(from, from + 499);
     if (error) throw new Error("تعذر تحميل الشفتات. حاول مرة أخرى.");
-    for (const s of data ?? []) if (hiddenIds.has(String(s.id)) === hiddenOnly) shifts.push({
+    for (const s of data ?? []) {
+      const id = String(s.id);
+      // Preserve the old picker exclusions without consuming any new links.
+      // Explicit restoration overrides historical visibility only for this owner.
+      const legacyHidden = s.ended_at != null && !restoredIds.has(id)
+        && (s.ended_reason === "p2p_used" || legacyIds.has(id));
+      if ((hiddenIds.has(id) || legacyHidden) === hiddenOnly) shifts.push({
       id: String(s.id), userId, startedAt: new Date(s.started_at).getTime(),
       endedAt: s.ended_at ? new Date(s.ended_at).getTime() : null,
     });
+    }
     if ((data ?? []).length < 500) break;
   }
   return {
