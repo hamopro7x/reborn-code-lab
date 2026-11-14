@@ -2251,6 +2251,113 @@ export type Database = {
           },
         ]
       }
+      work_p2p_audit: {
+        Row: {
+          action: string
+          actor_id: string
+          created_at: string
+          detail: Json
+          id: string
+          ledger_id: string | null
+          shift_id: string
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          created_at?: string
+          detail?: Json
+          id?: string
+          ledger_id?: string | null
+          shift_id: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          created_at?: string
+          detail?: Json
+          id?: string
+          ledger_id?: string | null
+          shift_id?: string
+        }
+        Relationships: []
+      }
+      work_p2p_hidden_shifts: {
+        Row: {
+          changed_at: string
+          hidden: boolean
+          shift_id: string
+          user_id: string
+        }
+        Insert: {
+          changed_at?: string
+          hidden?: boolean
+          shift_id: string
+          user_id: string
+        }
+        Update: {
+          changed_at?: string
+          hidden?: boolean
+          shift_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_p2p_hidden_shifts_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "work_shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_p2p_shift_links: {
+        Row: {
+          id: string
+          ledger_id: string
+          linked_at: string
+          linked_by: string
+          shift_ended_at: string | null
+          shift_id: string | null
+          shift_started_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          ledger_id: string
+          linked_at?: string
+          linked_by: string
+          shift_ended_at?: string | null
+          shift_id?: string | null
+          shift_started_at: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          ledger_id?: string
+          linked_at?: string
+          linked_by?: string
+          shift_ended_at?: string | null
+          shift_id?: string | null
+          shift_started_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_p2p_shift_links_ledger_id_fkey"
+            columns: ["ledger_id"]
+            isOneToOne: false
+            referencedRelation: "bybit_ledger"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_p2p_shift_links_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "work_shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       work_pins: {
         Row: {
           created_at: string
@@ -2493,6 +2600,21 @@ export type Database = {
           },
         ]
       }
+      work_p2p_effective_links: {
+        Row: {
+          ended_at: string | null
+          id: string | null
+          ledger_id: string | null
+          legacy_group: string | null
+          linked_at: string | null
+          linked_by: string | null
+          shift_id: string | null
+          source: string | null
+          started_at: string | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       admin_allow_signup: { Args: { p_email: string }; Returns: boolean }
@@ -2649,6 +2771,14 @@ export type Database = {
           p_shift_id: string
           p_used_shift_ids: string[]
         }
+        Returns: Json
+      }
+      work_link_p2p_many: {
+        Args: { p_actor_id: string; p_ledger_id: string; p_shift_ids: string[] }
+        Returns: Json
+      }
+      work_set_p2p_shift_hidden: {
+        Args: { p_actor_id: string; p_hidden: boolean; p_shift_id: string }
         Returns: Json
       }
     }
