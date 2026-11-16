@@ -34,7 +34,6 @@ import {
   Trash2,
   Plus,
   ClipboardList,
-  Calculator,
 
   
 
@@ -76,7 +75,6 @@ import {
   getMyAvatarUrl,
 } from "@/lib/work.functions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { getBybitCardBrands } from "@/lib/bybit.functions";
 import { usePinClaim } from "@/components/admin/PinGate";
 import { BrandBadge, LedgerRowDetails, statusBadge } from "@/components/admin/BybitLedgerPanel";
@@ -1935,7 +1933,7 @@ export function EmployeeWorkView({
 
       <div className="data-surface">
         {!viewing && (
-          <div className="flex items-center justify-start gap-2 px-3 pb-1.5 pt-2">
+          <div className="flex flex-wrap items-center justify-start gap-3 px-3 pb-2 pt-2">
             <button
               type="button"
               onClick={openManual}
@@ -1945,28 +1943,18 @@ export function EmployeeWorkView({
               <Plus className="size-3" />
               <span>إضافة</span>
             </button>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="size-7 border-primary/60 bg-background text-foreground"
-                  title="إجمالي الجنيه"
-                  aria-label="إجمالي الجنيه"
-                >
-                  <Calculator className="size-3.5" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="start" className="w-56" dir="rtl">
-                <div className="flex items-center justify-between gap-3 text-sm">
-                  <span className="font-bold">إجمالي الجنيه</span>
-                  <span className="font-bold tabular-nums text-primary" dir="ltr" aria-live="polite">
+            <div className="flex min-w-48 max-w-full items-center gap-3 rounded-lg border border-primary/40 bg-card px-4 py-3 text-card-foreground" role="status" aria-label="إجمالي الجنيه">
+              <Wallet className="size-5 shrink-0 text-primary" />
+              <div className="min-w-0">
+                <div className="text-xs font-semibold text-muted-foreground">إجمالي الجنيه</div>
+                <div className="mt-1 flex flex-wrap items-baseline gap-2">
+                  <span className="break-all text-xl font-bold tabular-nums text-foreground" dir="ltr">
                     {summary.egp.toLocaleString("en-US", { maximumFractionDigits: 2 })}
                   </span>
+                  <span className="text-xs text-muted-foreground">جنيه</span>
                 </div>
-              </PopoverContent>
-            </Popover>
+              </div>
+            </div>
           </div>
         )}
         <div className="overflow-x-auto">
