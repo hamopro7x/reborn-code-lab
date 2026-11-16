@@ -749,6 +749,7 @@
 .staff-chat-header, .staff-chat-composer { background: var(--chat-header); }
 .staff-chat-avatar { background: var(--chat-outgoing); color: var(--chat-sender); }
 .staff-chat-wallpaper { opacity: 0.38; }
+.staff-chat-transcript { overflow-x: hidden; }
 .staff-chat-inputbar { background: var(--chat-input); border-radius: 26px; }
 .staff-chat-textarea {
   min-height: 38px;
