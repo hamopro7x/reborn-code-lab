@@ -34,6 +34,7 @@ import {
   Trash2,
   Plus,
   ClipboardList,
+  Calculator,
 
   
 
@@ -83,6 +84,8 @@ import { useWorkRealtime } from "@/lib/use-work-realtime";
 import { useLedgerAutoSync } from "@/lib/use-ledger-sync";
 import { livePoll } from "@/lib/live-poll";
 import { useUiState } from "@/lib/ui-state";
+import { Button } from "@/components/ui/button";
+import { shiftEgpTotal } from "@/lib/shift-egp-total";
 
 type ManualKind = "wrong" | "employee" | "receive" | "transfer";
 
@@ -1669,7 +1672,7 @@ export function EmployeeWorkView({
     };
     const count = mergedRows.length;
     const amount = mergedRows.reduce((s, r: any) => s + Math.abs(n(r.amount)), 0);
-    const egp = mergedRows.reduce((s, r: any) => s + Math.abs(n(r.egp)), 0);
+    const egp = shiftEgpTotal(mergedRows);
     const p2pRows = (viewUserId && !shiftMode ? [] : ((p2pCompleted.data ?? []) as any[])) as any[];
     const p2pEgp = p2pRows.reduce((s, r: any) => s + Math.abs(n((r.detail ?? {}).fiatAmount)), 0);
     const p2pUsdt = p2pRows.reduce((s, r: any) => s + Math.abs(n(r.amount)), 0);
@@ -1932,7 +1935,7 @@ export function EmployeeWorkView({
 
       <div className="data-surface">
         {!viewing && (
-          <div className="flex items-center justify-start px-3 pb-1.5 pt-2">
+          <div className="flex items-center justify-start gap-2 px-3 pb-1.5 pt-2">
             <button
               type="button"
               onClick={openManual}
@@ -1942,6 +1945,28 @@ export function EmployeeWorkView({
               <Plus className="size-3" />
               <span>إضافة</span>
             </button>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="size-7 border-primary/60 bg-background text-foreground"
+                  title="إجمالي الجنيه"
+                  aria-label="إجمالي الجنيه"
+                >
+                  <Calculator className="size-3.5" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="start" className="w-56" dir="rtl">
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <span className="font-bold">إجمالي الجنيه</span>
+                  <span className="font-bold tabular-nums text-primary" dir="ltr" aria-live="polite">
+                    {summary.egp.toLocaleString("en-US", { maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
         )}
         <div className="overflow-x-auto">
