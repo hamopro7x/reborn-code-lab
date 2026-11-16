@@ -74,7 +74,7 @@ REVOKE ALL ON public.work_p2p_effective_links FROM anon;
 
 CREATE OR REPLACE FUNCTION public.work_link_p2p_many(
   p_ledger_id uuid, p_actor_id uuid, p_shift_ids uuid[]
-) RETURNS jsonb LANGUAGE plpgsql SET search_path = public AS $function$
+) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $function$
 DECLARE selected_ids uuid[]; led public.bybit_ledger%ROWTYPE; sh public.work_shifts%ROWTYPE; new_id uuid;
 BEGIN
   IF NOT coalesce(private.is_staff(p_actor_id), false) THEN
@@ -120,7 +120,7 @@ GRANT EXECUTE ON FUNCTION public.work_link_p2p_many(uuid,uuid,uuid[]) TO service
 -- Old clients keep their signature but no longer consume shifts or select newest.
 CREATE OR REPLACE FUNCTION public.work_link_p2p_atomic(
   p_ledger_id uuid, p_shift_id uuid, p_actor_id uuid, p_used_shift_ids uuid[]
-) RETURNS jsonb LANGUAGE plpgsql SET search_path = public AS $function$
+) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $function$
 BEGIN
   RETURN public.work_link_p2p_many(p_ledger_id,p_actor_id,
     array_append(coalesce(p_used_shift_ids,ARRAY[]::uuid[]),p_shift_id));
@@ -130,7 +130,7 @@ GRANT EXECUTE ON FUNCTION public.work_link_p2p_atomic(uuid,uuid,uuid,uuid[]) TO 
 
 CREATE OR REPLACE FUNCTION public.work_set_p2p_shift_hidden(
   p_actor_id uuid, p_shift_id uuid, p_hidden boolean
-) RETURNS jsonb LANGUAGE plpgsql SET search_path = public AS $function$
+) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $function$
 DECLARE changed uuid;
 BEGIN
   IF p_hidden IS NULL OR NOT coalesce(private.is_staff(p_actor_id), false) THEN
