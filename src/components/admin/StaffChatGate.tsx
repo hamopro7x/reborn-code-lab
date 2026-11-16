@@ -9,6 +9,7 @@ import { getChatState, mutateChat } from "@/lib/chat.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { livePoll } from "@/lib/live-poll";
 import { StaffChatMessage } from "./StaffChatMessage";
+import { createChatSound, isNewIncomingChat, type IncomingChatCursor } from "@/lib/chat-sound";
 
 export function StaffChatGate() {
   const [signedIn, setSignedIn] = useState(false); const [identityReady, setIdentityReady] = useState(false);
@@ -26,6 +27,25 @@ export function StaffChatGate() {
   const status = useQuery({ queryKey: ["staff-chat-state"], queryFn: () => stateFn(), enabled: signedIn,
     refetchInterval: livePoll(15000), refetchIntervalInBackground: false, staleTime: 0 });
   const state = status.data;
+  const sound = useRef<ReturnType<typeof createChatSound> | null>(null);
+  const incoming = useRef<{ userId: string; cursor: IncomingChatCursor } | null>(null);
+  useEffect(() => {
+    const audio = createChatSound(); sound.current = audio;
+    window.addEventListener("pointerdown", audio.unlock);
+    window.addEventListener("keydown", audio.unlock);
+    return () => { window.removeEventListener("pointerdown", audio.unlock); window.removeEventListener("keydown", audio.unlock); audio.dispose(); sound.current = null; };
+  }, []);
+  useEffect(() => {
+    if (!signedIn) { incoming.current = null; return; }
+    if (!state?.enabled || state.incoming === undefined) return;
+    if (!incoming.current || incoming.current.userId !== state.userId) {
+      incoming.current = { userId: state.userId, cursor: state.incoming }; return;
+    }
+    if (isNewIncomingChat(incoming.current.cursor, state.incoming)) {
+      incoming.current.cursor = state.incoming;
+      sound.current?.play();
+    }
+  }, [signedIn, state]);
   const message = state?.pending[0];
   const blocked = signedIn && (!identityReady || status.isPending || status.isError || (state?.role === "employee" && Boolean(message)));
   useEffect(() => {

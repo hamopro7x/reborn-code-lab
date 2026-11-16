@@ -39,6 +39,7 @@ export function StaffChatMessage({ message, state, act, forced = false }: {
         : <p className={forced ? "mt-2 whitespace-pre-wrap break-words text-sm leading-7" : "staff-chat-message-text whitespace-pre-wrap break-words text-sm"}>{chatLinks(message.body).map((part, i) => part.url ?
           <a key={i} className="text-primary underline break-all" href={part.url} target="_blank" rel="noopener noreferrer">{part.text}</a> : <span key={i}>{part.text}</span>)}</p>}
       {message.mentions?.length > 0 && <div className="mt-2 flex flex-wrap gap-2 text-xs text-primary">{message.mentions.map((id) => <span key={id}>@{state.members.find((m) => m.id === id)?.name ?? "موظف"}</span>)}</div>}
+      {!!message.mandatory_mentions?.length && <div className="mt-2 flex flex-wrap gap-2 text-xs text-destructive"><span>قراءة مطلوبة:</span>{message.mandatory_mentions.map((id) => <span key={id}>@{state.members.find((m) => m.id === id)?.name ?? "موظف"}</span>)}</div>}
       {(message.attachments ?? []).map((attachment) => <div className="mt-3 max-w-lg" key={attachment.id}>
         {attachment.url && attachment.mime.startsWith("image/") && <a href={attachment.url} target="_blank" rel="noopener noreferrer"><img className="max-h-80 max-w-full rounded-md object-contain" src={attachment.url} alt={attachment.name} loading="lazy" /></a>}
         {attachment.url && attachment.mime.startsWith("video/") && <video className="max-h-80 w-full rounded-md" controls preload="metadata" src={attachment.url} />}

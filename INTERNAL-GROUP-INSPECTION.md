@@ -1,5 +1,13 @@
 # MG Pro internal group — pre-implementation inspection
 
+## Targeted mandatory reading and incoming sound — 2026-11-16 UTC
+
+- Inspected installed mutation/read/status/blocked RPCs and columns via SELECT only. Existing mandatory sends create receipts for all employees, independently of ordinary mentions.
+- New review-only upgrade: `supabase/manual/internal_group_targeted_read.sql`. Apply this AFTER the installed initial group SQL; do not rerun table creation. It adds nullable `mandatory_mentions`, replaces mutation/status/read RPCs, and leaves every historical message, receipt, acknowledgment and role unchanged. Historical obligations remain as sent; no silent rewriting.
+- Composer selects mandatory employees independently from ordinary mentions/@everyone. SQL requires a nonempty valid employee selection for mandatory messages; only those selected get read receipts. Ordinary group message visibility is unchanged. Server refuses new targeted mandatory sends on old RPCs instead of accidentally broadcasting obligations.
+- Incoming sound runs once in the existing root gate for other senders' new messages through the existing Realtime refresh and fallback polling. Initial history, own messages, edits, votes and acknowledgments are silent. Audio needs one interaction on the page due to browser autoplay restrictions; no sound is promised while the browser/page is closed.
+- No production SQL, data writes, Gmail/OAuth changes or deployment. Real-account checks remain unavailable on external unmanaged Supabase; local SQL policy tests validate recipients and backward compatibility.
+
 Date: 2026-11-16 UTC. Status: implementation prepared after owner confirmation; no production writes, bucket changes, SQL execution on Supabase, or deployment.
 
 ## Verified existing systems

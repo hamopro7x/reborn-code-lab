@@ -55,10 +55,12 @@ export type ChatAttachment = { id: string; name: string; mime: string; size: num
 export type ChatMessage = {
   id: string; sender_id: string; sender_name: string; body: string; created_at: string; edited_at: string | null;
   mandatory: boolean; deleted_at: string | null; attachments: ChatAttachment[];
-  mentions: string[]; poll: { question: string; options: string[]; multiple: boolean } | null;
+  mentions: string[]; mandatory_mentions?: string[] | null; poll: { question: string; options: string[]; multiple: boolean } | null;
   votes: { user_id: string; name: string; choices: number[]; voted_at: string }[];
 };
 export type ChatState = {
   enabled: boolean; userId: string; role: string; owner: boolean; open: boolean;
   members: ChatMember[]; pending: ChatMessage[]; notifications: { message_id: string; body: string }[];
+  targetedMandatory?: boolean;
+  incoming?: { id: string; created_at: string } | null;
 };

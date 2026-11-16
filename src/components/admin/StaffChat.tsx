@@ -23,6 +23,7 @@ export function StaffChat({ targetId }: { targetId?: string }) {
   const [text, setText] = useState(""); const [files, setFiles] = useState<ChatAttachment[]>([]);
   const [mentions, setMentions] = useState<string[]>([]); const [everyone, setEveryone] = useState(false);
   const [mandatory, setMandatory] = useState(false); const [pollOpen, setPollOpen] = useState(false);
+  const [mandatoryMentions, setMandatoryMentions] = useState<string[]>([]);
   const [question, setQuestion] = useState(""); const [options, setOptions] = useState(["", ""]); const [multiple, setMultiple] = useState(false);
   const [busy, setBusy] = useState(false); const [recording, setRecording] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null); const recorder = useRef<MediaRecorder | null>(null); const stream = useRef<MediaStream | null>(null);
@@ -66,9 +67,10 @@ export function StaffChat({ targetId }: { targetId?: string }) {
     } catch (error) { toast.error(error instanceof Error ? error.message : "تعذر تشغيل الميكروفون"); }
   };
   const send = async () => {
+    if (mandatory && !mandatoryMentions.length) { toast.error("اختار الموظفين المطلوب منهم القراءة الإجبارية"); return; }
     setBusy(true); try {
-      await act("send", { body: text, mentions, everyone, mandatory, attachments: files.map((f) => f.id), poll: pollOpen ? { question, options, multiple } : null });
-      setText(""); setFiles([]); setMentions([]); setEveryone(false); setMandatory(false); setPollOpen(false); setQuestion(""); setOptions(["", ""]); setBefore(undefined);
+      await act("send", { body: text, mentions, everyone, mandatory, mandatoryMentions: mandatory ? mandatoryMentions : [], attachments: files.map((f) => f.id), poll: pollOpen ? { question, options, multiple } : null });
+      setText(""); setFiles([]); setMentions([]); setEveryone(false); setMandatory(false); setMandatoryMentions([]); setPollOpen(false); setQuestion(""); setOptions(["", ""]); setBefore(undefined);
     } catch { /* error already shown; preserve draft */ } finally { setBusy(false); }
   };
   if (stateQ.isLoading) return <p className="p-4 text-muted-foreground">جاري تحميل الجروب…</p>;
@@ -103,8 +105,11 @@ export function StaffChat({ targetId }: { targetId?: string }) {
             <div className="flex flex-wrap gap-3 py-2">{state.role === "admin" && <label className="flex gap-1 items-center"><input type="checkbox" checked={everyone} onChange={(e) => setEveryone(e.target.checked)} />@everyone</label>}
               {state.members.filter((m) => m.role === "employee").map((member) => <label key={member.id} className="flex gap-1 items-center"><input type="checkbox" checked={mentions.includes(member.id)} disabled={everyone} onChange={(e) => setMentions((old) => e.target.checked ? [...old, member.id] : old.filter((id) => id !== member.id))} />@{member.name}</label>)}</div>
           </details>
-          {state.role === "admin" && <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={mandatory} onChange={(e) => setMandatory(e.target.checked)} />قراءة إجبارية</label>}
+          {state.role === "admin" && <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={mandatory} disabled={!state.targetedMandatory} onChange={(e) => setMandatory(e.target.checked)} />قراءة إجبارية</label>}
         </div>
+        {mandatory && <fieldset className="border-s-2 border-destructive ps-3 py-2"><legend className="text-xs font-semibold">منشن القراءة الإجبارية</legend>
+          <div className="flex flex-wrap gap-3 pt-2">{state.members.filter((m) => m.role === "employee").map((member) => <label key={member.id} className="flex gap-1 items-center text-sm"><input type="checkbox" checked={mandatoryMentions.includes(member.id)} onChange={(e) => setMandatoryMentions((old) => e.target.checked ? [...old, member.id] : old.filter((id) => id !== member.id))} />@{member.name}</label>)}</div>
+        </fieldset>}
         {files.length>0 && <div className="flex flex-wrap gap-2">{files.map((file) => <div key={file.id} className="flex gap-1 items-center bg-muted px-2 py-1 rounded text-xs max-w-full"><span className="truncate">{file.name}</span><Button size="icon" variant="ghost" className="size-6 shrink-0" aria-label={`إزالة ${file.name}`} onClick={() => setFiles((old) => old.filter((f) => f.id !== file.id))}><X className="size-3" /></Button></div>)}</div>}
         {pollOpen && <div className="border-s-2 border-primary ps-3 space-y-2"><Input placeholder="سؤال الاستطلاع" aria-label="سؤال الاستطلاع" value={question} onChange={(e) => setQuestion(e.target.value)} maxLength={500} />
           {options.map((option, index) => <div key={index} className="flex gap-1"><Input value={option} maxLength={200} placeholder={`اختيار ${index + 1}`} aria-label={`اختيار ${index + 1}`} onChange={(e) => setOptions((old) => old.map((v, i) => i === index ? e.target.value : v))} />{options.length>2 && <Button variant="ghost" size="icon" aria-label={`إزالة اختيار ${index+1}`} onClick={() => setOptions((old) => old.filter((_, i) => i !== index))}><X className="size-4" /></Button>}</div>)}

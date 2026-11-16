@@ -35,6 +35,7 @@ describe("review-only internal group SQL policy and atomic actions",()=>{
       INSERT INTO user_roles VALUES('${owner}','admin',now()),('${employee}','employee',now()),('${other}','employee',now()),('${customer}','customer',now());
       INSERT INTO profiles VALUES('${owner}','Owner'),('${employee}','Employee'),('${other}','Other');`);
     await db.exec(readFileSync(new URL("../../supabase/manual/internal_group.sql",import.meta.url),"utf8"));
+    await db.exec(readFileSync(new URL("../../supabase/manual/internal_group_targeted_read.sql",import.meta.url),"utf8"));
     await db.query("INSERT INTO user_roles VALUES($1,'admin',now())",[admin]);
   });
   afterAll(async()=>{await db.close();});
@@ -59,7 +60,7 @@ describe("review-only internal group SQL policy and atomic actions",()=>{
     await send(); expect((await db.query<{blocked:boolean}>("SELECT staff_chat_blocked($1) blocked",[employee])).rows[0]?.blocked).toBe(false);
   });
   it("mandatory receipts persist offline; every pending message needs own server acknowledgment",async()=>{
-    const a=await send(owner,{mandatory:true}),b=await send(owner,{mandatory:true});
+    const a=await send(owner,{mandatory:true,mandatoryMentions:[employee]}),b=await send(owner,{mandatory:true,mandatoryMentions:[employee]});
     expect((await db.query("SELECT * FROM staff_chat_receipts WHERE user_id=$1 AND read_at IS NULL",[employee])).rows).toHaveLength(2);
     await mutate(other,"ack",{id:a});
     expect((await db.query("SELECT * FROM staff_chat_receipts WHERE user_id=$1 AND read_at IS NULL",[employee])).rows).toHaveLength(2);
@@ -80,6 +81,46 @@ describe("review-only internal group SQL policy and atomic actions",()=>{
     expect((await as(other,"SELECT message_id FROM staff_chat_notifications")).map((r:any)=>r.message_id)).toEqual([id]);
     expect(await as(employee,"SELECT * FROM staff_chat_notifications")).toEqual([]);
     await send(owner,{everyone:true}); expect((await as(employee,"SELECT * FROM staff_chat_notifications")).length).toBe(1);
+  });
+  it("mandatory mentions block only selected employees, independently of ordinary everyone",async()=>{
+    const id=await send(owner,{mandatory:true,mandatoryMentions:[employee],everyone:true});
+    expect((await db.query("SELECT user_id FROM staff_chat_receipts WHERE message_id=$1",[id])).rows).toEqual([{user_id:employee}]);
+    expect((await as<{result:{pending:{id:string}[]}}>(other,"SELECT staff_chat_status() result"))[0]?.result.pending).toEqual([]);
+    expect((await as<{result:{pending:{id:string}[]}}>(employee,"SELECT staff_chat_status() result"))[0]?.result.pending.map(m=>m.id)).toEqual([id]);
+    await send(other);
+    await expect(send(employee)).rejects.toThrow("قراءة");
+  });
+  it("ordinary mentions never create mandatory receipts",async()=>{
+    await send(owner,{mentions:[employee]});
+    expect((await db.query("SELECT * FROM staff_chat_receipts")).rows).toEqual([]);
+  });
+  it("mandatory recipients must be explicitly selected valid employees",async()=>{
+    for(const payload of [{mandatory:true},{mandatory:true,mandatoryMentions:[customer]}, {mandatory:true,mandatoryMentions:[admin]}, {mandatoryMentions:[employee]}]) {
+      await expect(send(owner,payload)).rejects.toThrow();
+    }
+    await expect(send(employee,{mandatory:true,mandatoryMentions:[other]})).rejects.toThrow();
+    expect((await db.query("SELECT * FROM staff_chat_messages")).rows).toEqual([]);
+  });
+  it("one mandatory message supports several recipients without duplicate receipts",async()=>{
+    const id=await send(owner,{mandatory:true,mandatoryMentions:[employee,other,employee]});
+    expect((await db.query("SELECT * FROM staff_chat_receipts WHERE message_id=$1",[id])).rows).toHaveLength(2);
+  });
+  it("reviewed upgrade preserves historical mandatory receipts and timestamps when reapplied",async()=>{
+    const id=await send();
+    await db.query("UPDATE staff_chat_messages SET mandatory=true,mandatory_mentions=NULL WHERE id=$1",[id]);
+    await db.query("INSERT INTO staff_chat_receipts VALUES($1,$2,'2026-11-16T23:00:00Z'),($1,$3,NULL)",[id,employee,other]);
+    const before=(await db.query("SELECT * FROM staff_chat_receipts ORDER BY user_id")).rows;
+    await db.exec(readFileSync(new URL("../../supabase/manual/internal_group_targeted_read.sql",import.meta.url),"utf8"));
+    expect((await db.query("SELECT * FROM staff_chat_receipts ORDER BY user_id")).rows).toEqual(before);
+    expect((await as<{result:{pending:{id:string}[]}}>(other,"SELECT staff_chat_status() result"))[0]?.result.pending.map(m=>m.id)).toEqual([id]);
+  });
+  it("server sound cursor ignores the viewer's messages, edits and acknowledgments",async()=>{
+    const status=async()=> (await as<{result:{incoming:{id:string}|null}}>(employee,"SELECT staff_chat_status() result"))[0]?.result.incoming;
+    expect(await status()).toBeNull(); await send(employee); expect(await status()).toBeNull();
+    const id=await send(owner,{mandatory:true,mandatoryMentions:[employee]});
+    expect((await status())?.id).toBe(id);
+    await mutate(owner,"edit",{id,body:"edited"}); await mutate(employee,"ack",{id});
+    expect((await status())?.id).toBe(id);
   });
   it("own edit within an hour stores previous text; other admin cannot edit",async()=>{
     const id=await send(employee,{body:"original"}); await mutate(employee,"edit",{id,body:"changed"});
@@ -129,7 +170,7 @@ describe("review-only internal group SQL policy and atomic actions",()=>{
   it("mandatory direct read guard hides work from employee but never changes shift or background assignment",async()=>{
     await db.query("INSERT INTO work_shifts VALUES($1,$1,NULL)",[employee]);
     expect(await as(employee,"SELECT id FROM work_shifts")).toHaveLength(1);
-    const id=await send(owner,{mandatory:true});
+    const id=await send(owner,{mandatory:true,mandatoryMentions:[employee]});
     expect(await as(employee,"SELECT id FROM work_shifts")).toHaveLength(0);
     expect(await as(owner,"SELECT id FROM work_shifts")).toHaveLength(1);
     await db.exec("SET ROLE service_role");
@@ -138,7 +179,7 @@ describe("review-only internal group SQL policy and atomic actions",()=>{
     await mutate(employee,"ack",{id}); expect(await as(employee,"SELECT id FROM work_shifts")).toHaveLength(2);
   });
   it("repeated mandatory status reads never write change events or lose pending receipts",async()=>{
-    const id=await send(owner,{mandatory:true});
+    const id=await send(owner,{mandatory:true,mandatoryMentions:[employee]});
     const version=(await db.query<{version:number}>("SELECT version FROM staff_chat_events")).rows[0]?.version;
     for(let i=0;i<3;i++) {const status=(await as<{result:{pending:{id:string}[]}}>(employee,"SELECT staff_chat_status() result"))[0]?.result; expect(status?.pending.map(m=>m.id)).toEqual([id]);}
     expect((await db.query<{version:number}>("SELECT version FROM staff_chat_events")).rows[0]?.version).toBe(version);
