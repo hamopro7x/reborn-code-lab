@@ -310,7 +310,7 @@ function Admin() {
             </div>
             <AdminTranslator lang={adminLang} />
           </header>
-          <main className="flex-1 p-4 md:p-6 overflow-x-hidden">
+          <main className={`flex-1 overflow-x-hidden ${panel === "chat" ? "p-0" : "p-4 md:p-6"}`}>
             {isEmployee && panel === "orders" && (
               <div className="card-surface rounded-2xl p-4 mb-4 flex flex-wrap items-center justify-between gap-3">
                 <div>
