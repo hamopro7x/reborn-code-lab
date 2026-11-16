@@ -1943,17 +1943,11 @@ export function EmployeeWorkView({
               <Plus className="size-3" />
               <span>إضافة</span>
             </button>
-            <div className="flex min-w-48 max-w-full items-center gap-3 rounded-lg border border-primary/40 bg-card px-4 py-3 text-card-foreground" role="status" aria-label="إجمالي الجنيه">
-              <Wallet className="size-5 shrink-0 text-primary" />
-              <div className="min-w-0">
-                <div className="text-xs font-semibold text-muted-foreground">إجمالي الجنيه</div>
-                <div className="mt-1 flex flex-wrap items-baseline gap-2">
-                  <span className="break-all text-xl font-bold tabular-nums text-foreground" dir="ltr">
-                    {summary.egp.toLocaleString("en-US", { maximumFractionDigits: 2 })}
-                  </span>
-                  <span className="text-xs text-muted-foreground">جنيه</span>
-                </div>
-              </div>
+            <div className="inline-flex max-w-full flex-wrap items-center gap-1.5 py-1 text-[13px] font-extrabold text-foreground" role="status" aria-label="إجمالي الجنيه" dir="rtl">
+              <span>مصري :</span>
+              <span className="break-all tabular-nums" dir="ltr">
+                {summary.egp.toLocaleString("en-US", { maximumFractionDigits: 2 })}
+              </span>
             </div>
           </div>
         )}
