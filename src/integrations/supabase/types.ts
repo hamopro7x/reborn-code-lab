@@ -1987,6 +1987,267 @@ export type Database = {
         }
         Relationships: []
       }
+      staff_chat_attachments: {
+        Row: {
+          created_at: string
+          id: string
+          message_id: string | null
+          mime: string
+          name: string
+          path: string
+          ready: boolean
+          size: number
+          uploader_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message_id?: string | null
+          mime: string
+          name: string
+          path: string
+          ready?: boolean
+          size: number
+          uploader_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message_id?: string | null
+          mime?: string
+          name?: string
+          path?: string
+          ready?: boolean
+          size?: number
+          uploader_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_chat_attachments_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "staff_chat_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_chat_audit: {
+        Row: {
+          action: string
+          actor_id: string
+          created_at: string
+          id: string
+          message_id: string | null
+          previous: Json | null
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          created_at?: string
+          id?: string
+          message_id?: string | null
+          previous?: Json | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          created_at?: string
+          id?: string
+          message_id?: string | null
+          previous?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_chat_audit_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "staff_chat_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_chat_events: {
+        Row: {
+          id: boolean
+          version: number
+        }
+        Insert: {
+          id?: boolean
+          version?: number
+        }
+        Update: {
+          id?: boolean
+          version?: number
+        }
+        Relationships: []
+      }
+      staff_chat_group: {
+        Row: {
+          created_at: string
+          id: boolean
+          is_open: boolean
+          owner_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: boolean
+          is_open?: boolean
+          owner_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: boolean
+          is_open?: boolean
+          owner_id?: string
+        }
+        Relationships: []
+      }
+      staff_chat_hidden: {
+        Row: {
+          hidden_at: string
+          message_id: string
+          user_id: string
+        }
+        Insert: {
+          hidden_at?: string
+          message_id: string
+          user_id: string
+        }
+        Update: {
+          hidden_at?: string
+          message_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_chat_hidden_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "staff_chat_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_chat_messages: {
+        Row: {
+          body: string
+          created_at: string
+          deleted_at: string | null
+          edited_at: string | null
+          id: string
+          mandatory: boolean
+          mentions: string[]
+          poll: Json | null
+          sender_id: string
+          sender_name: string
+        }
+        Insert: {
+          body?: string
+          created_at?: string
+          deleted_at?: string | null
+          edited_at?: string | null
+          id?: string
+          mandatory?: boolean
+          mentions?: string[]
+          poll?: Json | null
+          sender_id: string
+          sender_name: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          deleted_at?: string | null
+          edited_at?: string | null
+          id?: string
+          mandatory?: boolean
+          mentions?: string[]
+          poll?: Json | null
+          sender_id?: string
+          sender_name?: string
+        }
+        Relationships: []
+      }
+      staff_chat_notifications: {
+        Row: {
+          message_id: string
+          seen_at: string | null
+          user_id: string
+        }
+        Insert: {
+          message_id: string
+          seen_at?: string | null
+          user_id: string
+        }
+        Update: {
+          message_id?: string
+          seen_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_chat_notifications_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "staff_chat_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_chat_receipts: {
+        Row: {
+          message_id: string
+          read_at: string | null
+          user_id: string
+        }
+        Insert: {
+          message_id: string
+          read_at?: string | null
+          user_id: string
+        }
+        Update: {
+          message_id?: string
+          read_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_chat_receipts_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "staff_chat_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_chat_votes: {
+        Row: {
+          choices: number[]
+          message_id: string
+          user_id: string
+          voted_at: string
+        }
+        Insert: {
+          choices: number[]
+          message_id: string
+          user_id: string
+          voted_at?: string
+        }
+        Update: {
+          choices?: number[]
+          message_id?: string
+          user_id?: string
+          voted_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_chat_votes_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "staff_chat_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tiktok_jobs: {
         Row: {
           amount_egp: number
@@ -2755,6 +3016,21 @@ export type Database = {
       prune_bybit_card_txns: {
         Args: { p_delete?: number; p_max?: number }
         Returns: number
+      }
+      staff_chat_blocked: { Args: { p_user: string }; Returns: boolean }
+      staff_chat_can_read_work: { Args: never; Returns: boolean }
+      staff_chat_mutate: {
+        Args: { p_action: string; p_data?: Json }
+        Returns: Json
+      }
+      staff_chat_read: {
+        Args: { p_before?: string; p_before_id?: string; p_id?: string }
+        Returns: Json
+      }
+      staff_chat_status: { Args: never; Returns: Json }
+      staff_chat_upload_ready: {
+        Args: { p_id: string; p_user: string }
+        Returns: undefined
       }
       work_assign_txn: {
         Args: { p_ledger_id: string; p_shift_id: string }
