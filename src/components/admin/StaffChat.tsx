@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Send, Paperclip, Mic, Square, X, BarChart3, AtSign, Loader2, Users } from "lucide-react";
+import { Send, Paperclip, Mic, Square, X, BarChart3, AtSign, Loader2, Users, FileText, Images, Headphones } from "lucide-react";
 import chatWallpaper from "@/assets/staff-chat-wallpaper.jpg";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { getChatState, getChatMessages, mutateChat, uploadChatFile } from "@/lib/chat.functions";
 import { livePoll } from "@/lib/live-poll";
@@ -29,6 +30,12 @@ export function StaffChat({ targetId }: { targetId?: string }) {
   const fileInput = useRef<HTMLInputElement>(null); const recorder = useRef<MediaRecorder | null>(null); const stream = useRef<MediaStream | null>(null);
   const end = useRef<HTMLDivElement>(null);
   const active = useRef(true);
+  const chooseFile = (accept: string) => {
+    const input = fileInput.current;
+    if (!input) return;
+    input.accept = accept;
+    input.click();
+  };
   const state = stateQ.data;
   const canSend = state?.enabled && (state.open || state.role === "admin") && !state.pending.length;
   const refresh = async () => { await Promise.all([qc.invalidateQueries({ queryKey: ["staff-chat-messages"] }), qc.invalidateQueries({ queryKey: ["staff-chat-state"] }), qc.invalidateQueries({ queryKey: ["staff-chat-receipts"] })]); };
@@ -94,13 +101,20 @@ export function StaffChat({ targetId }: { targetId?: string }) {
       {!canSend ? <p className="text-sm text-muted-foreground">{state.pending.length ? "أكد قراءة الرسائل الإجبارية الأول" : "الجروب مغلق؛ تقدر تقرأ الرسائل الجديدة"}</p> : <>
         <div className="staff-chat-inputbar flex items-end gap-1 px-2 py-1.5">
           <input ref={fileInput} type="file" multiple className="hidden" aria-label="رفع مرفقات" onChange={(e) => void upload(Array.from(e.target.files ?? []))} />
-          <Button size="icon" variant="ghost" className="shrink-0" title="رفع ملف أو صورة أو فيديو أو صوت" aria-label="إرفاق ملف" disabled={busy || recording} onClick={() => fileInput.current?.click()}><Paperclip className="size-5" /></Button>
+          <DropdownMenu dir="rtl">
+            <DropdownMenuTrigger asChild><Button size="icon" variant="ghost" className="shrink-0 rounded-full" title="المرفقات" aria-label="إرفاق ملف" disabled={busy || recording}><Paperclip className="size-5" /></Button></DropdownMenuTrigger>
+            <DropdownMenuContent side="top" align="start" sideOffset={10} collisionPadding={12} className="staff-chat-attachment-menu w-56 max-w-[calc(100vw-24px)] p-1.5" aria-label="المرفقات">
+              <DropdownMenuItem className="staff-chat-attachment-item" onSelect={() => chooseFile("")}><FileText className="staff-chat-document-icon" /><span>مستند</span></DropdownMenuItem>
+              <DropdownMenuItem className="staff-chat-attachment-item" onSelect={() => chooseFile("image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime")}><Images className="staff-chat-media-icon" /><span>الصور ومقاطع الفيديو</span></DropdownMenuItem>
+              <DropdownMenuItem className="staff-chat-attachment-item" onSelect={() => chooseFile("audio/webm,audio/mpeg,audio/wav,audio/x-wav,audio/ogg,audio/mp4,audio/x-m4a")}><Headphones className="staff-chat-audio-icon" /><span>مقطع صوتي</span></DropdownMenuItem>
+              <DropdownMenuItem className="staff-chat-attachment-item" onSelect={() => setPollOpen(!pollOpen)}><BarChart3 className="staff-chat-poll-icon" /><span>استطلاع رأي</span></DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="اكتب رسالة…" aria-label="نص الرسالة" maxLength={10000} className="staff-chat-textarea min-w-0 flex-1" />
           <Button size="icon" variant={recording ? "destructive" : "ghost"} className="shrink-0" title={recording ? "إيقاف التسجيل" : "تسجيل صوتي"} aria-label={recording ? "إيقاف التسجيل" : "تسجيل صوتي"} disabled={busy} onClick={() => void record()}>{recording ? <Square className="size-4" /> : <Mic className="size-5" />}</Button>
           <Button size="icon" className="staff-chat-send shrink-0" title="إرسال" aria-label="إرسال" disabled={busy || recording || (!text.trim() && !files.length && !pollOpen)} onClick={() => void send()}>{busy ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}</Button>
         </div>
         <div className="flex flex-wrap gap-2 items-center">
-          <Button size="icon" variant={pollOpen ? "secondary" : "outline"} title="استطلاع رأي" aria-label="استطلاع رأي" onClick={() => setPollOpen(!pollOpen)}><BarChart3 className="size-4" /></Button>
           <details className="text-sm"><summary className="cursor-pointer flex gap-1 items-center p-2"><AtSign className="size-4" />منشن {mentions.length || ""}</summary>
             <div className="flex flex-wrap gap-3 py-2">{state.role === "admin" && <label className="flex gap-1 items-center"><input type="checkbox" checked={everyone} onChange={(e) => setEveryone(e.target.checked)} />@everyone</label>}
               {state.members.filter((m) => m.role === "employee").map((member) => <label key={member.id} className="flex gap-1 items-center"><input type="checkbox" checked={mentions.includes(member.id)} disabled={everyone} onChange={(e) => setMentions((old) => e.target.checked ? [...old, member.id] : old.filter((id) => id !== member.id))} />@{member.name}</label>)}</div>

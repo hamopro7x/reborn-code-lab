@@ -750,6 +750,29 @@
 .staff-chat-avatar { background: var(--chat-outgoing); color: var(--chat-sender); }
 .staff-chat-wallpaper { opacity: 0.38; }
 .staff-chat-transcript { overflow-x: hidden; }
+.staff-chat-attachment-menu {
+  --chat-menu-background: oklch(0.20 0 0);
+  --chat-menu-foreground: oklch(0.95 0 0);
+  --chat-menu-border: oklch(0.31 0 0);
+  --chat-menu-active: oklch(0.27 0 0);
+  --chat-menu-document: oklch(0.64 0.24 295);
+  --chat-menu-media: oklch(0.65 0.20 250);
+  --chat-menu-audio: oklch(0.71 0.20 42);
+  --chat-menu-poll: oklch(0.84 0.17 85);
+  background: var(--chat-menu-background);
+  color: var(--chat-menu-foreground);
+  border-color: var(--chat-menu-border);
+  border-radius: 8px;
+}
+.staff-chat-attachment-item { min-height: 40px; gap: 12px; padding: 8px 12px; }
+.staff-chat-attachment-item:focus {
+  background: var(--chat-menu-active);
+  color: var(--chat-menu-foreground);
+}
+.staff-chat-document-icon { color: var(--chat-menu-document); }
+.staff-chat-media-icon { color: var(--chat-menu-media); }
+.staff-chat-audio-icon { color: var(--chat-menu-audio); }
+.staff-chat-poll-icon { color: var(--chat-menu-poll); }
 .staff-chat-inputbar { background: var(--chat-input); border-radius: 26px; }
 .staff-chat-textarea {
   min-height: 38px;
