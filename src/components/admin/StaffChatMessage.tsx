@@ -23,11 +23,10 @@ export function StaffChatMessage({ message, state, act, forced = false }: {
   };
   const poll = message.poll;
   const voted = message.votes?.some((vote) => vote.user_id === state.userId);
-  return <article id={`chat-message-${message.id}`} className="border-b border-border py-4 min-w-0" dir="rtl">
+  return <article id={`chat-message-${message.id}`} className={forced ? "py-4 min-w-0" : `staff-chat-bubble min-w-0 ${message.sender_id === state.userId ? "staff-chat-outgoing" : "staff-chat-incoming"}`} dir="rtl">
     <div className="flex flex-wrap items-center gap-2 text-sm">
-      <span className="font-bold">{message.sender_name}</span>
+      <span className={forced ? "font-bold" : "staff-chat-sender font-bold text-xs"}>{message.sender_name}</span>
       {message.mandatory && <span className="text-destructive text-xs font-semibold">قراءة إجبارية</span>}
-      <time className="text-muted-foreground text-xs" dateTime={message.created_at}>{new Date(message.created_at).toLocaleString("ar-EG", { dateStyle: "short", timeStyle: "short" })}</time>
     </div>
     {message.deleted_at ? <p className="mt-2 text-muted-foreground text-sm">تم حذف الرسالة لدى الجميع</p> : <>
       {editing ? <div className="my-2 flex gap-2"><Input value={body} onChange={(e) => setBody(e.target.value)} maxLength={10000} aria-label="تعديل الرسالة" />
@@ -58,7 +57,7 @@ export function StaffChatMessage({ message, state, act, forced = false }: {
         {state.role === "admin" && <details className="text-xs"><summary className="cursor-pointer">أسماء المصوّتين</summary>{(message.votes ?? []).map((vote) => <p className="mt-2" key={vote.user_id}>{vote.name}: {vote.choices.map((i) => poll.options[i]).join("، ")} · {new Date(vote.voted_at).toLocaleString("ar-EG")}</p>)}</details>}
       </section>}
       {message.edited_at && <p className="mt-2 text-xs text-muted-foreground">تم التعديل</p>}
-      {!forced && <div className="mt-2 flex flex-wrap items-center gap-1">
+      {!forced && <div className="staff-chat-message-actions mt-2 flex flex-wrap items-center gap-1">
         <Button variant="ghost" size="icon" className="size-8" title="نسخ نص الرسالة والروابط" aria-label="نسخ الرسالة" onClick={() => void navigator.clipboard.writeText(message.body)}><Copy className="size-3.5" /></Button>
         {canEditChatMessage(message.sender_id, state.userId, message.created_at, Date.now()) && <Button variant="ghost" size="icon" className="size-8" title="تعديل الرسالة" aria-label="تعديل الرسالة" onClick={() => { setBody(message.body); setEditing(true); }}><Pencil className="size-3.5" /></Button>}
         {state.owner && <details className="relative text-xs"><summary className="cursor-pointer inline-flex items-center gap-1 p-2"><Trash2 className="size-3.5" />حذف</summary>
@@ -68,5 +67,6 @@ export function StaffChatMessage({ message, state, act, forced = false }: {
       </div>}
       {showReceipts && <div className="mt-2 text-xs space-y-2">{receipts.isLoading ? "جاري التحميل…" : receipts.isError ? "تعذر تحميل التأكيدات" : (receipts.data ?? []).map((receipt) => <p key={receipt.user_id}>{state.members.find((m) => m.id === receipt.user_id)?.name ?? "موظف"}: {receipt.read_at ? `تمت القراءة · ${new Date(receipt.read_at).toLocaleString("ar-EG")}` : "لم يؤكد القراءة"}</p>)}</div>}
     </>}
+    <time className="mt-1 flex justify-end text-muted-foreground text-[10px]" dateTime={message.created_at}>{new Date(message.created_at).toLocaleString("ar-EG", { dateStyle: "short", timeStyle: "short" })}</time>
   </article>;
 }

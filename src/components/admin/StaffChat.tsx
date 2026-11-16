@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Send, Paperclip, Mic, Square, X, BarChart3, AtSign, Loader2 } from "lucide-react";
+import { Send, Paperclip, Mic, Square, X, BarChart3, AtSign, Loader2, Users } from "lucide-react";
+import chatWallpaper from "@/assets/staff-chat-wallpaper.jpg";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -73,31 +74,36 @@ export function StaffChat({ targetId }: { targetId?: string }) {
   if (stateQ.isLoading) return <p className="p-4 text-muted-foreground">جاري تحميل الجروب…</p>;
   if (stateQ.isError) return <div className="space-y-3"><p className="text-destructive">تعذر تحميل الجروب</p><Button onClick={() => void stateQ.refetch()}>إعادة المحاولة</Button></div>;
   if (!state?.enabled) return <p className="text-muted-foreground">الجروب غير مفعّل لحد تطبيق ملف الإعدادات المعتمد.</p>;
-  return <div dir="rtl" className="mx-auto max-w-4xl min-w-0">
-    <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
-      <div><h2 className="font-bold text-lg">جروب MG Pro</h2><p className="text-xs text-muted-foreground mt-1">{state.members.length} أعضاء · {state.open ? "مفتوح" : "الأدمن فقط يقدر يرسل"}</p></div>
+  return <div dir="rtl" className="staff-chat min-w-0">
+    <header className="staff-chat-header flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+      <div className="flex items-center gap-3 min-w-0"><span className="staff-chat-avatar flex size-10 shrink-0 items-center justify-center rounded-full"><Users className="size-5" /></span><div><h2 className="font-bold text-base">جروب MG Pro</h2><p className="text-xs text-muted-foreground mt-1">{state.members.length} أعضاء · {state.open ? "مفتوح" : "الأدمن فقط يقدر يرسل"}</p></div></div>
       {state.owner && <label className="flex gap-2 items-center text-sm"><span>مفتوح للإرسال</span><Switch checked={state.open} onCheckedChange={(open) => void act("state", { open }).catch(() => {})} /></label>}
     </header>
-    <div className="max-h-[60dvh] min-h-64 overflow-y-auto pe-2">
+    <div className="staff-chat-transcript relative min-h-0 flex-1 overflow-y-auto px-4 py-5">
+      <img src={chatWallpaper} alt="" aria-hidden="true" width={1024} height={1024} loading="lazy" className="staff-chat-wallpaper pointer-events-none absolute inset-0 h-full w-full object-cover" />
+      <div className="relative min-h-full flex flex-col justify-end">
       {before && <Button variant="ghost" size="sm" onClick={() => setBefore(undefined)}>آخر الرسائل</Button>}
       {!targetId && (messages.data?.length ?? 0) === 50 && <Button variant="ghost" size="sm" onClick={() => { const first = messages.data?.[0]; if (first) setBefore({ date: first.created_at, id: first.id }); }}>رسائل أقدم</Button>}
       {messages.isLoading ? <p className="py-8 text-muted-foreground text-sm">جاري التحميل…</p> : messages.isError ? <div className="py-4"><p className="text-destructive">تعذر تحميل الرسائل</p><Button onClick={() => void messages.refetch()}>إعادة المحاولة</Button></div> : !messages.data?.length ? <p className="py-10 text-muted-foreground text-sm">مفيش رسائل هنا لسه</p> : messages.data.map((message: ChatMessage) => <StaffChatMessage key={message.id} message={message} state={state} act={act} />)}
       <div ref={end} />
+      </div>
     </div>
-    <section className="sticky bottom-0 bg-background border-t border-border pt-3 pb-2 space-y-3">
+    <section className="staff-chat-composer shrink-0 px-3 pt-2 pb-3 space-y-2">
       {!canSend ? <p className="text-sm text-muted-foreground">{state.pending.length ? "أكد قراءة الرسائل الإجبارية الأول" : "الجروب مغلق؛ تقدر تقرأ الرسائل الجديدة"}</p> : <>
-        <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="اكتب رسالة…" aria-label="نص الرسالة" maxLength={10000} className="min-h-20" />
-        <div className="flex flex-wrap gap-2 items-center">
+        <div className="staff-chat-inputbar flex items-end gap-1 px-2 py-1.5">
           <input ref={fileInput} type="file" multiple className="hidden" aria-label="رفع مرفقات" onChange={(e) => void upload(Array.from(e.target.files ?? []))} />
-          <Button size="icon" variant="outline" title="رفع ملف أو صورة أو فيديو أو صوت" aria-label="إرفاق ملف" disabled={busy || recording} onClick={() => fileInput.current?.click()}><Paperclip className="size-4" /></Button>
-          <Button size="icon" variant={recording ? "destructive" : "outline"} title={recording ? "إيقاف التسجيل" : "تسجيل صوتي"} aria-label={recording ? "إيقاف التسجيل" : "تسجيل صوتي"} disabled={busy} onClick={() => void record()}>{recording ? <Square className="size-4" /> : <Mic className="size-4" />}</Button>
+          <Button size="icon" variant="ghost" className="shrink-0" title="رفع ملف أو صورة أو فيديو أو صوت" aria-label="إرفاق ملف" disabled={busy || recording} onClick={() => fileInput.current?.click()}><Paperclip className="size-5" /></Button>
+          <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="اكتب رسالة…" aria-label="نص الرسالة" maxLength={10000} className="staff-chat-textarea min-w-0 flex-1" />
+          <Button size="icon" variant={recording ? "destructive" : "ghost"} className="shrink-0" title={recording ? "إيقاف التسجيل" : "تسجيل صوتي"} aria-label={recording ? "إيقاف التسجيل" : "تسجيل صوتي"} disabled={busy} onClick={() => void record()}>{recording ? <Square className="size-4" /> : <Mic className="size-5" />}</Button>
+          <Button size="icon" className="staff-chat-send shrink-0" title="إرسال" aria-label="إرسال" disabled={busy || recording || (!text.trim() && !files.length && !pollOpen)} onClick={() => void send()}>{busy ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}</Button>
+        </div>
+        <div className="flex flex-wrap gap-2 items-center">
           <Button size="icon" variant={pollOpen ? "secondary" : "outline"} title="استطلاع رأي" aria-label="استطلاع رأي" onClick={() => setPollOpen(!pollOpen)}><BarChart3 className="size-4" /></Button>
           <details className="text-sm"><summary className="cursor-pointer flex gap-1 items-center p-2"><AtSign className="size-4" />منشن {mentions.length || ""}</summary>
             <div className="flex flex-wrap gap-3 py-2">{state.role === "admin" && <label className="flex gap-1 items-center"><input type="checkbox" checked={everyone} onChange={(e) => setEveryone(e.target.checked)} />@everyone</label>}
               {state.members.filter((m) => m.role === "employee").map((member) => <label key={member.id} className="flex gap-1 items-center"><input type="checkbox" checked={mentions.includes(member.id)} disabled={everyone} onChange={(e) => setMentions((old) => e.target.checked ? [...old, member.id] : old.filter((id) => id !== member.id))} />@{member.name}</label>)}</div>
           </details>
           {state.role === "admin" && <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={mandatory} onChange={(e) => setMandatory(e.target.checked)} />قراءة إجبارية</label>}
-          <Button className="ms-auto" disabled={busy || recording || (!text.trim() && !files.length && !pollOpen)} onClick={() => void send()}>{busy ? <Loader2 className="size-4 animate-spin me-2" /> : <Send className="size-4 me-2" />}إرسال</Button>
         </div>
         {files.length>0 && <div className="flex flex-wrap gap-2">{files.map((file) => <div key={file.id} className="flex gap-1 items-center bg-muted px-2 py-1 rounded text-xs max-w-full"><span className="truncate">{file.name}</span><Button size="icon" variant="ghost" className="size-6 shrink-0" aria-label={`إزالة ${file.name}`} onClick={() => setFiles((old) => old.filter((f) => f.id !== file.id))}><X className="size-3" /></Button></div>)}</div>}
         {pollOpen && <div className="border-s-2 border-primary ps-3 space-y-2"><Input placeholder="سؤال الاستطلاع" aria-label="سؤال الاستطلاع" value={question} onChange={(e) => setQuestion(e.target.value)} maxLength={500} />

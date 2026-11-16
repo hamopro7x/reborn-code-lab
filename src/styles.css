@@ -723,6 +723,65 @@
 }
 .wm-float { animation: wmFloat 22s ease-in-out infinite; }
 
+/* Internal group only: messaging reference, independent of staff/store palettes. */
+.staff-chat {
+  --background: oklch(0.19 0.005 165);
+  --foreground: oklch(0.95 0.005 165);
+  --muted-foreground: oklch(0.72 0.015 165);
+  --primary: oklch(0.53 0.105 164);
+  --primary-foreground: oklch(0.98 0 0);
+  --border: oklch(0.31 0.005 165);
+  --input: oklch(0.31 0.005 165);
+  --ring: oklch(0.65 0.10 164);
+  --chat-header: oklch(0.205 0.004 165);
+  --chat-input: oklch(0.26 0.006 165);
+  --chat-incoming: oklch(0.255 0.008 165);
+  --chat-outgoing: oklch(0.345 0.06 164);
+  --chat-sender: oklch(0.78 0.10 164);
+  display: flex;
+  flex-direction: column;
+  height: min(820px, calc(100dvh - 170px));
+  min-height: 420px;
+  background: var(--background);
+  color: var(--foreground);
+  overflow: hidden;
+}
+.staff-chat-header, .staff-chat-composer { background: var(--chat-header); }
+.staff-chat-avatar { background: var(--chat-outgoing); color: var(--chat-sender); }
+.staff-chat-wallpaper { opacity: 0.38; }
+.staff-chat-inputbar { background: var(--chat-input); border-radius: 26px; }
+.staff-chat-textarea {
+  min-height: 38px;
+  height: 38px;
+  max-height: 120px;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  resize: vertical;
+}
+.staff-chat-textarea:focus-visible { box-shadow: none; }
+.staff-chat-send { border-radius: 50%; }
+.staff-chat-bubble {
+  position: relative;
+  width: fit-content;
+  max-width: min(76%, 560px);
+  padding: 9px 12px 6px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  background: var(--chat-incoming);
+  overflow-wrap: anywhere;
+}
+.staff-chat-incoming { align-self: flex-start; border-top-right-radius: 0; }
+.staff-chat-outgoing { align-self: flex-end; background: var(--chat-outgoing); border-top-left-radius: 0; }
+.staff-chat-sender { color: var(--chat-sender); }
+.staff-chat-bubble a { color: var(--chat-sender); }
+.staff-chat-message-actions { border-top: 1px solid var(--border); }
+@media (max-width: 640px) {
+  .staff-chat { height: calc(100dvh - 150px); min-height: 380px; }
+  .staff-chat-bubble { max-width: 90%; }
+  .staff-chat-transcript { padding-inline: 12px; }
+}
+
 /* ===== Admin / staff area: neutral graphite theme ===== */
 .admin-theme {
   --background: oklch(0.155 0 0);
