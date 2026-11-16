@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { getChatState, getChatMessages, mutateChat, uploadChatFile } from "@/lib/chat.functions";
 import { livePoll } from "@/lib/live-poll";
@@ -24,6 +24,7 @@ export function StaffChat({ targetId }: { targetId?: string }) {
   const [text, setText] = useState(""); const [files, setFiles] = useState<ChatAttachment[]>([]);
   const [mentions, setMentions] = useState<string[]>([]); const [everyone, setEveryone] = useState(false);
   const [mandatory, setMandatory] = useState(false); const [pollOpen, setPollOpen] = useState(false);
+  const [mentionsOpen, setMentionsOpen] = useState(false);
   const [mandatoryMentions, setMandatoryMentions] = useState<string[]>([]);
   const [question, setQuestion] = useState(""); const [options, setOptions] = useState(["", ""]); const [multiple, setMultiple] = useState(false);
   const [busy, setBusy] = useState(false); const [recording, setRecording] = useState(false);
@@ -108,22 +109,25 @@ export function StaffChat({ targetId }: { targetId?: string }) {
               <DropdownMenuItem className="staff-chat-attachment-item" onSelect={() => chooseFile("image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime")}><Images className="staff-chat-media-icon" /><span>الصور ومقاطع الفيديو</span></DropdownMenuItem>
               <DropdownMenuItem className="staff-chat-attachment-item" onSelect={() => chooseFile("audio/webm,audio/mpeg,audio/wav,audio/x-wav,audio/ogg,audio/mp4,audio/x-m4a")}><Headphones className="staff-chat-audio-icon" /><span>مقطع صوتي</span></DropdownMenuItem>
               <DropdownMenuItem className="staff-chat-attachment-item" onSelect={() => setPollOpen(!pollOpen)}><BarChart3 className="staff-chat-poll-icon" /><span>استطلاع رأي</span></DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="staff-chat-attachment-item" onSelect={(event) => { event.preventDefault(); setMentionsOpen(!mentionsOpen); }}><AtSign className="staff-chat-media-icon" /><span>منشن {everyone ? "@everyone" : mentions.length || ""}</span></DropdownMenuItem>
+              {mentionsOpen && <>
+                {state.role === "admin" && <DropdownMenuCheckboxItem checked={everyone} onCheckedChange={setEveryone} onSelect={(event) => event.preventDefault()}>@everyone</DropdownMenuCheckboxItem>}
+                {state.members.filter((m) => m.role === "employee").map((member) => <DropdownMenuCheckboxItem key={member.id} checked={mentions.includes(member.id)} disabled={everyone} onSelect={(event) => event.preventDefault()} onCheckedChange={(checked) => setMentions((old) => checked ? [...old, member.id] : old.filter((id) => id !== member.id))}>@{member.name}</DropdownMenuCheckboxItem>)}
+              </>}
+              {state.role === "admin" && <>
+                <DropdownMenuCheckboxItem className="min-h-10" checked={mandatory} disabled={!state.targetedMandatory} onCheckedChange={setMandatory} onSelect={(event) => event.preventDefault()}>قراءة إجبارية</DropdownMenuCheckboxItem>
+                {mandatory && <>
+                  <DropdownMenuLabel className="text-xs">منشن القراءة الإجبارية</DropdownMenuLabel>
+                  {state.members.filter((m) => m.role === "employee").map((member) => <DropdownMenuCheckboxItem key={member.id} checked={mandatoryMentions.includes(member.id)} onSelect={(event) => event.preventDefault()} onCheckedChange={(checked) => setMandatoryMentions((old) => checked ? [...old, member.id] : old.filter((id) => id !== member.id))}>@{member.name}</DropdownMenuCheckboxItem>)}
+                </>}
+              </>}
             </DropdownMenuContent>
           </DropdownMenu>
           <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="اكتب رسالة…" aria-label="نص الرسالة" maxLength={10000} className="staff-chat-textarea min-w-0 flex-1" />
           <Button size="icon" variant={recording ? "destructive" : "ghost"} className="shrink-0" title={recording ? "إيقاف التسجيل" : "تسجيل صوتي"} aria-label={recording ? "إيقاف التسجيل" : "تسجيل صوتي"} disabled={busy} onClick={() => void record()}>{recording ? <Square className="size-4" /> : <Mic className="size-5" />}</Button>
           <Button size="icon" className="staff-chat-send shrink-0" title="إرسال" aria-label="إرسال" disabled={busy || recording || (!text.trim() && !files.length && !pollOpen)} onClick={() => void send()}>{busy ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}</Button>
         </div>
-        <div className="flex flex-wrap gap-2 items-center">
-          <details className="text-sm"><summary className="cursor-pointer flex gap-1 items-center p-2"><AtSign className="size-4" />منشن {mentions.length || ""}</summary>
-            <div className="flex flex-wrap gap-3 py-2">{state.role === "admin" && <label className="flex gap-1 items-center"><input type="checkbox" checked={everyone} onChange={(e) => setEveryone(e.target.checked)} />@everyone</label>}
-              {state.members.filter((m) => m.role === "employee").map((member) => <label key={member.id} className="flex gap-1 items-center"><input type="checkbox" checked={mentions.includes(member.id)} disabled={everyone} onChange={(e) => setMentions((old) => e.target.checked ? [...old, member.id] : old.filter((id) => id !== member.id))} />@{member.name}</label>)}</div>
-          </details>
-          {state.role === "admin" && <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={mandatory} disabled={!state.targetedMandatory} onChange={(e) => setMandatory(e.target.checked)} />قراءة إجبارية</label>}
-        </div>
-        {mandatory && <fieldset className="border-s-2 border-destructive ps-3 py-2"><legend className="text-xs font-semibold">منشن القراءة الإجبارية</legend>
-          <div className="flex flex-wrap gap-3 pt-2">{state.members.filter((m) => m.role === "employee").map((member) => <label key={member.id} className="flex gap-1 items-center text-sm"><input type="checkbox" checked={mandatoryMentions.includes(member.id)} onChange={(e) => setMandatoryMentions((old) => e.target.checked ? [...old, member.id] : old.filter((id) => id !== member.id))} />@{member.name}</label>)}</div>
-        </fieldset>}
         {files.length>0 && <div className="flex flex-wrap gap-2">{files.map((file) => <div key={file.id} className="flex gap-1 items-center bg-muted px-2 py-1 rounded text-xs max-w-full"><span className="truncate">{file.name}</span><Button size="icon" variant="ghost" className="size-6 shrink-0" aria-label={`إزالة ${file.name}`} onClick={() => setFiles((old) => old.filter((f) => f.id !== file.id))}><X className="size-3" /></Button></div>)}</div>}
         {pollOpen && <div className="border-s-2 border-primary ps-3 space-y-2"><Input placeholder="سؤال الاستطلاع" aria-label="سؤال الاستطلاع" value={question} onChange={(e) => setQuestion(e.target.value)} maxLength={500} />
           {options.map((option, index) => <div key={index} className="flex gap-1"><Input value={option} maxLength={200} placeholder={`اختيار ${index + 1}`} aria-label={`اختيار ${index + 1}`} onChange={(e) => setOptions((old) => old.map((v, i) => i === index ? e.target.value : v))} />{options.length>2 && <Button variant="ghost" size="icon" aria-label={`إزالة اختيار ${index+1}`} onClick={() => setOptions((old) => old.filter((_, i) => i !== index))}><X className="size-4" /></Button>}</div>)}
