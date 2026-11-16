@@ -51,6 +51,8 @@ import { FileBarChart, MonitorPlay, Image as ImageIcon, ChevronUp, ChevronDown, 
 import { WorkSheetPanel } from "@/components/admin/WorkSheetPanel";
 import { AdminSheet } from "@/components/admin/AdminSheet";
 import { GmailInbox, MailNotifier } from "@/components/admin/GmailInbox";
+import { StaffChat } from "@/components/admin/StaffChat";
+import { MessagesSquare } from "lucide-react";
 import { Mail, Wallet } from "lucide-react";
 
 import { LessonUploader } from "@/components/admin/LessonUploader";
@@ -66,11 +68,11 @@ import { getPaymentIconUrl, preparePaymentIconUpload } from "@/lib/payments.func
 
 type PanelKey =
   | "overview" | "orders" | "categories" | "products" | "customers" | "employees"
-  | "reviews" | "payments" | "currencies" | "timers" | "settings" | "courses" | "devices" | "reports" | "remote" | "cardtx" | "okx" | "apikey" | "worksheet" | "sheet" | "mail";
+  | "reviews" | "payments" | "currencies" | "timers" | "settings" | "courses" | "devices" | "reports" | "remote" | "cardtx" | "okx" | "apikey" | "worksheet" | "sheet" | "mail" | "chat";
 
 const panelKeys: PanelKey[] = [
   "overview", "orders", "categories", "customers", "employees",
-  "reviews", "payments", "currencies", "timers", "settings", "courses", "devices", "reports", "remote", "cardtx", "okx", "apikey", "worksheet", "sheet", "mail",
+  "reviews", "payments", "currencies", "timers", "settings", "courses", "devices", "reports", "remote", "cardtx", "okx", "apikey", "worksheet", "sheet", "mail", "chat",
 ];
 
 
@@ -84,8 +86,10 @@ export const Route = createFileRoute("/_authenticated/admin")({
     { property: "og:type", content: "website" },
     { name: "twitter:card", content: "summary" },
   ] }),
-  validateSearch: (search: Record<string, unknown>): { panel?: PanelKey } =>
-    panelKeys.includes(search.panel as PanelKey) ? { panel: search.panel as PanelKey } : {},
+  validateSearch: (search: Record<string, unknown>): { panel?: PanelKey; message?: string } => ({
+    ...(panelKeys.includes(search.panel as PanelKey) ? { panel: search.panel as PanelKey } : {}),
+    ...(typeof search.message === "string" && /^[0-9a-f-]{36}$/i.test(search.message) ? { message: search.message } : {}),
+  }),
   component: Admin,
 });
 
@@ -126,6 +130,9 @@ function Admin() {
     if (!search.panel) navigate({ to: "/admin", search: { panel }, replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  useEffect(() => {
+    if (search.panel) setPanelState(search.panel);
+  }, [search.panel]);
 
   const isEmployee = role === "employee";
   const adminOnly = role === "admin";
@@ -144,7 +151,7 @@ function Admin() {
     refetchIntervalInBackground: false,
   });
   const shared = sharedQ.data ?? [];
-  const basePanels: PanelKey[] = ["orders", "courses", "worksheet", "mail"];
+  const basePanels: PanelKey[] = ["orders", "courses", "worksheet", "mail", "chat"];
   const employeeAllowed = (key: PanelKey) => basePanels.includes(key) || shared.includes(key);
   const canView = (key: PanelKey) => adminOnly || employeeAllowed(key);
   const readOnly = isEmployee && !basePanels.includes(panel);
@@ -198,6 +205,7 @@ function Admin() {
         { key: "worksheet", label: "جدول بيانات الشغل", icon: ClipboardList },
         { key: "sheet", label: "جدول بيانات خاص", icon: Table2, adminOnly: true },
         { key: "mail", label: "البريد", icon: Mail },
+        { key: "chat", label: "جروب MG Pro", icon: MessagesSquare },
 
 
       ],
@@ -333,6 +341,7 @@ function Admin() {
             {panel === "worksheet" && canView("worksheet") && <WorkSheetPanel isAdmin={adminOnly} />}
             {panel === "sheet" && adminOnly && <AdminSheet />}
             {panel === "mail" && canView("mail") && <GmailInbox isAdmin={adminOnly} />}
+            {panel === "chat" && <StaffChat targetId={search.message} />}
 
 
             

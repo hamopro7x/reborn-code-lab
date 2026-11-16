@@ -14,6 +14,7 @@ import { GlobalRealtime } from "@/lib/realtime/global-realtime";
 import { setUiScope } from "@/lib/ui-state";
 import { saveLastLocation } from "@/lib/last-location";
 import { DATABASE_URL } from "@/integrations/supabase/config";
+import { StaffChatGate } from "@/components/admin/StaffChatGate";
 
 const SUPABASE_ORIGIN = (() => {
   const url = (import.meta.env['VITE_SUPABASE_URL'] as string | undefined) || DATABASE_URL;
@@ -180,6 +181,7 @@ function RootComponent() {
       <CurrencyProvider>
         <CartProvider>
           <GlobalRealtime />
+          <StaffChatGate />
           <Outlet />
         </CartProvider>
       </CurrencyProvider>

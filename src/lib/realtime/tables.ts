@@ -8,6 +8,7 @@
 
 /** بادئات مفاتيح الـqueries المتأثرة بكل جدول. */
 export const TABLE_QUERY_KEYS: Record<string, string[]> = {
+  staff_chat_events: ["staff-chat-state", "staff-chat-messages", "staff-chat-receipts"],
   // ---- بيانات الشغل / المعاملات المركزية ----
   bybit_ledger: [
     "bybit-ledger", "bybit-spend-totals", "bybit-overview", "admin-stats",
