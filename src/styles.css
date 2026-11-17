@@ -802,10 +802,11 @@
 .staff-chat-send { border-radius: 50%; }
 .staff-chat-bubble {
   position: relative;
+  flex-shrink: 0;
   width: fit-content;
   max-width: min(76%, 560px);
   padding: 6px 9px 5px;
-  margin-bottom: 10px;
+  margin-bottom: 20px;
   border-radius: 8px;
   background: var(--chat-incoming);
   overflow-wrap: anywhere;
