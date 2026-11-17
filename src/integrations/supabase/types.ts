@@ -2136,6 +2136,7 @@ export type Database = {
           edited_at: string | null
           id: string
           mandatory: boolean
+          mandatory_mentions: string[] | null
           mentions: string[]
           poll: Json | null
           sender_id: string
@@ -2148,6 +2149,7 @@ export type Database = {
           edited_at?: string | null
           id?: string
           mandatory?: boolean
+          mandatory_mentions?: string[] | null
           mentions?: string[]
           poll?: Json | null
           sender_id: string
@@ -2160,6 +2162,7 @@ export type Database = {
           edited_at?: string | null
           id?: string
           mandatory?: boolean
+          mandatory_mentions?: string[] | null
           mentions?: string[]
           poll?: Json | null
           sender_id?: string
