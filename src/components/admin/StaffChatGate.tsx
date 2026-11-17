@@ -25,7 +25,7 @@ export function StaffChatGate() {
     return () => { active = false; window.removeEventListener("focus", recheck); window.clearInterval(timer); };
   }, []);
   const status = useQuery({ queryKey: ["staff-chat-state"], queryFn: () => stateFn(), enabled: signedIn,
-    refetchInterval: livePoll(5000), refetchIntervalInBackground: false, staleTime: 0 });
+    refetchInterval: livePoll(5000), refetchIntervalInBackground: false, staleTime: 0, retry: 3, retryDelay: (n) => Math.min(1000 * 2 ** n, 5000) });
   const state = status.data;
   useEffect(() => {
     if (!signedIn) return;
@@ -58,7 +58,7 @@ export function StaffChatGate() {
     }
   }, [signedIn, state]);
   const message = state?.pending[0];
-  const blocked = signedIn && (!identityReady || status.isPending || status.isError || (state?.role === "employee" && Boolean(message)));
+  const blocked = signedIn && (!identityReady || status.isPending || (status.isError && !state) || (state?.role === "employee" && Boolean(message)));
   useEffect(() => {
     if (!blocked || !overlay.current) return;
     const panel = overlay.current;
@@ -90,7 +90,7 @@ export function StaffChatGate() {
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-8">
       <header className="border-b border-border pb-4"><h2 className="text-xl font-bold flex gap-2 items-center"><CheckCheck className="size-5 text-primary" />رسائل MG Pro</h2>
         {message && <p className="text-sm text-muted-foreground mt-2">قراءة إجبارية · {state?.pending.length} رسائل مستحقة</p>}</header>
-      {status.isError ? <div className="py-8 space-y-3"><p className="text-destructive">تعذر التحقق من الرسائل المطلوبة</p><Button onClick={() => void status.refetch()}>إعادة المحاولة</Button></div>
+      {status.isError && !state ? <div className="py-8 space-y-3"><p className="text-destructive">تعذر التحقق من الرسائل المطلوبة</p><Button onClick={() => void status.refetch()}>إعادة المحاولة</Button></div>
         : message && state ? <><StaffChatMessage message={message} state={state} forced act={async () => {}} />
           {error && <p className="text-destructive text-sm py-2">{error}</p>}
           <Button className="mt-5 w-full sm:w-auto" disabled={busy} onClick={() => void acknowledge()}>{busy ? "جاري تأكيد القراءة…" : "تمت القراءة"}</Button></>
