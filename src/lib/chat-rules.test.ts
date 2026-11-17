@@ -1,6 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { canEditChatMessage, CHAT_MAX_BYTES, chatLinks, validateChatFile } from "./chat-rules";
+import { allChatEmployeeIds, canEditChatMessage, CHAT_MAX_BYTES, chatLinks, validateChatFile } from "./chat-rules";
 describe("chat attachment and edit rules", () => {
+  it("selects all employees for mandatory reading without admins or duplicate recipients", () => {
+    expect(allChatEmployeeIds([
+      { id: "employee-1", name: "أحمد", role: "employee" },
+      { id: "employee-2", name: "محمد", role: "employee" },
+      { id: "employee-1", name: "أحمد", role: "employee" },
+      { id: "owner", name: "المالك", role: "admin" },
+      { id: "owner", name: "المالك", role: "employee" },
+      { id: "customer", name: "عميل", role: "customer" },
+    ])).toEqual(["employee-1", "employee-2"]);
+  });
   it("permits own-message edits up to one hour and rejects after it", () => {
     expect(canEditChatMessage("a", "a", "2026-11-16T20:00:00Z", Date.parse("2026-11-16T21:00:00Z"))).toBe(true);
     expect(canEditChatMessage("a", "a", "2026-11-16T20:00:00Z", Date.parse("2026-11-16T21:00:00.001Z"))).toBe(false);

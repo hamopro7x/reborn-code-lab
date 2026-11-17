@@ -7,14 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuCheckboxItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { getChatState, getChatMessages, mutateChat, uploadChatFile } from "@/lib/chat.functions";
 import { livePoll } from "@/lib/live-poll";
 import { chatReadPhase, chatRetryDelay } from "@/lib/chat-query";
 import { parseChatReadCursor, unreadChatMessages, type ChatReadCursor } from "@/lib/chat-unread";
 import { sendChatRecording } from "@/lib/chat-recording";
-import { CHAT_MAX_BYTES, type ChatAttachment, type ChatMessage } from "@/lib/chat-rules";
+import { allChatEmployeeIds, CHAT_MAX_BYTES, type ChatAttachment, type ChatMessage } from "@/lib/chat-rules";
 import { StaffChatMessage, type ChatAction } from "./StaffChatMessage";
 import { StaffChatMediaPreview } from "./StaffChatMediaPreview";
 import { StaffChatVoice } from "./StaffChatVoice";
@@ -231,7 +231,7 @@ export function StaffChat({ targetId }: { targetId?: string }) {
               {state.role === "admin" && <>
                 <DropdownMenuCheckboxItem className="min-h-10" checked={mandatory} disabled={!state.targetedMandatory} onCheckedChange={setMandatory} onSelect={(event) => event.preventDefault()}>قراءة إجبارية</DropdownMenuCheckboxItem>
                 {mandatory && <>
-                  <DropdownMenuLabel className="text-xs">منشن القراءة الإجبارية</DropdownMenuLabel>
+                  <DropdownMenuCheckboxItem checked={allChatEmployeeIds(state.members).length > 0 && allChatEmployeeIds(state.members).every((id) => mandatoryMentions.includes(id))} onSelect={(event) => event.preventDefault()} onCheckedChange={(checked) => setMandatoryMentions(checked ? allChatEmployeeIds(state.members) : [])}>الكل</DropdownMenuCheckboxItem>
                   {state.members.filter((m) => m.role === "employee").map((member) => <DropdownMenuCheckboxItem key={member.id} checked={mandatoryMentions.includes(member.id)} onSelect={(event) => event.preventDefault()} onCheckedChange={(checked) => setMandatoryMentions((old) => checked ? [...old, member.id] : old.filter((id) => id !== member.id))}>@{member.name}</DropdownMenuCheckboxItem>)}
                 </>}
               </>}
