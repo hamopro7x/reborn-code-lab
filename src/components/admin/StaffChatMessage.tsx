@@ -45,7 +45,7 @@ export function StaffChatMessage({ message, state, act, forced = false }: {
         {attachment.url && attachment.mime.startsWith("image/") && <a href={attachment.url} target="_blank" rel="noopener noreferrer"><img className="max-h-80 max-w-full rounded-md object-contain" src={attachment.url} alt={attachment.name} loading="lazy" /></a>}
         {attachment.url && attachment.mime.startsWith("video/") && <video className="max-h-80 w-full rounded-md" controls preload="metadata" src={attachment.url} />}
         {attachment.url && attachment.mime.startsWith("audio/") && <StaffChatVoice src={attachment.url} sender={message.sender_name ?? ""} seed={attachment.id} />}
-        <a href={attachment.url} download={attachment.name} target="_blank" rel="noopener noreferrer" className="inline-flex gap-2 items-center text-xs text-primary break-all mt-1"><Download className="size-3 shrink-0" />{attachment.name} · {(attachment.size / 1024 / 1024).toFixed(2)} MB</a>
+        {attachment.url && !attachment.mime.startsWith("audio/") && <a href={attachment.url} download={attachment.name} target="_blank" rel="noopener noreferrer" className="inline-flex gap-2 items-center text-xs text-primary break-all mt-1"><Download className="size-3 shrink-0" />{attachment.name} · {(attachment.size / 1024 / 1024).toFixed(2)} MB</a>}
       </div>)}
       {poll && <section className="my-3 border-s-2 border-primary ps-3 space-y-2">
         <h3 className="font-semibold text-sm">{poll.question}</h3>
