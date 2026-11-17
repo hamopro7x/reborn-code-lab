@@ -7,8 +7,10 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { StaffChatVoice } from "@/components/admin/StaffChatVoice";
+import { StaffChatImageViewer } from "@/components/admin/StaffChatImageViewer";
 import { getChatReceipts } from "@/lib/chat.functions";
 import { canEditChatMessage, chatLinks, type ChatMessage, type ChatState } from "@/lib/chat-rules";
+import { chatImageAttachments, viewerIndex } from "@/lib/chat-viewer";
 
 export type ChatAction = (action: "edit" | "delete" | "hide" | "vote" | "ack" | "seen" | "state" | "send", payload: Record<string, unknown>) => Promise<void>;
 export function StaffChatMessage({ message, state, act, forced = false }: {
@@ -19,6 +21,7 @@ export function StaffChatMessage({ message, state, act, forced = false }: {
   const [choices, setChoices] = useState<number[]>([]);
   const [showReceipts, setShowReceipts] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [viewer, setViewer] = useState<number | null>(null);
   const receiptsFn = useServerFn(getChatReceipts);
   const receipts = useQuery({ queryKey: ["staff-chat-receipts", message.id], queryFn: () => receiptsFn({ data: { id: message.id } }), enabled: showReceipts });
   const run = async (action: Parameters<ChatAction>[0], payload: Record<string, unknown>) => {
@@ -28,6 +31,7 @@ export function StaffChatMessage({ message, state, act, forced = false }: {
   const voted = message.votes?.some((vote) => vote.user_id === state.userId);
   const outgoing = message.sender_id === state.userId;
   const hasMedia = (message.attachments ?? []).some((attachment) => !!attachment.url && /^(image|video)\//.test(attachment.mime));
+  const images = chatImageAttachments(message.attachments ?? []);
   return <article id={`chat-message-${message.id}`} className={forced ? "py-4 min-w-0" : `staff-chat-bubble min-w-0${hasMedia ? " staff-chat-bubble-media" : ""} ${message.sender_id === state.userId ? "staff-chat-outgoing" : "staff-chat-incoming"}`} dir="rtl">
     {(forced || !outgoing || message.mandatory) && <div className="flex flex-wrap items-center gap-2 text-sm">
       {(forced || !outgoing) &&
@@ -46,7 +50,10 @@ export function StaffChatMessage({ message, state, act, forced = false }: {
       {(message.attachments ?? []).map((attachment) => {
         const media = !!attachment.url && /^(image|video)\//.test(attachment.mime);
         return <div className={media ? "staff-chat-media" : "mt-3 max-w-lg"} key={attachment.id}>
-        {attachment.url && attachment.mime.startsWith("image/") && <a href={attachment.url} target="_blank" rel="noopener noreferrer"><img className="max-h-96 max-w-full rounded-[10px] object-contain" src={attachment.url} alt={attachment.name} loading="lazy" /></a>}
+        {attachment.url && attachment.mime.startsWith("image/") && <button type="button" className="staff-chat-media-open" title="فتح الصورة" aria-label={`فتح ${attachment.name}`}
+          onClick={() => setViewer(viewerIndex(images.findIndex((image) => image.id === attachment.id), images.length))}>
+          <img className="max-h-96 max-w-full rounded-[10px] object-contain" src={attachment.url} alt={attachment.name} loading="lazy" />
+        </button>}
         {attachment.url && attachment.mime.startsWith("video/") && <video className="max-h-96 max-w-full rounded-[10px]" controls preload="metadata" src={attachment.url} />}
         {attachment.url && attachment.mime.startsWith("audio/") && <StaffChatVoice src={attachment.url} sender={message.sender_name ?? ""} seed={attachment.id} />}
         {attachment.url && !/^(image|video|audio)\//.test(attachment.mime) && <a href={attachment.url} download={attachment.name} target="_blank" rel="noopener noreferrer" className="inline-flex gap-2 items-center text-xs text-primary break-all mt-1"><Download className="size-3 shrink-0" />{attachment.name} · {(attachment.size / 1024 / 1024).toFixed(2)} MB</a>}
@@ -84,5 +91,6 @@ export function StaffChatMessage({ message, state, act, forced = false }: {
       {!forced && outgoing && !message.deleted_at && <Check className="size-3" aria-label="تم الإرسال" />}
       <time dateTime={message.created_at} title={formatLocaleDateTime(message.created_at, "ar-EG")}>{forced ? formatLocaleDateTime(message.created_at, "ar-EG", { dateStyle: "short", timeStyle: "short" }) : formatTime(message.created_at)}</time>
     </span>
+    {viewer !== null && viewer >= 0 && <StaffChatImageViewer images={images} index={viewer} caption={message.body} onClose={() => setViewer(null)} />}
   </article>;
 }

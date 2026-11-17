@@ -838,6 +838,80 @@
   overflow: hidden;
 }
 .staff-chat-media a { display: block; }
+.staff-chat-media-open { display: block; width: 100%; padding: 0; border: 0; background: transparent; cursor: zoom-in; }
+.staff-chat-media-open img { transition: filter 120ms ease; }
+.staff-chat-media-open:hover img { filter: brightness(1.06); }
+/* Full-screen picture viewer, opened inside the site instead of a new tab. */
+.staff-chat-viewer {
+  --viewer-backdrop: oklch(0.10 0.01 265 / 0.96);
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  background: var(--viewer-backdrop);
+  color: var(--foreground);
+}
+.staff-chat-viewer-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  background: oklch(0.12 0.01 265 / 0.72);
+}
+.staff-chat-viewer-bar [dir="ltr"] { min-width: 0; }
+.staff-chat-viewer-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  cursor: zoom-in;
+}
+.staff-chat-viewer-stage img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 4px;
+  cursor: zoom-in;
+}
+.staff-chat-viewer-stage.is-zoomed {
+  align-items: flex-start;
+  justify-content: flex-start;
+  overflow: auto;
+  cursor: zoom-out;
+}
+.staff-chat-viewer-stage.is-zoomed img {
+  max-width: none;
+  max-height: none;
+  cursor: zoom-out;
+}
+.staff-chat-viewer-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  border-radius: 50%;
+  background: oklch(0.16 0.01 265 / 0.78);
+  color: var(--foreground);
+}
+.staff-chat-viewer-nav:hover { background: oklch(0.22 0.01 265 / 0.9); }
+.staff-chat-viewer-nav.is-prev { right: 10px; }
+.staff-chat-viewer-nav.is-next { left: 10px; }
+.staff-chat-viewer-caption {
+  flex-shrink: 0;
+  max-height: 22vh;
+  overflow: auto;
+  margin: 0;
+  padding: 10px 16px 16px;
+  font-size: 15px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: oklch(0.12 0.01 265 / 0.72);
+}
 .staff-chat-media img, .staff-chat-media video { display: block; max-width: 100%; max-height: 384px; }
 .staff-chat-bubble-media > *:not(.staff-chat-media):not(.staff-chat-message-actions) { padding-inline: 10px; }
 .staff-chat-bubble-media .staff-chat-message-meta {
