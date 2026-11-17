@@ -110,9 +110,9 @@ export function StaffChat({ targetId }: { targetId?: string }) {
               <DropdownMenuItem className="staff-chat-attachment-item" onSelect={() => chooseFile("audio/webm,audio/mpeg,audio/wav,audio/x-wav,audio/ogg,audio/mp4,audio/x-m4a")}><Headphones className="staff-chat-audio-icon" /><span>مقطع صوتي</span></DropdownMenuItem>
               <DropdownMenuItem className="staff-chat-attachment-item" onSelect={() => setPollOpen(!pollOpen)}><BarChart3 className="staff-chat-poll-icon" /><span>استطلاع رأي</span></DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="staff-chat-attachment-item" onSelect={(event) => { event.preventDefault(); setMentionsOpen(!mentionsOpen); }}><AtSign className="staff-chat-media-icon" /><span>منشن {everyone ? "@everyone" : mentions.length || ""}</span></DropdownMenuItem>
+              <DropdownMenuItem className="staff-chat-attachment-item" onSelect={(event) => { event.preventDefault(); setMentionsOpen(!mentionsOpen); }}><AtSign className="staff-chat-media-icon" /><span>منشن {everyone ? "الجميع" : mentions.length || ""}</span></DropdownMenuItem>
               {mentionsOpen && <>
-                {state.role === "admin" && <DropdownMenuCheckboxItem checked={everyone} onCheckedChange={setEveryone} onSelect={(event) => event.preventDefault()}>@everyone</DropdownMenuCheckboxItem>}
+                {state.role === "admin" && <DropdownMenuCheckboxItem checked={everyone} onCheckedChange={setEveryone} onSelect={(event) => event.preventDefault()}>الجميع</DropdownMenuCheckboxItem>}
                 {state.members.filter((m) => m.role === "employee").map((member) => <DropdownMenuCheckboxItem key={member.id} checked={mentions.includes(member.id)} disabled={everyone} onSelect={(event) => event.preventDefault()} onCheckedChange={(checked) => setMentions((old) => checked ? [...old, member.id] : old.filter((id) => id !== member.id))}>@{member.name}</DropdownMenuCheckboxItem>)}
               </>}
               {state.role === "admin" && <>
