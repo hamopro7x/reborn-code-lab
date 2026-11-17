@@ -18,9 +18,9 @@ export function StaffChat({ targetId }: { targetId?: string }) {
   const qc = useQueryClient();
   const stateFn = useServerFn(getChatState); const readFn = useServerFn(getChatMessages);
   const mutate = useServerFn(mutateChat); const uploadFn = useServerFn(uploadChatFile);
-  const stateQ = useQuery({ queryKey: ["staff-chat-state"], queryFn: () => stateFn(), refetchInterval: livePoll(15000) });
+  const stateQ = useQuery({ queryKey: ["staff-chat-state"], queryFn: () => stateFn(), refetchInterval: livePoll(5000) });
   const [before, setBefore] = useState<{ date: string; id: string }>();
-  const messages = useQuery({ queryKey: ["staff-chat-messages", before, targetId], queryFn: () => readFn({ data: targetId ? { id: targetId } : { before: before?.date, beforeId: before?.id } }), enabled: stateQ.data?.enabled === true, refetchInterval: livePoll(15000) });
+  const messages = useQuery({ queryKey: ["staff-chat-messages", before, targetId], queryFn: () => readFn({ data: targetId ? { id: targetId } : { before: before?.date, beforeId: before?.id } }), enabled: stateQ.data?.enabled === true, refetchInterval: livePoll(5000) });
   const [text, setText] = useState(""); const [files, setFiles] = useState<ChatAttachment[]>([]);
   const [mentions, setMentions] = useState<string[]>([]); const [everyone, setEveryone] = useState(false);
   const [mandatory, setMandatory] = useState(false); const [pollOpen, setPollOpen] = useState(false);

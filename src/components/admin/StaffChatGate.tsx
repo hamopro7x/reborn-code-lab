@@ -25,8 +25,19 @@ export function StaffChatGate() {
     return () => { active = false; window.removeEventListener("focus", recheck); window.clearInterval(timer); };
   }, []);
   const status = useQuery({ queryKey: ["staff-chat-state"], queryFn: () => stateFn(), enabled: signedIn,
-    refetchInterval: livePoll(15000), refetchIntervalInBackground: false, staleTime: 0 });
+    refetchInterval: livePoll(5000), refetchIntervalInBackground: false, staleTime: 0 });
   const state = status.data;
+  useEffect(() => {
+    if (!signedIn) return;
+    // Dedicated instant channel: any chat change refreshes the group immediately instead of waiting for polling.
+    const channel = supabase.channel(`staff-chat-live-${Math.random().toString(36).slice(2)}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "staff_chat_events" }, () => {
+        void qc.refetchQueries({ queryKey: ["staff-chat-state"], type: "active" });
+        void qc.refetchQueries({ queryKey: ["staff-chat-messages"], type: "active" });
+      })
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [signedIn, qc]);
   const sound = useRef<ReturnType<typeof createChatSound> | null>(null);
   const incoming = useRef<{ userId: string; cursor: IncomingChatCursor } | null>(null);
   useEffect(() => {

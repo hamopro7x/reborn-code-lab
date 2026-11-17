@@ -41,6 +41,12 @@ export async function chatState(db: any, userId: string): Promise<ChatState> {
   if (error?.code === "PGRST202" || error?.code === "42883") return inactive;
   if (error || !data) throw new Error("تعذر التحقق من الرسائل الإجبارية؛ حاول مرة أخرى");
   const state = data as ChatState;
+  if (state.enabled && state.incoming === undefined) {
+    // Older installed status RPC has no arrival cursor; derive it from RLS-readable messages so sounds still work.
+    const { data: latest } = await db.from("staff_chat_messages").select("id,created_at")
+      .neq("sender_id", userId).is("deleted_at", null).order("created_at", { ascending: false }).order("id", { ascending: false }).limit(1);
+    state.incoming = latest?.[0] ? { id: latest[0].id, created_at: latest[0].created_at } : null;
+  }
   const hydrated: ChatMessage[] = [];
   for (const pending of state.pending) {
     const rows = await chatRpc(db, "staff_chat_read", { p_id: pending.id });
