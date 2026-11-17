@@ -738,6 +738,7 @@
   --chat-incoming: oklch(0.255 0.008 165);
   --chat-outgoing: oklch(0.345 0.06 164);
   --chat-mandatory-label: oklch(0.87 0.17 95);
+  --chat-mention: oklch(0.88 0.13 145);
   --chat-sender: oklch(0.78 0.10 164);
   display: flex;
   flex-direction: column;
@@ -964,6 +965,7 @@
 .staff-chat-message-meta { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; margin-inline-start: 8px; vertical-align: bottom; line-height: 18px; }
 .staff-chat-sender { color: var(--chat-sender); }
 .staff-chat-mandatory { color: var(--chat-mandatory-label); }
+.staff-chat-mention { color: var(--chat-mention, oklch(0.88 0.13 145)); }
 .staff-chat-bubble a { color: var(--chat-sender); }
 .staff-chat-message-actions { position: absolute; top: -4px; left: -24px; opacity: 0; }
 .staff-chat-bubble:hover .staff-chat-message-actions,

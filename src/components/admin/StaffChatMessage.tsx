@@ -48,7 +48,7 @@ export function StaffChatMessage({ message, state, act, forced = false }: {
     </div>}
     {message.deleted_at ? <p className="mt-2 text-muted-foreground text-[15px]">تم حذف الرسالة لدى الجميع</p> : <>
       {!hasMedia && messageText}
-      {message.mentions?.length > 0 && <div className="mt-2 flex flex-wrap gap-2 text-xs text-primary">{message.mentions.map((id) => <span key={id}>@{state.members.find((m) => m.id === id)?.name ?? "موظف"}</span>)}</div>}
+      {message.mentions?.length > 0 && <div className="staff-chat-mention mt-2 flex flex-wrap gap-2 text-xs">{message.mentions.map((id) => <span key={id}>@{state.members.find((m) => m.id === id)?.name ?? "موظف"}</span>)}</div>}
       {(message.attachments ?? []).map((attachment) => {
         const media = !!attachment.url && /^(image|video)\//.test(attachment.mime);
         return <div className={media ? "staff-chat-media" : "mt-3 max-w-lg"} key={attachment.id}>
