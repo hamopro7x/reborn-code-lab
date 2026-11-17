@@ -11,7 +11,7 @@ import { livePoll } from "@/lib/live-poll";
 import { refreshQueries } from "@/lib/refresh-queries";
 import { StaffChat } from "./StaffChat";
 import { createChatSound, isNewIncomingChat, type IncomingChatCursor } from "@/lib/chat-sound";
-import mandatoryNotice from "@/assets/staff-chat-mandatory-trimmed.png";
+import mandatoryNotice from "@/assets/staff-chat-mandatory-cutout.png";
 
 export function StaffChatGate() {
   const [signedIn, setSignedIn] = useState(false); const [identityReady, setIdentityReady] = useState(false);
