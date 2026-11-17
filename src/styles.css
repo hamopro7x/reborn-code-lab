@@ -1201,3 +1201,14 @@
 .staff-chat-rec-wave{height:2px;background-image:radial-gradient(circle,var(--muted-foreground) 1px,transparent 1.5px);background-size:6px 2px;background-repeat:repeat-x;animation:staff-rec-wave 1s linear infinite}
 @keyframes staff-rec-blink{50%{opacity:.2}}
 @keyframes staff-rec-wave{to{background-position:6px 0}}
+
+.staff-chat-voice{display:flex;align-items:center;gap:.6rem;min-width:15rem;max-width:20rem;padding:.25rem 0}
+.staff-chat-voice-avatar{position:relative;flex:none;width:2.75rem;height:2.75rem;border-radius:9999px;background:var(--muted);color:var(--foreground);display:grid;place-items:center;font-weight:700}
+.staff-chat-voice-mic{position:absolute;bottom:-.15rem;left:-.15rem;width:1rem;height:1rem;color:var(--primary)}
+.staff-chat-voice-play{flex:none;color:var(--foreground);background:none;border:0;cursor:pointer}
+.staff-chat-voice-body{flex:1;min-width:0}
+.staff-chat-voice-wave{position:relative;display:flex;align-items:center;gap:2px;height:1.6rem;cursor:pointer}
+.staff-chat-voice-wave span{flex:1;min-width:2px;border-radius:2px;background:color-mix(in oklab,var(--muted-foreground) 60%,transparent)}
+.staff-chat-voice-wave span.is-played{background:var(--primary)}
+.staff-chat-voice-dot{position:absolute;top:50%;width:.8rem;height:.8rem;border-radius:9999px;background:var(--primary);transform:translate(-50%,-50%)}
+.staff-chat-voice-time{display:block;font-size:.7rem;color:var(--muted-foreground);margin-top:.15rem}
