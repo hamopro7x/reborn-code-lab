@@ -27,7 +27,8 @@ export function StaffChatMessage({ message, state, act, forced = false }: {
   const poll = message.poll;
   const voted = message.votes?.some((vote) => vote.user_id === state.userId);
   const outgoing = message.sender_id === state.userId;
-  return <article id={`chat-message-${message.id}`} className={forced ? "py-4 min-w-0" : `staff-chat-bubble min-w-0 ${message.sender_id === state.userId ? "staff-chat-outgoing" : "staff-chat-incoming"}`} dir="rtl">
+  const hasMedia = (message.attachments ?? []).some((attachment) => !!attachment.url && /^(image|video)\//.test(attachment.mime));
+  return <article id={`chat-message-${message.id}`} className={forced ? "py-4 min-w-0" : `staff-chat-bubble min-w-0${hasMedia ? " staff-chat-bubble-media" : ""} ${message.sender_id === state.userId ? "staff-chat-outgoing" : "staff-chat-incoming"}`} dir="rtl">
     {(forced || !outgoing || message.mandatory) && <div className="flex flex-wrap items-center gap-2 text-sm">
       {(forced || !outgoing) &&
       <span className={forced ? "font-bold" : "staff-chat-sender font-bold text-[13px]"}>{message.sender_name}</span>
@@ -38,16 +39,19 @@ export function StaffChatMessage({ message, state, act, forced = false }: {
       {editing ? <div className="my-2 flex gap-2"><Input value={body} onChange={(e) => setBody(e.target.value)} maxLength={10000} aria-label="تعديل الرسالة" />
         <Button disabled={busy} size="sm" onClick={() => void run("edit", { id: message.id, body }).then(() => setEditing(false))}>حفظ</Button>
         <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>إلغاء</Button></div>
-        : <p className={forced ? "mt-2 whitespace-pre-wrap break-words text-[15px] leading-8" : "staff-chat-message-text whitespace-pre-wrap break-words text-[15px]"}>{chatLinks(message.body).map((part, i) => part.url ?
+        : message.body.trim() && <p className={forced ? "mt-2 whitespace-pre-wrap break-words text-[15px] leading-8" : "staff-chat-message-text whitespace-pre-wrap break-words text-[15px]"}>{chatLinks(message.body).map((part, i) => part.url ?
           <a key={i} className="text-primary underline break-all" href={part.url} target="_blank" rel="noopener noreferrer">{part.text}</a> : <span key={i}>{part.text}</span>)}</p>}
       {message.mentions?.length > 0 && <div className="mt-2 flex flex-wrap gap-2 text-xs text-primary">{message.mentions.map((id) => <span key={id}>@{state.members.find((m) => m.id === id)?.name ?? "موظف"}</span>)}</div>}
       {!!message.mandatory_mentions?.length && <div className="mt-2 flex flex-wrap gap-2 text-xs text-destructive"><span>قراءة مطلوبة:</span>{message.mandatory_mentions.map((id) => <span key={id}>@{state.members.find((m) => m.id === id)?.name ?? "موظف"}</span>)}</div>}
-      {(message.attachments ?? []).map((attachment) => <div className="mt-3 max-w-lg" key={attachment.id}>
-        {attachment.url && attachment.mime.startsWith("image/") && <a href={attachment.url} target="_blank" rel="noopener noreferrer"><img className="max-h-80 max-w-full rounded-md object-contain" src={attachment.url} alt={attachment.name} loading="lazy" /></a>}
-        {attachment.url && attachment.mime.startsWith("video/") && <video className="max-h-80 w-full rounded-md" controls preload="metadata" src={attachment.url} />}
+      {(message.attachments ?? []).map((attachment) => {
+        const media = !!attachment.url && /^(image|video)\//.test(attachment.mime);
+        return <div className={media ? "staff-chat-media" : "mt-3 max-w-lg"} key={attachment.id}>
+        {attachment.url && attachment.mime.startsWith("image/") && <a href={attachment.url} target="_blank" rel="noopener noreferrer"><img className="max-h-96 max-w-full rounded-[10px] object-contain" src={attachment.url} alt={attachment.name} loading="lazy" /></a>}
+        {attachment.url && attachment.mime.startsWith("video/") && <video className="max-h-96 max-w-full rounded-[10px]" controls preload="metadata" src={attachment.url} />}
         {attachment.url && attachment.mime.startsWith("audio/") && <StaffChatVoice src={attachment.url} sender={message.sender_name ?? ""} seed={attachment.id} />}
         {attachment.url && !/^(image|video|audio)\//.test(attachment.mime) && <a href={attachment.url} download={attachment.name} target="_blank" rel="noopener noreferrer" className="inline-flex gap-2 items-center text-xs text-primary break-all mt-1"><Download className="size-3 shrink-0" />{attachment.name} · {(attachment.size / 1024 / 1024).toFixed(2)} MB</a>}
-      </div>)}
+      </div>;
+      })}
       {poll && <section className="my-3 border-s-2 border-primary ps-3 space-y-2">
         <h3 className="font-semibold text-sm">{poll.question}</h3>
         {poll.options.map((option, index) => {

@@ -268,3 +268,7 @@
 - [ ] Step 5: 1h scheduler/late-reversal observation
 - [ ] Step 6: live audit of the 9 unaudited accounts
 - [ ] Steps 7-8: exact-ID audited corrections (incl. 15 historical side-2 ledger rows) — need owner approval
+
+## إطار الصور في شات الجروب — 17 نوفمبر 2026
+- [x] الصورة تبان من غير أي إطار: الفقاعة بقت شفافة حوالين الصورة/الفيديو، والحواف الخضرا اختفت.
+- [ ] تجربة الإرسال المصادق داخل الجروب بعد نشر المالك؛ جلسة Supabase الخارجية غير متاحة هنا.
