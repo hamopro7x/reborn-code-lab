@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { getChatState, getChatMessages, mutateChat, uploadChatFile } from "@/lib/chat.functions";
 import { livePoll } from "@/lib/live-poll";
 import { chatReadPhase, chatRetryDelay } from "@/lib/chat-query";
+import { sendChatRecording } from "@/lib/chat-recording";
 import { CHAT_MAX_BYTES, type ChatAttachment, type ChatMessage } from "@/lib/chat-rules";
 import { StaffChatMessage, type ChatAction } from "./StaffChatMessage";
 
@@ -33,6 +34,8 @@ export function StaffChat({ targetId }: { targetId?: string }) {
   const fileInput = useRef<HTMLInputElement>(null); const recorder = useRef<MediaRecorder | null>(null); const stream = useRef<MediaStream | null>(null);
   const end = useRef<HTMLDivElement>(null);
   const active = useRef(true);
+  const sendOnStop = useRef(false);
+  const recordingSend = useRef<(file: File) => Promise<void>>(async () => {});
   const chooseFile = (accept: string) => {
     const input = fileInput.current;
     if (!input) return;
@@ -65,7 +68,15 @@ export function StaffChat({ targetId }: { targetId?: string }) {
   const togglePause = () => { const rec = recorder.current; if (!rec) return; if (rec.state === "recording") { rec.pause(); setPaused(true); } else if (rec.state === "paused") { rec.resume(); setPaused(false); } };
   const cancelRecording = () => { discard.current = true; if (recorder.current && recorder.current.state !== "inactive") recorder.current.stop(); setRecording(false); setPaused(false); };
   const record = async () => {
-    if (recording) { recorder.current?.stop(); setRecording(false); setPaused(false); return; }
+    if (recording) {
+      if (busy || (mandatory && !mandatoryMentions.length)) {
+        if (mandatory && !mandatoryMentions.length) toast.error("اختار الموظفين المطلوب منهم القراءة الإجبارية");
+        return;
+      }
+      const rec = recorder.current;
+      if (!rec || rec.state === "inactive") return;
+      sendOnStop.current = true; setBusy(true); rec.stop(); setRecording(false); setPaused(false); return;
+    }
     try {
       if (!navigator.mediaDevices || typeof MediaRecorder === "undefined") throw new Error("التسجيل غير متاح في المتصفح؛ تقدر ترفع ملف صوتي");
       const mic = await navigator.mediaDevices.getUserMedia({ audio: true }); stream.current = mic;
@@ -75,16 +86,32 @@ export function StaffChat({ targetId }: { targetId?: string }) {
       rec.ondataavailable = (event) => { chunks.push(event.data); total += event.data.size; if (total > CHAT_MAX_BYTES && rec.state !== "inactive") rec.stop(); };
       rec.onstop = () => { mic.getTracks().forEach((t) => t.stop()); setRecording(false); const mime = rec.mimeType.split(";")[0] ?? "audio/webm";
         const extension = mime === "audio/mp4" ? "m4a" : mime === "audio/ogg" ? "ogg" : "webm";
-        if (active.current && !discard.current) void upload([new File(chunks, `تسجيل-${Date.now()}.${extension}`, { type: mime })]); };
-      discard.current = false; setSeconds(0); setPaused(false); rec.start(1000); setRecording(true);
+        if (active.current && !discard.current) {
+          const file = new File(chunks, `تسجيل-${Date.now()}.${extension}`, { type: mime });
+          if (sendOnStop.current) void recordingSend.current(file);
+          else void upload([file]);
+        } };
+      discard.current = false; sendOnStop.current = false; setSeconds(0); setPaused(false); rec.start(1000); setRecording(true);
     } catch (error) { toast.error(error instanceof Error ? error.message : "تعذر تشغيل الميكروفون"); }
   };
-  const send = async () => {
-    if (mandatory && !mandatoryMentions.length) { toast.error("اختار الموظفين المطلوب منهم القراءة الإجبارية"); return; }
+  const send = async (attachments = files) => {
+    if (mandatory && !mandatoryMentions.length) { toast.error("اختار الموظفين المطلوب منهم القراءة الإجبارية"); return false; }
     setBusy(true); try {
-      await act("send", { body: text, mentions, everyone, mandatory, mandatoryMentions: mandatory ? mandatoryMentions : [], attachments: files.map((f) => f.id), poll: pollOpen ? { question, options, multiple } : null });
+      await act("send", { body: text, mentions, everyone, mandatory, mandatoryMentions: mandatory ? mandatoryMentions : [], attachments: attachments.map((f) => f.id), poll: pollOpen ? { question, options, multiple } : null });
       setText(""); setFiles([]); setMentions([]); setEveryone(false); setMandatory(false); setMandatoryMentions([]); setPollOpen(false); setQuestion(""); setOptions(["", ""]); setBefore(undefined);
-    } catch { /* error already shown; preserve draft */ } finally { setBusy(false); }
+      return true;
+    } catch { return false; /* error already shown; preserve draft */ } finally { setBusy(false); }
+  };
+  recordingSend.current = async (file) => {
+    try {
+      if (files.length >= 10) throw new Error("الحد الأقصى 10 مرفقات للرسالة");
+      if (!file.size || file.size > CHAT_MAX_BYTES) throw new Error("التسجيل فارغ أو حجمه أكبر من 25 ميجابايت");
+      await sendChatRecording(file, async (voice) => {
+        const form = new FormData(); form.set("file", voice);
+        return uploadFn({ data: form });
+      }, (attachment) => send([...files, attachment]), (attachment) => setFiles((old) => [...old, attachment]));
+    } catch (error) { toast.error(error instanceof Error ? error.message : "فشل إرسال التسجيل"); }
+    finally { setBusy(false); }
   };
   if (stateQ.isLoading) return <p className="p-4 text-muted-foreground">جاري تحميل الجروب…</p>;
   if (stateQ.isError && !state) return <div className="space-y-3"><p className="text-muted-foreground">جاري إعادة الاتصال بالجروب…</p><Button onClick={() => void stateQ.refetch()}>إعادة المحاولة</Button></div>;
@@ -111,7 +138,7 @@ export function StaffChat({ targetId }: { targetId?: string }) {
           <span className={`staff-chat-rec-wave flex-1 ${paused ? "is-paused" : ""}`} aria-hidden="true" />
           <Button size="icon" variant="ghost" className="shrink-0 rounded-full" title="حذف التسجيل" aria-label="حذف التسجيل" onClick={cancelRecording}><Trash2 className="size-5" /></Button>
           <Button size="icon" variant="ghost" className="shrink-0 rounded-full text-destructive" title={paused ? "استكمال" : "إيقاف مؤقت"} aria-label={paused ? "استكمال التسجيل" : "إيقاف التسجيل مؤقتًا"} onClick={togglePause}>{paused ? <Play className="size-5" /> : <Pause className="size-5" />}</Button>
-          <Button size="icon" className="staff-chat-send shrink-0 rounded-full" title="إنهاء التسجيل" aria-label="إنهاء التسجيل وإرفاقه" onClick={() => void record()}><Send className="size-4" /></Button>
+          <Button size="icon" className="staff-chat-send shrink-0 rounded-full" title="إرسال التسجيل" aria-label="إرسال التسجيل" disabled={busy} onClick={() => void record()}><Send className="size-4" /></Button>
         </div> :
         <div className="staff-chat-inputbar flex items-end gap-1 px-2 py-1.5">
           <input ref={fileInput} type="file" multiple className="hidden" aria-label="رفع مرفقات" onChange={(e) => void upload(Array.from(e.target.files ?? []))} />
