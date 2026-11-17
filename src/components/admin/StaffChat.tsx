@@ -53,7 +53,7 @@ export function StaffChat({ targetId }: { targetId?: string }) {
     input.click();
   };
   const state = stateQ.data;
-  const unread = !before && !targetId && readBaseline?.userId === state?.userId
+  const unread = !before && !targetId && readBaseline && readBaseline.userId === state?.userId
     ? unreadChatMessages(messages.data ?? [], readBaseline.userId, readBaseline.cursor) : [];
   useEffect(() => {
     if (!state?.userId) return;
