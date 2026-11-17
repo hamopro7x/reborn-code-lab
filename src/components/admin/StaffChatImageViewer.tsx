@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { ChevronLeft, ChevronRight, Download, X, ZoomIn, ZoomOut } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, X, ZoomIn, ZoomOut, Loader2, RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatLocaleDateTime } from "@/lib/format";
 import { viewerIndex, viewerKeyAction, viewerStep } from "@/lib/chat-viewer";
@@ -15,6 +15,30 @@ export function StaffChatImageViewer({ images, index, caption, sender, createdAt
 }) {
   const [current, setCurrent] = useState(() => viewerIndex(index, images.length));
   const [zoomed, setZoomed] = useState(false);
+  const [downloadFile, setDownloadFile] = useState<{ source: string; blob: Blob } | null>(null);
+  const [downloadError, setDownloadError] = useState(false);
+  const [downloadAttempt, setDownloadAttempt] = useState(0);
+  const source = images[current]?.url;
+
+  // Prepare before the click: cross-origin links ignore `download`, and awaiting
+  // a fetch in the click handler loses user activation in Safari.
+  useEffect(() => {
+    setDownloadFile(null);
+    setDownloadError(false);
+    if (!source) return;
+    const controller = new AbortController();
+    const deadline = setTimeout(() => controller.abort(), 30_000);
+    void fetch(source, { signal: controller.signal }).then(async (response) => {
+      if (!response.ok) throw new Error("Download unavailable");
+      const blob = await response.blob();
+      if (!blob.size) throw new Error("Empty image");
+      if (!controller.signal.aborted) setDownloadFile({ source, blob });
+    }).catch(() => {
+      if (!cancelled) setDownloadError(true);
+    }).finally(() => clearTimeout(deadline));
+    let cancelled = false;
+    return () => { cancelled = true; clearTimeout(deadline); controller.abort(); };
+  }, [source, downloadAttempt]);
 
   useEffect(() => {
     const previous = document.body.style.overflow;
@@ -47,6 +71,18 @@ export function StaffChatImageViewer({ images, index, caption, sender, createdAt
   const item = images[current];
   if (!item?.url) return null;
   const step = (direction: -1 | 1) => setCurrent((old) => viewerStep(old, images.length, direction));
+  const ready = downloadFile?.source === item.url;
+  const download = () => {
+    if (!downloadFile || downloadFile.source !== item.url) return;
+    const url = URL.createObjectURL(downloadFile.blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = item.name || "image";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 30_000);
+  };
 
   return createPortal(<div className="staff-chat-viewer" dir="rtl" role="dialog" aria-modal="true" aria-label="عرض الصورة">
     <header className="staff-chat-viewer-bar">
@@ -59,8 +95,9 @@ export function StaffChatImageViewer({ images, index, caption, sender, createdAt
       </div>
       <div className="staff-chat-viewer-tools" dir="ltr">
         <Button variant="ghost" size="icon" aria-label="إغلاق عرض الصورة" title="إغلاق" onClick={onClose}><X className="size-5" /></Button>
-        <Button asChild variant="ghost" size="icon" aria-label="تنزيل الصورة" title="تنزيل">
-          <a href={item.url} download={item.name}><Download className="size-5" /></a>
+        <Button variant="ghost" size="icon" aria-label={downloadError ? "إعادة محاولة تجهيز التنزيل" : "تنزيل الصورة"} title={downloadError ? "تعذر تجهيز التنزيل؛ إعادة المحاولة" : ready ? "تنزيل" : "جاري تجهيز التنزيل…"} disabled={!ready && !downloadError}
+          onClick={downloadError ? () => setDownloadAttempt((old) => old + 1) : download}>
+          {downloadError ? <RotateCw className="size-5" /> : ready ? <Download className="size-5" /> : <Loader2 className="size-5 animate-spin" />}
         </Button>
         <Button variant="ghost" size="icon" aria-label="تكبير الصورة" title="تكبير" disabled={zoomed} onClick={() => setZoomed(true)}><ZoomIn className="size-5" /></Button>
         <Button variant="ghost" size="icon" aria-label="تصغير الصورة" title="تصغير" disabled={!zoomed} onClick={() => setZoomed(false)}><ZoomOut className="size-5" /></Button>
