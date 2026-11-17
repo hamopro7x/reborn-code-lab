@@ -16,6 +16,7 @@ import { sendChatRecording } from "@/lib/chat-recording";
 import { CHAT_MAX_BYTES, type ChatAttachment, type ChatMessage } from "@/lib/chat-rules";
 import { StaffChatMessage, type ChatAction } from "./StaffChatMessage";
 import { StaffChatMediaPreview } from "./StaffChatMediaPreview";
+import { StaffChatVoice } from "./StaffChatVoice";
 
 export function StaffChat({ targetId }: { targetId?: string }) {
   const qc = useQueryClient();
@@ -39,6 +40,7 @@ export function StaffChat({ targetId }: { targetId?: string }) {
   const end = useRef<HTMLDivElement>(null);
   const active = useRef(true);
   const sendOnStop = useRef(false);
+  const [pendingVoices, setPendingVoices] = useState<{ id: string; url: string }[]>([]);
   const recordingSend = useRef<(file: File) => Promise<void>>(async () => {});
   const chooseFile = (accept: string) => {
     const input = fileInput.current;
@@ -79,13 +81,13 @@ export function StaffChat({ targetId }: { targetId?: string }) {
       }
       const rec = recorder.current;
       if (!rec || rec.state === "inactive") return;
-      sendOnStop.current = true; setBusy(true); rec.stop(); setRecording(false); setPaused(false); return;
+      sendOnStop.current = true; rec.stop(); setRecording(false); setPaused(false); return;
     }
     try {
       if (!navigator.mediaDevices || typeof MediaRecorder === "undefined") throw new Error("التسجيل غير متاح في المتصفح؛ تقدر ترفع ملف صوتي");
       const mic = await navigator.mediaDevices.getUserMedia({ audio: true }); stream.current = mic;
       const type = ["audio/webm", "audio/mp4", "audio/ogg"].find((mime) => MediaRecorder.isTypeSupported(mime));
-      const rec = new MediaRecorder(mic, type ? { mimeType: type } : undefined); recorder.current = rec;
+      const rec = new MediaRecorder(mic, { ...(type ? { mimeType: type } : {}), audioBitsPerSecond: 32000 }); recorder.current = rec;
       const chunks: Blob[] = []; let total = 0;
       rec.ondataavailable = (event) => { chunks.push(event.data); total += event.data.size; if (total > CHAT_MAX_BYTES && rec.state !== "inactive") rec.stop(); };
       rec.onstop = () => { mic.getTracks().forEach((t) => t.stop()); setRecording(false); const mime = rec.mimeType.split(";")[0] ?? "audio/webm";
@@ -107,6 +109,9 @@ export function StaffChat({ targetId }: { targetId?: string }) {
     } catch { return false; /* error already shown; preserve draft */ } finally { setBusy(false); }
   };
   recordingSend.current = async (file) => {
+    const pendingId = `voice-${Date.now()}`; const url = URL.createObjectURL(file);
+    setPendingVoices((old) => [...old, { id: pendingId, url }]);
+    requestAnimationFrame(() => end.current?.scrollIntoView({ block: "nearest" }));
     try {
       if (files.length >= 10) throw new Error("الحد الأقصى 10 مرفقات للرسالة");
       if (!file.size || file.size > CHAT_MAX_BYTES) throw new Error("التسجيل فارغ أو حجمه أكبر من 25 ميجابايت");
@@ -115,7 +120,7 @@ export function StaffChat({ targetId }: { targetId?: string }) {
         return uploadFn({ data: form });
       }, (attachment) => send([...files, attachment]), (attachment) => setFiles((old) => [...old, attachment]));
     } catch (error) { toast.error(error instanceof Error ? error.message : "فشل إرسال التسجيل"); }
-    finally { setBusy(false); }
+    finally { setBusy(false); setPendingVoices((old) => old.filter((v) => v.id !== pendingId)); URL.revokeObjectURL(url); }
   };
   if (stateQ.isLoading) return <p className="p-4 text-muted-foreground">جاري تحميل الجروب…</p>;
   if (stateQ.isError && !state) return <div className="space-y-3"><p className="text-muted-foreground">جاري إعادة الاتصال بالجروب…</p><Button onClick={() => void stateQ.refetch()}>إعادة المحاولة</Button></div>;
@@ -144,6 +149,7 @@ export function StaffChat({ targetId }: { targetId?: string }) {
       {before && <Button variant="ghost" size="sm" onClick={() => setBefore(undefined)}>آخر الرسائل</Button>}
       {!targetId && (messages.data?.length ?? 0) === 50 && <Button variant="ghost" size="sm" onClick={() => { const first = messages.data?.[0]; if (first) setBefore({ date: first.created_at, id: first.id }); }}>رسائل أقدم</Button>}
       {messagesPhase === "loading" ? <p className="py-8 text-muted-foreground text-sm">جاري التحميل…</p> : messagesPhase === "retrying" ? <div className="py-4" role="status"><p className="text-muted-foreground">جاري إعادة الاتصال لتحميل الرسائل…</p><Button onClick={() => void messages.refetch()}>إعادة المحاولة</Button></div> : !messages.data?.length ? <p className="py-10 text-muted-foreground text-sm">مفيش رسائل هنا لسه</p> : messages.data.map((message: ChatMessage) => <StaffChatMessage key={message.id} message={message} state={state} act={act} />)}
+      {pendingVoices.map((voice) => <div key={voice.id} className="flex justify-end py-1" role="status"><div className="staff-chat-bubble staff-chat-outgoing min-w-0 opacity-80"><StaffChatVoice src={voice.url} sender="أنا" seed={voice.id} /><span className="staff-chat-message-meta flex items-center gap-1 text-xs"><Loader2 className="size-3 animate-spin" />جاري الإرسال…</span></div></div>)}
       <div ref={end} />
       </div>
     </div>
