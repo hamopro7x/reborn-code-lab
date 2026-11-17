@@ -29,15 +29,15 @@ export function StaffChatMessage({ message, state, act, forced = false }: {
   return <article id={`chat-message-${message.id}`} className={forced ? "py-4 min-w-0" : `staff-chat-bubble min-w-0 ${message.sender_id === state.userId ? "staff-chat-outgoing" : "staff-chat-incoming"}`} dir="rtl">
     {(forced || !outgoing || message.mandatory) && <div className="flex flex-wrap items-center gap-2 text-sm">
       {(forced || !outgoing) &&
-      <span className={forced ? "font-bold" : "staff-chat-sender font-bold text-xs"}>{message.sender_name}</span>
+      <span className={forced ? "font-bold" : "staff-chat-sender font-bold text-[13px]"}>{message.sender_name}</span>
       }
-      {message.mandatory && <span className="staff-chat-mandatory text-xs font-semibold">قراءة إجبارية</span>}
+      {message.mandatory && <span className="staff-chat-mandatory text-[13px] font-semibold">قراءة إجبارية</span>}
     </div>}
-    {message.deleted_at ? <p className="mt-2 text-muted-foreground text-sm">تم حذف الرسالة لدى الجميع</p> : <>
+    {message.deleted_at ? <p className="mt-2 text-muted-foreground text-[15px]">تم حذف الرسالة لدى الجميع</p> : <>
       {editing ? <div className="my-2 flex gap-2"><Input value={body} onChange={(e) => setBody(e.target.value)} maxLength={10000} aria-label="تعديل الرسالة" />
         <Button disabled={busy} size="sm" onClick={() => void run("edit", { id: message.id, body }).then(() => setEditing(false))}>حفظ</Button>
         <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>إلغاء</Button></div>
-        : <p className={forced ? "mt-2 whitespace-pre-wrap break-words text-sm leading-7" : "staff-chat-message-text whitespace-pre-wrap break-words text-sm"}>{chatLinks(message.body).map((part, i) => part.url ?
+        : <p className={forced ? "mt-2 whitespace-pre-wrap break-words text-[15px] leading-8" : "staff-chat-message-text whitespace-pre-wrap break-words text-[15px]"}>{chatLinks(message.body).map((part, i) => part.url ?
           <a key={i} className="text-primary underline break-all" href={part.url} target="_blank" rel="noopener noreferrer">{part.text}</a> : <span key={i}>{part.text}</span>)}</p>}
       {message.mentions?.length > 0 && <div className="mt-2 flex flex-wrap gap-2 text-xs text-primary">{message.mentions.map((id) => <span key={id}>@{state.members.find((m) => m.id === id)?.name ?? "موظف"}</span>)}</div>}
       {!!message.mandatory_mentions?.length && <div className="mt-2 flex flex-wrap gap-2 text-xs text-destructive"><span>قراءة مطلوبة:</span>{message.mandatory_mentions.map((id) => <span key={id}>@{state.members.find((m) => m.id === id)?.name ?? "موظف"}</span>)}</div>}

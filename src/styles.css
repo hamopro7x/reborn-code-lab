@@ -737,7 +737,7 @@
   --chat-input: oklch(0.26 0.006 165);
   --chat-incoming: oklch(0.255 0.008 165);
   --chat-outgoing: oklch(0.345 0.06 164);
-  --chat-mandatory-label: oklch(0 0 0);
+  --chat-mandatory-label: oklch(0.87 0.17 95);
   --chat-sender: oklch(0.78 0.10 164);
   display: flex;
   flex-direction: column;
