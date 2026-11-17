@@ -39,7 +39,6 @@ export function StaffChat({ targetId }: { targetId?: string }) {
   const [busy, setBusy] = useState(false); const [recording, setRecording] = useState(false); const [paused, setPaused] = useState(false); const [seconds, setSeconds] = useState(0); const discard = useRef(false);
   const fileInput = useRef<HTMLInputElement>(null); const recorder = useRef<MediaRecorder | null>(null); const stream = useRef<MediaStream | null>(null);
   const end = useRef<HTMLDivElement>(null);
-  const unreadMarker = useRef<HTMLDivElement>(null);
   const [readBaseline, setReadBaseline] = useState<{ userId: string; cursor: ChatReadCursor | null } | null>(null);
   const initialScroll = useRef(false);
   const active = useRef(true);
@@ -105,7 +104,13 @@ export function StaffChat({ targetId }: { targetId?: string }) {
   useEffect(() => {
     if (before || targetId || !readBaseline || !messages.data?.length) return;
     if (!initialScroll.current) {
-      (unreadMarker.current ?? end.current)?.scrollIntoView({ block: unreadMarker.current ? "start" : "nearest" });
+      const first = unread[0];
+      const target = first ? document.getElementById(`chat-message-${first.id}`) : null;
+      if (target) {
+        target.scrollIntoView({ block: "start" });
+        const transcript = target.closest(".staff-chat-transcript");
+        if (transcript) transcript.scrollTop -= 52;
+      } else end.current?.scrollIntoView({ block: "nearest" });
       initialScroll.current = true;
     } else if (!unread.length) end.current?.scrollIntoView({ block: "nearest" });
   }, [messages.data?.length, before, targetId, readBaseline, unread.length]);
@@ -184,17 +189,19 @@ export function StaffChat({ targetId }: { targetId?: string }) {
       <div className="flex items-center gap-3 min-w-0"><span className="staff-chat-avatar flex size-10 shrink-0 items-center justify-center rounded-full"><Users className="size-5" /></span><div><h2 className="font-bold text-base">جروب MG Pro</h2><p className="text-xs text-muted-foreground mt-1">{state.members.length} أعضاء · {state.open ? "مفتوح" : "الأدمن فقط يقدر يرسل"}</p></div></div>
       {state.owner && <label className="flex gap-2 items-center text-sm"><span>مفتوح للإرسال</span><Switch checked={state.open} onCheckedChange={(open) => void act("state", { open }).catch(() => {})} /></label>}
     </header>
-    <div className="staff-chat-transcript relative min-h-0 flex-1 overflow-y-auto px-4 py-5">
+    <div className="staff-chat-transcript-wrap relative min-h-0 flex-1">
+      {!!unread.length && <div className="staff-chat-unread" role="status"><span>{unread.length === 1 ? "رسالة واحدة غير مقروءة" : `${unread.length} رسائل غير مقروءة`}</span></div>}
+      <div className="staff-chat-transcript relative h-full min-h-0 overflow-y-auto px-4 py-5">
       <div className="relative min-h-full flex flex-col justify-end">
       {before && <Button variant="ghost" size="sm" onClick={() => setBefore(undefined)}>آخر الرسائل</Button>}
       {!targetId && (messages.data?.length ?? 0) === 50 && <Button variant="ghost" size="sm" onClick={() => { const first = messages.data?.[0]; if (first) setBefore({ date: first.created_at, id: first.id }); }}>رسائل أقدم</Button>}
       {messagesPhase === "loading" ? <p className="py-8 text-muted-foreground text-sm">جاري التحميل…</p> : messagesPhase === "retrying" ? <div className="py-4" role="status"><p className="text-muted-foreground">جاري إعادة الاتصال لتحميل الرسائل…</p><Button onClick={() => void messages.refetch()}>إعادة المحاولة</Button></div> : !messages.data?.length ? <p className="py-10 text-muted-foreground text-sm">مفيش رسائل هنا لسه</p> : messages.data.map((message: ChatMessage) => <Fragment key={message.id}>
-        {message.id === unread[0]?.id && <div ref={unreadMarker} className="staff-chat-unread" role="status"><span>{unread.length === 1 ? "رسالة واحدة غير مقروءة" : `${unread.length} رسائل غير مقروءة`}</span></div>}
         <StaffChatMessage message={message} state={state} act={act} />
       </Fragment>)}
       {pendingVoices.map((voice) => <div key={voice.id} className="flex justify-end py-1" role="status"><div className="staff-chat-bubble staff-chat-outgoing min-w-0 opacity-80"><StaffChatVoice src={voice.url} sender="أنا" seed={voice.id} /><span className="staff-chat-message-meta flex items-center gap-1 text-xs"><Loader2 className="size-3 animate-spin" />جاري الإرسال…</span></div></div>)}
       <div ref={end} className="h-px shrink-0" />
       </div>
+    </div>
     </div>
     <section className="staff-chat-composer shrink-0 px-3 pt-2 pb-3 space-y-2">
       {!canSend ? <></> : <>
