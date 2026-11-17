@@ -11,7 +11,7 @@ import { livePoll } from "@/lib/live-poll";
 import { refreshQueries } from "@/lib/refresh-queries";
 import { StaffChat } from "./StaffChat";
 import { createChatSound, isNewIncomingChat, type IncomingChatCursor } from "@/lib/chat-sound";
-import mandatoryNotice from "@/assets/staff-chat-mandatory-corrected.png.asset.json";
+import mandatoryNotice from "@/assets/staff-chat-mandatory-trimmed.png";
 
 export function StaffChatGate() {
   const [signedIn, setSignedIn] = useState(false); const [identityReady, setIdentityReady] = useState(false);
@@ -89,7 +89,7 @@ export function StaffChatGate() {
     }}>
     {groupOpen ? <StaffChat targetId={message?.id} /> : <div className="staff-chat-mandatory-screen">
       <div className="staff-chat-mandatory-notice">
-        <img src={new URL(mandatoryNotice.url, "https://id-preview--335637d3-bc9b-407f-9e44-b28bda5c78dc.lovable.app").href} width={1672} height={941} alt="قراءة مهمة قبل متابعة العمل. يجب قراءة رسائل الإدارة المهمة قبل متابعة العمل. لن تتمكن من متابعة العمل حتى تقرأ الرسائل المطلوبة." />
+        <img src={mandatoryNotice} width={1672} height={941} alt="قراءة مهمة قبل متابعة العمل. لن تتمكن من متابعة العمل حتى تقرأ الرسائل المطلوبة." />
         <Button type="button" variant="ghost" className="staff-chat-mandatory-open" aria-label="فتح الجروب" onClick={() => setGroupOpen(true)}><span className="sr-only">فتح الجروب</span></Button>
       </div>
     </div>}
