@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Send, Paperclip, Mic, Pause, Play, Trash2, X, BarChart3, AtSign, Loader2, Users, FileText, Images, Headphones } from "lucide-react";
@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { getChatState, getChatMessages, mutateChat, uploadChatFile } from "@/lib/chat.functions";
 import { livePoll } from "@/lib/live-poll";
 import { chatReadPhase, chatRetryDelay } from "@/lib/chat-query";
+import { parseChatReadCursor, unreadChatMessages, type ChatReadCursor } from "@/lib/chat-unread";
 import { sendChatRecording } from "@/lib/chat-recording";
 import { CHAT_MAX_BYTES, type ChatAttachment, type ChatMessage } from "@/lib/chat-rules";
 import { StaffChatMessage, type ChatAction } from "./StaffChatMessage";
@@ -38,6 +39,9 @@ export function StaffChat({ targetId }: { targetId?: string }) {
   const [busy, setBusy] = useState(false); const [recording, setRecording] = useState(false); const [paused, setPaused] = useState(false); const [seconds, setSeconds] = useState(0); const discard = useRef(false);
   const fileInput = useRef<HTMLInputElement>(null); const recorder = useRef<MediaRecorder | null>(null); const stream = useRef<MediaStream | null>(null);
   const end = useRef<HTMLDivElement>(null);
+  const unreadMarker = useRef<HTMLDivElement>(null);
+  const [readBaseline, setReadBaseline] = useState<{ userId: string; cursor: ChatReadCursor | null } | null>(null);
+  const initialScroll = useRef(false);
   const active = useRef(true);
   const sendOnStop = useRef(false);
   const [pendingVoices, setPendingVoices] = useState<{ id: string; url: string }[]>([]);
@@ -49,6 +53,36 @@ export function StaffChat({ targetId }: { targetId?: string }) {
     input.click();
   };
   const state = stateQ.data;
+  const unread = !before && !targetId && readBaseline?.userId === state?.userId
+    ? unreadChatMessages(messages.data ?? [], readBaseline.userId, readBaseline.cursor) : [];
+  useEffect(() => {
+    if (!state?.userId) return;
+    let cursor: ChatReadCursor | null = null;
+    try { cursor = parseChatReadCursor(localStorage.getItem(`staff-chat-read:${state.userId}`)); } catch { /* Device storage may be unavailable. */ }
+    setReadBaseline({ userId: state.userId, cursor });
+    initialScroll.current = false;
+  }, [state?.userId]);
+  useEffect(() => {
+    if (!state?.userId || !messages.data?.length || before || targetId || !readBaseline) return;
+    const marker = end.current;
+    if (!marker) return;
+    const save = () => {
+      if (document.visibilityState !== "visible" || !document.hasFocus()) return;
+      const bounds = marker.getBoundingClientRect();
+      const container = marker.closest(".staff-chat-transcript")?.getBoundingClientRect();
+      if (!container || bounds.top > container.bottom || bounds.bottom < container.top) return;
+      const latest = messages.data?.at(-1);
+      if (!latest) return;
+      const cursor = { date: latest.created_at, id: latest.id };
+      try { localStorage.setItem(`staff-chat-read:${state.userId}`, JSON.stringify(cursor)); } catch { /* Keep chat usable without storage. */ }
+      if (!readBaseline.cursor) setReadBaseline({ userId: state.userId, cursor });
+    };
+    const observer = new IntersectionObserver(save, { root: marker.closest(".staff-chat-transcript") });
+    observer.observe(marker);
+    window.addEventListener("focus", save);
+    document.addEventListener("visibilitychange", save);
+    return () => { observer.disconnect(); window.removeEventListener("focus", save); document.removeEventListener("visibilitychange", save); };
+  }, [state?.userId, messages.data, before, targetId, readBaseline]);
   const canSend = state?.enabled && (state.open || state.role === "admin") && !state.pending.length;
   const refresh = async () => { await Promise.all([qc.invalidateQueries({ queryKey: ["staff-chat-messages"] }), qc.invalidateQueries({ queryKey: ["staff-chat-state"] }), qc.invalidateQueries({ queryKey: ["staff-chat-receipts"] })]); };
   const act: ChatAction = async (action, payload) => {
@@ -68,7 +102,13 @@ export function StaffChat({ targetId }: { targetId?: string }) {
     finally { setBusy(false); if (fileInput.current) fileInput.current.value = ""; }
   };
   useEffect(() => { active.current = true; return () => { active.current = false; if (recorder.current) recorder.current.onstop = null; if (recorder.current?.state === "recording") recorder.current.stop(); stream.current?.getTracks().forEach((t) => t.stop()); }; }, []);
-  useEffect(() => { if (!before && !targetId) end.current?.scrollIntoView({ block: "nearest" }); }, [messages.data?.length, before, targetId]);
+  useEffect(() => {
+    if (before || targetId || !readBaseline || !messages.data?.length) return;
+    if (!initialScroll.current) {
+      (unreadMarker.current ?? end.current)?.scrollIntoView({ block: unreadMarker.current ? "start" : "nearest" });
+      initialScroll.current = true;
+    } else if (!unread.length) end.current?.scrollIntoView({ block: "nearest" });
+  }, [messages.data?.length, before, targetId, readBaseline, unread.length]);
   useEffect(() => { if (targetId && messages.data?.length) void mutate({ data: { action: "seen", payload: { id: targetId } } }).then(() => qc.invalidateQueries({ queryKey: ["staff-chat-state"] })).catch(() => {}); }, [targetId, messages.data?.length, mutate, qc]);
   useEffect(() => { if (!recording || paused) return; const t = window.setInterval(() => setSeconds((v) => v + 1), 1000); return () => window.clearInterval(t); }, [recording, paused]);
   const togglePause = () => { const rec = recorder.current; if (!rec) return; if (rec.state === "recording") { rec.pause(); setPaused(true); } else if (rec.state === "paused") { rec.resume(); setPaused(false); } };
@@ -148,9 +188,12 @@ export function StaffChat({ targetId }: { targetId?: string }) {
       <div className="relative min-h-full flex flex-col justify-end">
       {before && <Button variant="ghost" size="sm" onClick={() => setBefore(undefined)}>آخر الرسائل</Button>}
       {!targetId && (messages.data?.length ?? 0) === 50 && <Button variant="ghost" size="sm" onClick={() => { const first = messages.data?.[0]; if (first) setBefore({ date: first.created_at, id: first.id }); }}>رسائل أقدم</Button>}
-      {messagesPhase === "loading" ? <p className="py-8 text-muted-foreground text-sm">جاري التحميل…</p> : messagesPhase === "retrying" ? <div className="py-4" role="status"><p className="text-muted-foreground">جاري إعادة الاتصال لتحميل الرسائل…</p><Button onClick={() => void messages.refetch()}>إعادة المحاولة</Button></div> : !messages.data?.length ? <p className="py-10 text-muted-foreground text-sm">مفيش رسائل هنا لسه</p> : messages.data.map((message: ChatMessage) => <StaffChatMessage key={message.id} message={message} state={state} act={act} />)}
+      {messagesPhase === "loading" ? <p className="py-8 text-muted-foreground text-sm">جاري التحميل…</p> : messagesPhase === "retrying" ? <div className="py-4" role="status"><p className="text-muted-foreground">جاري إعادة الاتصال لتحميل الرسائل…</p><Button onClick={() => void messages.refetch()}>إعادة المحاولة</Button></div> : !messages.data?.length ? <p className="py-10 text-muted-foreground text-sm">مفيش رسائل هنا لسه</p> : messages.data.map((message: ChatMessage) => <Fragment key={message.id}>
+        {message.id === unread[0]?.id && <div ref={unreadMarker} className="staff-chat-unread" role="status"><span>{unread.length === 1 ? "رسالة واحدة غير مقروءة" : `${unread.length} رسائل غير مقروءة`}</span></div>}
+        <StaffChatMessage message={message} state={state} act={act} />
+      </Fragment>)}
       {pendingVoices.map((voice) => <div key={voice.id} className="flex justify-end py-1" role="status"><div className="staff-chat-bubble staff-chat-outgoing min-w-0 opacity-80"><StaffChatVoice src={voice.url} sender="أنا" seed={voice.id} /><span className="staff-chat-message-meta flex items-center gap-1 text-xs"><Loader2 className="size-3 animate-spin" />جاري الإرسال…</span></div></div>)}
-      <div ref={end} />
+      <div ref={end} className="h-px shrink-0" />
       </div>
     </div>
     <section className="staff-chat-composer shrink-0 px-3 pt-2 pb-3 space-y-2">
