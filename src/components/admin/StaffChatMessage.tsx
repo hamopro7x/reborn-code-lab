@@ -31,7 +31,7 @@ export function StaffChatMessage({ message, state, act, forced = false }: {
       {(forced || !outgoing) &&
       <span className={forced ? "font-bold" : "staff-chat-sender font-bold text-xs"}>{message.sender_name}</span>
       }
-      {message.mandatory && <span className="text-destructive text-xs font-semibold">قراءة إجبارية</span>}
+      {message.mandatory && <span className="staff-chat-mandatory text-xs font-semibold">قراءة إجبارية</span>}
     </div>}
     {message.deleted_at ? <p className="mt-2 text-muted-foreground text-sm">تم حذف الرسالة لدى الجميع</p> : <>
       {editing ? <div className="my-2 flex gap-2"><Input value={body} onChange={(e) => setBody(e.target.value)} maxLength={10000} aria-label="تعديل الرسالة" />
