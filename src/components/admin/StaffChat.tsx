@@ -104,7 +104,7 @@ export function StaffChat({ targetId }: { targetId?: string }) {
       </div>
     </div>
     <section className="staff-chat-composer shrink-0 px-3 pt-2 pb-3 space-y-2">
-      {!canSend ? <p className="text-sm text-muted-foreground">{state.pending.length ? "أكد قراءة الرسائل الإجبارية الأول" : "الجروب مغلق؛ تقدر تقرأ الرسائل الجديدة"}</p> : <>
+      {!canSend ? <></> : <>
         {recording ? <div className="staff-chat-inputbar staff-chat-recordbar flex items-center gap-2 px-2 py-1.5" aria-live="polite">
           <span className={`staff-chat-rec-dot ${paused ? "is-paused" : ""}`} aria-hidden="true" />
           <span className="tabular-nums text-sm" dir="ltr">{Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, "0")}</span>
