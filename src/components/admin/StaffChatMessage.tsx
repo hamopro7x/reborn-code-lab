@@ -33,12 +33,13 @@ export function StaffChatMessage({ message, state, act, forced = false }: {
   const hasMedia = (message.attachments ?? []).some((attachment) => !!attachment.url && /^(image|video)\//.test(attachment.mime));
   const images = chatImageAttachments(message.attachments ?? []);
   const hasCaption = hasMedia && !!message.body.trim() && !message.deleted_at;
+  const voiceOnly = !message.deleted_at && !message.body.trim() && message.attachments?.length === 1 && message.attachments[0]?.mime.startsWith("audio/");
   const messageText = editing ? <div className="my-2 flex gap-2"><Input value={body} onChange={(e) => setBody(e.target.value)} maxLength={10000} aria-label="تعديل الرسالة" />
     <Button disabled={busy} size="sm" onClick={() => void run("edit", { id: message.id, body }).then(() => setEditing(false))}>حفظ</Button>
     <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>إلغاء</Button></div>
     : message.body.trim() && <p className={forced ? "mt-2 whitespace-pre-wrap break-words text-[15px] leading-8" : "staff-chat-message-text whitespace-pre-wrap break-words text-[15px]"}>{chatLinks(message.body).map((part, i) => part.url ?
       <a key={i} className="text-primary underline break-all" href={part.url} target="_blank" rel="noopener noreferrer">{part.text}</a> : <span key={i}>{part.text}</span>)}</p>;
-  return <article id={`chat-message-${message.id}`} className={forced ? "py-4 min-w-0" : `staff-chat-bubble min-w-0${hasMedia ? " staff-chat-bubble-media" : ""}${hasCaption ? " staff-chat-bubble-caption" : ""} ${message.sender_id === state.userId ? "staff-chat-outgoing" : "staff-chat-incoming"}`} dir="rtl">
+  return <article id={`chat-message-${message.id}`} className={forced ? "py-4 min-w-0" : `staff-chat-bubble min-w-0${hasMedia ? " staff-chat-bubble-media" : ""}${hasCaption ? " staff-chat-bubble-caption" : ""}${voiceOnly ? " staff-chat-bubble-voice" : ""} ${message.sender_id === state.userId ? "staff-chat-outgoing" : "staff-chat-incoming"}`} dir="rtl">
     {(forced || !outgoing || message.mandatory) && <div className="flex flex-wrap items-center gap-2 text-sm">
       {(forced || !outgoing) &&
       <span className={forced ? "font-bold" : "staff-chat-sender font-bold text-[13px]"}>{message.sender_name}</span>
