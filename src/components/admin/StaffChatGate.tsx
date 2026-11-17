@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { getChatState, mutateChat } from "@/lib/chat.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { livePoll } from "@/lib/live-poll";
+import { refreshQueries } from "@/lib/refresh-queries";
 import { StaffChatMessage } from "./StaffChatMessage";
 import { createChatSound, isNewIncomingChat, type IncomingChatCursor } from "@/lib/chat-sound";
 
@@ -29,14 +30,18 @@ export function StaffChatGate() {
   const state = status.data;
   useEffect(() => {
     if (!signedIn) return;
+    let refreshTimer: ReturnType<typeof setTimeout> | undefined;
     // Dedicated instant channel: any chat change refreshes the group immediately instead of waiting for polling.
     const channel = supabase.channel(`staff-chat-live-${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "staff_chat_events" }, () => {
-        void qc.refetchQueries({ queryKey: ["staff-chat-state"], type: "active" });
-        void qc.refetchQueries({ queryKey: ["staff-chat-messages"], type: "active" });
+        if (refreshTimer !== undefined) return;
+        refreshTimer = setTimeout(() => {
+          refreshTimer = undefined;
+          void refreshQueries(qc, [["staff-chat-state"], ["staff-chat-messages"]]);
+        }, 150);
       })
       .subscribe();
-    return () => { void supabase.removeChannel(channel); };
+    return () => { if (refreshTimer !== undefined) clearTimeout(refreshTimer); void supabase.removeChannel(channel); };
   }, [signedIn, qc]);
   const sound = useRef<ReturnType<typeof createChatSound> | null>(null);
   const incoming = useRef<{ userId: string; cursor: IncomingChatCursor } | null>(null);

@@ -11,6 +11,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuCheckb
 import { toast } from "sonner";
 import { getChatState, getChatMessages, mutateChat, uploadChatFile } from "@/lib/chat.functions";
 import { livePoll } from "@/lib/live-poll";
+import { chatReadPhase, chatRetryDelay } from "@/lib/chat-query";
 import { CHAT_MAX_BYTES, type ChatAttachment, type ChatMessage } from "@/lib/chat-rules";
 import { StaffChatMessage, type ChatAction } from "./StaffChatMessage";
 
@@ -18,9 +19,10 @@ export function StaffChat({ targetId }: { targetId?: string }) {
   const qc = useQueryClient();
   const stateFn = useServerFn(getChatState); const readFn = useServerFn(getChatMessages);
   const mutate = useServerFn(mutateChat); const uploadFn = useServerFn(uploadChatFile);
-  const stateQ = useQuery({ queryKey: ["staff-chat-state"], queryFn: () => stateFn(), refetchInterval: livePoll(5000) });
+  const stateQ = useQuery({ queryKey: ["staff-chat-state"], queryFn: () => stateFn(), refetchInterval: livePoll(5000), retry: 3, retryDelay: chatRetryDelay });
   const [before, setBefore] = useState<{ date: string; id: string }>();
-  const messages = useQuery({ queryKey: ["staff-chat-messages", before, targetId], queryFn: () => readFn({ data: targetId ? { id: targetId } : { before: before?.date, beforeId: before?.id } }), enabled: stateQ.data?.enabled === true, refetchInterval: livePoll(5000) });
+  const messages = useQuery({ queryKey: ["staff-chat-messages", before, targetId], queryFn: () => readFn({ data: targetId ? { id: targetId } : { before: before?.date, beforeId: before?.id } }), enabled: stateQ.data?.enabled === true, refetchInterval: livePoll(5000), retry: 3, retryDelay: chatRetryDelay });
+  const messagesPhase = chatReadPhase(messages.data, messages.isError);
   const [text, setText] = useState(""); const [files, setFiles] = useState<ChatAttachment[]>([]);
   const [mentions, setMentions] = useState<string[]>([]); const [everyone, setEveryone] = useState(false);
   const [mandatory, setMandatory] = useState(false); const [pollOpen, setPollOpen] = useState(false);
@@ -85,7 +87,7 @@ export function StaffChat({ targetId }: { targetId?: string }) {
     } catch { /* error already shown; preserve draft */ } finally { setBusy(false); }
   };
   if (stateQ.isLoading) return <p className="p-4 text-muted-foreground">جاري تحميل الجروب…</p>;
-  if (stateQ.isError) return <div className="space-y-3"><p className="text-destructive">تعذر تحميل الجروب</p><Button onClick={() => void stateQ.refetch()}>إعادة المحاولة</Button></div>;
+  if (stateQ.isError && !state) return <div className="space-y-3"><p className="text-muted-foreground">جاري إعادة الاتصال بالجروب…</p><Button onClick={() => void stateQ.refetch()}>إعادة المحاولة</Button></div>;
   if (!state?.enabled) return <p className="text-muted-foreground">الجروب غير مفعّل لحد تطبيق ملف الإعدادات المعتمد.</p>;
   return <div dir="rtl" className="staff-chat min-w-0">
     <header className="staff-chat-header flex flex-wrap items-center justify-between gap-3 px-4 py-3">
@@ -97,7 +99,7 @@ export function StaffChat({ targetId }: { targetId?: string }) {
       <div className="relative min-h-full flex flex-col justify-end">
       {before && <Button variant="ghost" size="sm" onClick={() => setBefore(undefined)}>آخر الرسائل</Button>}
       {!targetId && (messages.data?.length ?? 0) === 50 && <Button variant="ghost" size="sm" onClick={() => { const first = messages.data?.[0]; if (first) setBefore({ date: first.created_at, id: first.id }); }}>رسائل أقدم</Button>}
-      {messages.isLoading ? <p className="py-8 text-muted-foreground text-sm">جاري التحميل…</p> : messages.isError ? <div className="py-4"><p className="text-destructive">تعذر تحميل الرسائل</p><Button onClick={() => void messages.refetch()}>إعادة المحاولة</Button></div> : !messages.data?.length ? <p className="py-10 text-muted-foreground text-sm">مفيش رسائل هنا لسه</p> : messages.data.map((message: ChatMessage) => <StaffChatMessage key={message.id} message={message} state={state} act={act} />)}
+      {messagesPhase === "loading" ? <p className="py-8 text-muted-foreground text-sm">جاري التحميل…</p> : messagesPhase === "retrying" ? <div className="py-4" role="status"><p className="text-muted-foreground">جاري إعادة الاتصال لتحميل الرسائل…</p><Button onClick={() => void messages.refetch()}>إعادة المحاولة</Button></div> : !messages.data?.length ? <p className="py-10 text-muted-foreground text-sm">مفيش رسائل هنا لسه</p> : messages.data.map((message: ChatMessage) => <StaffChatMessage key={message.id} message={message} state={state} act={act} />)}
       <div ref={end} />
       </div>
     </div>

@@ -6,3 +6,4 @@
 - Keep group SQL review-only under supabase/manual until the owner approves application; missing RPCs mean the feature is not installed, but operational errors never imply an empty unread list.
 - Mandatory chat recipients are explicit and independent of ordinary mentions; preserve legacy receipts and refuse targeted sends until the reviewed RPC update is installed, preventing old broadcasts from targeting everyone.
 - Sound uses the root gate's authenticated incoming-message cursor with an initial silent baseline and browser gesture unlock; generic Realtime changes must not chime because edits, votes and acknowledgments are not arrivals.
+- Chat reads retain confirmed query data on background failure and retry with capped backoff; batch live refreshes without cancelling in-flight reads so outages do not erase the transcript.
