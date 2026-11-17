@@ -15,6 +15,7 @@ import { chatReadPhase, chatRetryDelay } from "@/lib/chat-query";
 import { sendChatRecording } from "@/lib/chat-recording";
 import { CHAT_MAX_BYTES, type ChatAttachment, type ChatMessage } from "@/lib/chat-rules";
 import { StaffChatMessage, type ChatAction } from "./StaffChatMessage";
+import { StaffChatMediaPreview } from "./StaffChatMediaPreview";
 
 export function StaffChat({ targetId }: { targetId?: string }) {
   const qc = useQueryClient();
@@ -25,6 +26,9 @@ export function StaffChat({ targetId }: { targetId?: string }) {
   const messages = useQuery({ queryKey: ["staff-chat-messages", before, targetId], queryFn: () => readFn({ data: targetId ? { id: targetId } : { before: before?.date, beforeId: before?.id } }), enabled: stateQ.data?.enabled === true, refetchInterval: livePoll(5000), retry: 3, retryDelay: chatRetryDelay });
   const messagesPhase = chatReadPhase(messages.data, messages.isError);
   const [text, setText] = useState(""); const [files, setFiles] = useState<ChatAttachment[]>([]);
+  const [mediaSelection, setMediaSelection] = useState<File[]>([]);
+  const [mediaOpen, setMediaOpen] = useState(false);
+  const mediaInput = useRef<HTMLInputElement>(null);
   const [mentions, setMentions] = useState<string[]>([]); const [everyone, setEveryone] = useState(false);
   const [mandatory, setMandatory] = useState(false); const [pollOpen, setPollOpen] = useState(false);
   const [mentionsOpen, setMentionsOpen] = useState(false);
@@ -94,10 +98,10 @@ export function StaffChat({ targetId }: { targetId?: string }) {
       discard.current = false; sendOnStop.current = false; setSeconds(0); setPaused(false); rec.start(1000); setRecording(true);
     } catch (error) { toast.error(error instanceof Error ? error.message : "تعذر تشغيل الميكروفون"); }
   };
-  const send = async (attachments = files) => {
+  const send = async (attachments = files, body = text) => {
     if (mandatory && !mandatoryMentions.length) { toast.error("اختار الموظفين المطلوب منهم القراءة الإجبارية"); return false; }
     setBusy(true); try {
-      await act("send", { body: text, mentions, everyone, mandatory, mandatoryMentions: mandatory ? mandatoryMentions : [], attachments: attachments.map((f) => f.id), poll: pollOpen ? { question, options, multiple } : null });
+      await act("send", { body, mentions, everyone, mandatory, mandatoryMentions: mandatory ? mandatoryMentions : [], attachments: attachments.map((f) => f.id), poll: pollOpen ? { question, options, multiple } : null });
       setText(""); setFiles([]); setMentions([]); setEveryone(false); setMandatory(false); setMandatoryMentions([]); setPollOpen(false); setQuestion(""); setOptions(["", ""]); setBefore(undefined);
       return true;
     } catch { return false; /* error already shown; preserve draft */ } finally { setBusy(false); }
@@ -117,6 +121,19 @@ export function StaffChat({ targetId }: { targetId?: string }) {
   if (stateQ.isError && !state) return <div className="space-y-3"><p className="text-muted-foreground">جاري إعادة الاتصال بالجروب…</p><Button onClick={() => void stateQ.refetch()}>إعادة المحاولة</Button></div>;
   if (!state?.enabled) return <p className="text-muted-foreground">الجروب غير مفعّل لحد تطبيق ملف الإعدادات المعتمد.</p>;
   return <div dir="rtl" className="staff-chat min-w-0">
+    <input ref={mediaInput} type="file" multiple className="hidden" aria-label="اختيار صور وفيديوهات" accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime" onChange={(e) => {
+      const selected = Array.from(e.target.files ?? []); e.target.value = "";
+      if (!selected.length) return;
+      if (selected.some((file) => !file.size || file.size > CHAT_MAX_BYTES)) { toast.error("الحد الأقصى 25 ميجابايت للمرفق"); return; }
+      setMediaSelection(selected); setMediaOpen(true);
+    }} />
+    {mediaOpen && <StaffChatMediaPreview selected={mediaSelection} maxFiles={10 - files.length} caption={text} onCaption={setText} onClose={() => { setMediaOpen(false); setMediaSelection([]); }} onAdd={() => mediaInput.current?.click()} onUpload={async (file) => {
+      const form = new FormData(); form.set("file", file);
+      return uploadFn({ data: form });
+    }} onSend={async (attachments, caption) => {
+      if (attachments.length + files.length > 10) { toast.error("الحد الأقصى 10 مرفقات للرسالة"); return false; }
+      return send([...files, ...attachments], caption);
+    }} />}
     <img src={chatWallpaper.url} alt="" aria-hidden="true" className="staff-chat-wallpaper" />
     <header className="staff-chat-header flex flex-wrap items-center justify-between gap-3 px-4 py-3">
       <div className="flex items-center gap-3 min-w-0"><span className="staff-chat-avatar flex size-10 shrink-0 items-center justify-center rounded-full"><Users className="size-5" /></span><div><h2 className="font-bold text-base">جروب MG Pro</h2><p className="text-xs text-muted-foreground mt-1">{state.members.length} أعضاء · {state.open ? "مفتوح" : "الأدمن فقط يقدر يرسل"}</p></div></div>
@@ -146,7 +163,7 @@ export function StaffChat({ targetId }: { targetId?: string }) {
             <DropdownMenuTrigger asChild><Button size="icon" variant="ghost" className="shrink-0 rounded-full" title="المرفقات" aria-label="إرفاق ملف" disabled={busy || recording}><Paperclip className="size-5" /></Button></DropdownMenuTrigger>
             <DropdownMenuContent side="top" align="start" sideOffset={10} collisionPadding={12} className="staff-chat-attachment-menu w-56 max-w-[calc(100vw-24px)] p-1.5" aria-label="المرفقات">
               <DropdownMenuItem className="staff-chat-attachment-item" onSelect={() => chooseFile("")}><FileText className="staff-chat-document-icon" /><span>مستند</span></DropdownMenuItem>
-              <DropdownMenuItem className="staff-chat-attachment-item" onSelect={() => chooseFile("image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime")}><Images className="staff-chat-media-icon" /><span>الصور ومقاطع الفيديو</span></DropdownMenuItem>
+              <DropdownMenuItem className="staff-chat-attachment-item" onSelect={() => mediaInput.current?.click()}><Images className="staff-chat-media-icon" /><span>الصور ومقاطع الفيديو</span></DropdownMenuItem>
               <DropdownMenuItem className="staff-chat-attachment-item" onSelect={() => chooseFile("audio/webm,audio/mpeg,audio/wav,audio/x-wav,audio/ogg,audio/mp4,audio/x-m4a")}><Headphones className="staff-chat-audio-icon" /><span>مقطع صوتي</span></DropdownMenuItem>
               <DropdownMenuItem className="staff-chat-attachment-item" onSelect={() => setPollOpen(!pollOpen)}><BarChart3 className="staff-chat-poll-icon" /><span>استطلاع رأي</span></DropdownMenuItem>
               <DropdownMenuSeparator />
