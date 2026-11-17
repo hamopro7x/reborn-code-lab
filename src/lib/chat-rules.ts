@@ -73,3 +73,7 @@ export type ChatState = {
   targetedMandatory?: boolean;
   incoming?: { id: string; created_at: string } | null;
 };
+
+export function canAcknowledgeChatMessage(message: ChatMessage, state: ChatState) {
+  return state.role === "employee" && !message.deleted_at && state.pending.some((pending) => pending.id === message.id);
+}

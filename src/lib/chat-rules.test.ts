@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { allChatEmployeeIds, mentionsAllChatEmployees, canEditChatMessage, CHAT_MAX_BYTES, chatLinks, validateChatFile } from "./chat-rules";
+import { allChatEmployeeIds, mentionsAllChatEmployees, canAcknowledgeChatMessage, canEditChatMessage, CHAT_MAX_BYTES, chatLinks, validateChatFile, type ChatMessage, type ChatState } from "./chat-rules";
 describe("chat attachment and edit rules", () => {
+  it("allows confirmation only on an employee's pending undeleted message inside the group", () => {
+    const message: ChatMessage = { id: "required", sender_id: "owner", sender_name: "المالك", body: "رسالة", created_at: "2026-11-17T21:00:00Z", edited_at: null, mandatory: true, deleted_at: null, attachments: [], mentions: [], poll: null, votes: [] };
+    const state: ChatState = { enabled: true, userId: "employee", role: "employee", owner: false, open: true, members: [], pending: [message], notifications: [] };
+    expect(canAcknowledgeChatMessage(message, state)).toBe(true);
+    expect(canAcknowledgeChatMessage(message, { ...state, pending: [] })).toBe(false);
+    expect(canAcknowledgeChatMessage(message, { ...state, role: "admin" })).toBe(false);
+    expect(canAcknowledgeChatMessage({ ...message, deleted_at: "2026-11-17T21:30:00Z" }, state)).toBe(false);
+  });
   it("groups the complete employee mention set but keeps individual mentions separate", () => {
     const members = [
       { id: "a", name: "أحمد", role: "employee" },

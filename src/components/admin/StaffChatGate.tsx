@@ -5,17 +5,17 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { CheckCheck, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getChatState, mutateChat } from "@/lib/chat.functions";
+import { getChatState } from "@/lib/chat.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { livePoll } from "@/lib/live-poll";
 import { refreshQueries } from "@/lib/refresh-queries";
-import { StaffChatMessage } from "./StaffChatMessage";
+import { StaffChat } from "./StaffChat";
 import { createChatSound, isNewIncomingChat, type IncomingChatCursor } from "@/lib/chat-sound";
 
 export function StaffChatGate() {
   const [signedIn, setSignedIn] = useState(false); const [identityReady, setIdentityReady] = useState(false);
-  const [busy, setBusy] = useState(false); const [error, setError] = useState("");
-  const qc = useQueryClient(); const stateFn = useServerFn(getChatState); const mutationFn = useServerFn(mutateChat);
+  const [groupOpen, setGroupOpen] = useState(false);
+  const qc = useQueryClient(); const stateFn = useServerFn(getChatState);
   const overlay = useRef<HTMLDivElement>(null);
   useEffect(() => {
     let active = true;
@@ -64,6 +64,7 @@ export function StaffChatGate() {
   }, [signedIn, state]);
   const message = state?.pending[0];
   const blocked = signedIn && identityReady && state?.role === "employee" && Boolean(message);
+  useEffect(() => { if (!blocked) setGroupOpen(false); }, [blocked]);
   useEffect(() => {
     if (!blocked || !overlay.current) return;
     const panel = overlay.current;
@@ -74,13 +75,6 @@ export function StaffChatGate() {
     panel.focus();
     return () => { siblings.forEach((el, index) => { el.inert = previous[index] ?? false; }); document.body.style.overflow = overflow; };
   }, [blocked, message?.id]);
-  const acknowledge = async () => {
-    if (!message) return;
-    setBusy(true); setError("");
-    try { await mutationFn({ data: { action: "ack", payload: { id: message.id } } }); await qc.invalidateQueries({ queryKey: ["staff-chat-state"] }); }
-    catch (failure) { setError(failure instanceof Error ? failure.message : "تعذر حفظ تأكيد القراءة"); }
-    finally { setBusy(false); }
-  };
   if (typeof document === "undefined") return null;
   if (blocked) return createPortal(<div ref={overlay} tabIndex={-1} role="dialog" aria-modal="true" aria-label="قراءة رسائل MG Pro الإجبارية"
     className="admin-theme fixed inset-0 z-[10000] bg-background text-foreground overflow-y-auto outline-none" dir="rtl" onKeyDown={(event) => {
@@ -92,15 +86,13 @@ export function StaffChatGate() {
         else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
       }
     }}>
-    <div className="mx-auto max-w-3xl px-4 py-8 sm:px-8">
+    {groupOpen ? <StaffChat targetId={message?.id} /> : <div className="mx-auto max-w-3xl px-4 py-8 sm:px-8">
       <header className="border-b border-border pb-4"><h2 className="text-xl font-bold flex gap-2 items-center"><CheckCheck className="size-5 text-primary" />رسائل MG Pro</h2>
         {message && <p className="text-sm text-muted-foreground mt-2">قراءة إجبارية · {state?.pending.length} رسائل مستحقة</p>}</header>
       {status.isError && !state ? <div className="py-8 space-y-3"><p className="text-destructive">تعذر التحقق من الرسائل المطلوبة</p><Button onClick={() => void status.refetch()}>إعادة المحاولة</Button></div>
-        : message && state ? <><StaffChatMessage message={message} state={state} forced act={async () => {}} />
-          {error && <p className="text-destructive text-sm py-2">{error}</p>}
-          <Button className="mt-5 w-full sm:w-auto" disabled={busy} onClick={() => void acknowledge()}>{busy ? "جاري تأكيد القراءة…" : "تمت القراءة"}</Button></>
+        : message && state ? <Button className="mt-5 w-full sm:w-auto" onClick={() => setGroupOpen(true)}>فتح الجروب</Button>
         : <p className="py-8 text-muted-foreground">جاري التحقق من الرسائل…</p>}
-    </div>
+    </div>}
   </div>, document.body);
   if (!state?.enabled || !state.notifications.length) return null;
   return createPortal(<aside className="admin-theme fixed bottom-4 start-4 z-50 max-w-[calc(100vw-2rem)] w-80 bg-popover text-popover-foreground border border-border rounded-md p-3" dir="rtl" aria-label="إشعارات المنشن">

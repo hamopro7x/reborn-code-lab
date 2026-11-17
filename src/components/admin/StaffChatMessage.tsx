@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { StaffChatVoice } from "@/components/admin/StaffChatVoice";
 import { StaffChatImageViewer } from "@/components/admin/StaffChatImageViewer";
 import { getChatReceipts } from "@/lib/chat.functions";
-import { canEditChatMessage, chatLinks, mentionsAllChatEmployees, type ChatMessage, type ChatState } from "@/lib/chat-rules";
+import { canAcknowledgeChatMessage, canEditChatMessage, chatLinks, mentionsAllChatEmployees, type ChatMessage, type ChatState } from "@/lib/chat-rules";
 import { chatImageAttachments, viewerIndex } from "@/lib/chat-viewer";
 
 export type ChatAction = (action: "edit" | "delete" | "hide" | "vote" | "ack" | "seen" | "state" | "send", payload: Record<string, unknown>) => Promise<void>;
@@ -78,6 +78,7 @@ export function StaffChatMessage({ message, state, act, forced = false }: {
         {state.role === "admin" && <details className="text-xs"><summary className="cursor-pointer">أسماء المصوّتين</summary>{(message.votes ?? []).map((vote) => <p className="mt-2" key={vote.user_id}>{vote.name}: {vote.choices.map((i) => poll.options[i]).join("، ")} · {formatLocaleDateTime(vote.voted_at, "ar-EG")}</p>)}</details>}
       </section>}
       {message.edited_at && <p className="mt-2 text-xs text-muted-foreground">تم التعديل</p>}
+      {!forced && canAcknowledgeChatMessage(message, state) && <Button className="mt-3" size="sm" disabled={busy} onClick={() => void run("ack", { id: message.id })}><CheckCheck className="size-4" />{busy ? "جاري تأكيد القراءة…" : "تمت القراءة"}</Button>}
       {!forced && <div className="staff-chat-message-actions">
         <DropdownMenu dir="rtl"><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="size-6" title="خيارات الرسالة" aria-label="خيارات الرسالة" disabled={busy}>{busy ? <Loader2 className="size-3 animate-spin" /> : <ChevronDown className="size-3.5" />}</Button></DropdownMenuTrigger>
           <DropdownMenuContent align="end">
