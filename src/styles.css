@@ -741,6 +741,7 @@
   --chat-sender: oklch(0.78 0.10 164);
   display: flex;
   flex-direction: column;
+  position: relative;
   height: calc(100dvh - 56px);
   min-height: 0;
   background: var(--background);
@@ -748,8 +749,19 @@
   overflow: hidden;
 }
 .staff-chat-header, .staff-chat-composer { background: var(--chat-header); }
+.staff-chat-header, .staff-chat-transcript, .staff-chat-composer { position: relative; z-index: 1; }
 .staff-chat-avatar { background: var(--chat-outgoing); color: var(--chat-sender); }
-.staff-chat-wallpaper { opacity: 0.38; }
+.staff-chat-wallpaper {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  opacity: 0.9;
+  pointer-events: none;
+}
 .staff-chat-transcript { overflow-x: hidden; }
 .staff-chat-attachment-menu {
   --chat-menu-background: oklch(0.20 0 0);

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Send, Paperclip, Mic, Pause, Play, Trash2, X, BarChart3, AtSign, Loader2, Users, FileText, Images, Headphones } from "lucide-react";
-import chatWallpaper from "@/assets/staff-chat-wallpaper.jpg";
+import chatWallpaper from "@/assets/staff-chat-brand-wallpaper.webp.asset.json";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -90,12 +90,12 @@ export function StaffChat({ targetId }: { targetId?: string }) {
   if (stateQ.isError && !state) return <div className="space-y-3"><p className="text-muted-foreground">جاري إعادة الاتصال بالجروب…</p><Button onClick={() => void stateQ.refetch()}>إعادة المحاولة</Button></div>;
   if (!state?.enabled) return <p className="text-muted-foreground">الجروب غير مفعّل لحد تطبيق ملف الإعدادات المعتمد.</p>;
   return <div dir="rtl" className="staff-chat min-w-0">
+    <img src={chatWallpaper.url} alt="" aria-hidden="true" className="staff-chat-wallpaper" />
     <header className="staff-chat-header flex flex-wrap items-center justify-between gap-3 px-4 py-3">
       <div className="flex items-center gap-3 min-w-0"><span className="staff-chat-avatar flex size-10 shrink-0 items-center justify-center rounded-full"><Users className="size-5" /></span><div><h2 className="font-bold text-base">جروب MG Pro</h2><p className="text-xs text-muted-foreground mt-1">{state.members.length} أعضاء · {state.open ? "مفتوح" : "الأدمن فقط يقدر يرسل"}</p></div></div>
       {state.owner && <label className="flex gap-2 items-center text-sm"><span>مفتوح للإرسال</span><Switch checked={state.open} onCheckedChange={(open) => void act("state", { open }).catch(() => {})} /></label>}
     </header>
     <div className="staff-chat-transcript relative min-h-0 flex-1 overflow-y-auto px-4 py-5">
-      <img src={chatWallpaper} alt="" aria-hidden="true" width={1024} height={1024} loading="lazy" className="staff-chat-wallpaper pointer-events-none absolute inset-0 h-full w-full object-cover" />
       <div className="relative min-h-full flex flex-col justify-end">
       {before && <Button variant="ghost" size="sm" onClick={() => setBefore(undefined)}>آخر الرسائل</Button>}
       {!targetId && (messages.data?.length ?? 0) === 50 && <Button variant="ghost" size="sm" onClick={() => { const first = messages.data?.[0]; if (first) setBefore({ date: first.created_at, id: first.id }); }}>رسائل أقدم</Button>}
