@@ -91,6 +91,6 @@ export function StaffChatMessage({ message, state, act, forced = false }: {
       {!forced && outgoing && !message.deleted_at && <Check className="size-3" aria-label="تم الإرسال" />}
       <time dateTime={message.created_at} title={formatLocaleDateTime(message.created_at, "ar-EG")}>{forced ? formatLocaleDateTime(message.created_at, "ar-EG", { dateStyle: "short", timeStyle: "short" }) : formatTime(message.created_at)}</time>
     </span>
-    {viewer !== null && viewer >= 0 && <StaffChatImageViewer images={images} index={viewer} caption={message.body} onClose={() => setViewer(null)} />}
+    {viewer !== null && viewer >= 0 && <StaffChatImageViewer images={images} index={viewer} caption={message.body} sender={outgoing ? "أنت" : message.sender_name} createdAt={message.created_at} onClose={() => setViewer(null)} />}
   </article>;
 }
