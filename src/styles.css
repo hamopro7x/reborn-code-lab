@@ -1195,3 +1195,9 @@
   .nav-glider { transition: none; }
 }
 
+
+.staff-chat-rec-dot{width:.6rem;height:.6rem;border-radius:9999px;background:var(--destructive);animation:staff-rec-blink 1s infinite}
+.staff-chat-rec-dot.is-paused,.staff-chat-rec-wave.is-paused{animation:none;opacity:.5}
+.staff-chat-rec-wave{height:2px;background-image:radial-gradient(circle,var(--muted-foreground) 1px,transparent 1.5px);background-size:6px 2px;background-repeat:repeat-x;animation:staff-rec-wave 1s linear infinite}
+@keyframes staff-rec-blink{50%{opacity:.2}}
+@keyframes staff-rec-wave{to{background-position:6px 0}}

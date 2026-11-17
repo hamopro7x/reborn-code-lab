@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Send, Paperclip, Mic, Square, X, BarChart3, AtSign, Loader2, Users, FileText, Images, Headphones } from "lucide-react";
+import { Send, Paperclip, Mic, Pause, Play, Trash2, X, BarChart3, AtSign, Loader2, Users, FileText, Images, Headphones } from "lucide-react";
 import chatWallpaper from "@/assets/staff-chat-wallpaper.jpg";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,7 +27,7 @@ export function StaffChat({ targetId }: { targetId?: string }) {
   const [mentionsOpen, setMentionsOpen] = useState(false);
   const [mandatoryMentions, setMandatoryMentions] = useState<string[]>([]);
   const [question, setQuestion] = useState(""); const [options, setOptions] = useState(["", ""]); const [multiple, setMultiple] = useState(false);
-  const [busy, setBusy] = useState(false); const [recording, setRecording] = useState(false);
+  const [busy, setBusy] = useState(false); const [recording, setRecording] = useState(false); const [paused, setPaused] = useState(false); const [seconds, setSeconds] = useState(0); const discard = useRef(false);
   const fileInput = useRef<HTMLInputElement>(null); const recorder = useRef<MediaRecorder | null>(null); const stream = useRef<MediaStream | null>(null);
   const end = useRef<HTMLDivElement>(null);
   const active = useRef(true);
@@ -59,19 +59,22 @@ export function StaffChat({ targetId }: { targetId?: string }) {
   useEffect(() => { active.current = true; return () => { active.current = false; if (recorder.current) recorder.current.onstop = null; if (recorder.current?.state === "recording") recorder.current.stop(); stream.current?.getTracks().forEach((t) => t.stop()); }; }, []);
   useEffect(() => { if (!before && !targetId) end.current?.scrollIntoView({ block: "nearest" }); }, [messages.data?.length, before, targetId]);
   useEffect(() => { if (targetId && messages.data?.length) void mutate({ data: { action: "seen", payload: { id: targetId } } }).then(() => qc.invalidateQueries({ queryKey: ["staff-chat-state"] })).catch(() => {}); }, [targetId, messages.data?.length, mutate, qc]);
+  useEffect(() => { if (!recording || paused) return; const t = window.setInterval(() => setSeconds((v) => v + 1), 1000); return () => window.clearInterval(t); }, [recording, paused]);
+  const togglePause = () => { const rec = recorder.current; if (!rec) return; if (rec.state === "recording") { rec.pause(); setPaused(true); } else if (rec.state === "paused") { rec.resume(); setPaused(false); } };
+  const cancelRecording = () => { discard.current = true; if (recorder.current && recorder.current.state !== "inactive") recorder.current.stop(); setRecording(false); setPaused(false); };
   const record = async () => {
-    if (recording) { recorder.current?.stop(); setRecording(false); return; }
+    if (recording) { recorder.current?.stop(); setRecording(false); setPaused(false); return; }
     try {
       if (!navigator.mediaDevices || typeof MediaRecorder === "undefined") throw new Error("التسجيل غير متاح في المتصفح؛ تقدر ترفع ملف صوتي");
       const mic = await navigator.mediaDevices.getUserMedia({ audio: true }); stream.current = mic;
       const type = ["audio/webm", "audio/mp4", "audio/ogg"].find((mime) => MediaRecorder.isTypeSupported(mime));
       const rec = new MediaRecorder(mic, type ? { mimeType: type } : undefined); recorder.current = rec;
       const chunks: Blob[] = []; let total = 0;
-      rec.ondataavailable = (event) => { chunks.push(event.data); total += event.data.size; if (total > CHAT_MAX_BYTES && rec.state === "recording") rec.stop(); };
+      rec.ondataavailable = (event) => { chunks.push(event.data); total += event.data.size; if (total > CHAT_MAX_BYTES && rec.state !== "inactive") rec.stop(); };
       rec.onstop = () => { mic.getTracks().forEach((t) => t.stop()); setRecording(false); const mime = rec.mimeType.split(";")[0] ?? "audio/webm";
         const extension = mime === "audio/mp4" ? "m4a" : mime === "audio/ogg" ? "ogg" : "webm";
-        if (active.current) void upload([new File(chunks, `تسجيل-${Date.now()}.${extension}`, { type: mime })]); };
-      rec.start(1000); setRecording(true);
+        if (active.current && !discard.current) void upload([new File(chunks, `تسجيل-${Date.now()}.${extension}`, { type: mime })]); };
+      discard.current = false; setSeconds(0); setPaused(false); rec.start(1000); setRecording(true);
     } catch (error) { toast.error(error instanceof Error ? error.message : "تعذر تشغيل الميكروفون"); }
   };
   const send = async () => {
@@ -100,6 +103,14 @@ export function StaffChat({ targetId }: { targetId?: string }) {
     </div>
     <section className="staff-chat-composer shrink-0 px-3 pt-2 pb-3 space-y-2">
       {!canSend ? <p className="text-sm text-muted-foreground">{state.pending.length ? "أكد قراءة الرسائل الإجبارية الأول" : "الجروب مغلق؛ تقدر تقرأ الرسائل الجديدة"}</p> : <>
+        {recording ? <div className="staff-chat-inputbar staff-chat-recordbar flex items-center gap-2 px-2 py-1.5" aria-live="polite">
+          <span className={`staff-chat-rec-dot ${paused ? "is-paused" : ""}`} aria-hidden="true" />
+          <span className="tabular-nums text-sm" dir="ltr">{Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, "0")}</span>
+          <span className={`staff-chat-rec-wave flex-1 ${paused ? "is-paused" : ""}`} aria-hidden="true" />
+          <Button size="icon" variant="ghost" className="shrink-0 rounded-full" title="حذف التسجيل" aria-label="حذف التسجيل" onClick={cancelRecording}><Trash2 className="size-5" /></Button>
+          <Button size="icon" variant="ghost" className="shrink-0 rounded-full text-destructive" title={paused ? "استكمال" : "إيقاف مؤقت"} aria-label={paused ? "استكمال التسجيل" : "إيقاف التسجيل مؤقتًا"} onClick={togglePause}>{paused ? <Play className="size-5" /> : <Pause className="size-5" />}</Button>
+          <Button size="icon" className="staff-chat-send shrink-0 rounded-full" title="إنهاء التسجيل" aria-label="إنهاء التسجيل وإرفاقه" onClick={() => void record()}><Send className="size-4" /></Button>
+        </div> :
         <div className="staff-chat-inputbar flex items-end gap-1 px-2 py-1.5">
           <input ref={fileInput} type="file" multiple className="hidden" aria-label="رفع مرفقات" onChange={(e) => void upload(Array.from(e.target.files ?? []))} />
           <DropdownMenu dir="rtl">
@@ -125,9 +136,9 @@ export function StaffChat({ targetId }: { targetId?: string }) {
             </DropdownMenuContent>
           </DropdownMenu>
           <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="اكتب رسالة…" aria-label="نص الرسالة" maxLength={10000} className="staff-chat-textarea min-w-0 flex-1" />
-          <Button size="icon" variant={recording ? "destructive" : "ghost"} className="shrink-0" title={recording ? "إيقاف التسجيل" : "تسجيل صوتي"} aria-label={recording ? "إيقاف التسجيل" : "تسجيل صوتي"} disabled={busy} onClick={() => void record()}>{recording ? <Square className="size-4" /> : <Mic className="size-5" />}</Button>
+          <Button size="icon" variant={recording ? "destructive" : "ghost"} className="shrink-0" title={recording ? "إيقاف التسجيل" : "تسجيل صوتي"} aria-label={recording ? "إيقاف التسجيل" : "تسجيل صوتي"} disabled={busy} onClick={() => void record()}><Mic className="size-5" /></Button>
           <Button size="icon" className="staff-chat-send shrink-0" title="إرسال" aria-label="إرسال" disabled={busy || recording || (!text.trim() && !files.length && !pollOpen)} onClick={() => void send()}>{busy ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}</Button>
-        </div>
+        </div>}
         {files.length>0 && <div className="flex flex-wrap gap-2">{files.map((file) => <div key={file.id} className="flex gap-1 items-center bg-muted px-2 py-1 rounded text-xs max-w-full"><span className="truncate">{file.name}</span><Button size="icon" variant="ghost" className="size-6 shrink-0" aria-label={`إزالة ${file.name}`} onClick={() => setFiles((old) => old.filter((f) => f.id !== file.id))}><X className="size-3" /></Button></div>)}</div>}
         {pollOpen && <div className="border-s-2 border-primary ps-3 space-y-2"><Input placeholder="سؤال الاستطلاع" aria-label="سؤال الاستطلاع" value={question} onChange={(e) => setQuestion(e.target.value)} maxLength={500} />
           {options.map((option, index) => <div key={index} className="flex gap-1"><Input value={option} maxLength={200} placeholder={`اختيار ${index + 1}`} aria-label={`اختيار ${index + 1}`} onChange={(e) => setOptions((old) => old.map((v, i) => i === index ? e.target.value : v))} />{options.length>2 && <Button variant="ghost" size="icon" aria-label={`إزالة اختيار ${index+1}`} onClick={() => setOptions((old) => old.filter((_, i) => i !== index))}><X className="size-4" /></Button>}</div>)}
