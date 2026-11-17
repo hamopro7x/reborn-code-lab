@@ -55,6 +55,11 @@ export function allChatEmployeeIds(members: ChatMember[]) {
   const adminIds = new Set(members.filter((member) => member.role === "admin").map((member) => member.id));
   return [...new Set(members.filter((member) => member.role === "employee" && !adminIds.has(member.id)).map((member) => member.id))];
 }
+export function mentionsAllChatEmployees(mentions: string[], members: ChatMember[]) {
+  const employees = new Set(members.filter((member) => member.role === "employee").map((member) => member.id));
+  const recipients = new Set(mentions);
+  return employees.size > 0 && recipients.size === employees.size && [...employees].every((id) => recipients.has(id));
+}
 export type ChatAttachment = { id: string; name: string; mime: string; size: number; url?: string };
 export type ChatMessage = {
   id: string; sender_id: string; sender_name: string; body: string; created_at: string; edited_at: string | null;

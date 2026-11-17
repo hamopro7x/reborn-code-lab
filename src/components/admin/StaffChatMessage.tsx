@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { StaffChatVoice } from "@/components/admin/StaffChatVoice";
 import { StaffChatImageViewer } from "@/components/admin/StaffChatImageViewer";
 import { getChatReceipts } from "@/lib/chat.functions";
-import { canEditChatMessage, chatLinks, type ChatMessage, type ChatState } from "@/lib/chat-rules";
+import { canEditChatMessage, chatLinks, mentionsAllChatEmployees, type ChatMessage, type ChatState } from "@/lib/chat-rules";
 import { chatImageAttachments, viewerIndex } from "@/lib/chat-viewer";
 
 export type ChatAction = (action: "edit" | "delete" | "hide" | "vote" | "ack" | "seen" | "state" | "send", payload: Record<string, unknown>) => Promise<void>;
@@ -48,7 +48,7 @@ export function StaffChatMessage({ message, state, act, forced = false }: {
     </div>}
     {message.deleted_at ? <p className="mt-2 text-muted-foreground text-[15px]">تم حذف الرسالة لدى الجميع</p> : <>
       {!hasMedia && messageText}
-      {message.mentions?.length > 0 && <div className="staff-chat-mention mt-2 flex flex-wrap gap-2 text-xs">{message.mentions.map((id) => <span key={id}>@{state.members.find((m) => m.id === id)?.name ?? "موظف"}</span>)}</div>}
+      {message.mentions?.length > 0 && <div className="staff-chat-mention mt-2 flex flex-wrap gap-2 text-xs">{mentionsAllChatEmployees(message.mentions, state.members) ? <span>@الكل</span> : message.mentions.map((id) => <span key={id}>@{state.members.find((m) => m.id === id)?.name ?? "موظف"}</span>)}</div>}
       {(message.attachments ?? []).map((attachment) => {
         const media = !!attachment.url && /^(image|video)\//.test(attachment.mime);
         return <div className={media ? "staff-chat-media" : "mt-3 max-w-lg"} key={attachment.id}>

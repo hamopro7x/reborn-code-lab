@@ -1,6 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { allChatEmployeeIds, canEditChatMessage, CHAT_MAX_BYTES, chatLinks, validateChatFile } from "./chat-rules";
+import { allChatEmployeeIds, mentionsAllChatEmployees, canEditChatMessage, CHAT_MAX_BYTES, chatLinks, validateChatFile } from "./chat-rules";
 describe("chat attachment and edit rules", () => {
+  it("groups the complete employee mention set but keeps individual mentions separate", () => {
+    const members = [
+      { id: "a", name: "أحمد", role: "employee" },
+      { id: "b", name: "محمد", role: "employee" },
+      { id: "owner", name: "المالك", role: "admin" },
+    ];
+    expect(mentionsAllChatEmployees(["b", "a"], members)).toBe(true);
+    expect(mentionsAllChatEmployees(["a"], members)).toBe(false);
+    expect(mentionsAllChatEmployees([], members)).toBe(false);
+    expect(mentionsAllChatEmployees(["a", "b", "unknown"], members)).toBe(false);
+    expect(mentionsAllChatEmployees([], [])).toBe(false);
+  });
   it("selects all employees for mandatory reading without admins or duplicate recipients", () => {
     expect(allChatEmployeeIds([
       { id: "employee-1", name: "أحمد", role: "employee" },
