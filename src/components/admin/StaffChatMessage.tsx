@@ -65,9 +65,9 @@ export function StaffChatMessage({ message, state, act, forced = false }: {
       {!forced && <div className="staff-chat-message-actions">
         <DropdownMenu dir="rtl"><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="size-6" title="خيارات الرسالة" aria-label="خيارات الرسالة" disabled={busy}>{busy ? <Loader2 className="size-3 animate-spin" /> : <ChevronDown className="size-3.5" />}</Button></DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={() => void navigator.clipboard.writeText(message.body)}><Copy />نسخ الرسالة والروابط</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => void navigator.clipboard.writeText(message.body)}><Copy />نسخ</DropdownMenuItem>
             {canEditChatMessage(message.sender_id, state.userId, message.created_at, Date.now()) && <DropdownMenuItem onSelect={() => { setBody(message.body); setEditing(true); }}><Pencil />تعديل الرسالة</DropdownMenuItem>}
-            {state.owner && <><DropdownMenuItem onSelect={() => void run("hide", { id: message.id })}><Trash2 />إخفاء لديّ فقط</DropdownMenuItem><DropdownMenuItem className="text-destructive" onSelect={() => { if (window.confirm("حذف الرسالة لدى الجميع؟")) void run("delete", { id: message.id }); }}><Trash2 />حذف لدى الجميع</DropdownMenuItem></>}
+            {state.owner && <><DropdownMenuItem onSelect={() => void run("hide", { id: message.id })}><Trash2 />حذف لديّ</DropdownMenuItem><DropdownMenuItem className="text-destructive" onSelect={() => { if (window.confirm("حذف الرسالة لدى الجميع؟")) void run("delete", { id: message.id }); }}><Trash2 />حذف لدى الجميع</DropdownMenuItem></>}
             {state.role === "admin" && message.mandatory && <DropdownMenuItem onSelect={() => setShowReceipts(!showReceipts)}><CheckCheck />تأكيدات القراءة</DropdownMenuItem>}
           </DropdownMenuContent>
         </DropdownMenu>
