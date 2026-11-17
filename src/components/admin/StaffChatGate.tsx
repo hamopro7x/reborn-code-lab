@@ -58,7 +58,7 @@ export function StaffChatGate() {
     }
   }, [signedIn, state]);
   const message = state?.pending[0];
-  const blocked = signedIn && (!identityReady || status.isPending || (status.isError && !state) || (state?.role === "employee" && Boolean(message)));
+  const blocked = signedIn && identityReady && state?.role === "employee" && Boolean(message);
   useEffect(() => {
     if (!blocked || !overlay.current) return;
     const panel = overlay.current;
