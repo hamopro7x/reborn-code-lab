@@ -1,3 +1,4 @@
+import { formatLocaleDateTime } from "@/lib/format";
 import { useState } from "react";
 import { useAdminBack } from "@/components/admin/back-nav";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -237,7 +238,7 @@ export function RemoteAccessTab() {
               {row.notes && <p className="text-sm text-muted-foreground whitespace-pre-wrap">{row.notes}</p>}
 
               <div className="text-xs text-muted-foreground">
-                آخر اتصال: {row.last_connected_at ? new Date(row.last_connected_at).toLocaleString("ar-EG") : "—"}
+                آخر اتصال: {row.last_connected_at ? formatLocaleDateTime(row.last_connected_at, "ar-EG") : "—"}
               </div>
 
               <div className="flex gap-2 pt-1">

@@ -1,3 +1,4 @@
+import { DateTimeInput } from "@/components/ui/date-time-input";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -192,7 +193,7 @@ export function ProductsTab() {
               <div><Label>الضمان</Label><Input value={editing.warranty_text ?? ""} placeholder="مثال: ضمان 30 يوم استبدال" onChange={(event) => setEditing({ ...editing, warranty_text: event.target.value })} /></div>
             </div>
             <div><Label>الاسترداد</Label><Input value={editing.refund_text ?? ""} placeholder="مثال: استرداد خلال 7 أيام" onChange={(event) => setEditing({ ...editing, refund_text: event.target.value })} /></div>
-            <div><Label>نهاية الخصم</Label><Input type="datetime-local" value={editing.discount_ends_at?.slice(0, 16) ?? ""} onChange={(event) => setEditing({ ...editing, discount_ends_at: event.target.value ? new Date(event.target.value).toISOString() : null })} /></div>
+            <div><Label>نهاية الخصم</Label><DateTimeInput label="نهاية الخصم" value={editing.discount_ends_at} onChange={(discount_ends_at) => setEditing({ ...editing, discount_ends_at })} /></div>
             <div><Label>القسم</Label><select value={editing.category_id ?? ""} onChange={(event) => setEditing({ ...editing, category_id: event.target.value })} className="w-full h-10 rounded-md border border-input bg-input px-3 text-sm"><option value="">— بدون —</option>{(categoriesQuery.data ?? []).map((category: any) => <option key={category.id} value={category.id}>{category.icon} {category.name}</option>)}</select></div>
             <div className="rounded-xl border border-border p-3">
               <Label>صورة المنتج</Label>

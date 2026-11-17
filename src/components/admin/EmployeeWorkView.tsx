@@ -41,7 +41,7 @@ import {
 import { toast } from "sonner";
 import { MerchantLogo } from "./MerchantLogo";
 import { P2PShiftLinkMenu } from "./P2PShiftLinkMenu";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, formatTime } from "@/lib/format";
 import { PAGE_SIZE } from "@/lib/pagination";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { supabase } from "@/integrations/supabase/client";
@@ -1700,8 +1700,7 @@ export function EmployeeWorkView({
     return () => clearInterval(t);
   }, []);
   const clock = {
-    time: now.toLocaleTimeString("en-GB", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" }),
-    ampm: now.getHours() < 12 ? "صباحاً" : "مساء",
+    time: formatTime(now, { second: "2-digit" }),
     date: `${AR_DAYS[now.getDay()]} ${now.toLocaleDateString("en-GB")}`,
   };
 
@@ -1755,7 +1754,7 @@ export function EmployeeWorkView({
           <div className="flex shrink-0 items-center gap-2">
             <div className="text-left leading-tight">
               <div className="text-base font-black tabular-nums">
-                {clock.ampm} {clock.time}
+                {clock.time}
               </div>
               <div className="mt-1 text-xs font-bold tabular-nums text-foreground/70">{clock.date}</div>
             </div>

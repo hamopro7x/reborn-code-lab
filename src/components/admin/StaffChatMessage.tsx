@@ -1,3 +1,4 @@
+import { formatLocaleDateTime, formatTime } from "@/lib/format";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
@@ -60,7 +61,7 @@ export function StaffChatMessage({ message, state, act, forced = false }: {
         })}
         <div className="flex items-center gap-3 text-xs text-muted-foreground"><span>{message.votes?.length ?? 0} مشارك</span>
           {!voted && !forced && <Button size="sm" disabled={!choices.length || busy} onClick={() => void run("vote", { id: message.id, choices })}>تصويت</Button>}</div>
-        {state.role === "admin" && <details className="text-xs"><summary className="cursor-pointer">أسماء المصوّتين</summary>{(message.votes ?? []).map((vote) => <p className="mt-2" key={vote.user_id}>{vote.name}: {vote.choices.map((i) => poll.options[i]).join("، ")} · {new Date(vote.voted_at).toLocaleString("ar-EG")}</p>)}</details>}
+        {state.role === "admin" && <details className="text-xs"><summary className="cursor-pointer">أسماء المصوّتين</summary>{(message.votes ?? []).map((vote) => <p className="mt-2" key={vote.user_id}>{vote.name}: {vote.choices.map((i) => poll.options[i]).join("، ")} · {formatLocaleDateTime(vote.voted_at, "ar-EG")}</p>)}</details>}
       </section>}
       {message.edited_at && <p className="mt-2 text-xs text-muted-foreground">تم التعديل</p>}
       {!forced && <div className="staff-chat-message-actions">
@@ -73,11 +74,11 @@ export function StaffChatMessage({ message, state, act, forced = false }: {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>}
-      {showReceipts && <div className="mt-2 text-xs space-y-2">{receipts.isLoading ? "جاري التحميل…" : receipts.isError ? "تعذر تحميل التأكيدات" : (receipts.data ?? []).map((receipt) => <p key={receipt.user_id}>{state.members.find((m) => m.id === receipt.user_id)?.name ?? "موظف"}: {receipt.read_at ? `تمت القراءة · ${new Date(receipt.read_at).toLocaleString("ar-EG")}` : "لم يؤكد القراءة"}</p>)}</div>}
+      {showReceipts && <div className="mt-2 text-xs space-y-2">{receipts.isLoading ? "جاري التحميل…" : receipts.isError ? "تعذر تحميل التأكيدات" : (receipts.data ?? []).map((receipt) => <p key={receipt.user_id}>{state.members.find((m) => m.id === receipt.user_id)?.name ?? "موظف"}: {receipt.read_at ? `تمت القراءة · ${formatLocaleDateTime(receipt.read_at, "ar-EG")}` : "لم يؤكد القراءة"}</p>)}</div>}
     </>}
     <span className={forced ? "mt-1 flex justify-end text-muted-foreground text-xs" : "staff-chat-message-meta text-muted-foreground"} dir="ltr">
       {!forced && outgoing && !message.deleted_at && <Check className="size-3" aria-label="تم الإرسال" />}
-      <time dateTime={message.created_at} title={new Date(message.created_at).toLocaleString("ar-EG")}>{new Date(message.created_at).toLocaleString(forced ? "ar-EG" : "en-GB", forced ? { dateStyle: "short", timeStyle: "short" } : { hour: "2-digit", minute: "2-digit" })}</time>
+      <time dateTime={message.created_at} title={formatLocaleDateTime(message.created_at, "ar-EG")}>{forced ? formatLocaleDateTime(message.created_at, "ar-EG", { dateStyle: "short", timeStyle: "short" }) : formatTime(message.created_at)}</time>
     </span>
   </article>;
 }

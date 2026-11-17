@@ -18,16 +18,28 @@ export function computeDiscountedPrice(price: number, discountPercent: number): 
   return price * (1 - discountPercent / 100);
 }
 
+type DateValue = string | number | Date | null | undefined;
+
+/** Display only: preserve the caller's locale/time zone and always use 12 hours. */
+export function formatLocaleDateTime(value: DateValue, locale = "ar-EG", options: Intl.DateTimeFormatOptions = {}): string {
+  if (value === null || value === undefined || value === "") return "—";
+  const date = new Date(value);
+  if (isNaN(date.getTime())) return "—";
+  return date.toLocaleString(locale, { ...options, hour12: true });
+}
+
+export function formatTime(value: DateValue, options: Intl.DateTimeFormatOptions = {}): string {
+  return formatLocaleDateTime(value, "ar-EG", { numberingSystem: "latn", hour: "2-digit", minute: "2-digit", ...options });
+}
+
 export function formatDateTime(value: string | number | Date | null | undefined): string {
   if (!value) return "—";
   const d = new Date(value);
   if (isNaN(d.getTime())) return "—";
   const day = d.toLocaleDateString("ar-EG", { weekday: "long", numberingSystem: "latn" });
   const date = d.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
-  const time = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true });
-  const [timePart, ampm] = time.split(" ");
-  const ampmAr = ampm?.toLowerCase() === "am" ? "ص" : "م";
-  return `${day} - ${date} - ${timePart} ${ampmAr}`;
+  const time = formatTime(d, { second: "2-digit" });
+  return `${day} - ${date} - ${time}`;
 }
 
 export function formatDateOnly(value: string | number | Date | null | undefined): string {

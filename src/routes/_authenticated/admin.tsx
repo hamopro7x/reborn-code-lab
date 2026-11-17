@@ -1,3 +1,5 @@
+import { DateTimeInput } from "@/components/ui/date-time-input";
+import { formatLocaleDateTime } from "@/lib/format";
 import { useUiState } from "@/lib/ui-state";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -470,7 +472,7 @@ function OverviewTab() {
               <div className="flex-1 min-w-0">
                 <div className="font-bold text-sm">{n.title}</div>
                 {n.body && <div className="text-xs text-muted-foreground mt-0.5">{n.body}</div>}
-                <div className="text-[10px] text-muted-foreground mt-1">{new Date(n.created_at).toLocaleString("ar-EG")}</div>
+                <div className="text-[10px] text-muted-foreground mt-1">{formatLocaleDateTime(n.created_at, "ar-EG")}</div>
               </div>
               {!n.read_at && (
                 <Button size="sm" variant="ghost" onClick={() => markRead(n.id)}><Check className="size-4" /></Button>
@@ -515,7 +517,7 @@ function CustomersTab() {
                   )}
                 </div>
                 <div className="text-xs text-muted-foreground">{c.email} · {c.phone} · {c.country}</div>
-                <div className="text-[11px] text-muted-foreground mt-1">آخر طلب: {new Date(c.last_at).toLocaleString("ar-EG")}</div>
+                <div className="text-[11px] text-muted-foreground mt-1">آخر طلب: {formatLocaleDateTime(c.last_at, "ar-EG")}</div>
               </div>
               <div className="text-left">
                 <div className="text-xs text-muted-foreground">إجمالي المشتريات المؤكدة</div>
@@ -601,7 +603,7 @@ function ReviewsTab() {
                 </div>
                 <div className="text-xs text-muted-foreground mt-0.5">على: {r.product?.name}</div>
                 {r.comment && <p className="text-sm mt-2">{r.comment}</p>}
-                <div className="text-[10px] text-muted-foreground mt-1">{new Date(r.created_at).toLocaleString("ar-EG")}</div>
+                <div className="text-[10px] text-muted-foreground mt-1">{formatLocaleDateTime(r.created_at, "ar-EG")}</div>
               </div>
               <div className="flex gap-1 shrink-0">
                 <Button size="sm" variant={r.approved ? "outline" : "default"} onClick={() => approve(r.id, !r.approved)} className={!r.approved ? "gradient-primary text-white" : ""}>
@@ -837,7 +839,7 @@ function EmployeesTab() {
                 </div>
                 <div className="space-y-1.5">
                   <div className="text-xs text-muted-foreground">تاريخ الإضافة</div>
-                  <div className="rounded-md bg-muted/60 border border-border/50 px-3 py-2.5 text-sm font-medium truncate">{new Date(u.created_at).toLocaleString("ar-EG")}</div>
+                  <div className="rounded-md bg-muted/60 border border-border/50 px-3 py-2.5 text-sm font-medium truncate">{formatLocaleDateTime(u.created_at, "ar-EG")}</div>
                 </div>
               </div>
             </div>
@@ -1090,7 +1092,7 @@ function OrdersTab({ isAdmin }: { isAdmin: boolean }) {
                   <Badge variant={o.status === "confirmed" || o.status === "completed" ? "default" : o.status === "rejected" || o.status === "cancelled" ? "destructive" : "secondary"}>{statusLabel[o.status] ?? o.status}</Badge>
                 </div>
                 <div className="text-sm"><strong>{o.customer_name}</strong> · {o.customer_email}</div>
-                <div className="text-xs text-muted-foreground">{o.dial_code}{o.customer_phone} · {o.customer_country} · {new Date(o.created_at).toLocaleString("ar-EG")}</div>
+                <div className="text-xs text-muted-foreground">{o.dial_code}{o.customer_phone} · {o.customer_country} · {formatLocaleDateTime(o.created_at, "ar-EG")}</div>
                 <div className="mt-2 space-y-0.5 text-xs">
                   {(o.items ?? []).map((it: any) => <div key={it.id}>• {it.product_name} × {it.quantity} — {it.unit_price} {o.currency_code}</div>)}
                 </div>
@@ -1609,7 +1611,7 @@ function TimersTab() {
       <div className="space-y-3">
         {(q.data ?? []).map((t: any) => (
           <div key={t.id} className="card-surface rounded-2xl p-4 flex items-center justify-between">
-            <div><div className="font-bold">{t.title}</div><div className="text-xs text-muted-foreground">{new Date(t.ends_at).toLocaleString("ar-EG")}</div></div>
+            <div><div className="font-bold">{t.title}</div><div className="text-xs text-muted-foreground">{formatLocaleDateTime(t.ends_at, "ar-EG")}</div></div>
             <div className="flex gap-1">
               {t.active ? <Badge>نشط</Badge> : <Badge variant="secondary">متوقف</Badge>}
               <Button size="icon" variant="ghost" onClick={() => { setEditing(t); setOpen(true); }}><Edit className="size-4" /></Button>
@@ -1625,7 +1627,7 @@ function TimersTab() {
             <div className="space-y-3">
               <div><Label>العنوان</Label><Input value={editing.title} onChange={(e) => setEditing({ ...editing, title: e.target.value })} /></div>
               <div><Label>وصف</Label><Input value={editing.subtitle ?? ""} onChange={(e) => setEditing({ ...editing, subtitle: e.target.value })} /></div>
-              <div><Label>ينتهي في</Label><Input type="datetime-local" value={editing.ends_at?.slice(0,16) ?? ""} onChange={(e) => setEditing({ ...editing, ends_at: new Date(e.target.value).toISOString() })} /></div>
+              <div><Label>ينتهي في</Label><DateTimeInput label="ينتهي في" value={editing.ends_at} onChange={(ends_at) => setEditing({ ...editing, ends_at })} /></div>
               <label className="flex items-center gap-2"><Switch checked={editing.active} onCheckedChange={(v) => setEditing({ ...editing, active: v })} /> نشط</label>
             </div>
           )}
@@ -2312,7 +2314,7 @@ function DevicesTab({ userId, employeeName }: { userId?: string; employeeName?: 
                     <div className="min-w-0 text-xs">
                       <div className="font-mono truncate">{d.device_label || d.device_fingerprint.slice(0, 16) + "…"}</div>
                       <div className="text-muted-foreground truncate">{d.user_agent?.slice(0, 80)}</div>
-                      <div className="text-muted-foreground">آخر ظهور: {new Date(d.last_seen_at).toLocaleString("ar")}</div>
+                      <div className="text-muted-foreground">آخر ظهور: {formatLocaleDateTime(d.last_seen_at, "ar")}</div>
                     </div>
                     <Button size="sm" variant="outline" onClick={async () => {
                       if (!confirm("حذف هذا الجهاز؟")) return;

@@ -1,3 +1,4 @@
+import { formatLocaleDateTime } from "@/lib/format";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -34,7 +35,7 @@ export function OkxHistoryTable({ accountId, kind }: { accountId: string; kind: 
       <Table>
         <TableHeader><TableRow>{["التاريخ", "العملية", "العملة / الزوج", kind === "orders" ? "الكمية المنفذة" : "تغير الرصيد", "الرسوم", ...(kind === "orders" ? ["متوسط السعر"] : []), "الحالة", "المعرف"].map((h) => <TableHead className="whitespace-nowrap text-right" key={h}>{h}</TableHead>)}</TableRow></TableHeader>
         <TableBody>{q.data?.rows.map((r) => <TableRow key={r.id}>
-          <TableCell className="whitespace-nowrap" dir="ltr">{new Date(r.time).toLocaleString("en-GB", { timeZone: "Africa/Cairo" })}</TableCell>
+          <TableCell className="whitespace-nowrap" dir="ltr">{formatLocaleDateTime(r.time, "en-GB", { timeZone: "Africa/Cairo" })}</TableCell>
           <TableCell className="min-w-36">{r.label}{r.note && <div className="max-w-64 break-words text-xs text-muted-foreground">{r.note}</div>}</TableCell>
           <TableCell dir="ltr">{r.instrument || r.currency || "—"}</TableCell>
           <TableCell className="whitespace-nowrap tabular-nums" dir="ltr">{r.amount || "—"} {kind !== "orders" ? r.currency : ""}</TableCell>

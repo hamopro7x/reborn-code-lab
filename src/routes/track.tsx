@@ -1,3 +1,4 @@
+import { formatLocaleDateTime } from "@/lib/format";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -70,7 +71,7 @@ function TrackPage() {
                 >
                   <div className="text-xs">
                     <div className="font-mono font-bold">{o.order_code}</div>
-                    <div className="text-muted-foreground mt-0.5">{new Date(o.created_at).toLocaleString("ar-EG")}</div>
+                    <div className="text-muted-foreground mt-0.5">{formatLocaleDateTime(o.created_at, "ar-EG")}</div>
                   </div>
                   <div className="text-left">
                     <div className="text-sm font-bold">{o.total} {o.currency_code}</div>

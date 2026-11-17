@@ -1,3 +1,4 @@
+import { formatLocaleDateTime } from "@/lib/format";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -253,7 +254,7 @@ function LiveScreen({
                 <span className="text-[11px] text-muted-foreground">
                   آخر ظهور:{" "}
                   {device.last_seen_at
-                    ? new Date(device.last_seen_at).toLocaleString("ar-EG")
+                    ? formatLocaleDateTime(device.last_seen_at, "ar-EG")
                     : "لم يتصل بعد"}
                 </span>
               </>
@@ -465,7 +466,7 @@ export function EmployeeDevices({
                 الحالة: {d.approved ? "مصرّح له" : "غير مصرّح"}
               </p>
               <p className="text-xs text-muted-foreground">
-                آخر ظهور: {d.last_seen_at ? new Date(d.last_seen_at).toLocaleString("ar-EG") : "—"}
+                آخر ظهور: {d.last_seen_at ? formatLocaleDateTime(d.last_seen_at, "ar-EG") : "—"}
               </p>
               <p className="text-xs text-muted-foreground">
                 أُضيف: {new Date(d.created_at).toLocaleDateString("ar-EG")}

@@ -1,3 +1,4 @@
+import { formatLocaleDateTime } from "@/lib/format";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -21,7 +22,7 @@ type KeyRow = {
   created_at: string;
 };
 
-const when = (v: string | null) => (v ? new Date(v).toLocaleString("ar-EG") : "—");
+const when = (v: string | null) => (v ? formatLocaleDateTime(v, "ar-EG") : "—");
 
 export function ApiKeysTab() {
   const qc = useQueryClient();
