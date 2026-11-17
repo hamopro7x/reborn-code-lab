@@ -78,7 +78,7 @@ export function StaffChatGate() {
   }, [blocked, message?.id]);
   if (typeof document === "undefined") return null;
   if (blocked) return createPortal(<div ref={overlay} tabIndex={-1} role="dialog" aria-modal="true" aria-label="قراءة رسائل MG Pro الإجبارية"
-    className="admin-theme fixed inset-0 z-[10000] bg-background text-foreground overflow-y-auto outline-none" dir="rtl" onKeyDown={(event) => {
+    className={`admin-theme fixed inset-0 z-[10000] text-foreground overflow-y-auto outline-none${groupOpen ? " bg-background" : " staff-chat-mandatory-overlay"}`} dir="rtl" onKeyDown={(event) => {
       if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); }
       if (event.key === "Tab") {
         const controls = overlay.current?.querySelectorAll<HTMLElement>('button,a[href],input,video,audio,[tabindex="0"]');

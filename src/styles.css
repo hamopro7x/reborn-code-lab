@@ -724,8 +724,9 @@
 .wm-float { animation: wmFloat 22s ease-in-out infinite; }
 
 /* Exact supplied mandatory-reading artwork; only the group action is interactive. */
+.admin-theme.staff-chat-mandatory-overlay { background: transparent; }
 .staff-chat-mandatory-screen {
-  --mandatory-backdrop: #08090c;
+  --mandatory-backdrop: oklch(0.13 0.008 270 / 0.45);
   --mandatory-shadow: #000b;
   --mandatory-focus: #fff;
   --mandatory-inset: 24px;
@@ -736,6 +737,7 @@
   padding: var(--mandatory-inset);
   overflow: hidden;
   background: var(--mandatory-backdrop);
+  backdrop-filter: blur(4px);
 }
 .staff-chat-mandatory-notice {
   position: relative;
