@@ -807,8 +807,8 @@
   pointer-events: none;
 }
 .staff-chat-transcript { overflow-x: hidden; }
-.staff-chat-unread { position: absolute; top: 10px; inset-inline: 0; z-index: 5; display: flex; justify-content: center; pointer-events: none; }
-.staff-chat-unread span { background: var(--chat-header); color: var(--foreground); font-size: 13px; font-weight: 600; line-height: 20px; padding: 6px 16px; border-radius: 999px; border: 1px solid var(--border); box-shadow: 0 8px 18px -8px oklch(0 0 0 / 0.7); }
+.staff-chat-unread { display: flex; justify-content: center; flex-shrink: 0; width: calc(100% + 32px); margin: 10px -16px; padding: 6px 16px; background: var(--chat-header); pointer-events: none; }
+.staff-chat-unread span { color: var(--foreground); font-size: 13px; font-weight: 600; line-height: 20px; text-align: center; }
 .staff-chat-attachment-menu {
   --chat-menu-background: oklch(0.20 0 0);
   --chat-menu-foreground: oklch(0.95 0 0);

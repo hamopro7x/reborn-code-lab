@@ -190,12 +190,12 @@ export function StaffChat({ targetId }: { targetId?: string }) {
       {state.owner && <label className="flex gap-2 items-center text-sm"><span>مفتوح للإرسال</span><Switch checked={state.open} onCheckedChange={(open) => void act("state", { open }).catch(() => {})} /></label>}
     </header>
     <div className="staff-chat-transcript-wrap relative min-h-0 flex-1">
-      {!!unread.length && <div className="staff-chat-unread" role="status"><span>{unread.length === 1 ? "رسالة واحدة غير مقروءة" : `${unread.length} رسائل غير مقروءة`}</span></div>}
       <div className="staff-chat-transcript relative h-full min-h-0 overflow-y-auto px-4 py-5">
       <div className="relative min-h-full flex flex-col justify-end">
       {before && <Button variant="ghost" size="sm" onClick={() => setBefore(undefined)}>آخر الرسائل</Button>}
       {!targetId && (messages.data?.length ?? 0) === 50 && <Button variant="ghost" size="sm" onClick={() => { const first = messages.data?.[0]; if (first) setBefore({ date: first.created_at, id: first.id }); }}>رسائل أقدم</Button>}
       {messagesPhase === "loading" ? <p className="py-8 text-muted-foreground text-sm">جاري التحميل…</p> : messagesPhase === "retrying" ? <div className="py-4" role="status"><p className="text-muted-foreground">جاري إعادة الاتصال لتحميل الرسائل…</p><Button onClick={() => void messages.refetch()}>إعادة المحاولة</Button></div> : !messages.data?.length ? <p className="py-10 text-muted-foreground text-sm">مفيش رسائل هنا لسه</p> : messages.data.map((message: ChatMessage) => <Fragment key={message.id}>
+        {message.id === unread[0]?.id && <div className="staff-chat-unread" role="status"><span>{unread.length === 1 ? "رسالة واحدة غير مقروءة" : `${unread.length} رسائل غير مقروءة`}</span></div>}
         <StaffChatMessage message={message} state={state} act={act} />
       </Fragment>)}
       {pendingVoices.map((voice) => <div key={voice.id} className="flex justify-end py-1" role="status"><div className="staff-chat-bubble staff-chat-outgoing min-w-0 opacity-80"><StaffChatVoice src={voice.url} sender="أنا" seed={voice.id} /><span className="staff-chat-message-meta flex items-center gap-1 text-xs"><Loader2 className="size-3 animate-spin" />جاري الإرسال…</span></div></div>)}
