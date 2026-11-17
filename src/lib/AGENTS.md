@@ -8,3 +8,4 @@
 - Sound uses the root gate's authenticated incoming-message cursor with an initial silent baseline and browser gesture unlock; generic Realtime changes must not chime because edits, votes and acknowledgments are not arrivals.
 - Chat reads retain confirmed query data on background failure and retry with capped backoff; batch live refreshes without cancelling in-flight reads so outages do not erase the transcript.
 - The ordinary unread divider uses an account-scoped device-local cursor and excludes self/deleted messages; it never changes server notifications or mandatory acknowledgments because it is presentation-only.
+- Exempt only courses.functions.ts/checkDevice from the mandatory-read barrier while retaining its authentication and user-scoped device checks; otherwise pending chat reads can be cached as device rejection when the layout remounts.
