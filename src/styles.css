@@ -748,7 +748,8 @@
   color: var(--foreground);
   overflow: hidden;
 }
-.staff-chat-header, .staff-chat-composer { background: var(--chat-header); }
+.staff-chat-header { background: var(--chat-header); }
+.staff-chat-composer { background: transparent; }
 .staff-chat-header, .staff-chat-transcript, .staff-chat-composer { position: relative; z-index: 1; }
 .staff-chat-avatar { background: var(--chat-outgoing); color: var(--chat-sender); }
 .staff-chat-wallpaper {
