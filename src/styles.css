@@ -723,6 +723,44 @@
 }
 .wm-float { animation: wmFloat 22s ease-in-out infinite; }
 
+/* Exact supplied mandatory-reading artwork; only the group action is interactive. */
+.staff-chat-mandatory-screen {
+  --mandatory-backdrop: #08090c;
+  --mandatory-shadow: #000b;
+  --mandatory-focus: #fff;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--mandatory-backdrop);
+}
+.staff-chat-mandatory-notice {
+  position: relative;
+  width: min(1648px, 100%);
+  line-height: 0;
+  filter: drop-shadow(0 18px 45px var(--mandatory-shadow));
+}
+.staff-chat-mandatory-notice img { display: block; width: 100%; height: auto; border-radius: 2px; }
+.staff-chat-mandatory-notice .staff-chat-mandatory-open {
+  position: absolute;
+  left: 25.3%;
+  top: 63.7%;
+  width: 49.4%;
+  height: 16.8%;
+  padding: 0;
+  border: 0;
+  border-radius: 48px;
+  background: transparent;
+  box-shadow: none;
+  cursor: pointer;
+}
+.staff-chat-mandatory-notice .staff-chat-mandatory-open:hover { background: transparent; }
+.staff-chat-mandatory-notice .staff-chat-mandatory-open:focus-visible { outline: 3px solid var(--mandatory-focus); outline-offset: 5px; }
+@media (max-width: 600px) {
+  .staff-chat-mandatory-screen { padding: 8px; }
+  .staff-chat-mandatory-notice img { border-radius: 4px; }
+}
+
 /* Internal group only: messaging reference, independent of staff/store palettes. */
 .staff-chat {
   --background: oklch(0.19 0.005 165);

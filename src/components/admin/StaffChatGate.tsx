@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { CheckCheck, Bell } from "lucide-react";
+import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getChatState } from "@/lib/chat.functions";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,6 +11,7 @@ import { livePoll } from "@/lib/live-poll";
 import { refreshQueries } from "@/lib/refresh-queries";
 import { StaffChat } from "./StaffChat";
 import { createChatSound, isNewIncomingChat, type IncomingChatCursor } from "@/lib/chat-sound";
+import mandatoryNotice from "@/assets/staff-chat-mandatory-notice.png.asset.json";
 
 export function StaffChatGate() {
   const [signedIn, setSignedIn] = useState(false); const [identityReady, setIdentityReady] = useState(false);
@@ -86,12 +87,11 @@ export function StaffChatGate() {
         else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
       }
     }}>
-    {groupOpen ? <StaffChat targetId={message?.id} /> : <div className="mx-auto max-w-3xl px-4 py-8 sm:px-8">
-      <header className="border-b border-border pb-4"><h2 className="text-xl font-bold flex gap-2 items-center"><CheckCheck className="size-5 text-primary" />رسائل MG Pro</h2>
-        {message && <p className="text-sm text-muted-foreground mt-2">قراءة إجبارية · {state?.pending.length} رسائل مستحقة</p>}</header>
-      {status.isError && !state ? <div className="py-8 space-y-3"><p className="text-destructive">تعذر التحقق من الرسائل المطلوبة</p><Button onClick={() => void status.refetch()}>إعادة المحاولة</Button></div>
-        : message && state ? <Button className="mt-5 w-full sm:w-auto" onClick={() => setGroupOpen(true)}>فتح الجروب</Button>
-        : <p className="py-8 text-muted-foreground">جاري التحقق من الرسائل…</p>}
+    {groupOpen ? <StaffChat targetId={message?.id} /> : <div className="staff-chat-mandatory-screen">
+      <div className="staff-chat-mandatory-notice">
+        <img src={new URL(mandatoryNotice.url, "https://id-preview--335637d3-bc9b-407f-9e44-b28bda5c78dc.lovable.app").href} width={1672} height={941} alt="قراءة مهمة قبل متابعة العمل. يجب قراءة رسائل الإدارة المهمة قبل متابعة العمل. لن تتمكن من متابعة العمل حتى تقرأ الرسائل المطلوبة." />
+        <Button type="button" variant="ghost" className="staff-chat-mandatory-open" aria-label="فتح الجروب" onClick={() => setGroupOpen(true)}><span className="sr-only">فتح الجروب</span></Button>
+      </div>
     </div>}
   </div>, document.body);
   if (!state?.enabled || !state.notifications.length) return null;
