@@ -23,9 +23,9 @@ export function StaffChat({ targetId }: { targetId?: string }) {
   const qc = useQueryClient();
   const stateFn = useServerFn(getChatState); const readFn = useServerFn(getChatMessages);
   const mutate = useServerFn(mutateChat); const uploadFn = useServerFn(uploadChatFile);
-  const stateQ = useQuery({ queryKey: ["staff-chat-state"], queryFn: () => stateFn(), refetchInterval: livePoll(5000), retry: 3, retryDelay: chatRetryDelay });
+  const stateQ = useQuery({ queryKey: ["staff-chat-state"], queryFn: () => stateFn(), refetchOnMount: "always", refetchInterval: livePoll(5000), retry: 3, retryDelay: chatRetryDelay });
   const [before, setBefore] = useState<{ date: string; id: string }>();
-  const messages = useQuery({ queryKey: ["staff-chat-messages", before], queryFn: () => readFn({ data: { before: before?.date, beforeId: before?.id } }), enabled: stateQ.data?.enabled !== false, staleTime: 0, refetchInterval: livePoll(2000), retry: 3, retryDelay: chatRetryDelay });
+  const messages = useQuery({ queryKey: ["staff-chat-messages", before], queryFn: () => readFn({ data: { before: before?.date, beforeId: before?.id } }), enabled: stateQ.data?.enabled !== false, staleTime: 0, refetchOnMount: "always", refetchInterval: livePoll(2000), retry: 3, retryDelay: chatRetryDelay });
   const messagesPhase = chatReadPhase(messages.data, messages.isError);
   const [text, setText] = useState(""); const [files, setFiles] = useState<ChatAttachment[]>([]);
   const [mediaSelection, setMediaSelection] = useState<File[]>([]);
