@@ -1,5 +1,47 @@
 import { describe, expect, it } from "vitest";
-import { isNewIncomingChat } from "./chat-sound";
+import { CHAT_TONE, isNewIncomingChat, playChatTone } from "./chat-sound";
+
+function fakeContext() {
+  const notes: { frequency: number; start: number; stop: number }[] = [];
+  const context = {
+    currentTime: 10,
+    destination: {},
+    createOscillator: () => {
+      const note = { frequency: 0, start: 0, stop: 0 };
+      notes.push(note);
+      const oscillator = {
+        type: "",
+        frequency: { value: 0 },
+        connect: () => {},
+        start: (at: number) => { note.frequency = oscillator.frequency.value; note.start = at; },
+        stop: (at: number) => { note.stop = at; },
+      };
+      return oscillator;
+    },
+    createGain: () => ({
+      gain: { setValueAtTime: () => {}, exponentialRampToValueAtTime: () => {} },
+      connect: () => {},
+    }),
+  };
+  return { context, notes };
+}
+
+describe("chat chime", () => {
+  it("is a multi-note chime, not the single mail beep", () => {
+    expect(CHAT_TONE.length).toBeGreaterThan(1);
+    expect(new Set(CHAT_TONE.map((note) => note.frequency)).size).toBe(CHAT_TONE.length);
+  });
+  it("plays every note of the chime, ascending and staggered", () => {
+    const { context, notes } = fakeContext();
+    playChatTone(context);
+    expect(notes.length).toBe(CHAT_TONE.length);
+    expect(notes.map((note) => note.start)).toEqual([10, 10.15]);
+    expect(notes[0].stop - notes[0].start).toBeCloseTo(0.22, 6);
+    expect(notes[1].stop - notes[1].start).toBeCloseTo(0.42, 6);
+    expect(notes[1].frequency).toBeGreaterThan(notes[0].frequency);
+  });
+});
+
 
 describe("incoming chat sound cursor", () => {
   const first = { id: "a", created_at: "2026-11-16T23:00:00Z" };
