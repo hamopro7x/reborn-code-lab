@@ -1,8 +1,9 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Send, Paperclip, Mic, Pause, Play, Trash2, X, BarChart3, AtSign, Loader2, Users, FileText, Images, Headphones } from "lucide-react";
+import { Send, Paperclip, Mic, Pause, Play, Trash2, X, BarChart3, AtSign, Loader2, FileText, Images, Headphones } from "lucide-react";
 import chatWallpaper from "@/assets/staff-chat-original-wallpaper.png.asset.json";
+import headerMark from "@/assets/mg-metallic-logo-3d.png";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -222,7 +223,7 @@ export function StaffChat({ targetId }: { targetId?: string }) {
     }} />}
     <img src={new URL(chatWallpaper.url, "https://id-preview--335637d3-bc9b-407f-9e44-b28bda5c78dc.lovable.app").href} alt="" aria-hidden="true" className="staff-chat-wallpaper" />
     <header className="staff-chat-header flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-      <div className="flex items-center gap-3 min-w-0"><span className="staff-chat-avatar flex size-10 shrink-0 items-center justify-center rounded-full"><Users className="size-5" /></span><div><h2 className="font-bold text-base">جروب MG Pro</h2><p className="text-xs text-muted-foreground mt-1">{state.members.length} أعضاء · {state.open ? "مفتوح" : "الأدمن فقط يقدر يرسل"}</p></div></div>
+      <div className="flex items-center gap-3 min-w-0"><span className="staff-chat-avatar flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full"><img src={headerMark} alt="" aria-hidden="true" className="staff-chat-avatar-logo" /></span><div><h2 className="font-bold text-base">جروب MG Pro</h2><p className="text-xs text-muted-foreground mt-1">{state.open ? "مفتوح" : "الأدمن فقط يقدر يرسل"}</p></div></div>
       {state.owner && <label className="flex gap-2 items-center text-sm"><span>مفتوح للإرسال</span><Switch checked={state.open} onCheckedChange={(open) => void act("state", { open }).catch(() => {})} /></label>}
     </header>
     <div className="staff-chat-transcript-wrap relative min-h-0 flex-1">

@@ -817,7 +817,8 @@
 .staff-chat-header { background: var(--chat-header); }
 .staff-chat-composer { background: transparent; }
 .staff-chat-header, .staff-chat-transcript, .staff-chat-composer { position: relative; z-index: 1; }
-.staff-chat-avatar { background: var(--chat-outgoing); color: var(--chat-sender); }
+.staff-chat-avatar { background: oklch(0 0 0); color: var(--chat-sender); }
+.staff-chat-avatar-logo { width: 100%; height: 100%; object-fit: contain; padding: 4px; }
 .staff-chat-wallpaper {
   position: absolute;
   inset: 0;
