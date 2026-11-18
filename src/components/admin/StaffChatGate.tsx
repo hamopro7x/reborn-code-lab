@@ -38,8 +38,9 @@ export function StaffChatGate() {
     if (!signedIn) return;
     let refreshTimer: ReturnType<typeof setTimeout> | undefined;
     // Dedicated instant channel: any chat change refreshes the group immediately instead of waiting for polling.
-    const channel = supabase.channel(`staff-chat-live-${Math.random().toString(36).slice(2)}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "staff_chat_events" }, () => {
+    let channel: ReturnType<typeof supabase.channel> | undefined;
+    let stopped = false;
+    const onEvent = () => {
         if (refreshTimer !== undefined) return;
         refreshTimer = setTimeout(() => {
           refreshTimer = undefined;
@@ -47,10 +48,22 @@ export function StaffChatGate() {
           // A poll already in flight may predate this event; refresh once more after it settles.
           const inFlight = keys.some((queryKey) => qc.isFetching({ queryKey }) > 0);
           void refreshQueries(qc, keys).then(() => { if (inFlight) return refreshQueries(qc, keys); });
-        }, 150);
-      })
-      .subscribe();
-    return () => { if (refreshTimer !== undefined) clearTimeout(refreshTimer); void supabase.removeChannel(channel); };
+        }, 50);
+    };
+    // The live socket must carry the signed-in token, otherwise the staff-only events are filtered out
+    // and the group silently falls back to slow polling.
+    void supabase.auth.getSession().then(async ({ data }) => {
+      if (stopped) return;
+      if (data.session?.access_token) await supabase.realtime.setAuth(data.session.access_token);
+      if (stopped) return;
+      channel = supabase.channel(`staff-chat-live-${Math.random().toString(36).slice(2)}`)
+        .on("postgres_changes", { event: "*", schema: "public", table: "staff_chat_events" }, onEvent)
+        .subscribe();
+    });
+    const authSub = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "TOKEN_REFRESHED" && session?.access_token) void supabase.realtime.setAuth(session.access_token);
+    });
+    return () => { stopped = true; authSub.data.subscription.unsubscribe(); if (refreshTimer !== undefined) clearTimeout(refreshTimer); if (channel) void supabase.removeChannel(channel); };
   }, [signedIn, qc]);
   const sound = useRef<ReturnType<typeof createChatSound> | null>(null);
   const incoming = useRef<{ userId: string; cursor: IncomingChatCursor } | null>(null);
