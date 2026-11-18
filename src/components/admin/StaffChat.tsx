@@ -37,6 +37,19 @@ export function StaffChat({ targetId }: { targetId?: string }) {
   const [mentionsOpen, setMentionsOpen] = useState(false);
   const [mandatoryOpen, setMandatoryOpen] = useState(false);
   const [mandatoryMentions, setMandatoryMentions] = useState<string[]>([]);
+  const [namesOffset, setNamesOffset] = useState(0);
+  const [namesMaxHeight, setNamesMaxHeight] = useState(420);
+  const attachmentMenuRef = useRef<HTMLDivElement>(null);
+  const mentionTriggerRef = useRef<HTMLDivElement>(null);
+  const mandatoryTriggerRef = useRef<HTMLDivElement>(null);
+  // keeps the names card level with the attachments card: same bottom line, never above the screen
+  const alignNamesCard = (trigger: HTMLElement | null) => {
+    const menu = attachmentMenuRef.current;
+    if (!trigger || !menu) return;
+    const menuBottom = menu.getBoundingClientRect().bottom;
+    setNamesOffset(Math.round(trigger.getBoundingClientRect().bottom - menuBottom));
+    setNamesMaxHeight(Math.max(160, Math.min(420, Math.round(menuBottom - 12))));
+  };
   const [question, setQuestion] = useState(""); const [options, setOptions] = useState(["", ""]); const [multiple, setMultiple] = useState(false);
   const [busy, setBusy] = useState(false); const [recording, setRecording] = useState(false); const [paused, setPaused] = useState(false); const [seconds, setSeconds] = useState(0); const discard = useRef(false);
   const fileInput = useRef<HTMLInputElement>(null); const recorder = useRef<MediaRecorder | null>(null); const stream = useRef<MediaStream | null>(null);
@@ -241,24 +254,24 @@ export function StaffChat({ targetId }: { targetId?: string }) {
           <input ref={fileInput} type="file" multiple className="hidden" aria-label="رفع مرفقات" onChange={(e) => void upload(Array.from(e.target.files ?? []))} />
           <DropdownMenu dir="rtl" open={attachmentMenuOpen} onOpenChange={(open) => { setAttachmentMenuOpen(open); if (!open) { setMentionsOpen(false); setMandatoryOpen(false); } }}>
             <DropdownMenuTrigger asChild><Button size="icon" variant="ghost" className="shrink-0 rounded-full" title="المرفقات" aria-label="إرفاق ملف" disabled={busy || recording}><Paperclip className="size-5" /></Button></DropdownMenuTrigger>
-            <DropdownMenuContent side="top" align="start" sideOffset={10} collisionPadding={12} className="staff-chat-attachment-menu w-56 max-w-[calc(100vw-24px)] p-1.5" aria-label="المرفقات">
+            <DropdownMenuContent ref={attachmentMenuRef} side="top" align="start" sideOffset={10} collisionPadding={12} className="staff-chat-attachment-menu w-56 max-w-[calc(100vw-24px)] p-1.5" aria-label="المرفقات">
               <DropdownMenuItem className="staff-chat-attachment-item" onSelect={() => chooseFile("")}><FileText className="staff-chat-document-icon" /><span>مستند</span></DropdownMenuItem>
               <DropdownMenuItem className="staff-chat-attachment-item" onSelect={() => mediaInput.current?.click()}><Images className="staff-chat-media-icon" /><span>الصور ومقاطع الفيديو</span></DropdownMenuItem>
               <DropdownMenuItem className="staff-chat-attachment-item" onSelect={() => chooseFile("audio/webm,audio/mpeg,audio/wav,audio/x-wav,audio/ogg,audio/mp4,audio/x-m4a")}><Headphones className="staff-chat-audio-icon" /><span>مقطع صوتي</span></DropdownMenuItem>
               <DropdownMenuItem className="staff-chat-attachment-item" onSelect={() => setPollOpen(!pollOpen)}><BarChart3 className="staff-chat-poll-icon" /><span>استطلاع رأي</span></DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuSub open={mentionsOpen} onOpenChange={(open) => { setMentionsOpen(open); if (open) setMandatoryOpen(false); }}>
-                <DropdownMenuSubTrigger className="staff-chat-attachment-item"><AtSign className="staff-chat-media-icon" /><span>منشن {everyone ? "الجميع" : mentions.length || ""}</span></DropdownMenuSubTrigger>
-                <DropdownMenuSubContent sideOffset={8} collisionPadding={12} className="staff-chat-attachment-menu staff-chat-names-menu w-56 max-w-[calc(100vw-24px)] p-1.5" aria-label="اختيار المنشن">
+              <DropdownMenuSub open={mentionsOpen} onOpenChange={(open) => { setMentionsOpen(open); if (open) { setMandatoryOpen(false); alignNamesCard(mentionTriggerRef.current); } }}>
+                <DropdownMenuSubTrigger ref={mentionTriggerRef} className="staff-chat-attachment-item"><AtSign className="staff-chat-media-icon" /><span>منشن {everyone ? "الجميع" : mentions.length || ""}</span></DropdownMenuSubTrigger>
+                <DropdownMenuSubContent sideOffset={8} align="end" alignOffset={namesOffset} collisionPadding={12} style={{ maxHeight: namesMaxHeight }} className="staff-chat-attachment-menu staff-chat-names-menu w-56 max-w-[calc(100vw-24px)] p-1.5" aria-label="اختيار المنشن">
                   {state.role === "admin" && <DropdownMenuCheckboxItem className="min-h-10" checked={everyone} onCheckedChange={setEveryone} onSelect={(event) => event.preventDefault()}>الجميع</DropdownMenuCheckboxItem>}
                   {state.members.filter((m) => m.role === "employee").map((member) => <DropdownMenuCheckboxItem className="min-h-10" key={member.id} checked={mentions.includes(member.id)} disabled={everyone} onSelect={(event) => event.preventDefault()} onCheckedChange={(checked) => setMentions((old) => checked ? [...old, member.id] : old.filter((id) => id !== member.id))}>@{member.name}</DropdownMenuCheckboxItem>)}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem className="staff-chat-attachment-item justify-center" onSelect={() => { setMentionsOpen(false); setAttachmentMenuOpen(false); }}>تم</DropdownMenuItem>
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
-              {state.role === "admin" && <DropdownMenuSub open={mandatoryOpen} onOpenChange={(open) => { setMandatoryOpen(open); if (open) setMentionsOpen(false); }}>
-                <DropdownMenuSubTrigger className="staff-chat-attachment-item" disabled={!state.targetedMandatory} onClick={() => setMandatory(true)}><span>قراءة إجبارية</span></DropdownMenuSubTrigger>
-                <DropdownMenuSubContent sideOffset={8} collisionPadding={12} className="staff-chat-attachment-menu staff-chat-names-menu w-56 max-w-[calc(100vw-24px)] p-1.5" aria-label="اختيار الموظفين للقراءة الإجبارية">
+              {state.role === "admin" && <DropdownMenuSub open={mandatoryOpen} onOpenChange={(open) => { setMandatoryOpen(open); if (open) { setMentionsOpen(false); alignNamesCard(mandatoryTriggerRef.current); } }}>
+                <DropdownMenuSubTrigger ref={mandatoryTriggerRef} className="staff-chat-attachment-item" disabled={!state.targetedMandatory} onClick={() => setMandatory(true)}><span>قراءة إجبارية</span></DropdownMenuSubTrigger>
+                <DropdownMenuSubContent sideOffset={8} align="end" alignOffset={namesOffset} collisionPadding={12} style={{ maxHeight: namesMaxHeight }} className="staff-chat-attachment-menu staff-chat-names-menu w-56 max-w-[calc(100vw-24px)] p-1.5" aria-label="اختيار الموظفين للقراءة الإجبارية">
                   <DropdownMenuCheckboxItem className="min-h-10" checked={mandatory} onCheckedChange={setMandatory} onSelect={(event) => event.preventDefault()}>تفعيل القراءة الإجبارية</DropdownMenuCheckboxItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuCheckboxItem className="min-h-10" checked={allChatEmployeeIds(state.members).length > 0 && allChatEmployeeIds(state.members).every((id) => mandatoryMentions.includes(id))} disabled={!mandatory} onSelect={(event) => event.preventDefault()} onCheckedChange={(checked) => setMandatoryMentions(checked ? allChatEmployeeIds(state.members) : [])}>الكل</DropdownMenuCheckboxItem>
