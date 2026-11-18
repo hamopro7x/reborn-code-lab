@@ -574,9 +574,17 @@ export async function myShiftsForLink(userId: string, hiddenOnly = false) {
     .filter((l) => l.source === "legacy-assignment" && l.shift_id)
     .map((l) => l.shift_id));
   const shifts: { id: string; userId: string; startedAt: number; endedAt: number | null }[] = [];
+  // Archived shifts are hidden from the admin history, so the picker must hide them too.
+  let archiveColumn = true;
   for (let from = 0; ; from += 500) {
-    const { data, error } = await db.from("work_shifts").select("id,user_id,started_at,ended_at,ended_reason")
-      .eq("user_id", userId).order("started_at", { ascending: false }).order("id").range(from, from + 499);
+    const page = () => {
+      let q = db.from("work_shifts").select(archiveColumn ? "id,user_id,started_at,ended_at,ended_reason,archived_at" : "id,user_id,started_at,ended_at,ended_reason")
+        .eq("user_id", userId);
+      if (archiveColumn) q = q.is("archived_at", null);
+      return q.order("started_at", { ascending: false }).order("id").range(from, from + 499);
+    };
+    let { data, error } = await page() as { data: any[] | null; error: any };
+    if (error?.code === "42703" && archiveColumn) { archiveColumn = false; ({ data, error } = await page() as { data: any[] | null; error: any }); }
     if (error) throw new Error("تعذر تحميل الشفتات. حاول مرة أخرى.");
     for (const s of data ?? []) {
       const id = String(s.id);

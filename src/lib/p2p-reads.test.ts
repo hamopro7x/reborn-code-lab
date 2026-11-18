@@ -7,6 +7,7 @@ const shifts = [
   { id: "open", user_id: "employee", started_at: "2026-11-13T10:00Z", ended_at: null },
   { id: "foreign", user_id: "other", started_at: "2026-11-11T10:00Z", ended_at: null },
   { id: "new-linked", user_id: "employee", started_at: "2026-11-13T12:00Z", ended_at: "2026-11-13T13:00Z" },
+  { id: "archived", user_id: "employee", started_at: "2026-11-13T14:00Z", ended_at: "2026-11-13T15:00Z", archived_at: "2026-11-14T10:00Z" },
 ];
 const links = [
   { id: "link-1", ledger_id: "order", shift_id: "old", user_id: "employee", started_at: shifts[0].started_at, source: "legacy-assignment" },
@@ -31,6 +32,7 @@ vi.mock("@/integrations/supabase/client.server", () => ({ supabaseAdmin: createC
     for (const field of ["user_id","shift_id"]) {
       const filter=url.searchParams.get(field); if(filter?.startsWith("eq.")) data=data.filter(row=>row[field]===filter.slice(3));
     }
+    if (url.searchParams.get("archived_at")==="is.null") data=data.filter(row=>!row.archived_at);
     for (const field of ["id","ledger_id"]) {
       const filter=url.searchParams.get(field);
       if(filter?.startsWith("in.(")) {
@@ -63,6 +65,11 @@ describe("P2P application reads",()=>{
     expect((await myShiftsForLink("employee")).shifts.map(s=>s.id)).toEqual(["new-linked"]);
     expect((await myShiftsForLink("employee",true)).shifts.map(s=>s.id)).toEqual(["old","open"]);
     expect((await myShiftsForLink("other")).shifts.map(s=>s.id)).toEqual(["foreign"]);
+  });
+  it("picker hides archived shifts exactly like the admin shift history",async()=>{
+    const picker=(await myShiftsForLink("employee")).shifts.map(s=>s.id);
+    expect(picker).not.toContain("archived");
+    expect((await shiftHistory("employee")).map(s=>s.id)).not.toContain("archived");
   });
   it("employee can explicitly restore a historically excluded shift",async()=>{
     state.restored=true;
