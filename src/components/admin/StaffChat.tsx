@@ -43,6 +43,7 @@ export function StaffChat({ targetId }: { targetId?: string }) {
   const initialScroll = useRef(false);
   const active = useRef(true);
   const sendOnStop = useRef(false);
+  const [pendingTexts, setPendingTexts] = useState<{ id: string; body: string }[]>([]);
   const [pendingVoices, setPendingVoices] = useState<{ id: string; url: string }[]>([]);
   const recordingSend = useRef<(file: File) => Promise<void>>(async () => {});
   const chooseFile = (accept: string) => {
@@ -164,11 +165,14 @@ export function StaffChat({ targetId }: { targetId?: string }) {
   };
   const send = async (attachments = files, body = text) => {
     if (mandatory && !mandatoryMentions.length) { toast.error("اختار الموظفين المطلوب منهم القراءة الإجبارية"); return false; }
+    const optimistic = body.trim() && !pollOpen ? { id: `text-${Date.now()}`, body } : null;
+    if (optimistic) { setPendingTexts((old) => [...old, optimistic]); setText(""); requestAnimationFrame(() => end.current?.scrollIntoView({ block: "nearest" })); }
     setBusy(true); try {
       await act("send", { body, mentions, everyone, mandatory, mandatoryMentions: mandatory ? mandatoryMentions : [], attachments: attachments.map((f) => f.id), poll: pollOpen ? { question, options, multiple } : null });
       setText(""); setFiles([]); setMentions([]); setEveryone(false); setMandatory(false); setMandatoryMentions([]); setPollOpen(false); setQuestion(""); setOptions(["", ""]); setBefore(undefined);
       return true;
-    } catch { return false; /* error already shown; preserve draft */ } finally { setBusy(false); }
+    } catch { if (optimistic) setText((current) => current || body); return false; /* error already shown; preserve draft */ }
+    finally { setBusy(false); if (optimistic) setPendingTexts((old) => old.filter((item) => item.id !== optimistic.id)); }
   };
   recordingSend.current = async (file) => {
     const pendingId = `voice-${Date.now()}`; const url = URL.createObjectURL(file);
@@ -215,6 +219,7 @@ export function StaffChat({ targetId }: { targetId?: string }) {
         {message.id === unread[0]?.id && <div className="staff-chat-unread" role="status"><span>{unread.length === 1 ? "رسالة واحدة غير مقروءة" : `${unread.length} رسائل غير مقروءة`}</span></div>}
         <StaffChatMessage message={message} state={state} act={act} />
       </Fragment>)}
+      {pendingTexts.map((item) => <div key={item.id} className="flex justify-end py-1" role="status"><div className="staff-chat-bubble staff-chat-outgoing min-w-0 opacity-80"><p className="whitespace-pre-wrap break-words">{item.body}</p><span className="staff-chat-message-meta flex items-center gap-1 text-xs"><Loader2 className="size-3 animate-spin" />جاري الإرسال…</span></div></div>)}
       {pendingVoices.map((voice) => <div key={voice.id} className="flex justify-end py-1" role="status"><div className="staff-chat-bubble staff-chat-outgoing min-w-0 opacity-80"><StaffChatVoice src={voice.url} sender="أنا" seed={voice.id} /><span className="staff-chat-message-meta flex items-center gap-1 text-xs"><Loader2 className="size-3 animate-spin" />جاري الإرسال…</span></div></div>)}
       <div ref={end} className="h-px shrink-0" />
       </div>
