@@ -15,14 +15,15 @@ const mediaTypes: Record<string, string[]> = {
 
 export function validateChatFile(name: string, mime: string, bytes: Uint8Array) {
   const ext = name.split(".").pop()?.toLowerCase() ?? "";
-  if (!mediaTypes[ext]?.includes(mime) || bytes.length === 0 || bytes.length > CHAT_MAX_BYTES) {
-    throw new Error("نوع الملف غير مسموح أو حجمه أكبر من 25 ميجابايت");
+  if (bytes.length === 0 || bytes.length > CHAT_MAX_BYTES) {
+    throw new Error("الملف فارغ أو حجمه أكبر من 25 ميجابايت");
+  }
+  // Unrecognized formats stay inert binary downloads, never inline previews.
+  if (!mediaTypes[ext]?.includes(mime)) {
+    return { extension: ext, inline: false, mime: "application/octet-stream" };
   }
   const starts = (...values: number[]) => values.every((v, i) => bytes[i] === v);
   const ascii = new TextDecoder().decode(bytes.subarray(0, 512));
-  if (starts(0x4d, 0x5a) || starts(0x7f, 0x45, 0x4c, 0x46) || /^\s*(#!|<\?php|<!doctype\s+html|<html|<script|<svg)/i.test(ascii)) {
-    throw new Error("ملف قابل للتنفيذ أو محتوى غير آمن");
-  }
   const signatures: Record<string, boolean> = {
     jpg: starts(0xff, 0xd8, 0xff), jpeg: starts(0xff, 0xd8, 0xff), png: starts(137, 80, 78, 71, 13, 10, 26, 10),
     gif: ascii.startsWith("GIF87a") || ascii.startsWith("GIF89a"),
@@ -38,7 +39,7 @@ export function validateChatFile(name: string, mime: string, bytes: Uint8Array) 
     throw new Error("محتوى الملف لا يطابق نوعه");
   }
   // Documents and archives are download-only. They are never rendered as HTML or executed.
-  return { extension: ext, inline: /^(image|audio|video)\//.test(mime) };
+  return { extension: ext, inline: /^(image|audio|video)\//.test(mime), mime };
 }
 
 export function canEditChatMessage(sender: string, viewer: string, createdAt: string, now: number) {

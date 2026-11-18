@@ -66,9 +66,9 @@ export async function chatRead(db: any, userId: string, before?: string, id?: st
 export async function chatUpload(db: any, userId: string, file: File) {
   if (!await chatRole(db, userId)) throw new Error("غير مصرح");
   if (file.size > 25 * 1024 * 1024) throw new Error("الحد الأقصى للمرفق 25 ميجابايت");
-  const mime = file.type.split(";")[0] ?? "";
+  const declaredMime = file.type.split(";")[0] ?? "";
   const bytes = new Uint8Array(await file.arrayBuffer());
-  validateChatFile(file.name, mime, bytes);
+  const { mime } = validateChatFile(file.name, declaredMime, bytes);
   const reservation = await chatRpc(db, "staff_chat_mutate", {
     p_action: "reserve", p_data: { name: file.name, mime, size: bytes.length },
   });

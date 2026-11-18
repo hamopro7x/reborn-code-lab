@@ -28,7 +28,7 @@ BEGIN
     IF jsonb_typeof(p_data->'size') IS DISTINCT FROM 'number' OR jsonb_typeof(p_data->'name') IS DISTINCT FROM 'string'
       OR jsonb_typeof(p_data->'mime') IS DISTINCT FROM 'string'
       OR (p_data->>'size')::integer NOT BETWEEN 1 AND 26214400 OR length(p_data->>'name') NOT BETWEEN 1 AND 240
-      OR (p_data->>'mime') NOT IN ('image/jpeg','image/png','image/gif','image/webp','video/mp4','video/webm','video/quicktime',
+      OR (p_data->>'mime') NOT IN ('application/octet-stream','image/jpeg','image/png','image/gif','image/webp','video/mp4','video/webm','video/quicktime',
       'audio/webm','audio/mpeg','audio/wav','audio/x-wav','audio/ogg','audio/mp4','audio/x-m4a','application/pdf','text/plain','text/csv',
       'application/zip','application/x-zip-compressed','application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/vnd.openxmlformats-officedocument.presentationml.presentation')

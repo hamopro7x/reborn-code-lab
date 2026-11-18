@@ -36,6 +36,7 @@ describe("review-only internal group SQL policy and atomic actions",()=>{
       INSERT INTO profiles VALUES('${owner}','Owner'),('${employee}','Employee'),('${other}','Other');`);
     await db.exec(readFileSync(new URL("../../supabase/manual/internal_group.sql",import.meta.url),"utf8"));
     await db.exec(readFileSync(new URL("../../supabase/manual/internal_group_targeted_read.sql",import.meta.url),"utf8"));
+    await db.exec(readFileSync(new URL("../../supabase/manual/internal_group_any_file.sql",import.meta.url),"utf8"));
     await db.query("INSERT INTO user_roles VALUES($1,'admin',now())",[admin]);
   });
   afterAll(async()=>{await db.close();});
@@ -155,16 +156,26 @@ describe("review-only internal group SQL policy and atomic actions",()=>{
   it("poll requires two distinct nonempty options",async()=>{
     for(const options of [["one"],["a","a"],["a",""]]) await expect(send(employee,{poll:{question:"Pick",options,multiple:false}})).rejects.toThrow();
   });
+  it("any-file upgrade updates the legacy MIME guard without losing targeted recipients",async()=>{
+    const row = (await db.query<{definition:string}>("SELECT pg_get_functiondef('public.staff_chat_mutate(text,jsonb)'::regprocedure) definition")).rows[0];
+    if (!row) throw new Error("missing mutation function");
+    await db.exec(row.definition.replace("'application/octet-stream',", ""));
+    await expect(mutate(employee,"reserve",{name:"backup.7z",mime:"application/octet-stream",size:100})).rejects.toThrow();
+    await db.exec(readFileSync(new URL("../../supabase/manual/internal_group_any_file.sql",import.meta.url),"utf8"));
+    expect((await mutate(employee,"reserve",{name:"backup.7z",mime:"application/octet-stream",size:100}))?.id).toBeTruthy();
+    const id = await send(owner,{mandatory:true,mandatoryMentions:[other]});
+    expect((await db.query("SELECT user_id FROM staff_chat_receipts WHERE message_id=$1",[id])).rows).toEqual([{user_id:other}]);
+  });
   it("unverified/foreign attachments cannot be sent and reservation enforces sizes/types",async()=>{
     await expect(mutate(employee,"reserve",{})).rejects.toThrow();
-    await expect(mutate(employee,"reserve",{name:"x.exe",mime:"application/octet-stream",size:100})).rejects.toThrow();
+    expect((await mutate(employee,"reserve",{name:"x.exe",mime:"application/octet-stream",size:100}))?.id).toBeTruthy();
     await expect(mutate(employee,"reserve",{name:"x.png",mime:"image/png",size:26214401})).rejects.toThrow();
     const reserved=await mutate(employee,"reserve",{name:"x.png",mime:"image/png",size:8});
     await expect(send(employee,{attachments:[reserved?.id]})).rejects.toThrow();
     await expect(as(employee,"SELECT staff_chat_upload_ready($1,$2)",[reserved?.id,employee])).rejects.toThrow("permission denied");
     await db.query("SELECT staff_chat_upload_ready($1,$2)",[reserved?.id,employee]);
     await expect(send(other,{attachments:[reserved?.id]})).rejects.toThrow();
-    const id=await send(employee,{attachments:[reserved?.id]}); expect((await db.query<{message_id:string}>("SELECT message_id FROM staff_chat_attachments")).rows[0]?.message_id).toBe(id);
+    const id=await send(employee,{attachments:[reserved?.id]}); expect((await db.query<{message_id:string}>("SELECT message_id FROM staff_chat_attachments WHERE id=$1",[reserved?.id])).rows[0]?.message_id).toBe(id);
     await expect(send(employee,{attachments:[reserved?.id]})).rejects.toThrow();
   });
   it("mandatory direct read guard hides work from employee but never changes shift or background assignment",async()=>{

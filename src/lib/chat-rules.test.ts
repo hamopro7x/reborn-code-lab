@@ -41,11 +41,11 @@ describe("chat attachment and edit rules", () => {
   it("validates actual media signatures not only filename", () => {
     expect(validateChatFile("a.png", "image/png", new Uint8Array([137,80,78,71,13,10,26,10])).inline).toBe(true);
     expect(() => validateChatFile("a.png", "image/png", new TextEncoder().encode("not a png"))).toThrow();
-    expect(() => validateChatFile("a.png", "text/plain", new Uint8Array([137,80,78,71]))).toThrow();
+    expect(validateChatFile("a.png", "text/plain", new Uint8Array([137,80,78,71])).inline).toBe(false);
   });
-  it("rejects executable, HTML, SVG and shell uploads", () => {
-    for (const [name,type,body] of [["a.exe","application/octet-stream","MZ"],["a.txt","text/plain","MZpayload"],["a.txt","text/plain","<script>alert(1)</script>"],["a.txt","text/plain","#!/bin/sh"],["a.svg","image/svg+xml","<svg />"]]) {
-      expect(() => validateChatFile(name ?? "",type ?? "",new TextEncoder().encode(body))).toThrow();
+  it("accepts any file format only as an inert download when not supported for preview", () => {
+    for (const [name, type, body] of [["a.exe", "application/octet-stream", "MZ"], ["a.html", "text/html", "<script>alert(1)</script>"], ["a.svg", "image/svg+xml", "<svg />"], ["a.ps1", "", "Write-Host hello"], ["backup.7z", "application/x-7z-compressed", "archive"], ["no-extension", "", "data"]]) {
+      expect(validateChatFile(name ?? "", type ?? "", new TextEncoder().encode(body))).toMatchObject({ inline: false, mime: "application/octet-stream" });
     }
   });
   it("enforces actual size limit and serves documents download-only", () => {
