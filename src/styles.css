@@ -815,6 +815,10 @@
   overflow: hidden;
 }
 .staff-chat-header { background: var(--chat-header); }
+.staff-chat-group-button { color: inherit; cursor: pointer; transition: background-color 150ms ease-out; }
+.staff-chat-group-button:hover { background: color-mix(in oklab, var(--foreground) 6%, transparent); }
+.staff-chat-group-button:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
+.staff-chat-settings { background: var(--background); color: var(--foreground); border-color: var(--border); }
 .staff-chat-composer { background: transparent; }
 .staff-chat-header, .staff-chat-transcript, .staff-chat-composer { position: relative; z-index: 1; }
 .staff-chat-avatar { background: oklch(0 0 0); color: var(--chat-sender); }

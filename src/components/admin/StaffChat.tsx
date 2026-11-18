@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuCheckboxItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { getChatState, getChatMessages, mutateChat, uploadChatFile } from "@/lib/chat.functions";
 import { livePoll } from "@/lib/live-poll";
@@ -222,9 +223,26 @@ export function StaffChat({ targetId }: { targetId?: string }) {
       return send([...files, ...attachments], caption);
     }} />}
     <img src={new URL(chatWallpaper.url, "https://id-preview--335637d3-bc9b-407f-9e44-b28bda5c78dc.lovable.app").href} alt="" aria-hidden="true" className="staff-chat-wallpaper" />
-    <header className="staff-chat-header flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-      <div className="flex items-center gap-3 min-w-0"><span className="staff-chat-avatar flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full"><img src={headerMark} alt="" aria-hidden="true" className="staff-chat-avatar-logo" /></span><div><h2 className="font-bold text-base">جروب MG Pro</h2><p className="text-xs text-muted-foreground mt-1">{state.open ? "مفتوح" : "الأدمن فقط يقدر يرسل"}</p></div></div>
-      {state.owner && <label className="flex gap-2 items-center text-sm"><span>مفتوح للإرسال</span><Switch checked={state.open} onCheckedChange={(open) => void act("state", { open }).catch(() => {})} /></label>}
+    <header className="staff-chat-header px-2 py-2">
+      <Dialog>
+        <DialogTrigger asChild>
+          <button type="button" className="staff-chat-group-button flex w-full items-center gap-3 rounded-md px-2 py-1 text-right" aria-label="فتح إعدادات الجروب">
+            <span className="staff-chat-avatar flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full"><img src={headerMark} alt="" aria-hidden="true" className="staff-chat-avatar-logo" /></span>
+            <span className="min-w-0"><span className="block font-bold text-base">جروب MG Pro</span><span className="block text-xs text-muted-foreground mt-1">{state.open ? "مفتوح" : "الأدمن فقط يقدر يرسل"}</span></span>
+          </button>
+        </DialogTrigger>
+        <DialogContent dir="rtl" className="staff-chat-settings max-w-[calc(100vw-32px)] sm:max-w-md">
+          <DialogHeader className="text-right sm:text-right">
+            <DialogTitle>إعدادات الجروب</DialogTitle>
+            <DialogDescription>جروب MG Pro</DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center gap-3 py-2">
+            <span className="staff-chat-avatar flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-full"><img src={headerMark} alt="" aria-hidden="true" className="staff-chat-avatar-logo" /></span>
+            <div><p className="font-bold">جروب MG Pro</p><p className="text-sm text-muted-foreground mt-1">{state.open ? "مفتوح" : "الأدمن فقط يقدر يرسل"}</p></div>
+          </div>
+          {state.owner && <label className="flex items-center justify-between gap-4 border-t pt-4 text-sm"><span>مفتوح للإرسال</span><Switch checked={state.open} onCheckedChange={(open) => void act("state", { open }).catch(() => {})} /></label>}
+        </DialogContent>
+      </Dialog>
     </header>
     <div className="staff-chat-transcript-wrap relative min-h-0 flex-1">
       <div className="staff-chat-transcript relative h-full min-h-0 overflow-y-auto px-4 py-5">
