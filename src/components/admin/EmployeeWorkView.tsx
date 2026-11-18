@@ -90,7 +90,8 @@ const TOP_TABS: { key: ShiftSection; label: string; icon: typeof ListOrdered }[]
   { key: "all", label: "المعاملات", icon: ListOrdered },
   { key: "employee", label: "الخاص بالموظف", icon: User },
   { key: "wrong", label: "المعاملات الغلط", icon: AlertTriangle },
-  { key: "transfers", label: "الاستلام من والتحويل الي", icon: ArrowLeftRight },
+  { key: "receive", label: "الاستلام من", icon: ArrowDownUp },
+  { key: "transfer", label: "التحويل الي", icon: ArrowLeftRight },
   { key: "p2p", label: "طلبات p2p", icon: Users },
   { key: "ext", label: "الإيداع والسحب الخارجي", icon: ArrowDownUp },
   { key: "int", label: "الإيداع والسحب الداخلي", icon: ArrowLeftRight },
@@ -1414,7 +1415,8 @@ export function EmployeeWorkView({
     switch (tab) {
       case "wrong":
         return allRows.filter((r) => /fail|reject|decline|cancel/i.test(String(r.status)));
-      case "transfers":
+      case "receive":
+      case "transfer":
         return allRows.filter((r) => /transfer|deposit|withdraw/i.test(String(r.kind)));
       case "p2p":
         return allRows.filter((r) => /p2p/i.test(String(r.kind)));
@@ -1743,16 +1745,18 @@ export function EmployeeWorkView({
             { card: "wrong", title: "المعاملات الغلط" },
           ]}
         />
-      ) : tab === "transfers" ? (
+      ) : tab === "receive" || tab === "transfer" ? (
         <ManualSection
           isAdmin={isAdmin}
           {...(viewUserId ? { viewUserId } : {})}
           {...(viewShiftId ? { viewShiftId } : {})}
           blank={blank}
-          cards={[
-            { card: "receive", title: "الاستلام من" },
-            { card: "transfer", title: "التحويل الي" },
-          ]}
+          key={tab}
+          cards={
+            tab === "receive"
+              ? [{ card: "receive", title: "الاستلام من" }]
+              : [{ card: "transfer", title: "التحويل الي" }]
+          }
         />
       ) : tab === "ext" ? (
         <TransfersTable

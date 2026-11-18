@@ -11,10 +11,10 @@ const input = {
 };
 describe("unreviewed shift section notifications", () => {
   it("counts employee writing in its own section, including saved zero, but not empty or provider-only rows", () => {
-    expect(shiftSectionNotifications(input)).toEqual({ all: 3, employee: 1, wrong: 1, transfers: 2, ext: 1, int: 0, p2p: 0 });
+    expect(shiftSectionNotifications(input)).toEqual({ all: 3, employee: 1, wrong: 1, receive: 1, transfer: 1, ext: 1, int: 0, p2p: 0 });
   });
   it("clears every section only when the shift is marked reviewed", () => {
-    expect(Object.values(shiftSectionNotifications({ ...input, reviewed: true }))).toEqual([0, 0, 0, 0, 0, 0, 0]);
+    expect(Object.values(shiftSectionNotifications({ ...input, reviewed: true }))).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
   });
   it("does not show review notifications to employees or before selecting a shift", () => {
     expect(Object.values(shiftSectionNotifications({ ...input, isAdmin: false })).every((n) => n === 0)).toBe(true);
