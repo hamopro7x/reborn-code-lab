@@ -2,8 +2,9 @@ import { formatLocaleDateTime, formatTime } from "@/lib/format";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { Check, CheckCheck, ChevronDown, Copy, Pencil, Trash2, Download, Loader2 } from "lucide-react";
+import { Check, CheckCheck, ChevronDown, Copy, Pencil, Trash2, Download, Loader2, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { StaffChatVoice } from "@/components/admin/StaffChatVoice";
@@ -85,11 +86,32 @@ export function StaffChatMessage({ message, state, act, forced = false }: {
             <DropdownMenuItem onSelect={() => void navigator.clipboard.writeText(message.body)}><Copy />نسخ</DropdownMenuItem>
             {canEditChatMessage(message.sender_id, state.userId, message.created_at, Date.now()) && <DropdownMenuItem onSelect={() => { setBody(message.body); setEditing(true); }}><Pencil />تعديل الرسالة</DropdownMenuItem>}
             {state.owner && <><DropdownMenuItem onSelect={() => void run("hide", { id: message.id })}><Trash2 />حذف لديّ</DropdownMenuItem><DropdownMenuItem className="text-destructive" onSelect={() => { if (window.confirm("حذف الرسالة لدى الجميع؟")) void run("delete", { id: message.id }); }}><Trash2 />حذف لدى الجميع</DropdownMenuItem></>}
-            {state.role === "admin" && message.mandatory && <DropdownMenuItem onSelect={() => setShowReceipts(!showReceipts)}><CheckCheck />تأكيدات القراءة</DropdownMenuItem>}
+            {state.role === "admin" && message.mandatory && <DropdownMenuItem onSelect={() => setShowReceipts(true)}><Info />معلومات الرسالة</DropdownMenuItem>}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>}
-      {showReceipts && <div className="mt-2 text-xs space-y-2">{receipts.isLoading ? "جاري التحميل…" : receipts.isError ? "تعذر تحميل التأكيدات" : (receipts.data ?? []).map((receipt) => <p key={receipt.user_id}>{state.members.find((m) => m.id === receipt.user_id)?.name ?? "موظف"}: {receipt.read_at ? `تمت القراءة · ${formatLocaleDateTime(receipt.read_at, "ar-EG")}` : "لم يؤكد القراءة"}</p>)}</div>}
+      <Dialog open={showReceipts} onOpenChange={setShowReceipts}>
+        <DialogContent dir="rtl" className="admin-theme max-h-[85dvh] w-[calc(100%-32px)] overflow-y-auto rounded-lg">
+          <DialogTitle className="px-6 text-start">معلومات الرسالة</DialogTitle>
+          <DialogDescription className="sr-only">تأكيدات قراءة الرسالة وأوقاتها</DialogDescription>
+          <div className="border-b pb-3 text-sm text-muted-foreground whitespace-pre-wrap break-words max-h-28 overflow-y-auto">{message.body.trim() || "رسالة مرفقة"}</div>
+          {receipts.isLoading ? <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" />جاري التحميل…</div>
+            : receipts.isError ? <div className="space-y-3"><p className="text-sm text-destructive">تعذر تحميل معلومات الرسالة</p><Button variant="outline" size="sm" onClick={() => void receipts.refetch()}>إعادة المحاولة</Button></div>
+            : <div className="space-y-5">
+              <section>
+                <h3 className="flex items-center gap-2 text-sm font-semibold"><CheckCheck className="size-4 text-primary" />قُرئت بواسطة</h3>
+                {(receipts.data ?? []).some((receipt) => receipt.read_at) ? (receipts.data ?? []).filter((receipt) => receipt.read_at).map((receipt) => <div key={receipt.user_id} className="flex items-center gap-3 border-b py-3">
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold">{(state.members.find((member) => member.id === receipt.user_id)?.name ?? "موظف").slice(0, 1)}</span>
+                  <div className="min-w-0"><p className="break-words text-sm font-medium">{state.members.find((member) => member.id === receipt.user_id)?.name ?? "موظف"}</p><p className="mt-1 text-xs text-muted-foreground">{receipt.read_at && formatLocaleDateTime(receipt.read_at, "ar-EG")}</p></div>
+                </div>) : <p className="mt-3 text-sm text-muted-foreground">محدش أكّد القراءة لسه</p>}
+              </section>
+              {(receipts.data ?? []).some((receipt) => !receipt.read_at) && <section>
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground"><CheckCheck className="size-4" />لم يؤكد القراءة</h3>
+                {(receipts.data ?? []).filter((receipt) => !receipt.read_at).map((receipt) => <p key={receipt.user_id} className="border-b py-3 text-sm">{state.members.find((member) => member.id === receipt.user_id)?.name ?? "موظف"}</p>)}
+              </section>}
+            </div>}
+        </DialogContent>
+      </Dialog>
     </>}
     <span className={forced ? "mt-1 flex justify-end text-muted-foreground text-xs" : "staff-chat-message-meta text-muted-foreground"} dir="ltr">
       {!forced && outgoing && !message.deleted_at && <Check className="size-3" aria-label="تم الإرسال" />}
