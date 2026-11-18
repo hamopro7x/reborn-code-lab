@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuCheckboxItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuCheckboxItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { getChatState, getChatMessages, mutateChat, uploadChatFile } from "@/lib/chat.functions";
 import { livePoll } from "@/lib/live-poll";
@@ -33,7 +33,9 @@ export function StaffChat({ targetId }: { targetId?: string }) {
   const mediaInput = useRef<HTMLInputElement>(null);
   const [mentions, setMentions] = useState<string[]>([]); const [everyone, setEveryone] = useState(false);
   const [mandatory, setMandatory] = useState(false); const [pollOpen, setPollOpen] = useState(false);
+  const [attachmentMenuOpen, setAttachmentMenuOpen] = useState(false);
   const [mentionsOpen, setMentionsOpen] = useState(false);
+  const [mandatoryOpen, setMandatoryOpen] = useState(false);
   const [mandatoryMentions, setMandatoryMentions] = useState<string[]>([]);
   const [question, setQuestion] = useState(""); const [options, setOptions] = useState(["", ""]); const [multiple, setMultiple] = useState(false);
   const [busy, setBusy] = useState(false); const [recording, setRecording] = useState(false); const [paused, setPaused] = useState(false); const [seconds, setSeconds] = useState(0); const discard = useRef(false);
@@ -237,7 +239,7 @@ export function StaffChat({ targetId }: { targetId?: string }) {
         </div> :
         <div className="staff-chat-inputbar flex items-end gap-1 px-2 py-1.5">
           <input ref={fileInput} type="file" multiple className="hidden" aria-label="رفع مرفقات" onChange={(e) => void upload(Array.from(e.target.files ?? []))} />
-          <DropdownMenu dir="rtl">
+          <DropdownMenu dir="rtl" open={attachmentMenuOpen} onOpenChange={(open) => { setAttachmentMenuOpen(open); if (!open) { setMentionsOpen(false); setMandatoryOpen(false); } }}>
             <DropdownMenuTrigger asChild><Button size="icon" variant="ghost" className="shrink-0 rounded-full" title="المرفقات" aria-label="إرفاق ملف" disabled={busy || recording}><Paperclip className="size-5" /></Button></DropdownMenuTrigger>
             <DropdownMenuContent side="top" align="start" sideOffset={10} collisionPadding={12} className="staff-chat-attachment-menu w-56 max-w-[calc(100vw-24px)] p-1.5" aria-label="المرفقات">
               <DropdownMenuItem className="staff-chat-attachment-item" onSelect={() => chooseFile("")}><FileText className="staff-chat-document-icon" /><span>مستند</span></DropdownMenuItem>
@@ -245,18 +247,26 @@ export function StaffChat({ targetId }: { targetId?: string }) {
               <DropdownMenuItem className="staff-chat-attachment-item" onSelect={() => chooseFile("audio/webm,audio/mpeg,audio/wav,audio/x-wav,audio/ogg,audio/mp4,audio/x-m4a")}><Headphones className="staff-chat-audio-icon" /><span>مقطع صوتي</span></DropdownMenuItem>
               <DropdownMenuItem className="staff-chat-attachment-item" onSelect={() => setPollOpen(!pollOpen)}><BarChart3 className="staff-chat-poll-icon" /><span>استطلاع رأي</span></DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="staff-chat-attachment-item" onSelect={(event) => { event.preventDefault(); setMentionsOpen(!mentionsOpen); }}><AtSign className="staff-chat-media-icon" /><span>منشن {everyone ? "الجميع" : mentions.length || ""}</span></DropdownMenuItem>
-              {mentionsOpen && <>
-                {state.role === "admin" && <DropdownMenuCheckboxItem checked={everyone} onCheckedChange={setEveryone} onSelect={(event) => event.preventDefault()}>الجميع</DropdownMenuCheckboxItem>}
-                {state.members.filter((m) => m.role === "employee").map((member) => <DropdownMenuCheckboxItem key={member.id} checked={mentions.includes(member.id)} disabled={everyone} onSelect={(event) => event.preventDefault()} onCheckedChange={(checked) => setMentions((old) => checked ? [...old, member.id] : old.filter((id) => id !== member.id))}>@{member.name}</DropdownMenuCheckboxItem>)}
-              </>}
-              {state.role === "admin" && <>
-                <DropdownMenuCheckboxItem className="min-h-10" checked={mandatory} disabled={!state.targetedMandatory} onCheckedChange={setMandatory} onSelect={(event) => event.preventDefault()}>قراءة إجبارية</DropdownMenuCheckboxItem>
-                {mandatory && <>
-                  <DropdownMenuCheckboxItem checked={allChatEmployeeIds(state.members).length > 0 && allChatEmployeeIds(state.members).every((id) => mandatoryMentions.includes(id))} onSelect={(event) => event.preventDefault()} onCheckedChange={(checked) => setMandatoryMentions(checked ? allChatEmployeeIds(state.members) : [])}>الكل</DropdownMenuCheckboxItem>
-                  {state.members.filter((m) => m.role === "employee").map((member) => <DropdownMenuCheckboxItem key={member.id} checked={mandatoryMentions.includes(member.id)} onSelect={(event) => event.preventDefault()} onCheckedChange={(checked) => setMandatoryMentions((old) => checked ? [...old, member.id] : old.filter((id) => id !== member.id))}>@{member.name}</DropdownMenuCheckboxItem>)}
-                </>}
-              </>}
+              <DropdownMenuSub open={mentionsOpen} onOpenChange={(open) => { setMentionsOpen(open); if (open) setMandatoryOpen(false); }}>
+                <DropdownMenuSubTrigger className="staff-chat-attachment-item"><AtSign className="staff-chat-media-icon" /><span>منشن {everyone ? "الجميع" : mentions.length || ""}</span></DropdownMenuSubTrigger>
+                <DropdownMenuSubContent sideOffset={8} collisionPadding={12} className="staff-chat-attachment-menu staff-chat-names-menu w-56 max-w-[calc(100vw-24px)] p-1.5" aria-label="اختيار المنشن">
+                  {state.role === "admin" && <DropdownMenuCheckboxItem className="min-h-10" checked={everyone} onCheckedChange={setEveryone} onSelect={(event) => event.preventDefault()}>الجميع</DropdownMenuCheckboxItem>}
+                  {state.members.filter((m) => m.role === "employee").map((member) => <DropdownMenuCheckboxItem className="min-h-10" key={member.id} checked={mentions.includes(member.id)} disabled={everyone} onSelect={(event) => event.preventDefault()} onCheckedChange={(checked) => setMentions((old) => checked ? [...old, member.id] : old.filter((id) => id !== member.id))}>@{member.name}</DropdownMenuCheckboxItem>)}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="staff-chat-attachment-item justify-center" onSelect={() => { setMentionsOpen(false); setAttachmentMenuOpen(false); }}>تم</DropdownMenuItem>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+              {state.role === "admin" && <DropdownMenuSub open={mandatoryOpen} onOpenChange={(open) => { setMandatoryOpen(open); if (open) setMentionsOpen(false); }}>
+                <DropdownMenuSubTrigger className="staff-chat-attachment-item" disabled={!state.targetedMandatory} onClick={() => setMandatory(true)}><span>قراءة إجبارية</span></DropdownMenuSubTrigger>
+                <DropdownMenuSubContent sideOffset={8} collisionPadding={12} className="staff-chat-attachment-menu staff-chat-names-menu w-56 max-w-[calc(100vw-24px)] p-1.5" aria-label="اختيار الموظفين للقراءة الإجبارية">
+                  <DropdownMenuCheckboxItem className="min-h-10" checked={mandatory} onCheckedChange={setMandatory} onSelect={(event) => event.preventDefault()}>تفعيل القراءة الإجبارية</DropdownMenuCheckboxItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuCheckboxItem className="min-h-10" checked={allChatEmployeeIds(state.members).length > 0 && allChatEmployeeIds(state.members).every((id) => mandatoryMentions.includes(id))} disabled={!mandatory} onSelect={(event) => event.preventDefault()} onCheckedChange={(checked) => setMandatoryMentions(checked ? allChatEmployeeIds(state.members) : [])}>الكل</DropdownMenuCheckboxItem>
+                  {state.members.filter((m) => m.role === "employee").map((member) => <DropdownMenuCheckboxItem className="min-h-10" key={member.id} checked={mandatoryMentions.includes(member.id)} disabled={!mandatory} onSelect={(event) => event.preventDefault()} onCheckedChange={(checked) => setMandatoryMentions((old) => checked ? [...old, member.id] : old.filter((id) => id !== member.id))}>@{member.name}</DropdownMenuCheckboxItem>)}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="staff-chat-attachment-item justify-center" onSelect={() => { setMandatoryOpen(false); setAttachmentMenuOpen(false); }}>تم</DropdownMenuItem>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>}
             </DropdownMenuContent>
           </DropdownMenu>
           <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="اكتب رسالة…" aria-label="نص الرسالة" maxLength={10000} className="staff-chat-textarea min-w-0 flex-1" />

@@ -847,10 +847,12 @@
   border-radius: 8px;
 }
 .staff-chat-attachment-item { min-height: 40px; gap: 12px; padding: 8px 12px; }
-.staff-chat-attachment-item:focus {
+.staff-chat-attachment-item:focus,
+.staff-chat-names-menu [data-highlighted] {
   background: var(--chat-menu-active);
   color: var(--chat-menu-foreground);
 }
+.staff-chat-names-menu { max-height: min(420px, calc(100dvh - 24px)); overflow-y: auto; }
 .staff-chat-document-icon { color: var(--chat-menu-document); }
 .staff-chat-media-icon { color: var(--chat-menu-media); }
 .staff-chat-audio-icon { color: var(--chat-menu-audio); }
