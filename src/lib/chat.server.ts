@@ -17,18 +17,21 @@ export async function chatRpc(db: any, name: string, args: Record<string, unknow
 }
 
 async function attachmentUrls(db: any, messages: ChatMessage[]) {
-  for (const message of messages) {
-    for (const attachment of message.attachments ?? []) {
-      // Caller-scoped metadata policy + read RPC checked membership before this privileged storage operation.
-      const { data, error } = await db.from("staff_chat_attachments").select("path,mime,name").eq("id", attachment.id).single();
-      if (error || !data) throw new Error("تعذر تحميل المرفق");
-      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      const { data: signed, error: signError } = await supabaseAdmin.storage.from(CHAT_BUCKET)
-        .createSignedUrl(data.path, 300, /^(image|audio|video)\//.test(data.mime) ? undefined : { download: data.name });
-      if (signError || !signed?.signedUrl) throw new Error("تعذر فتح المرفق");
-      attachment.url = signed.signedUrl;
-    }
-  }
+  const attachments = messages.flatMap((message) => message.attachments ?? []);
+  if (!attachments.length) return messages;
+  // Caller-scoped metadata policy + read RPC checked membership before this privileged storage operation.
+  const { data: rows, error } = await db.from("staff_chat_attachments").select("id,path,mime,name").in("id", attachments.map((a) => a.id));
+  if (error || !rows) throw new Error("تعذر تحميل المرفق");
+  const byId = new Map<string, { path: string; mime: string; name: string }>(rows.map((r: any) => [r.id, r]));
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  await Promise.all(attachments.map(async (attachment) => {
+    const data = byId.get(attachment.id);
+    if (!data) throw new Error("تعذر تحميل المرفق");
+    const { data: signed, error: signError } = await supabaseAdmin.storage.from(CHAT_BUCKET)
+      .createSignedUrl(data.path, 300, /^(image|audio|video)\//.test(data.mime) ? undefined : { download: data.name });
+    if (signError || !signed?.signedUrl) throw new Error("تعذر فتح المرفق");
+    attachment.url = signed.signedUrl;
+  }));
   return messages;
 }
 
