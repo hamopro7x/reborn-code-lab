@@ -1025,7 +1025,7 @@
   padding-inline: 10px;
   text-shadow: 0 1px 2px oklch(0 0 0 / 0.75);
 }
-.staff-chat-message-meta { display: flex; align-items: center; justify-content: flex-end; gap: 3px; font-size: 10px; margin-block-start: 2px; line-height: 16px; }
+.staff-chat-message-meta { display: flex; align-items: center; justify-content: flex-end; gap: 3px; font-size: 12px; margin-block-start: 2px; line-height: 18px; }
 .staff-chat-sender { color: var(--chat-sender); }
 .staff-chat-mandatory { color: var(--chat-mandatory-label); }
 .staff-chat-mention { color: var(--chat-mention, oklch(0.88 0.13 145)); }
