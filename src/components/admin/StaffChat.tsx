@@ -188,7 +188,7 @@ export function StaffChat({ targetId }: { targetId?: string }) {
     } catch (error) { toast.error(error instanceof Error ? error.message : "فشل إرسال التسجيل"); }
     finally { setBusy(false); setPendingVoices((old) => old.filter((v) => v.id !== pendingId)); URL.revokeObjectURL(url); }
   };
-  if (stateQ.isLoading) return <p className="p-4 text-muted-foreground">جاري تحميل الجروب…</p>;
+  if (stateQ.isLoading) return null;
   if (stateQ.isError && !state) return <div className="space-y-3"><p className="text-muted-foreground">جاري إعادة الاتصال بالجروب…</p><Button onClick={() => void stateQ.refetch()}>إعادة المحاولة</Button></div>;
   if (!state?.enabled) return <p className="text-muted-foreground">الجروب غير مفعّل لحد تطبيق ملف الإعدادات المعتمد.</p>;
   return <div dir="rtl" className="staff-chat min-w-0">
@@ -215,7 +215,7 @@ export function StaffChat({ targetId }: { targetId?: string }) {
       <div className="relative min-h-full flex flex-col justify-end">
       {before && <Button variant="ghost" size="sm" onClick={() => setBefore(undefined)}>آخر الرسائل</Button>}
       {(messages.data?.length ?? 0) === 50 && <Button variant="ghost" size="sm" onClick={() => { const first = messages.data?.[0]; if (first) setBefore({ date: first.created_at, id: first.id }); }}>رسائل أقدم</Button>}
-      {messagesPhase === "loading" ? <p className="py-8 text-muted-foreground text-sm">جاري التحميل…</p> : messagesPhase === "retrying" ? <div className="py-4" role="status"><p className="text-muted-foreground">جاري إعادة الاتصال لتحميل الرسائل…</p><Button onClick={() => void messages.refetch()}>إعادة المحاولة</Button></div> : !messages.data?.length ? <p className="py-10 text-muted-foreground text-sm">مفيش رسائل هنا لسه</p> : messages.data.map((message: ChatMessage) => <Fragment key={message.id}>
+      {messagesPhase === "loading" ? <></> : messagesPhase === "retrying" ? <div className="py-4" role="status"><p className="text-muted-foreground">جاري إعادة الاتصال لتحميل الرسائل…</p><Button onClick={() => void messages.refetch()}>إعادة المحاولة</Button></div> : !messages.data?.length ? <p className="py-10 text-muted-foreground text-sm">مفيش رسائل هنا لسه</p> : messages.data.map((message: ChatMessage) => <Fragment key={message.id}>
         {message.id === unread[0]?.id && <div className="staff-chat-unread" role="status"><span>{unread.length === 1 ? "رسالة واحدة غير مقروءة" : `${unread.length} رسائل غير مقروءة`}</span></div>}
         <StaffChatMessage message={message} state={state} act={act} />
       </Fragment>)}
