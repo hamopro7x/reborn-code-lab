@@ -17,18 +17,15 @@ export function createChatSound() {
   };
   const play = () => {
     if (!context || context.state !== "running") return;
+    // Same tone as the mail notification.
     const now = context.currentTime;
-    for (const [delay, frequency] of [[0, 784], [0.12, 1046]]) {
-      const oscillator = context.createOscillator();
-      const gain = context.createGain();
-      oscillator.type = "sine";
-      oscillator.frequency.value = frequency;
-      gain.gain.setValueAtTime(0, now + delay);
-      gain.gain.linearRampToValueAtTime(0.12, now + delay + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.16);
-      oscillator.connect(gain); gain.connect(context.destination);
-      oscillator.start(now + delay); oscillator.stop(now + delay + 0.18);
-    }
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.frequency.value = 880;
+    gain.gain.setValueAtTime(0.25, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+    oscillator.connect(gain); gain.connect(context.destination);
+    oscillator.start(now); oscillator.stop(now + 0.6);
   };
   return { unlock, play, dispose: () => { void context?.close().catch(() => {}); } };
 }
