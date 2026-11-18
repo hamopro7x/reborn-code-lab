@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { formatLocaleDateTime, formatTime } from "./format";
+import { formatChatTimestamp, formatLocaleDateTime, formatTime } from "./format";
 import { dateTimeFields, dateTimeValue } from "./date-time-input";
 
 describe("site-wide 12-hour clock", () => {
+  it("shows chat date, period-first 12-hour time, and the actual Cairo weekday", () => {
+    expect(formatChatTimestamp("2026-11-18T00:32:00Z")).toBe("[ 2026 / 11 / 18 - ص 2:32 - الأربعاء ]");
+  });
+  it("keeps the chat date and weekday aligned across Cairo midnight", () => {
+    expect(formatChatTimestamp("2026-11-20T22:05:00Z")).toBe("[ 2026 / 11 / 21 - ص 12:05 - السبت ]");
+  });
   it.each([
     ["2026-11-17T00:05:00Z", "12:05 ص"],
     ["2026-11-17T09:05:00Z", "09:05 ص"],

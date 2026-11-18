@@ -1,4 +1,4 @@
-import { formatLocaleDateTime, formatTime } from "@/lib/format";
+import { formatLocaleDateTime, formatChatTimestamp } from "@/lib/format";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
@@ -115,7 +115,7 @@ export function StaffChatMessage({ message, state, act, forced = false }: {
     </>}
     <span className={forced ? "mt-1 flex justify-end text-muted-foreground text-xs" : "staff-chat-message-meta text-muted-foreground"} dir="ltr">
       {!forced && outgoing && !message.deleted_at && <Check className="size-3" aria-label="تم الإرسال" />}
-      <time dateTime={message.created_at} title={formatLocaleDateTime(message.created_at, "ar-EG")}>{forced ? formatLocaleDateTime(message.created_at, "ar-EG", { dateStyle: "short", timeStyle: "short" }) : formatTime(message.created_at)}</time>
+      <time className="min-w-0 whitespace-normal" dir="ltr" dateTime={message.created_at} title={formatChatTimestamp(message.created_at)}>{formatChatTimestamp(message.created_at)}</time>
     </span>
     {viewer !== null && viewer >= 0 && <StaffChatImageViewer images={images} index={viewer} caption={message.body} sender={outgoing ? "أنت" : message.sender_name} createdAt={message.created_at} onClose={() => setViewer(null)} />}
   </article>;

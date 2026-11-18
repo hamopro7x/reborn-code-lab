@@ -32,6 +32,19 @@ export function formatTime(value: DateValue, options: Intl.DateTimeFormatOptions
   return formatLocaleDateTime(value, "ar-EG", { numberingSystem: "latn", hour: "2-digit", minute: "2-digit", ...options });
 }
 
+/** Chat timestamps use one explicit zone for the date, clock, and weekday. */
+export function formatChatTimestamp(value: DateValue): string {
+  if (value === null || value === undefined || value === "") return "—";
+  const date = new Date(value);
+  if (isNaN(date.getTime())) return "—";
+  const parts = new Intl.DateTimeFormat("ar-EG", {
+    timeZone: "Africa/Cairo", numberingSystem: "latn", year: "numeric", month: "2-digit",
+    day: "2-digit", weekday: "long", hour: "numeric", minute: "2-digit", hour12: true,
+  }).formatToParts(date);
+  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((item) => item.type === type)?.value ?? "";
+  return `[ ${part("year")} / ${part("month")} / ${part("day")} - ${part("dayPeriod")} ${Number(part("hour"))}:${part("minute")} - ${part("weekday")} ]`;
+}
+
 export function formatDateTime(value: string | number | Date | null | undefined): string {
   if (!value) return "—";
   const d = new Date(value);
