@@ -84,8 +84,18 @@ export function StaffChat({ targetId }: { targetId?: string }) {
   }, [state?.userId, messages.data, before, targetId, readBaseline]);
   const canSend = state?.enabled && (state.open || state.role === "admin") && !state.pending.length;
   const refresh = async () => { await Promise.all([qc.invalidateQueries({ queryKey: ["staff-chat-messages"] }), qc.invalidateQueries({ queryKey: ["staff-chat-state"] }), qc.invalidateQueries({ queryKey: ["staff-chat-receipts"] })]); };
+  const withAuthRetry = async <T,>(run: () => Promise<T>): Promise<T> => {
+    try { return await run(); }
+    catch (error) {
+      if (!(error instanceof Error) || !/unauthorized|authorization/i.test(error.message)) throw error;
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data } = await supabase.auth.refreshSession();
+      if (!data.session) throw new Error("انتهت الجلسة، سجّل الدخول من جديد");
+      return await run();
+    }
+  };
   const act: ChatAction = async (action, payload) => {
-    try { await mutate({ data: { action, payload } }); await refresh(); }
+    try { await withAuthRetry(() => mutate({ data: { action, payload } })); await refresh(); }
     catch (error) { toast.error(error instanceof Error ? error.message : "تعذر تنفيذ الطلب"); throw error; }
   };
   const upload = async (selected: File[]) => {
@@ -95,7 +105,7 @@ export function StaffChat({ targetId }: { targetId?: string }) {
       for (const file of selected) {
         if (file.size > CHAT_MAX_BYTES) throw new Error("الحد الأقصى 25 ميجابايت للمرفق");
         const form = new FormData(); form.set("file", file);
-        const attachment = await uploadFn({ data: form }); setFiles((old) => [...old, attachment]);
+        const attachment = await withAuthRetry(() => uploadFn({ data: form })); setFiles((old) => [...old, attachment]);
       }
     } catch (error) { toast.error(error instanceof Error ? error.message : "فشل رفع الملف"); }
     finally { setBusy(false); if (fileInput.current) fileInput.current.value = ""; }
@@ -169,7 +179,7 @@ export function StaffChat({ targetId }: { targetId?: string }) {
       if (!file.size || file.size > CHAT_MAX_BYTES) throw new Error("التسجيل فارغ أو حجمه أكبر من 25 ميجابايت");
       await sendChatRecording(file, async (voice) => {
         const form = new FormData(); form.set("file", voice);
-        return uploadFn({ data: form });
+        return withAuthRetry(() => uploadFn({ data: form }));
       }, (attachment) => send([...files, attachment]), (attachment) => setFiles((old) => [...old, attachment]));
     } catch (error) { toast.error(error instanceof Error ? error.message : "فشل إرسال التسجيل"); }
     finally { setBusy(false); setPendingVoices((old) => old.filter((v) => v.id !== pendingId)); URL.revokeObjectURL(url); }
@@ -186,7 +196,7 @@ export function StaffChat({ targetId }: { targetId?: string }) {
     }} />
     {mediaOpen && <StaffChatMediaPreview selected={mediaSelection} maxFiles={10 - files.length} caption={text} onCaption={setText} onClose={() => { setMediaOpen(false); setMediaSelection([]); }} onAdd={() => mediaInput.current?.click()} onUpload={async (file) => {
       const form = new FormData(); form.set("file", file);
-      return uploadFn({ data: form });
+      return withAuthRetry(() => uploadFn({ data: form }));
     }} onSend={async (attachments, caption) => {
       if (attachments.length + files.length > 10) { toast.error("الحد الأقصى 10 مرفقات للرسالة"); return false; }
       return send([...files, ...attachments], caption);
