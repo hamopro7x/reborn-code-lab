@@ -16,7 +16,7 @@ import { livePoll } from "@/lib/live-poll";
 import { chatReadPhase, chatRetryDelay } from "@/lib/chat-query";
 import { parseChatReadCursor, unreadChatMessages, type ChatReadCursor } from "@/lib/chat-unread";
 import { sendChatRecording } from "@/lib/chat-recording";
-import { allChatEmployeeIds, CHAT_MAX_BYTES, type ChatAttachment, type ChatMessage } from "@/lib/chat-rules";
+import { allChatEmployeeIds, canOpenChatSettings, CHAT_MAX_BYTES, type ChatAttachment, type ChatMessage } from "@/lib/chat-rules";
 import { StaffChatMessage, type ChatAction } from "./StaffChatMessage";
 import { StaffChatMediaPreview } from "./StaffChatMediaPreview";
 import { StaffChatVoice } from "./StaffChatVoice";
@@ -224,7 +224,7 @@ export function StaffChat({ targetId }: { targetId?: string }) {
     }} />}
     <img src={new URL(chatWallpaper.url, "https://id-preview--335637d3-bc9b-407f-9e44-b28bda5c78dc.lovable.app").href} alt="" aria-hidden="true" className="staff-chat-wallpaper" />
     <header className="staff-chat-header px-2 py-2">
-      <Dialog>
+      {canOpenChatSettings(state) ? <Dialog>
         <DialogTrigger asChild>
           <button type="button" className="staff-chat-group-button flex w-full items-center gap-3 rounded-md px-2 py-1 text-right" aria-label="فتح إعدادات الجروب">
             <span className="staff-chat-avatar flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full"><img src={headerMark} alt="" aria-hidden="true" className="staff-chat-avatar-logo" /></span>
@@ -240,9 +240,12 @@ export function StaffChat({ targetId }: { targetId?: string }) {
             <span className="staff-chat-avatar flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-full"><img src={headerMark} alt="" aria-hidden="true" className="staff-chat-avatar-logo" /></span>
             <div><p className="font-bold">جروب MG Pro</p><p className="text-sm text-muted-foreground mt-1">{state.open ? "مفتوح" : "الأدمن فقط يقدر يرسل"}</p></div>
           </div>
-          {state.owner && <label className="flex items-center justify-between gap-4 border-t pt-4 text-sm"><span>مفتوح للإرسال</span><Switch checked={state.open} onCheckedChange={(open) => void act("state", { open }).catch(() => {})} /></label>}
+          <label className="flex items-center justify-between gap-4 border-t pt-4 text-sm"><span>مفتوح للإرسال</span><Switch checked={state.open} onCheckedChange={(open) => void act("state", { open }).catch(() => {})} /></label>
         </DialogContent>
-      </Dialog>
+      </Dialog> : <div className="flex w-full items-center gap-3 px-2 py-1">
+        <span className="staff-chat-avatar flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full"><img src={headerMark} alt="" aria-hidden="true" className="staff-chat-avatar-logo" /></span>
+        <div className="min-w-0"><h2 className="font-bold text-base">جروب MG Pro</h2><p className="text-xs text-muted-foreground mt-1">{state.open ? "مفتوح" : "الأدمن فقط يقدر يرسل"}</p></div>
+      </div>}
     </header>
     <div className="staff-chat-transcript-wrap relative min-h-0 flex-1">
       <div className="staff-chat-transcript relative h-full min-h-0 overflow-y-auto px-4 py-5">

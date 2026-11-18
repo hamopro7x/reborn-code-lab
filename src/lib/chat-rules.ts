@@ -75,6 +75,10 @@ export type ChatState = {
   incoming?: { id: string; created_at: string } | null;
 };
 
+export function canOpenChatSettings(state: Pick<ChatState, "role" | "owner">) {
+  return state.role === "admin" && state.owner;
+}
+
 export function canAcknowledgeChatMessage(message: ChatMessage, state: ChatState) {
   return state.role === "employee" && !message.deleted_at && state.pending.some((pending) => pending.id === message.id);
 }

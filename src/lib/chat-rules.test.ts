@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { allChatEmployeeIds, mentionsAllChatEmployees, canAcknowledgeChatMessage, canEditChatMessage, CHAT_MAX_BYTES, chatLinks, validateChatFile, type ChatMessage, type ChatState } from "./chat-rules";
+import { allChatEmployeeIds, mentionsAllChatEmployees, canAcknowledgeChatMessage, canEditChatMessage, canOpenChatSettings, CHAT_MAX_BYTES, chatLinks, validateChatFile, type ChatMessage, type ChatState } from "./chat-rules";
 describe("chat attachment and edit rules", () => {
+  it("shows group settings only to the principal owner, never employees or other admins", () => {
+    expect(canOpenChatSettings({ role: "employee", owner: false })).toBe(false);
+    expect(canOpenChatSettings({ role: "admin", owner: false })).toBe(false);
+    expect(canOpenChatSettings({ role: "admin", owner: true })).toBe(true);
+  });
   it("allows confirmation only on an employee's pending undeleted message inside the group", () => {
     const message: ChatMessage = { id: "required", sender_id: "owner", sender_name: "المالك", body: "رسالة", created_at: "2026-11-17T21:00:00Z", edited_at: null, mandatory: true, deleted_at: null, attachments: [], mentions: [], poll: null, votes: [] };
     const state: ChatState = { enabled: true, userId: "employee", role: "employee", owner: false, open: true, members: [], pending: [message], notifications: [] };
