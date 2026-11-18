@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Plus, Send, Trash2, X } from "lucide-react";
+import { FileText, Loader2, Plus, Send, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import type { ChatAttachment } from "@/lib/chat-rules";
 
+const isMedia = (file: File) => /^(image|video)\//.test(file.type);
+const sizeLabel = (bytes: number) => bytes >= 1048576 ? `${Math.round(bytes / 1048576)} ميجا بايت` : `${Math.max(1, Math.round(bytes / 1024))} كيلو بايت`;
+const extLabel = (name: string) => (name.includes(".") ? name.split(".").pop() ?? "" : "ملف").toUpperCase();
 type MediaItem = { file: File; url: string; attachment?: ChatAttachment };
 export function StaffChatMediaPreview({ selected, caption, onCaption, onClose, onAdd, onUpload, onSend, maxFiles = 10 }: {
   selected: File[]; caption: string; onCaption: (value: string) => void; onClose: () => void;
@@ -48,7 +51,7 @@ export function StaffChatMediaPreview({ selected, caption, onCaption, onClose, o
   return <Dialog open onOpenChange={(open) => { if (!open && !busy) onClose(); }}>
     <DialogContent className="flex h-[100dvh] w-full max-w-none flex-col gap-0 rounded-none border-0 p-0 sm:rounded-none [&>button]:hidden" aria-describedby={undefined} dir="rtl" onEscapeKeyDown={(e) => { if (busy) e.preventDefault(); }} onInteractOutside={(e) => e.preventDefault()}>
       <header className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
-        <DialogTitle className="text-sm">{item?.file.type.startsWith("video/") ? "إرسال فيديو" : "إرسال صورة"}</DialogTitle>
+        <DialogTitle className="text-sm">{!item ? "" : !isMedia(item.file) ? item.file.name : item.file.type.startsWith("video/") ? "إرسال فيديو" : "إرسال صورة"}</DialogTitle>
         <div className="flex gap-2">
           <Button variant="ghost" size="icon" aria-label="حذف الملف المحدد" title="حذف الملف المحدد" disabled={busy || !item} onClick={() => {
             const next = items.filter((media) => media !== item);
@@ -58,7 +61,11 @@ export function StaffChatMediaPreview({ selected, caption, onCaption, onClose, o
         </div>
       </header>
       <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden p-4">
-        {item && (item.file.type.startsWith("video/") ? <video key={item.url} src={item.url} controls className="h-full max-h-full w-full object-contain" /> : <img src={item.url} alt="معاينة الصورة" className="h-full max-h-full w-full object-contain" />)}
+        {item && !isMedia(item.file) ? <div className="flex w-full max-w-sm flex-col items-center gap-3 rounded-xl bg-card px-6 py-14 text-center">
+          <FileText className="size-28 text-foreground" strokeWidth={1} />
+          <p className="text-2xl text-muted-foreground">لا تتوفر معاينة</p>
+          <p className="text-sm text-muted-foreground" dir="rtl">{sizeLabel(item.file.size)} - {extLabel(item.file.name)}</p>
+        </div> : item && (item.file.type.startsWith("video/") ? <video key={item.url} src={item.url} controls className="h-full max-h-full w-full object-contain" /> : <img src={item.url} alt="معاينة الصورة" className="h-full max-h-full w-full object-contain" />)}
       </div>
       <footer className="shrink-0 space-y-3 border-t border-border bg-card px-4 py-3">
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
@@ -66,7 +73,7 @@ export function StaffChatMediaPreview({ selected, caption, onCaption, onClose, o
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex min-w-0 flex-1 items-center justify-center gap-2 overflow-x-auto">
             {items.map((media, index) => <Button key={media.url} variant="outline" className={`size-14 shrink-0 overflow-hidden p-1 ${item === media ? "border-primary ring-1 ring-primary" : ""}`} disabled={busy} aria-label={`معاينة الملف ${index + 1}`} onClick={() => setCurrent(index)}>
-              {media.file.type.startsWith("video/") ? <video src={media.url} muted preload="metadata" className="size-full object-cover" /> : <img src={media.url} alt="" className="size-full object-cover" />}
+              {!isMedia(media.file) ? <FileText className="size-full p-2" /> : media.file.type.startsWith("video/") ? <video src={media.url} muted preload="metadata" className="size-full object-cover" /> : <img src={media.url} alt="" className="size-full object-cover" />}
             </Button>)}
             <Button variant="outline" size="icon" className="shrink-0" disabled={busy} aria-label="إضافة صور أو فيديوهات" title="إضافة صور أو فيديوهات" onClick={onAdd}><Plus className="size-5" /></Button>
           </div>

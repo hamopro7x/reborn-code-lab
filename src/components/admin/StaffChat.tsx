@@ -54,7 +54,7 @@ export function StaffChat({ targetId }: { targetId?: string }) {
   };
   const [question, setQuestion] = useState(""); const [options, setOptions] = useState(["", ""]); const [multiple, setMultiple] = useState(false);
   const [busy, setBusy] = useState(false); const [recording, setRecording] = useState(false); const [paused, setPaused] = useState(false); const [seconds, setSeconds] = useState(0); const discard = useRef(false);
-  const fileInput = useRef<HTMLInputElement>(null); const recorder = useRef<MediaRecorder | null>(null); const stream = useRef<MediaStream | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null); const addFromDocs = useRef(false); const recorder = useRef<MediaRecorder | null>(null); const stream = useRef<MediaStream | null>(null);
   const end = useRef<HTMLDivElement>(null);
   const [readBaseline, setReadBaseline] = useState<{ userId: string; cursor: ChatReadCursor | null } | null>(null);
   const initialScroll = useRef(false);
@@ -213,9 +213,9 @@ export function StaffChat({ targetId }: { targetId?: string }) {
       const selected = Array.from(e.target.files ?? []); e.target.value = "";
       if (!selected.length) return;
       if (selected.some((file) => !file.size || file.size > CHAT_MAX_BYTES)) { toast.error("الحد الأقصى 25 ميجابايت للمرفق"); return; }
-      setMediaSelection(selected); setMediaOpen(true);
+      addFromDocs.current = false; setMediaSelection(selected); setMediaOpen(true);
     }} />
-    {mediaOpen && <StaffChatMediaPreview selected={mediaSelection} maxFiles={10 - files.length} caption={text} onCaption={setText} onClose={() => { setMediaOpen(false); setMediaSelection([]); }} onAdd={() => mediaInput.current?.click()} onUpload={async (file) => {
+    {mediaOpen && <StaffChatMediaPreview selected={mediaSelection} maxFiles={10 - files.length} caption={text} onCaption={setText} onClose={() => { setMediaOpen(false); setMediaSelection([]); }} onAdd={() => (addFromDocs.current ? fileInput : mediaInput).current?.click()} onUpload={async (file) => {
       const form = new FormData(); form.set("file", file);
       return withAuthRetry(() => uploadFn({ data: form }));
     }} onSend={async (attachments, caption) => {
@@ -273,7 +273,12 @@ export function StaffChat({ targetId }: { targetId?: string }) {
           <Button size="icon" className="staff-chat-send shrink-0 rounded-full" title="إرسال التسجيل" aria-label="إرسال التسجيل" disabled={busy} onClick={() => void record()}><Send className="size-4" /></Button>
         </div> :
         <div className="staff-chat-inputbar flex items-end gap-1 px-2 py-1.5">
-          <input ref={fileInput} type="file" multiple className="hidden" aria-label="رفع مرفقات" onChange={(e) => void upload(Array.from(e.target.files ?? []))} />
+          <input ref={fileInput} type="file" multiple className="hidden" aria-label="رفع مرفقات" onChange={(e) => {
+            const selected = Array.from(e.target.files ?? []); e.target.value = "";
+            if (!selected.length) return;
+            if (selected.some((file) => !file.size || file.size > CHAT_MAX_BYTES)) { toast.error("الحد الأقصى 25 ميجابايت للمرفق"); return; }
+            addFromDocs.current = true; setMediaSelection(selected); setMediaOpen(true);
+          }} />
           <DropdownMenu dir="rtl" open={attachmentMenuOpen} onOpenChange={(open) => { setAttachmentMenuOpen(open); if (!open) { setMentionsOpen(false); setMandatoryOpen(false); } }}>
             <DropdownMenuTrigger asChild><Button size="icon" variant="ghost" className="shrink-0 rounded-full" title="المرفقات" aria-label="إرفاق ملف" disabled={busy || recording}><Paperclip className="size-5" /></Button></DropdownMenuTrigger>
             <DropdownMenuContent ref={attachmentMenuRef} side="top" align="start" sideOffset={10} collisionPadding={12} className="staff-chat-attachment-menu w-56 max-w-[calc(100vw-24px)] p-1.5" aria-label="المرفقات">
