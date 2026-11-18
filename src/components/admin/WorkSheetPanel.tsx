@@ -171,6 +171,7 @@ function ShiftPickerMenu({
   selectedId,
   onSelect,
   onDeleted,
+  onReviewed,
   open,
   onOpenChange,
   children,
@@ -179,6 +180,7 @@ function ShiftPickerMenu({
   selectedId: string | null;
   onSelect: (shift: Shift) => void;
   onDeleted: (shiftId: string) => void;
+  onReviewed: (shiftId: string) => void;
   open: boolean;
   onOpenChange: (v: boolean) => void;
   children: React.ReactNode;
@@ -283,8 +285,11 @@ function ShiftPickerMenu({
       const pending = (q.data ?? []).filter((s) => !s.reviewed && ids.has(s.id)).map((s) => s.id);
       if (pending.length) {
         setMarking((prev) => new Set([...prev, ...pending]));
-        void Promise.all(pending.map((id) => markFn({ data: { shiftId: id } })))
-          .then(() => void q.refetch())
+        void Promise.all(pending.map(async (id) => {
+          const result = await markFn({ data: { shiftId: id } });
+          if (result.ok) onReviewed(id);
+        }))
+          .then(() => { void q.refetch(); })
           .finally(() =>
             setMarking((prev) => {
               const n = new Set(prev);
@@ -430,7 +435,11 @@ function ShiftPickerMenu({
                     if (isOn) return;
                     setMarking((prev) => new Set(prev).add(sh.id));
                     markFn({ data: { shiftId: sh.id } })
-                      .then(() => void q.refetch())
+                      .then((result) => {
+                        if (!result.ok) throw new Error(result.error);
+                        onReviewed(sh.id);
+                        void q.refetch();
+                      })
                       .catch(() => window.alert("تعذر حفظ علامة المراجعة"))
                       .finally(() =>
                         setMarking((prev) => {
@@ -588,6 +597,7 @@ export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
               setShiftOpen(false);
             }}
             onDeleted={() => setSelectedShift(null)}
+            onReviewed={(id) => setSelectedShift((current) => current?.id === id ? { ...current, reviewed: true } : current)}
           >
             <button type="button" className={`${CHIP_BASE} ${selectedShift ? CHIP_ON : CHIP_OFF}`}>
               اختيار الشفت

@@ -33,7 +33,6 @@ import {
   Wallet,
   Trash2,
   Plus,
-  ClipboardList,
 
   
 
@@ -69,8 +68,6 @@ import {
   getShiftTransfers,
   getShiftP2P,
   getMyShiftP2P,
-  getEmployeeArchive,
-  deleteEmployeeManualTxn,
 
   getMyAvatarUrl,
 } from "@/lib/work.functions";
@@ -84,13 +81,12 @@ import { livePoll } from "@/lib/live-poll";
 import { useUiState } from "@/lib/ui-state";
 import { Button } from "@/components/ui/button";
 import { shiftEgpTotal } from "@/lib/shift-egp-total";
+import { shiftSectionNotifications, type ShiftSection } from "@/lib/shift-section-notifications";
 
 type ManualKind = "wrong" | "employee" | "receive" | "transfer";
 
-type TabKey = "p2p" | "transfers" | "wrong" | "week" | "all" | "employee" | "ext" | "int" | "summary";
-
 /** DOM order = right-to-left order in the reference. */
-const TOP_TABS: { key: TabKey; label: string; icon: typeof ListOrdered }[] = [
+const TOP_TABS: { key: ShiftSection; label: string; icon: typeof ListOrdered }[] = [
   { key: "all", label: "المعاملات", icon: ListOrdered },
   { key: "employee", label: "الخاص بالموظف", icon: User },
   { key: "wrong", label: "المعاملات الغلط", icon: AlertTriangle },
@@ -98,7 +94,6 @@ const TOP_TABS: { key: TabKey; label: string; icon: typeof ListOrdered }[] = [
   { key: "p2p", label: "طلبات p2p", icon: Users },
   { key: "ext", label: "الإيداع والسحب الخارجي", icon: ArrowDownUp },
   { key: "int", label: "الإيداع والسحب الداخلي", icon: ArrowLeftRight },
-  { key: "summary", label: "ملخص الشفت", icon: ClipboardList },
 ];
 
 
@@ -1110,178 +1105,6 @@ function ManualSection({
   );
 }
 
-/* ==================== «ملخص الشفت» — أدمن فقط ====================
- * أرشيف كامل لكل شفتات الموظف المحدد: نفس الأقسام السبعة بنفس تصميمها
- * وأعمدتها، لكن البيانات مدمجة من جميع الشفتات ومرتّبة من الأقدم إلى الأحدث.
- * قراءة فقط، وبلا أي تعديل على سلوك الأقسام الأصلية. */
-type ArchiveTabKey = "employee" | "wrong";
-
-
-
-function ArchiveTxnsTable({
-  rows,
-  brands,
-  onDetails,
-}: {
-  rows: any[];
-  brands: Record<string, string>;
-  onDetails: (row: any) => void;
-}) {
-  return (
-    <div className="data-surface">
-      <div className="overflow-x-auto">
-        <table className="data-table text-center">
-          <thead>
-            <tr>
-              {COLUMNS.map((c) => (
-                <th key={c.label}>
-                  <span>{c.label}</span>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 ? (
-              <tr>
-                <td colSpan={COLUMNS.length} className="py-8 text-center text-xs text-muted-foreground">
-                  لا توجد معاملات
-                </td>
-              </tr>
-            ) : (
-              rows.map((r) =>
-                r.__manual ? (
-                  <tr key={`m-${r.id}`}>
-                    <td className="text-right">
-                      <span className="flex items-center justify-start gap-2">
-                        <MerchantLogo name={String(r.merchant ?? "—")} />
-                        <span>{String(r.merchant ?? "—")}</span>
-                      </span>
-                    </td>
-                    <td className="tabular-nums">{r.amount || "—"}</td>
-                    <td className="tabular-nums">{r.egp || "—"}</td>
-                    <td className="tabular-nums">{r.quantity || "—"}</td>
-                    <td>{txnTime(Number(r.time))}</td>
-                    <td className="tabular-nums">{r.pan4 || "—"}</td>
-                    <td>&nbsp;</td>
-                  </tr>
-                ) : (
-                  <tr key={r.assignmentId ?? r.ledgerId}>
-                    <td className="text-right">
-                      <span className="flex items-center justify-start gap-2">
-                        <MerchantLogo name={String(r.detail?.merchantName ?? r.title ?? "—")} />
-                        <span>{String(r.detail?.merchantName ?? r.title ?? "—")}</span>
-                      </span>
-                    </td>
-                    <td className="tabular-nums">
-                      {num(Math.abs(Number(r.amount)))} {r.currency}
-                    </td>
-                    <td className="tabular-nums">{r.egp ?? "—"}</td>
-                    <td className="tabular-nums">{r.quantity ?? "—"}</td>
-                    <td>{txnTime(Number(r.time))}</td>
-                    <td className="tabular-nums">
-                      <Last4Cell detail={(r.detail ?? {}) as Record<string, unknown>} brands={brands} />
-                    </td>
-                    <td>
-                      <button type="button" onClick={() => onDetails(r)} className="table-btn mx-auto">
-                        التفاصيل
-                      </button>
-                    </td>
-                  </tr>
-                ),
-              )
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-function ArchiveCard({
-  userId,
-  card,
-  title,
-}: {
-  userId: string;
-  card: ArchiveTabKey;
-  title: string;
-}) {
-  const [page, setPage] = useUiState<number>(`emp-archive-${card}`, "page", 1);
-  const archiveFn = useServerFn(getEmployeeArchive);
-  const deleteFn = useServerFn(deleteEmployeeManualTxn);
-
-  useEffect(() => {
-    setPage(1);
-  }, [userId, card]);
-
-  const q = useQuery({
-    queryKey: ["emp-archive", userId, card, page],
-    queryFn: () => archiveFn({ data: { userId, card, page, pageSize: PAGE_SIZE } }),
-    staleTime: 60_000,
-  });
-
-  if (q.isLoading) {
-    return (
-      <div className="data-surface grid min-h-[420px] place-items-center">
-        <Loader2 className="size-5 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  const d = (q.data ?? {}) as any;
-  const manualRows: any[] = d.manual?.rows ?? [];
-  const manualNow: string | null = d.manual?.serverNow ?? null;
-
-  const del = async (id: string) => {
-    if (!window.confirm("حذف هذا الصف نهائيًا؟")) return;
-    try {
-      await deleteFn({ data: { id } });
-      toast.success("تم حذف الصف");
-      q.refetch();
-    } catch {
-      toast.error("تعذّر حذف الصف");
-    }
-  };
-
-  return (
-    <div className="space-y-2">
-      <ManualCard
-        card={card}
-        title={title}
-        rows={manualRows.filter((r) => r.card === card)}
-        serverNow={manualNow}
-        onAdd={() => {}}
-        onClear={() => {}}
-        onSaved={() => {}}
-        adding={false}
-        clearing={false}
-        newestId={null}
-        isAdmin
-        readOnly
-        onDelete={del}
-      />
-      <PaginationBar
-        page={Number(d.manual?.page ?? page)}
-        total={Number(d.manual?.total ?? manualRows.length)}
-        pageSize={Number(d.manual?.pageSize ?? PAGE_SIZE)}
-        onPage={setPage}
-        className="data-surface rounded-2xl"
-      />
-    </div>
-  );
-}
-
-function ShiftArchive({ userId }: { userId: string }) {
-  return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-      <ArchiveCard userId={userId} card="employee" title="خاص بالموظف" />
-      <ArchiveCard userId={userId} card="wrong" title="المعاملات الغلط" />
-    </div>
-  );
-}
-
-
-
 /* ============ «معاملة يدوية» داخل قسم المعاملات — الموظف فقط ============
  * سجل مستقل عن معاملات الـAPI. الشفت يُستنتج على السيرفر، والتاريخ/الوقت
  * من ساعة السيرفر، والتعديل 10 دقائق من وقت الإنشاء (يُفرض على السيرفر أيضًا)،
@@ -1464,7 +1287,7 @@ export function EmployeeWorkView({
   /** أدمن اختار شفتًا محددًا → سجل ذلك الشفت فقط (قراءة). */
   viewShiftId?: string;
   /** بيانات الشفت المختار (للعرض فقط بجانب هوية الموظف). */
-  viewShift?: { id: string; startedAt: number; endedAt: number | null; open: boolean; txns: number; label?: string };
+  viewShift?: { id: string; startedAt: number; endedAt: number | null; open: boolean; txns: number; reviewed?: boolean; label?: string };
   viewName?: string;
   viewAvatar?: string;
 }) {
@@ -1480,7 +1303,9 @@ export function EmployeeWorkView({
   const shiftMode = !!viewShiftId;
   const viewing = !!viewUserId || shiftMode || blank;
 
-  const [tab, setTab] = useUiState<TabKey>("work-sheet", "tab", "all");
+  const [savedTab, setTab] = useUiState<string>("work-sheet", "tab", "all");
+  const tab = TOP_TABS.find((item) => item.key === savedTab)?.key ?? "all";
+  const reviewPending = isAdmin && shiftMode && viewShift?.reviewed === false;
   // إيداع / سحب داخل قسمي التحويلات (فلترة عرض فقط)
   const [flow, setFlow] = useUiState<"in" | "out">("work-sheet", "flow", "in");
 
@@ -1497,7 +1322,7 @@ export function EmployeeWorkView({
         : ["my-shift-txns"],
     queryFn: () =>
       shiftMode
-        ? shiftTxnsFn({ data: { shiftId: viewShiftId!, page: 1 } })
+        ? shiftTxnsFn({ data: { shiftId: String(viewShiftId), page: 1 } })
         : viewUserId
           ? empTxnsFn({ data: { userId: viewUserId, page: 1 } })
           : txnsFn({ data: { page: 1 } }),
@@ -1522,7 +1347,7 @@ export function EmployeeWorkView({
         : ["my-shift-p2p"],
     queryFn: () =>
       shiftMode
-        ? shiftP2PFn({ data: { shiftId: viewShiftId! } })
+        ? shiftP2PFn({ data: { shiftId: String(viewShiftId) } })
         : viewUserId
           ? empP2PFn({ data: { userId: viewUserId } })
           : myP2PFn({ data: undefined as any }),
@@ -1556,9 +1381,9 @@ export function EmployeeWorkView({
     queryKey: shiftMode ? ["shift-transfers", viewShiftId, "external"] : ["work-transfers", "external"],
     queryFn: () =>
       shiftMode
-        ? shiftTransfersFn({ data: { shiftId: viewShiftId!, scope: "external" as const } })
+        ? shiftTransfersFn({ data: { shiftId: String(viewShiftId), scope: "external" as const } })
         : transfersFn({ data: { scope: "external" as const } }),
-    enabled: tab === "ext" && !blank,
+    enabled: (tab === "ext" || reviewPending) && !blank,
     refetchInterval: livePoll(5_000),
     refetchIntervalInBackground: false,
   });
@@ -1566,7 +1391,7 @@ export function EmployeeWorkView({
     queryKey: shiftMode ? ["shift-transfers", viewShiftId, "internal"] : ["work-transfers", "internal"],
     queryFn: () =>
       shiftMode
-        ? shiftTransfersFn({ data: { shiftId: viewShiftId!, scope: "internal" as const } })
+        ? shiftTransfersFn({ data: { shiftId: String(viewShiftId), scope: "internal" as const } })
         : transfersFn({ data: { scope: "internal" as const } }),
     enabled: tab === "int" && !blank,
     refetchInterval: livePoll(5_000),
@@ -1586,7 +1411,6 @@ export function EmployeeWorkView({
   const allRows: any[] = blank ? [] : ((txns.data as any)?.rows ?? []);
   const txnServerNow: string | null = (txns.data as any)?.serverNow ?? null;
   const rows = useMemo(() => {
-    const weekAgo = Date.now() - 7 * 86400_000;
     switch (tab) {
       case "wrong":
         return allRows.filter((r) => /fail|reject|decline|cancel/i.test(String(r.status)));
@@ -1594,8 +1418,6 @@ export function EmployeeWorkView({
         return allRows.filter((r) => /transfer|deposit|withdraw/i.test(String(r.kind)));
       case "p2p":
         return allRows.filter((r) => /p2p/i.test(String(r.kind)));
-      case "week":
-        return allRows.filter((r) => Number(r.time) >= weekAgo);
       case "employee":
         return [] as any[];
       default:
@@ -1626,15 +1448,51 @@ export function EmployeeWorkView({
         : ["my-manual-card-txns"],
     queryFn: () =>
       shiftMode
-        ? manualShiftFn({ data: { shiftId: viewShiftId! } })
+        ? manualShiftFn({ data: { shiftId: String(viewShiftId) } })
         : viewUserId
           ? manualEmpFn({ data: { userId: viewUserId } })
           : manualCardFn({ data: undefined as any }),
-    enabled: !blank && tab === "all",
+    enabled: !blank && (tab === "all" || reviewPending),
     refetchInterval: livePoll(5_000),
     refetchIntervalInBackground: false,
   });
   const manualRows: any[] = blank || tab !== "all" ? [] : ((manualCardQ.data as any)?.rows ?? []);
+
+  const shiftManualNotesFn = useServerFn(getShiftManualTxns);
+  const reviewTransactions = useQuery({
+    queryKey: ["shift-review-entries", viewShiftId, txns.dataUpdatedAt],
+    queryFn: async () => {
+      if (!viewShiftId) return [];
+      const first = txns.data as { rows?: any[]; total?: number; pageSize?: number } | undefined;
+      const entries = [...(first?.rows ?? [])];
+      const pages = Math.ceil(Number(first?.total ?? entries.length) / Number(first?.pageSize ?? 50));
+      for (let page = 2; page <= pages; page++) {
+        const next = await shiftTxnsFn({ data: { shiftId: viewShiftId, page } });
+        entries.push(...next.rows);
+      }
+      return entries;
+    },
+    enabled: reviewPending && txns.isSuccess && !blank,
+    staleTime: Infinity,
+    gcTime: 30_000,
+  });
+  const shiftManualNotes = useQuery({
+    queryKey: ["shift-manual-txns", viewShiftId],
+    queryFn: () => viewShiftId
+      ? shiftManualNotesFn({ data: { shiftId: viewShiftId } })
+      : Promise.resolve({ rows: [] }),
+    enabled: reviewPending && !blank,
+    staleTime: 3_000,
+    refetchInterval: livePoll(5_000),
+    refetchIntervalInBackground: false,
+  });
+  const notifications = shiftSectionNotifications({
+    isAdmin, shiftId: viewShiftId, reviewed: viewShift?.reviewed,
+    transactions: reviewTransactions.data ?? allRows,
+    manualCards: (manualCardQ.data as any)?.rows ?? [],
+    manual: (shiftManualNotes.data as any)?.rows ?? [],
+    external: (extQ.data ?? []) as any[],
+  });
 
   const [manualOpen, setManualOpen] = useState(false);
   const [tick, setTick] = useState(0);
@@ -1835,21 +1693,27 @@ export function EmployeeWorkView({
 
       <section className="space-y-4">
         <div className="flex flex-wrap items-center gap-[0.1cm]">
-          {TOP_TABS.filter((t) => t.key !== "summary" || isAdmin).map((t) => {
+          {TOP_TABS.map((t) => {
             const Icon = t.icon;
             const active = tab === t.key;
             return (
-              <button
+              <Button
+                variant="ghost"
                 key={t.key}
                 type="button"
                 onClick={() => setTab(t.key)}
-                className={`flex items-center gap-2 rounded-2xl border px-3 py-2 text-[11px] font-bold transition ${
+                className={`relative flex h-auto items-center gap-2 rounded-2xl border px-3 py-2 text-[11px] font-bold transition ${
                   active ? GLOW_ACTIVE : GLOW_IDLE
                 }`}
               >
+                {notifications[t.key] > 0 && (
+                  <span aria-label={`${notifications[t.key]} تسجيلات من الموظف لم تتم مراجعتها`} className="absolute -top-2 -right-1 grid min-w-5 h-5 place-items-center rounded-full bg-destructive px-1 text-[10px] font-bold leading-none text-destructive-foreground">
+                    {notifications[t.key] > 99 ? "99+" : notifications[t.key]}
+                  </span>
+                )}
                 <span className="whitespace-nowrap">{t.label}</span>
                 <Icon className="size-4 shrink-0 text-[oklch(0.88_0.06_255)] drop-shadow-[0_0_4px_oklch(0.6_0.15_258/0.6)]" />
-              </button>
+              </Button>
             );
           })}
         </div>
@@ -1906,14 +1770,6 @@ export function EmployeeWorkView({
           onDetails={setDetailRow}
           readOnly={viewing}
         />
-      ) : tab === "summary" ? (
-        viewUserId ? (
-          <ShiftArchive userId={viewUserId} />
-        ) : (
-          <div className="data-surface grid min-h-[420px] place-items-center text-xs text-muted-foreground">
-            اختر موظفًا لعرض ملخص جميع شفتاته.
-          </div>
-        )
       ) : tab === "p2p" ? (
 
         <P2POrdersTable

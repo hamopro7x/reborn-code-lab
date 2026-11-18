@@ -60,7 +60,11 @@ export function useWorkRealtime(opts: {
               ["work-transfers", "internal"],
             ];
       }
-      return [["my-manual-card-txns"], ["my-manual-txns"]];
+      return shiftMode
+        ? [["shift-manual-card-txns", shiftId], ["shift-manual-txns", shiftId]]
+        : viewUserId
+          ? [["emp-manual-card-txns", viewUserId], ["emp-manual-txns", viewUserId]]
+          : [["my-manual-card-txns"], ["my-manual-txns"]];
     };
 
     /** تجميع الأحداث المتقاربة في invalidate واحد (debounce بسيط). */
