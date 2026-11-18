@@ -44,7 +44,7 @@ export function StaffChatMessage({ message, state, act, forced = false }: {
       {(forced || !outgoing) &&
       <span className={forced ? "font-bold" : "staff-chat-sender font-bold text-[13px]"}>{message.sender_name}</span>
       }
-      {message.mandatory && <span className="staff-chat-mandatory text-[13px] font-semibold">قراءة إجبارية</span>}
+      {message.mandatory && <span className="staff-chat-mandatory text-[13px] font-semibold">قراءة مهمة</span>}
     </div>}
     {message.deleted_at ? <p className="mt-2 text-muted-foreground text-[15px]">تم حذف الرسالة لدى الجميع</p> : <>
       {!hasMedia && messageText}
