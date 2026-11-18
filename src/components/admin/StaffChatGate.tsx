@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getChatState } from "@/lib/chat.functions";
+import { getChatState, getChatMessages } from "@/lib/chat.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { livePoll } from "@/lib/live-poll";
 import { refreshQueries } from "@/lib/refresh-queries";
@@ -34,6 +34,10 @@ export function StaffChatGate() {
   const status = useQuery({ queryKey: ["staff-chat-state"], queryFn: () => stateFn(), enabled: signedIn,
     refetchInterval: livePoll(5000), refetchIntervalInBackground: false, staleTime: 0, retry: 3, retryDelay: (n) => Math.min(1000 * 2 ** n, 5000) });
   const state = status.data;
+  const readFn = useServerFn(getChatMessages);
+  // Keep the newest group page warm in the background so opening the group shows messages instantly.
+  useQuery({ queryKey: ["staff-chat-messages", undefined], queryFn: () => readFn({ data: { before: undefined, beforeId: undefined } }),
+    enabled: signedIn && Boolean(state?.enabled), staleTime: 0, gcTime: Infinity, retry: 3, retryDelay: (n) => Math.min(1000 * 2 ** n, 5000) });
   useEffect(() => {
     if (!signedIn) return;
     let refreshTimer: ReturnType<typeof setTimeout> | undefined;
@@ -82,6 +86,7 @@ export function StaffChatGate() {
     if (isNewIncomingChat(incoming.current.cursor, state.incoming)) {
       incoming.current.cursor = state.incoming;
       sound.current?.play();
+      void refreshQueries(qc, [["staff-chat-messages"]]);
       if (!onChatPanel) chatBadge.bump();
     }
   }, [signedIn, state]);
