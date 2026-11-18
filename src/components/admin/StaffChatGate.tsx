@@ -43,7 +43,10 @@ export function StaffChatGate() {
         if (refreshTimer !== undefined) return;
         refreshTimer = setTimeout(() => {
           refreshTimer = undefined;
-          void refreshQueries(qc, [["staff-chat-state"], ["staff-chat-messages"]]);
+          const keys = [["staff-chat-state"], ["staff-chat-messages"]] as const;
+          // A poll already in flight may predate this event; refresh once more after it settles.
+          const inFlight = keys.some((queryKey) => qc.isFetching({ queryKey }) > 0);
+          void refreshQueries(qc, keys).then(() => { if (inFlight) return refreshQueries(qc, keys); });
         }, 150);
       })
       .subscribe();
