@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getChatState } from "@/lib/chat.functions";
@@ -19,6 +19,9 @@ export function StaffChatGate() {
   const [groupOpen, setGroupOpen] = useState(false);
   const qc = useQueryClient(); const stateFn = useServerFn(getChatState);
   const overlay = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+  const location = useRouterState({ select: (s) => ({ path: s.location.pathname, panel: (s.location.search as { panel?: string }).panel }) });
+  const onChatPanel = location.path === "/admin" && location.panel === "chat";
   useEffect(() => {
     let active = true;
     void supabase.auth.getUser().then(({ data }) => { if (active) { setSignedIn(Boolean(data.user)); setIdentityReady(true); } });
@@ -67,8 +70,24 @@ export function StaffChatGate() {
   const message = state?.pending[0];
   const blocked = signedIn && identityReady && state?.role === "employee" && Boolean(message);
   useEffect(() => { if (!blocked) setGroupOpen(false); }, [blocked]);
+  // Opening the group shows the normal site on the chat panel; only the sidebar stays frozen.
+  const reachedChat = useRef(false);
   useEffect(() => {
-    if (!blocked || !overlay.current) return;
+    if (!groupOpen) { reachedChat.current = false; return; }
+    if (onChatPanel) reachedChat.current = true; else if (reachedChat.current) setGroupOpen(false);
+  }, [groupOpen, onChatPanel]);
+  const chatUnlocked = blocked && groupOpen;
+  useEffect(() => {
+    if (!chatUnlocked) return;
+    document.body.classList.add("staff-chat-locked");
+    const freeze = () => document.querySelectorAll<HTMLElement>('[data-sidebar="sidebar"],[data-sidebar="trigger"]').forEach((el) => { el.inert = true; });
+    freeze(); const observer = new MutationObserver(freeze); observer.observe(document.body, { childList: true, subtree: true });
+    return () => { observer.disconnect(); document.body.classList.remove("staff-chat-locked");
+      document.querySelectorAll<HTMLElement>('[data-sidebar="sidebar"],[data-sidebar="trigger"]').forEach((el) => { el.inert = false; }); };
+  }, [chatUnlocked]);
+  const openGroup = () => { setGroupOpen(true); void navigate({ to: "/admin", search: { panel: "chat", message: message?.id } }); };
+  useEffect(() => {
+    if (!blocked || groupOpen || !overlay.current) return;
     const panel = overlay.current;
     const siblings = Array.from(document.body.children).filter((el) => el !== panel && el instanceof HTMLElement) as HTMLElement[];
     const previous = siblings.map((el) => el.inert);
@@ -76,8 +95,9 @@ export function StaffChatGate() {
     const overflow = document.body.style.overflow; document.body.style.overflow = "hidden";
     panel.focus();
     return () => { siblings.forEach((el, index) => { el.inert = previous[index] ?? false; }); document.body.style.overflow = overflow; };
-  }, [blocked, message?.id]);
+  }, [blocked, groupOpen, message?.id]);
   if (typeof document === "undefined") return null;
+  if (blocked && groupOpen) return null;
   if (blocked) return createPortal(<div ref={overlay} tabIndex={-1} role="dialog" aria-modal="true" aria-label="قراءة رسائل MG Pro الإجبارية"
     className={`admin-theme fixed inset-0 z-[10000] text-foreground overflow-y-auto outline-none${groupOpen ? " bg-background" : " staff-chat-mandatory-overlay"}`} dir="rtl" onKeyDown={(event) => {
       if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); }
@@ -91,7 +111,7 @@ export function StaffChatGate() {
     {groupOpen ? <StaffChat targetId={message?.id} /> : <div className="staff-chat-mandatory-screen">
       <div className="staff-chat-mandatory-notice">
         <img src={mandatoryNotice} width={1672} height={941} alt="قراءة مهمة قبل متابعة العمل. لن تتمكن من متابعة العمل حتى تقرأ الرسائل المطلوبة." />
-        <Button type="button" variant="ghost" className="staff-chat-mandatory-open" aria-label="فتح الجروب" onClick={() => setGroupOpen(true)}><img src={mandatoryOpenButton} width={826} height={158} alt="" aria-hidden="true" draggable={false} /><span className="sr-only">فتح الجروب</span></Button>
+        <Button type="button" variant="ghost" className="staff-chat-mandatory-open" aria-label="فتح الجروب" onClick={openGroup}><img src={mandatoryOpenButton} width={826} height={158} alt="" aria-hidden="true" draggable={false} /><span className="sr-only">فتح الجروب</span></Button>
       </div>
     </div>}
   </div>, document.body);

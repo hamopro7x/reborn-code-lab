@@ -1435,3 +1435,6 @@
 .staff-chat-bubble-voice{padding:6px 12px 4px;max-width:min(90%,360px)}
 .staff-chat-bubble-voice > .mt-3{margin-top:0}
 .staff-chat-bubble-voice .staff-chat-message-meta{margin-block-start:2px;font-size:10px;line-height:16px}
+
+/* Mandatory reading: sidebar frozen while the group is open in the normal site. */
+body.staff-chat-locked [data-sidebar="sidebar"], body.staff-chat-locked [data-sidebar="trigger"] { pointer-events: none; filter: grayscale(0.6) brightness(0.6); user-select: none; }
