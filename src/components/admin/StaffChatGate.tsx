@@ -12,6 +12,7 @@ import { refreshQueries } from "@/lib/refresh-queries";
 import { StaffChat } from "./StaffChat";
 import { createChatSound, isNewIncomingChat, type IncomingChatCursor } from "@/lib/chat-sound";
 import mandatoryNotice from "@/assets/staff-chat-mandatory-brand-colors.png";
+import mandatoryOpenButton from "@/assets/staff-chat-mandatory-open-button.png";
 
 export function StaffChatGate() {
   const [signedIn, setSignedIn] = useState(false); const [identityReady, setIdentityReady] = useState(false);
@@ -90,7 +91,7 @@ export function StaffChatGate() {
     {groupOpen ? <StaffChat targetId={message?.id} /> : <div className="staff-chat-mandatory-screen">
       <div className="staff-chat-mandatory-notice">
         <img src={mandatoryNotice} width={1672} height={941} alt="قراءة مهمة قبل متابعة العمل. لن تتمكن من متابعة العمل حتى تقرأ الرسائل المطلوبة." />
-        <Button type="button" variant="ghost" className="staff-chat-mandatory-open" aria-label="فتح الجروب" onClick={() => setGroupOpen(true)}><span className="sr-only">فتح الجروب</span></Button>
+        <Button type="button" variant="ghost" className="staff-chat-mandatory-open" aria-label="فتح الجروب" onClick={() => setGroupOpen(true)}><img src={mandatoryOpenButton} width={826} height={158} alt="" aria-hidden="true" draggable={false} /><span className="sr-only">فتح الجروب</span></Button>
       </div>
     </div>}
   </div>, document.body);
