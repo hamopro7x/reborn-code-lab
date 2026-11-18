@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { livePoll } from "@/lib/live-poll";
 import { refreshQueries } from "@/lib/refresh-queries";
 import { StaffChat } from "./StaffChat";
+import { chatBadge } from "@/lib/chat-badge";
 import { createChatSound, isNewIncomingChat, type IncomingChatCursor } from "@/lib/chat-sound";
 import mandatoryNotice from "@/assets/staff-chat-mandatory-brand-colors.png";
 import mandatoryOpenButton from "@/assets/staff-chat-mandatory-open-button.png";
@@ -65,8 +66,10 @@ export function StaffChatGate() {
     if (isNewIncomingChat(incoming.current.cursor, state.incoming)) {
       incoming.current.cursor = state.incoming;
       sound.current?.play();
+      if (!onChatPanel) chatBadge.bump();
     }
   }, [signedIn, state]);
+  useEffect(() => { if (onChatPanel) chatBadge.clear(); }, [onChatPanel]);
   const message = state?.pending[0];
   const blocked = signedIn && identityReady && state?.role === "employee" && Boolean(message);
   useEffect(() => { if (!blocked) setGroupOpen(false); }, [blocked]);

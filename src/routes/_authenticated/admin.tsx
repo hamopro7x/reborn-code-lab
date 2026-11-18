@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useChatBadge } from "@/lib/chat-badge";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
@@ -264,7 +265,7 @@ function Admin() {
                         <SidebarMenuItem key={i.key}>
                           <SidebarMenuButton isActive={panel === i.key} onClick={() => setPanel(i.key)}>
                             <i.icon className="size-4" />
-                            <span>{i.label}</span>
+                            <span>{i.label}</span>{i.key === "chat" && <ChatNavBadge />}
                           </SidebarMenuButton>
                         </SidebarMenuItem>
                       ))}
@@ -2330,4 +2331,10 @@ function DevicesTab({ userId, employeeName }: { userId?: string; employeeName?: 
       }
     </div>
   );
+}
+
+function ChatNavBadge() {
+  const n = useChatBadge();
+  if (!n) return null;
+  return <span className="ms-auto min-w-5 h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-[11px] font-bold flex items-center justify-center">{n > 99 ? "99+" : n}</span>;
 }
