@@ -52,7 +52,7 @@ export function StaffChat({ targetId }: { targetId?: string }) {
     input.click();
   };
   const state = stateQ.data;
-  const unread = !before && !targetId && readBaseline && readBaseline.userId === state?.userId
+  const unread = !before && readBaseline && readBaseline.userId === state?.userId
     ? unreadChatMessages(messages.data ?? [], readBaseline.userId, readBaseline.cursor) : [];
   useEffect(() => {
     if (!state?.userId) return;
@@ -62,7 +62,7 @@ export function StaffChat({ targetId }: { targetId?: string }) {
     initialScroll.current = false;
   }, [state?.userId]);
   useEffect(() => {
-    if (!state?.userId || !messages.data?.length || before || targetId || !readBaseline) return;
+    if (!state?.userId || !messages.data?.length || before || !readBaseline) return;
     const marker = end.current;
     if (!marker) return;
     const save = () => {
@@ -102,7 +102,7 @@ export function StaffChat({ targetId }: { targetId?: string }) {
   };
   useEffect(() => { active.current = true; return () => { active.current = false; if (recorder.current) recorder.current.onstop = null; if (recorder.current?.state === "recording") recorder.current.stop(); stream.current?.getTracks().forEach((t) => t.stop()); }; }, []);
   useEffect(() => {
-    if (before || targetId || !readBaseline || !messages.data?.length) return;
+    if (before || !readBaseline || !messages.data?.length) return;
     if (!initialScroll.current) {
       const first = unread[0];
       const target = first ? document.getElementById(`chat-message-${first.id}`) : null;
@@ -117,10 +117,10 @@ export function StaffChat({ targetId }: { targetId?: string }) {
   // Mandatory/mention links show the full group and jump to the target message.
   const targetScrolled = useRef<string | null>(null);
   useEffect(() => {
-    if (!targetId || before || !messages.data?.length || targetScrolled.current === targetId) return;
+    if (!targetId || before || !messages.data?.length || unread.length || targetScrolled.current === targetId) return;
     const el = document.getElementById(`chat-message-${targetId}`);
     if (el) { el.scrollIntoView({ block: "center" }); targetScrolled.current = targetId; }
-  }, [targetId, before, messages.data]);
+  }, [targetId, before, messages.data, unread.length]);
   useEffect(() => { if (targetId && messages.data?.length) void mutate({ data: { action: "seen", payload: { id: targetId } } }).then(() => qc.invalidateQueries({ queryKey: ["staff-chat-state"] })).catch(() => {}); }, [targetId, messages.data?.length, mutate, qc]);
   useEffect(() => { if (!recording || paused) return; const t = window.setInterval(() => setSeconds((v) => v + 1), 1000); return () => window.clearInterval(t); }, [recording, paused]);
   const togglePause = () => { const rec = recorder.current; if (!rec) return; if (rec.state === "recording") { rec.pause(); setPaused(true); } else if (rec.state === "paused") { rec.resume(); setPaused(false); } };
