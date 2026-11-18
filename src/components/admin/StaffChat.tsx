@@ -25,7 +25,7 @@ export function StaffChat({ targetId }: { targetId?: string }) {
   const mutate = useServerFn(mutateChat); const uploadFn = useServerFn(uploadChatFile);
   const stateQ = useQuery({ queryKey: ["staff-chat-state"], queryFn: () => stateFn(), refetchInterval: livePoll(5000), retry: 3, retryDelay: chatRetryDelay });
   const [before, setBefore] = useState<{ date: string; id: string }>();
-  const messages = useQuery({ queryKey: ["staff-chat-messages", before, targetId], queryFn: () => readFn({ data: targetId ? { id: targetId } : { before: before?.date, beforeId: before?.id } }), enabled: stateQ.data?.enabled === true, refetchInterval: livePoll(5000), retry: 3, retryDelay: chatRetryDelay });
+  const messages = useQuery({ queryKey: ["staff-chat-messages", before], queryFn: () => readFn({ data: { before: before?.date, beforeId: before?.id } }), enabled: stateQ.data?.enabled === true, refetchInterval: livePoll(5000), retry: 3, retryDelay: chatRetryDelay });
   const messagesPhase = chatReadPhase(messages.data, messages.isError);
   const [text, setText] = useState(""); const [files, setFiles] = useState<ChatAttachment[]>([]);
   const [mediaSelection, setMediaSelection] = useState<File[]>([]);
@@ -114,6 +114,13 @@ export function StaffChat({ targetId }: { targetId?: string }) {
       initialScroll.current = true;
     } else if (!unread.length) end.current?.scrollIntoView({ block: "nearest" });
   }, [messages.data?.length, before, targetId, readBaseline, unread.length]);
+  // Mandatory/mention links show the full group and jump to the target message.
+  const targetScrolled = useRef<string | null>(null);
+  useEffect(() => {
+    if (!targetId || before || !messages.data?.length || targetScrolled.current === targetId) return;
+    const el = document.getElementById(`chat-message-${targetId}`);
+    if (el) { el.scrollIntoView({ block: "center" }); targetScrolled.current = targetId; }
+  }, [targetId, before, messages.data]);
   useEffect(() => { if (targetId && messages.data?.length) void mutate({ data: { action: "seen", payload: { id: targetId } } }).then(() => qc.invalidateQueries({ queryKey: ["staff-chat-state"] })).catch(() => {}); }, [targetId, messages.data?.length, mutate, qc]);
   useEffect(() => { if (!recording || paused) return; const t = window.setInterval(() => setSeconds((v) => v + 1), 1000); return () => window.clearInterval(t); }, [recording, paused]);
   const togglePause = () => { const rec = recorder.current; if (!rec) return; if (rec.state === "recording") { rec.pause(); setPaused(true); } else if (rec.state === "paused") { rec.resume(); setPaused(false); } };
@@ -193,7 +200,7 @@ export function StaffChat({ targetId }: { targetId?: string }) {
       <div className="staff-chat-transcript relative h-full min-h-0 overflow-y-auto px-4 py-5">
       <div className="relative min-h-full flex flex-col justify-end">
       {before && <Button variant="ghost" size="sm" onClick={() => setBefore(undefined)}>آخر الرسائل</Button>}
-      {!targetId && (messages.data?.length ?? 0) === 50 && <Button variant="ghost" size="sm" onClick={() => { const first = messages.data?.[0]; if (first) setBefore({ date: first.created_at, id: first.id }); }}>رسائل أقدم</Button>}
+      {(messages.data?.length ?? 0) === 50 && <Button variant="ghost" size="sm" onClick={() => { const first = messages.data?.[0]; if (first) setBefore({ date: first.created_at, id: first.id }); }}>رسائل أقدم</Button>}
       {messagesPhase === "loading" ? <p className="py-8 text-muted-foreground text-sm">جاري التحميل…</p> : messagesPhase === "retrying" ? <div className="py-4" role="status"><p className="text-muted-foreground">جاري إعادة الاتصال لتحميل الرسائل…</p><Button onClick={() => void messages.refetch()}>إعادة المحاولة</Button></div> : !messages.data?.length ? <p className="py-10 text-muted-foreground text-sm">مفيش رسائل هنا لسه</p> : messages.data.map((message: ChatMessage) => <Fragment key={message.id}>
         {message.id === unread[0]?.id && <div className="staff-chat-unread" role="status"><span>{unread.length === 1 ? "رسالة واحدة غير مقروءة" : `${unread.length} رسائل غير مقروءة`}</span></div>}
         <StaffChatMessage message={message} state={state} act={act} />
