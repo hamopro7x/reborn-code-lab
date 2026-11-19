@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { MailListRow } from "@/components/admin/MailListRow";
 import { supabase } from "@/integrations/supabase/client";
-import { safeEmailDocument } from "@/lib/mail/mime";
+import { MailMessageBody } from "@/components/admin/MailMessageBody";
 import { formatDateTime } from "@/lib/format";
 import { refreshQueries } from "@/lib/refresh-queries";
 import { livePoll } from "@/lib/live-poll";
@@ -324,17 +324,7 @@ function ThreadView({ id, isAdmin, accounts, labels, onBack }: { id: string; isA
             </div>
             <p className="mb-2 text-xs text-muted-foreground" dir="ltr">To: {m.to_addr}{m.cc_addr ? ` · Cc: ${m.cc_addr}` : ""}</p>
             {m.body_html ? (
-              <iframe title="email" sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin" scrolling="no"
-                className="w-full rounded-md border border-border bg-background"
-                srcDoc={safeEmailDocument(m.body_html)}
-                onLoad={(e) => {
-                  const f = e.currentTarget;
-                  try {
-                    const d = f.contentDocument;
-                    const h = Math.max(d?.documentElement?.scrollHeight ?? 0, d?.body?.scrollHeight ?? 0);
-                    if (h) f.style.height = `${Math.ceil(h)}px`;
-                  } catch {}
-                }} />
+              <MailMessageBody key={m.body_html} html={m.body_html} />
             ) : (
               <pre className="whitespace-pre-wrap break-words font-sans text-sm">{m.body_text || m.snippet}</pre>
             )}
