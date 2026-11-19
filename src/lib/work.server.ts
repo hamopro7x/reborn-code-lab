@@ -1561,6 +1561,21 @@ export const MANUAL_NO_SHIFT_VISIBLE_MS = 10 * 60 * 1000;
  */
 export async function listMyManualTxns(userId: string) {
   const shiftId = await openShiftId(userId);
+  if (shiftId) {
+    // صفوف اتسجلت قبل فتح الشفت بدقائق تتربط به بدل ما تختفي بعد 10 دقائق.
+    const db = await admin();
+    const since = new Date(Date.now() - MANUAL_NO_SHIFT_VISIBLE_MS).toISOString();
+    try {
+      await db
+        .from("work_manual_txns")
+        .update({ shift_id: shiftId })
+        .eq("user_id", userId)
+        .is("shift_id", null)
+        .gte("created_at", since);
+    } catch {
+      /* الربط تحسين: فشله لا يوقف العرض. */
+    }
+  }
   const all = await listManualTxns(userId);
   const now = Date.now();
   const rows = all.rows.filter((r: any) => {
@@ -1596,7 +1611,7 @@ export async function saveManualTxn(
 
   const { data: row } = await db
     .from("work_manual_txns")
-    .select("id,amount,details,created_at,amount_saved_at,details_saved_at")
+    .select("id,amount,details,created_at,amount_saved_at,details_saved_at,shift_id")
     .eq("id", id)
     .eq("user_id", userId)
     .maybeSingle();
@@ -1634,6 +1649,11 @@ export async function saveManualTxn(
   // الطابع الزمني للحفظ يُحدَّث مع كل تعديل؛ الغلق يعتمد على created_at فقط.
   const hasValue = field === "amount" ? patch["amount"] !== null : String(value).trim() !== "";
   patch[stampCol] = hasValue ? savedAt : null;
+  // صف اتعمل قبل فتح الشفت: يتربط بالشفت المفتوح عشان يظهر للأدمن في مراجعة الشفت.
+  if (!(row as any).shift_id) {
+    const open = await openShiftId(userId);
+    if (open) patch["shift_id"] = open;
+  }
 
 
   const { error } = await db.from("work_manual_txns").update(patch).eq("id", id).eq("user_id", userId);

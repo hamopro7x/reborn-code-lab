@@ -692,28 +692,50 @@ function ManualCell({
   const savedRef = useRef(initial);
   const valueRef = useRef(initial);
 
-  // Always show the freshest value coming back from the database.
+  // آخر قيمة اتبعتت ولسه ما اتأكدتش من السيرفر (null = مفيش حفظ معلّق).
+  const pendingRef = useRef<string | null>(null);
+  const retryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // اعرض أحدث قيمة من قاعدة البيانات — إلا لو الموظف عنده كتابة لسه ما اتحفظتش
+  // أو حفظ معلّق؛ كان تحديث قديم بيرجع يمسح اللي اتكتب فيختفي.
   useEffect(() => {
+    if (pendingRef.current !== null) return;
+    if (valueRef.current !== savedRef.current) return;
     setValue(initial);
     savedRef.current = initial;
     valueRef.current = initial;
   }, [initial]);
 
-  const flush = (v: string) => {
-    if (v === savedRef.current) return;
-    savedRef.current = v;
+  const flush = (v: string, attempt = 0) => {
+    if (v === savedRef.current && pendingRef.current === null) return;
+    if (retryRef.current) {
+      clearTimeout(retryRef.current);
+      retryRef.current = null;
+    }
+    pendingRef.current = v;
     void saveFn({ data: { id, field, value: v } })
       .then((res: any) => {
         if (res && res.ok === false) {
-          savedRef.current = "\u0000";
+          if (pendingRef.current === v) pendingRef.current = null;
           toast.error(String(res.error ?? "تعذر الحفظ"));
+          return;
+        }
+        if (pendingRef.current === v) {
+          pendingRef.current = null;
+          savedRef.current = v;
         }
         // Refresh from the DB only after the save resolved (no race).
         onSaved();
       })
       .catch(() => {
-        savedRef.current = "\u0000";
-        toast.error("تعذر الحفظ، حاول مرة أخرى");
+        // خطأ شبكة: إعادة المحاولة تلقائيًا بدل ضياع القيمة.
+        if (pendingRef.current !== v) return;
+        if (attempt < 5) {
+          retryRef.current = setTimeout(() => flushRef.current(v, attempt + 1), 1500 * (attempt + 1));
+        } else {
+          pendingRef.current = null;
+          toast.error("تعذر الحفظ، حاول مرة أخرى");
+        }
       });
   };
   const flushRef = useRef(flush);
@@ -727,7 +749,7 @@ function ManualCell({
   // فضل واقف في الخانة القيمة ما كانتش بتتحفظ، وبعد 5 دقائق الصف يتقفل
   // أو يتمسح كصف فاضي، فالأدمن ما يشوفش حاجة.
   useEffect(() => {
-    if (locked || value === savedRef.current) return;
+    if (locked || value === savedRef.current || value === pendingRef.current) return;
     const t = setTimeout(() => flushRef.current(valueRef.current), 700);
     return () => clearTimeout(t);
   }, [value, locked]);
@@ -735,7 +757,10 @@ function ManualCell({
   // Save pending edits when the section unmounts, or when the tab/window
   // is hidden or closed — otherwise a fast "type then leave" loses the value.
   useEffect(() => {
-    const onHide = () => flushRef.current(valueRef.current);
+    const onHide = () => {
+      if (valueRef.current !== savedRef.current && valueRef.current !== pendingRef.current)
+        flushRef.current(valueRef.current);
+    };
     document.addEventListener("visibilitychange", onHide);
     window.addEventListener("pagehide", onHide);
     window.addEventListener("beforeunload", onHide);
@@ -743,7 +768,7 @@ function ManualCell({
       document.removeEventListener("visibilitychange", onHide);
       window.removeEventListener("pagehide", onHide);
       window.removeEventListener("beforeunload", onHide);
-      flushRef.current(valueRef.current);
+      onHide();
     };
   }, []);
 
