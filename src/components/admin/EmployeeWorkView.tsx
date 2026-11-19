@@ -1084,7 +1084,7 @@ function ManualSection({
   };
 
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+    <div className="grid grid-cols-1 gap-4">
       {cards.map((c) => (
         <ManualCard
           key={c.card}
@@ -1740,10 +1740,12 @@ export function EmployeeWorkView({
           {...(viewUserId ? { viewUserId } : {})}
           {...(viewShiftId ? { viewShiftId } : {})}
           blank={blank}
-          cards={[
-            { card: "employee", title: "خاص بالموظف" },
-            { card: "wrong", title: "المعاملات الغلط" },
-          ]}
+          key={tab}
+          cards={
+            tab === "employee"
+              ? [{ card: "employee", title: "خاص بالموظف" }]
+              : [{ card: "wrong", title: "المعاملات الغلط" }]
+          }
         />
       ) : tab === "receive" || tab === "transfer" ? (
         <ManualSection
