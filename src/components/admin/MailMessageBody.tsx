@@ -8,6 +8,17 @@ export function MailMessageBody({ html }: { html: string }) {
   const [ready, setReady] = useState(false);
   const observer = useRef<ResizeObserver | null>(null);
   const frame = useRef<number | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const done = useRef(false);
+
+  // onLoad can fire before React attaches it; also never leave a spinner forever.
+  useEffect(() => {
+    const el = iframeRef.current;
+    if (el && el.contentDocument?.readyState === "complete" && el.contentDocument.body?.childNodes.length) loaded(el);
+    const t = window.setTimeout(() => { if (iframeRef.current) loaded(iframeRef.current); setReady(true); }, 2500);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [document]);
 
   useEffect(() => () => {
     observer.current?.disconnect();
@@ -16,7 +27,8 @@ export function MailMessageBody({ html }: { html: string }) {
 
   const loaded = (iframe: HTMLIFrameElement) => {
     const doc = iframe.contentDocument;
-    if (!doc?.body) return;
+    if (!doc?.body || done.current) return;
+    done.current = true;
     const resize = () => {
       // Remove the previous viewport height from scrollHeight before measuring.
       iframe.style.height = "1px";
@@ -43,6 +55,7 @@ export function MailMessageBody({ html }: { html: string }) {
         </div>
       )}
       <iframe
+        ref={iframeRef}
         title="email"
         sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin"
         scrolling="no"
