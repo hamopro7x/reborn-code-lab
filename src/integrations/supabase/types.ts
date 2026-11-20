@@ -3043,6 +3043,7 @@ export type Database = {
         Args: { p_device: boolean; p_face: boolean }
         Returns: Json
       }
+      work_claim_shift_for: { Args: { p_user: string }; Returns: Json }
       work_link_p2p_atomic: {
         Args: {
           p_actor_id: string
