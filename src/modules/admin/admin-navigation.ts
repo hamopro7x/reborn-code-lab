@@ -58,3 +58,15 @@ export function getAdminNavGroups(): AdminNavGroup[] {
     },
   ];
 }
+
+/** Applies the employee-sharing policy without changing the source navigation. */
+export function getVisibleAdminNavGroups(
+  groups: AdminNavGroup[],
+  isEmployee: boolean,
+  isAllowed: (key: PanelKey) => boolean,
+): AdminNavGroup[] {
+  if (!isEmployee) return groups;
+  return groups
+    .map((group) => ({ ...group, items: group.items.filter((item) => isAllowed(item.key)) }))
+    .filter((group) => group.items.length > 0);
+}
