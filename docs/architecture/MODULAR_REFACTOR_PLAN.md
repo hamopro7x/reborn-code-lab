@@ -11,6 +11,7 @@
 - Extracted admin sidebar navigation metadata and employee-filtered navigation projection into `src/modules/admin/admin-navigation.ts`; the route now consumes both modules.
 - Extracted the unread staff-chat sidebar badge and admin back-navigation button into `src/modules/admin/components/`, removing their component implementations and hook dependencies from the route file.
 - Extracted the overview dashboard and customers panels into `src/modules/admin/components/OverviewTab.tsx` and `CustomersTab.tsx`; their existing React Query keys and query behavior are retained.
+- Extracted the reviews panel into `src/modules/admin/components/ReviewsTab.tsx`; the existing filter persistence namespace, React Query keys, Supabase operations, and review-management UI are retained. The admin route now imports the standalone panel.
 - Removed the inline role hook, panel registry, navigation metadata, employee base-panel list, navigation filtering, and local-storage read helper from `admin.tsx` while preserving the existing route keys, storage key, labels, role values, and panel visibility behavior.
 - The first extraction keeps panel implementations in the route for now; moving them requires dependency-by-dependency extraction to preserve their server functions and state contracts.
 - Validation status: GitHub Actions reports no workflow runs for the current head commit. The connector cannot run local npm scripts, so lint/typecheck/build remain unverified and must run in a CI/development environment before merge.
