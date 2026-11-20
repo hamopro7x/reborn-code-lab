@@ -1,5 +1,5 @@
 import { DateTimeInput } from "@/components/ui/date-time-input";
-import { ADMIN_LAST_PANEL_KEY, canEmployeeViewPanel, employeeBasePanels, PanelKey, panelKeys, readLastAdminPanel, useAdminRole } from "@/modules/admin/admin-access";
+import { ADMIN_LAST_PANEL_KEY, canEmployeeViewPanel, canViewAdminPanel, employeeBasePanels, PanelKey, panelKeys, readLastAdminPanel, useAdminRole } from "@/modules/admin/admin-access";
 import { getAdminNavGroups, getVisibleAdminNavGroups } from "@/modules/admin/admin-navigation";
 import { formatLocaleDateTime } from "@/lib/format";
 import { useUiState } from "@/lib/ui-state";
@@ -126,7 +126,7 @@ function Admin() {
   });
   const shared = sharedQ.data ?? [];
   const employeeAllowed = (key: PanelKey) => canEmployeeViewPanel(key, shared);
-  const canView = (key: PanelKey) => adminOnly || employeeAllowed(key);
+  const canView = (key: PanelKey) => canViewAdminPanel(role, key, shared);
   const readOnly = isEmployee && !employeeBasePanels.includes(panel);
   async function toggleShare(key: PanelKey, on: boolean) {
     const next = on ? Array.from(new Set([...shared, key])) : shared.filter((k) => k !== key);
