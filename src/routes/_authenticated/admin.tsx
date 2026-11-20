@@ -2,6 +2,7 @@ import { DateTimeInput } from "@/components/ui/date-time-input";
 import { ADMIN_LAST_PANEL_KEY, canEmployeeViewPanel, canViewAdminPanel, employeeBasePanels, PanelKey, panelKeys, readLastAdminPanel, useAdminRole } from "@/modules/admin/admin-access";
 import { getAdminNavGroups, getVisibleAdminNavGroups } from "@/modules/admin/admin-navigation";
 import { ChatNavBadge } from "@/modules/admin/components/ChatNavBadge";
+import { AdminBackButton } from "@/modules/admin/components/AdminBackButton";
 import { formatLocaleDateTime } from "@/lib/format";
 import { useUiState } from "@/lib/ui-state";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
@@ -48,7 +49,7 @@ import { ShieldAlert } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { ReportsTab } from "@/components/admin/ReportsTab";
 import { ProductsTab } from "@/components/admin/ProductsTab";
-import { AdminBackProvider, useAdminBack, useAdminBackTarget } from "@/components/admin/back-nav";
+import { AdminBackProvider, useAdminBack } from "@/components/admin/back-nav";
 import { BybitTab, ApiKeyPanel } from "@/components/admin/BybitTab";
 import { FileBarChart, MonitorPlay, Image as ImageIcon, ChevronUp, ChevronDown, WalletCards, KeyRound, ClipboardList, Table2 } from "lucide-react";
 import { WorkSheetPanel } from "@/components/admin/WorkSheetPanel";
@@ -301,22 +302,6 @@ function Admin() {
         </AdminBackProvider>
       </div>
     </SidebarProvider>
-  );
-}
-
-function AdminBackButton() {
-  const back = useAdminBackTarget();
-  if (!back) return null;
-  return (
-    <Button
-      size="sm"
-      variant="outline"
-      className="rounded-xl gap-1 shrink-0"
-      onClick={back}
-      aria-label="رجوع"
-    >
-      <ChevronRight className="size-4" /> رجوع
-    </Button>
   );
 }
 
