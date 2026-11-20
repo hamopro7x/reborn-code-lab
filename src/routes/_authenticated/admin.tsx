@@ -1,5 +1,5 @@
 import { DateTimeInput } from "@/components/ui/date-time-input";
-import { canEmployeeViewPanel, employeeBasePanels, PanelKey, panelKeys, useAdminRole } from "@/modules/admin/admin-access";
+import { ADMIN_LAST_PANEL_KEY, canEmployeeViewPanel, employeeBasePanels, PanelKey, panelKeys, readLastAdminPanel, useAdminRole } from "@/modules/admin/admin-access";
 import { getAdminNavGroups } from "@/modules/admin/admin-navigation";
 import { formatLocaleDateTime } from "@/lib/format";
 import { useUiState } from "@/lib/ui-state";
@@ -92,17 +92,11 @@ function Admin() {
   const search = Route.useSearch();
   const role = useAdminRole();
   const navigate = useNavigate();
-  // آخر قسم فتحه المستخدم — يُستعاد بعد Refresh حتى لو لم يكن في الرابط.
-  const LAST_PANEL_KEY = "mp:admin.last-panel";
-  const readLastPanel = (): PanelKey | null => {
-    if (typeof window === "undefined") return null;
-    const v = window.localStorage.getItem(LAST_PANEL_KEY) as PanelKey | null;
-    return v && panelKeys.includes(v) ? v : null;
-  };
-  const [panel, setPanelState] = useState<PanelKey>(search.panel ?? readLastPanel() ?? "overview");
+  // Restore the last selected panel when the URL does not specify one.
+  const [panel, setPanelState] = useState<PanelKey>(search.panel ?? readLastAdminPanel() ?? "overview");
   const setPanel = (key: PanelKey) => {
     setPanelState(key);
-    try { window.localStorage.setItem(LAST_PANEL_KEY, key); } catch { /* ignore */ }
+    try { window.localStorage.setItem(ADMIN_LAST_PANEL_KEY, key); } catch { /* ignore */ }
     navigate({ to: "/admin", search: { panel: key }, replace: true });
   };
   // لو فُتحت اللوحة بدون panel في الرابط، نثبّت آخر قسم في الرابط بدل الرجوع للنظرة العامة.
