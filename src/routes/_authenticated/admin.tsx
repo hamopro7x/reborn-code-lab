@@ -1,6 +1,7 @@
 import { DateTimeInput } from "@/components/ui/date-time-input";
 import { ADMIN_LAST_PANEL_KEY, canEmployeeViewPanel, canViewAdminPanel, employeeBasePanels, PanelKey, panelKeys, readLastAdminPanel, useAdminRole } from "@/modules/admin/admin-access";
 import { getAdminNavGroups, getVisibleAdminNavGroups } from "@/modules/admin/admin-navigation";
+import { ChatNavBadge } from "@/modules/admin/components/ChatNavBadge";
 import { formatLocaleDateTime } from "@/lib/format";
 import { useUiState } from "@/lib/ui-state";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
@@ -14,7 +15,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useChatBadge } from "@/lib/chat-badge";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
@@ -2258,8 +2258,3 @@ function DevicesTab({ userId, employeeName }: { userId?: string; employeeName?: 
   );
 }
 
-function ChatNavBadge() {
-  const n = useChatBadge();
-  if (!n) return null;
-  return <span className="ms-auto min-w-5 h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-[11px] font-bold flex items-center justify-center">{n > 99 ? "99+" : n}</span>;
-}
