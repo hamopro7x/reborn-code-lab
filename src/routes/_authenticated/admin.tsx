@@ -1,5 +1,5 @@
 import { DateTimeInput } from "@/components/ui/date-time-input";
-import { PanelKey, panelKeys, useAdminRole } from "@/modules/admin/admin-access";
+import { canEmployeeViewPanel, employeeBasePanels, PanelKey, panelKeys, useAdminRole } from "@/modules/admin/admin-access";
 import { getAdminNavGroups } from "@/modules/admin/admin-navigation";
 import { formatLocaleDateTime } from "@/lib/format";
 import { useUiState } from "@/lib/ui-state";
@@ -131,10 +131,9 @@ function Admin() {
     refetchIntervalInBackground: false,
   });
   const shared = sharedQ.data ?? [];
-  const basePanels: PanelKey[] = ["orders", "courses", "worksheet", "mail", "chat"];
-  const employeeAllowed = (key: PanelKey) => basePanels.includes(key) || shared.includes(key);
+  const employeeAllowed = (key: PanelKey) => canEmployeeViewPanel(key, shared);
   const canView = (key: PanelKey) => adminOnly || employeeAllowed(key);
-  const readOnly = isEmployee && !basePanels.includes(panel);
+  const readOnly = isEmployee && !employeeBasePanels.includes(panel);
   async function toggleShare(key: PanelKey, on: boolean) {
     const next = on ? Array.from(new Set([...shared, key])) : shared.filter((k) => k !== key);
     const { error } = await supabase.from("site_settings").upsert({ key: "employee_panels", value: { panels: next } as any }, { onConflict: "key" });
@@ -236,7 +235,7 @@ function Admin() {
             <SidebarTrigger />
             <AdminBackButton />
             <h1 className="font-bold">{visibleNavGroups.flatMap((g) => g.items).find((i) => i.key === panel)?.label}</h1>
-            {adminOnly && !basePanels.includes(panel) && (
+            {adminOnly && !employeeBasePanels.includes(panel) && (
               <label className="ms-auto flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
                 <span>إظهار للموظف (قراءة فقط)</span>
                 <Switch checked={shared.includes(panel)} onCheckedChange={(v) => void toggleShare(panel, v)} />
