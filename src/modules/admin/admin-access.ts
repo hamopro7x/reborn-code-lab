@@ -63,3 +63,16 @@ export function canViewAdminPanel(
 ): boolean {
   return role === "admin" || (role === "employee" && canEmployeeViewPanel(key, sharedPanels));
 }
+
+/** Persists the last selected panel using the existing browser storage key. */
+export const ADMIN_LAST_PANEL_KEY = "mp:admin.last-panel";
+
+export function readLastAdminPanel(): PanelKey | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const value = window.localStorage.getItem(ADMIN_LAST_PANEL_KEY) as PanelKey | null;
+    return value && panelKeys.includes(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
