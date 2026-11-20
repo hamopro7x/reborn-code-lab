@@ -1,5 +1,9 @@
 # خطة النقل الكامل إلى VPS
 
+## Permanent removal of retired payment integration — 20 November 2026
+- [x] Delete its UI, server modules, import, translations, environment example, and obsolete deployment documentation references; remove copies from the downloadable source archive while preserving other integrations and generic payment methods.
+- [x] No live application/config references remain; 93 regression tests passed and automatic build reports build OK. Historical SQL (including its archive copy) and the permanent-removal memory remain intentionally; no Supabase schema/data changes or deployment. Separate production build/typecheck and authenticated admin verification were not run in this environment.
+
 ## فحص أمان الموقع ومؤشرات الاختراق — 20 نوفمبر 2026
 - [x] فحص أمان قاعدة البيانات: لم يظهر كشف بيانات أو خلل صلاحيات؛ حماية كلمات المرور المسرّبة غير مفعلة.
 - [x] فحص مكتبات الإنتاج: تحذيرات معروفة بينها حرجة؛ وجود التحذير لا يثبت قابلية الاستغلال أو حدوث اختراق.

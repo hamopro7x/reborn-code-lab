@@ -49,7 +49,6 @@ import { ProductsTab } from "@/components/admin/ProductsTab";
 import { AdminBackProvider, useAdminBack, useAdminBackTarget } from "@/components/admin/back-nav";
 import { BybitTab, ApiKeyPanel } from "@/components/admin/BybitTab";
 import { OkxTab } from "@/components/admin/OkxTab";
-import { RedotPayPanel } from "@/components/admin/RedotPayPanel";
 import { FileBarChart, MonitorPlay, Image as ImageIcon, ChevronUp, ChevronDown, WalletCards, KeyRound, ClipboardList, Table2 } from "lucide-react";
 import { WorkSheetPanel } from "@/components/admin/WorkSheetPanel";
 import { AdminSheet } from "@/components/admin/AdminSheet";

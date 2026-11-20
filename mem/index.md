@@ -9,4 +9,5 @@
 - [Mobile keyword signal](mem://preferences/mobile-first-signal) — Message starting with "موبايل" means mobile-only work
 - [Store category rail](mem://design/store-category-rail) — Homepage categories use a horizontal gaming-cover rail on desktop and mobile
 - [Flexible payment methods](mem://features/payment-methods) — Full admin control; checkout must not assume every payment method is cryptocurrency
+- [Permanently retired integration](mem://features/retired-integration) — RedotPay is permanently removed; never reintroduce it without an explicit user request
 
