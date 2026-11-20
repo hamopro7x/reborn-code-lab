@@ -46,3 +46,20 @@ export function useAdminRole() {
 
   return role;
 }
+
+/** Sections employees can always access without an explicit admin share. */
+export const employeeBasePanels: readonly PanelKey[] = [
+  "orders", "courses", "worksheet", "mail", "chat",
+];
+
+export function canEmployeeViewPanel(key: PanelKey, sharedPanels: readonly PanelKey[]): boolean {
+  return employeeBasePanels.includes(key) || sharedPanels.includes(key);
+}
+
+export function canViewAdminPanel(
+  role: string | null,
+  key: PanelKey,
+  sharedPanels: readonly PanelKey[],
+): boolean {
+  return role === "admin" || (role === "employee" && canEmployeeViewPanel(key, sharedPanels));
+}
