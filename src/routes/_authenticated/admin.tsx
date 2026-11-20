@@ -7,7 +7,6 @@ import { OverviewTab } from "@/modules/admin/components/OverviewTab";
 import { CustomersTab } from "@/modules/admin/components/CustomersTab";
 import { ReviewsTab } from "@/modules/admin/components/ReviewsTab";
 import { formatLocaleDateTime } from "@/lib/format";
-import { useUiState } from "@/lib/ui-state";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
@@ -32,7 +31,7 @@ import { AdminLangToggle, AdminTranslator, useAdminLang } from "@/lib/admin-i18n
 import {
   LayoutDashboard, Package, Layers, ShoppingCart, CreditCard, Coins, Clock, Settings2,
   Plus, Trash2, Edit, ExternalLink, Check, X, TrendingUp, DollarSign, Users, Bell, Loader2,
-  Star, UserCog, LogOut, Repeat, ArrowUpRight, GraduationCap, MonitorSmartphone, Upload, PlayCircle,
+  UserCog, LogOut, Repeat, ArrowUpRight, GraduationCap, MonitorSmartphone, Upload, PlayCircle,
   Lock, Camera, Download, ChevronRight,
 } from "lucide-react";
 
