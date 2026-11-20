@@ -1355,12 +1355,17 @@ export function EmployeeWorkView({
             ? empTxnsFn({ data: { userId: viewUserId, page } })
             : txnsFn({ data: { page } });
       const first: any = await load(1);
+      // Only a single shift is bounded; other views stay on one page so polling stays light.
+      if (!shiftMode) return first;
       const total = Number(first?.total ?? 0);
       const size = Number(first?.pageSize ?? 50) || 50;
-      const pages = Math.min(Math.ceil(total / size), 50);
-      if (pages <= 1) return first;
-      const rest = await Promise.all(Array.from({ length: pages - 1 }, (_, i) => load(i + 2)));
-      return { ...first, rows: [...(first?.rows ?? []), ...rest.flatMap((r: any) => r?.rows ?? [])] };
+      const pages = Math.min(Math.ceil(total / size), 6);
+      const rows = [...(first?.rows ?? [])];
+      for (let p = 2; p <= pages; p++) {
+        const r: any = await load(p);
+        rows.push(...(r?.rows ?? []));
+      }
+      return { ...first, rows };
     },
     // Start rows immediately beside the state request. Both row endpoints
     // resolve the relevant shift themselves, so waiting for `st` created an
