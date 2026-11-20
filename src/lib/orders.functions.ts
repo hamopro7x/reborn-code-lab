@@ -220,6 +220,8 @@ export const listOrdersByDevice = createServerFn({ method: "POST" })
       .from("orders")
       .select("id, order_code, status, total, currency_code, created_at")
       .eq("device_id", data.device_id)
+      .is("user_id", null)
+      .gte("created_at", new Date(Date.now() - 30 * 86400_000).toISOString())
       .order("created_at", { ascending: false })
       .limit(50);
     if (error) throw new Error("Failed to load orders");

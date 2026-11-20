@@ -1543,6 +1543,7 @@ function AccountInfoCard({ isAdmin, accountId }: { isAdmin: boolean; accountId?:
   const info = useQuery({
     queryKey: ["bybit-account-info", accountId ?? null],
     queryFn: () => load({ data: { accountId } } as any),
+    enabled: isAdmin,
   });
   const row = (info.data as any)?.info ?? null;
   const [edit, setEdit] = useState(false);

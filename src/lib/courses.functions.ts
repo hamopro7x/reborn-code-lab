@@ -225,7 +225,7 @@ export const getLessonVideoUrl = createServerFn({ method: "POST" })
 
     const { data: signed, error } = await supabaseAdmin
       .storage.from("course-videos")
-      .createSignedUrl(lesson.video_path, 60 * 60 * 2); // 2 hours
+      .createSignedUrl(lesson.video_path, 60 * 10); // 10 minutes, re-checked on each request
     if (error || !signed?.signedUrl) throw new Error(error?.message || "Failed to sign URL");
 
     // touch last seen

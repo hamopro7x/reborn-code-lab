@@ -28,7 +28,7 @@ async function attachmentUrls(db: any, messages: ChatMessage[]) {
     const data = byId.get(attachment.id);
     if (!data) throw new Error("تعذر تحميل المرفق");
     const { data: signed, error: signError } = await supabaseAdmin.storage.from(CHAT_BUCKET)
-      .createSignedUrl(data.path, 300, /^(image|audio|video)\//.test(data.mime) ? undefined : { download: data.name });
+      .createSignedUrl(data.path, 60, /^(image|audio|video)\//.test(data.mime) ? undefined : { download: data.name });
     if (signError || !signed?.signedUrl) throw new Error("تعذر فتح المرفق");
     attachment.url = signed.signedUrl;
   }));

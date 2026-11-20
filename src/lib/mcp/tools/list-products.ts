@@ -21,7 +21,8 @@ export default defineTool({
       .order("sort_order")
       .limit(max);
     if (active_only !== false) query = query.eq("active", true);
-    if (search?.trim()) query = query.or(`name.ilike.%${search.trim()}%,description.ilike.%${search.trim()}%`);
+    const term = search?.trim().slice(0, 100).replace(/[^\p{L}\p{N} _-]/gu, "");
+    if (term) query = query.or(`name.ilike.%${term}%,description.ilike.%${term}%`);
     const { data, error } = await query;
     if (error) return errorResult(error.message);
     return jsonResult(data ?? []);

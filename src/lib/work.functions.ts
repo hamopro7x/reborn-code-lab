@@ -251,9 +251,10 @@ export const claimWorkShift = createServerFn({ method: "POST" })
       return { ok: false as const, error: check.reason ?? "الرمز غير صحيح" };
     }
 
-    const { data: shift, error } = await context.supabase.rpc("work_claim_shift", {
-      p_face: true,
-      p_device: true,
+    // PIN verified above; only the server may claim the shift.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: shift, error } = await (supabaseAdmin as any).rpc("work_claim_shift_for", {
+      p_user: context.userId,
     });
     if (error) return { ok: false as const, error: error.message };
     return { ok: true as const, shift };
