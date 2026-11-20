@@ -1,6 +1,6 @@
 import { DateTimeInput } from "@/components/ui/date-time-input";
 import { ADMIN_LAST_PANEL_KEY, canEmployeeViewPanel, employeeBasePanels, PanelKey, panelKeys, readLastAdminPanel, useAdminRole } from "@/modules/admin/admin-access";
-import { getAdminNavGroups } from "@/modules/admin/admin-navigation";
+import { getAdminNavGroups, getVisibleAdminNavGroups } from "@/modules/admin/admin-navigation";
 import { formatLocaleDateTime } from "@/lib/format";
 import { useUiState } from "@/lib/ui-state";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
@@ -165,11 +165,7 @@ function Admin() {
     );
   }
   const navGroups = getAdminNavGroups();
-  const visibleNavGroups = isEmployee
-    ? navGroups
-        .map((g) => ({ ...g, items: g.items.filter((i) => employeeAllowed(i.key)) }))
-        .filter((g) => g.items.length > 0)
-    : navGroups;
+  const visibleNavGroups = getVisibleAdminNavGroups(navGroups, isEmployee, employeeAllowed);
 
 
   return (
