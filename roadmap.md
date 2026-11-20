@@ -1,5 +1,10 @@
 # خطة النقل الكامل إلى VPS
 
+## Remove the retired account integration — 20 November 2026
+- [x] Remove its navigation, modules, tests, setup documentation, and shared-code hooks without changing Bybit or employee workflows.
+- [x] Prepare review-only cleanup instructions in supabase/manual/retired_account_cleanup_plan.md; keep the shared provider discriminator/filtering, constraint and index. No SQL, production/Fly changes, or deployment.
+- [x] 209 targeted regression tests pass; automatic build OK, no live source/config references. Full remaining-reference and changed-file inventory: integration-removal-audit-2026-11-20.md. Standalone production build/typecheck and authenticated production UI verification were not run.
+
 ## Permanent removal of retired payment integration — 20 November 2026
 - [x] Delete its UI, server modules, import, translations, environment example, and obsolete deployment documentation references; remove copies from the downloadable source archive while preserving other integrations and generic payment methods.
 - [x] No live application/config references remain; 93 regression tests passed and automatic build reports build OK. Historical SQL (including its archive copy) and the permanent-removal memory remain intentionally; no Supabase schema/data changes or deployment. Separate production build/typecheck and authenticated admin verification were not run in this environment.
@@ -117,31 +122,6 @@
 - [x] اعتماد خطة إضافة روابط متعددة وإخفاء خاص بالموظف، مع إبقاء الإسنادات ومجموعات التاريخ القديم دون تخمين.
 - [x] تنفيذ الربط المتعدد والإخفاء والاستعادة وعرض الروابط للأدمن، واختبارات الصلاحيات والتوافق وSQL محلي معزول؛ تفاصيل التطبيق في P2P-SHIFT-LINKING.md، دون SQL إنتاجي أو نشر.
 - [ ] التحقق المصادق داخل الموقع بعد تطبيق المالك للتحديث؛ جلسة اختبار Supabase الخارجي غير متاحة هنا.
-
-## عرض العملات الرقمية لحساب OKX العادي — 12 نوفمبر
-- [x] عرض جميع العملات التي يرجعها رصيد التمويل والتداول في كارت الحساب بدل USDT فقط، وإظهار الكسور حتى 8 منازل في الكارت والتفاصيل؛ دون تغيير Pay أو المفاتيح أو المعاملات.
-- [ ] التحقق بحساب المالك بعد نشر الموقع؛ جلسة حساب Supabase الخارجي غير متاحة هنا.
-
-## معاملات بطاقة OKX — 12 نوفمبر
-- [x] مراجعة الكود ودليل v5 الرسمي الحي: الربط الحالي لا يقرأ مشتريات البطاقة، والدليل لا يحتوي مسارًا موثقًا لبطاقة OKX أو Pay؛ البطاقة ممولة من Pay بحسب شرح OKX الرسمي.
-- [ ] التسجيل التلقائي لمشتريات بطاقة OKX متوقف على مصدر رسمي لسجل البطاقة؛ حركات التمويل المتاحة لا تثبت اسم التاجر أو حالة الشراء/العكس، ولا تُسجل كمشتريات بالتخمين. لا تعديل صلاحيات أو بيانات أو نشر.
-
-## معاملات OKX Pay في السجل الرئيسي — 12 نوفمبر
-- [x] تجربة المفتاح المحفوظ بطلبات GET فقط: الحساب hh يستجيب بنجاح؛ 22 حركة تمويل، 8 إيداعات خارجية و3 سحوبات خارجية، والتحويلات الداخلية صفر؛ دون عرض المفاتيح أو تعديلها أو كتابة بيانات.
-- [x] مقارنة حية: الإيداعات الثمانية والسحوبات الثلاثة موجودة بالفعل في المركزي، ومنها إيداع 600 USDT بتاريخ 12 نوفمبر؛ الإجمالي الرسمي 0.08 دولار لا يشمل Pay.
-- [ ] إدراج حركات Pay الفعلية: سجل التمويل يرجع خصومات USDG بنوع 325 غير موثق في قسم التمويل الرسمي؛ لا يثبت المستفيد أو الدفع من محفظة Pay، فلا تحويله إلى مصروف بالتخمين. ينتظر مصدر موثق لحركات Pay أو رد OKX بشأن هذا النوع.
-
-## رصيد نظرة OKX العامة — 12 نوفمبر
-- [x] عرض الإجمالي بدل إبراز USDT وحده، وجلب تقييم الأصول الرسمي بالدولار مع احتساب USDG في التقدير البديل؛ دون تغيير المفاتيح أو Bybit.
-- [x] نجحت اختبارات OKX الـ18، ومنها تقييم 7.65 بالدولار وعدم المضاعفة والصفر الحقيقي وفشل التقييم؛ البناء سليم.
-- [x] مقارنة بطلبات قراءة حية بالمفتاح المحفوظ: التقييم الرسمي 0.08 دولار ورصيد التمويل 0.0841471667438 USDT؛ التقييم لا يثبت رصيد Pay، وتجربة واجهة الحساب الخارجية غير متاحة.
-
-## استكمال معاملات OKX — 11 نوفمبر
-- [x] مراجعة الصورة والكود ودليل OKX: الحالي رصيد وسحب/إيداع داخلي وخارجي؛ Read كفاية للقراءة.
-- [x] إضافة سجلات التمويل وسجل التداول وطلبات التداول بصفحات منفصلة، دون مضاعفة السجل المالي أو تغيير Bybit؛ إظهار فشل الطلب بدل سجلات فارغة.
-- [x] تشخيص برد OKX حي: تبويب الداخلي فارغ لأن type=3 يرجع صفر؛ الخارجي يرجع 8 إيداعات و3 سحوبات وكلها في المركزي. التمويل يرجع 22 حركة منفصلة لا يجوز دمجها كلها في المالي وتكرار الإيداعات.
-- [x] 14 اختبارًا ناجحًا لدقة القيم والترقيم وعزل الحسابات وفشل المنصة؛ البناء سليم، دون SQL إنتاجي أو تنفيذ سحب/تداول.
-- [ ] فحص العرض بحساب حقيقي على الكمبيوتر والموبايل ثم نشر المالك عبر deploy.ps1؛ المعاينة لم تفتح حساب الأدمن واتصال Supabase الخارجي لا يوفر جلسة اختبار.
 
 ## خصوصية بريد الموظفين — 6 نوفمبر
 - [x] صفحة /mail-privacy مستقلة دون تغيير سياسة العملاء أو إضافة رابط لقوائمهم؛ فتحت بلا تسجيل دخول باستجابة 200، على الكمبيوتر والموبايل دون تمدد أو أخطاء تشغيل.

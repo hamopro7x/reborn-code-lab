@@ -1,6 +1,6 @@
 /**
- * Display label of every linked account (Bybit and OKX) for the central ledger
- * and shift sheets. Bybit keeps «(فيزا N)»; OKX accounts show «(OKX N)».
+ * Bybit display labels for the central ledger and shift sheets.
+ * Keep the shared provider discriminator until independent data cleanup finishes.
  */
 export async function accountLabels(db: any): Promise<Map<string, string>> {
   let res = await db
@@ -17,15 +17,10 @@ export async function accountLabels(db: any): Promise<Map<string, string>> {
   }
   const out = new Map<string, string>();
   let bybit = 0;
-  let okx = 0;
   for (const a of (res.data ?? []) as any[]) {
-    if (a.provider === "okx") {
-      okx++;
-      out.set(a.id, `${a.name} (OKX ${a.sort_order || okx})`);
-    } else {
-      bybit++;
-      out.set(a.id, `${a.name} (فيزا ${a.sort_order || bybit})`);
-    }
+    if (a.provider != null && a.provider !== "bybit") continue;
+    bybit++;
+    out.set(a.id, `${a.name} (فيزا ${a.sort_order || bybit})`);
   }
   return out;
 }

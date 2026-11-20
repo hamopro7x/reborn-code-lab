@@ -48,14 +48,13 @@ import { ReportsTab } from "@/components/admin/ReportsTab";
 import { ProductsTab } from "@/components/admin/ProductsTab";
 import { AdminBackProvider, useAdminBack, useAdminBackTarget } from "@/components/admin/back-nav";
 import { BybitTab, ApiKeyPanel } from "@/components/admin/BybitTab";
-import { OkxTab } from "@/components/admin/OkxTab";
 import { FileBarChart, MonitorPlay, Image as ImageIcon, ChevronUp, ChevronDown, WalletCards, KeyRound, ClipboardList, Table2 } from "lucide-react";
 import { WorkSheetPanel } from "@/components/admin/WorkSheetPanel";
 import { AdminSheet } from "@/components/admin/AdminSheet";
 import { GmailInbox, MailNotifier } from "@/components/admin/GmailInbox";
 import { StaffChat } from "@/components/admin/StaffChat";
 import { MessagesSquare } from "lucide-react";
-import { Mail, Wallet } from "lucide-react";
+import { Mail } from "lucide-react";
 
 import { LessonUploader } from "@/components/admin/LessonUploader";
 import { DeviceMonitorGrid } from "@/components/admin/DeviceMonitorGrid";
@@ -70,11 +69,11 @@ import { getPaymentIconUrl, preparePaymentIconUpload } from "@/lib/payments.func
 
 type PanelKey =
   | "overview" | "orders" | "categories" | "products" | "customers" | "employees"
-  | "reviews" | "payments" | "currencies" | "timers" | "settings" | "courses" | "devices" | "reports" | "remote" | "cardtx" | "okx" | "apikey" | "worksheet" | "sheet" | "mail" | "chat";
+  | "reviews" | "payments" | "currencies" | "timers" | "settings" | "courses" | "devices" | "reports" | "remote" | "cardtx" | "apikey" | "worksheet" | "sheet" | "mail" | "chat";
 
 const panelKeys: PanelKey[] = [
   "overview", "orders", "categories", "customers", "employees",
-  "reviews", "payments", "currencies", "timers", "settings", "courses", "devices", "reports", "remote", "cardtx", "okx", "apikey", "worksheet", "sheet", "mail", "chat",
+  "reviews", "payments", "currencies", "timers", "settings", "courses", "devices", "reports", "remote", "cardtx", "apikey", "worksheet", "sheet", "mail", "chat",
 ];
 
 
@@ -203,7 +202,6 @@ function Admin() {
         { key: "reviews", label: "المراجعات", icon: Star },
         { key: "reports", label: "التقارير", icon: FileBarChart, adminOnly: true },
         { key: "cardtx", label: "معاملات الفيزا", icon: WalletCards, adminOnly: true },
-        { key: "okx", label: "حسابات OKX", icon: Wallet, adminOnly: true },
         { key: "worksheet", label: "جدول بيانات الشغل", icon: ClipboardList },
         { key: "sheet", label: "جدول بيانات خاص", icon: Table2, adminOnly: true },
         { key: "mail", label: "البريد", icon: Mail },
@@ -339,7 +337,6 @@ function Admin() {
             {panel === "reviews" && canView("reviews") && <ReviewsTab />}
             {panel === "reports" && canView("reports") && <ReportsTab />}
             {panel === "cardtx" && canView("cardtx") && <BybitTab isAdmin={adminOnly} />}
-            {panel === "okx" && canView("okx") && <OkxTab isAdmin={adminOnly} />}
             {panel === "worksheet" && canView("worksheet") && <WorkSheetPanel isAdmin={adminOnly} />}
             {panel === "sheet" && adminOnly && <AdminSheet />}
             {panel === "mail" && canView("mail") && <GmailInbox isAdmin={adminOnly} />}

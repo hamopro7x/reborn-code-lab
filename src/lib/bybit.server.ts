@@ -79,7 +79,7 @@ async function heavyOnce<T>(key: string, cooldownMs: number, run: () => Promise<
 export async function listAccounts(): Promise<BybitAccount[]> {
   const db = await admin();
   const cols = "id, name, uid, email, created_at, sort_order, monthly_cashback";
-  // OKX accounts share this table (provider = 'okx'); Bybit work only sees Bybit rows.
+  // Keep shared-table isolation until independently managed account cleanup is complete.
   // Before the provider column exists every row is a Bybit account.
   let { data, error: listError } = await db
     .from("bybit_accounts")
@@ -193,7 +193,7 @@ export async function createAccount(key: string, secret: string, userId: string,
   const name =
     (customName ?? "").trim() ||
     (uid ? `Bybit · UID ${uid}` : `Bybit · ${key.slice(0, 4)}${key.slice(-4)}`);
-  // Visa numbers count Bybit accounts only (OKX accounts have their own numbering).
+  // Visa numbers count Bybit accounts only.
   const nextOrder = Math.max(0, ...(await listAccounts()).map((a) => a.sortOrder)) + 1;
   const { data, error } = await db
     .from("bybit_accounts")
@@ -2039,11 +2039,6 @@ async function changedLedgerRows(db: any, rows: LedgerInsert[]): Promise<LedgerI
   return out;
 }
 
-/** Shared ledger writer for other providers (OKX): same cycle filter, diffing and shift linking. */
-export async function saveLedgerRows(rows: LedgerInsert[]): Promise<number> {
-  return upsertLedger(rows);
-}
-
 async function upsertLedger(rows: LedgerInsert[], assign = true) {
   // Central + internal transactions follow the same monthly cycle as spend:
   // only movements inside the current cycle are mirrored/kept.
@@ -2356,10 +2351,6 @@ export async function syncAllRecent(): Promise<{ saved: number; accounts: number
       saved += await syncAccountRecent(a.id);
     });
     runRecentAssetSync(accounts);
-    // OKX accounts: own single-flight + cooldown, never blocks Bybit polling.
-    void import("./okx.server")
-      .then((m) => m.syncAllOkx(false))
-      .catch((e) => console.error("okx recent sync failed:", (e as Error)?.message));
     return { saved, accounts: accounts.length };
   });
 }
