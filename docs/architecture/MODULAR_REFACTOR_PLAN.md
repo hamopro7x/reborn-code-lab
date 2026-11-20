@@ -5,6 +5,11 @@
 - Baseline inspected: 2026-11-21
 - Production database and deployment are not modified by this plan commit.
 
+## Implementation progress
+- Phase 0: branch and architecture plan created; baseline source inventory completed.
+- Phase 1 (first slice): extracted the `PanelKey` registry and `useAdminRole` hook into `src/modules/admin/admin-access.ts`; the route now consumes that module. Existing panel URL validation and role values (`admin`, `employee`, `customer`) are retained. The hook now ignores late async results after unmount.
+- Validation status: GitHub Actions reports no workflow runs for the current head commit. The connector cannot run local npm scripts, so lint/typecheck/build remain unverified and must run in a CI/development environment before merge.
+
 ## Baseline findings
 - `src/routes/_authenticated/admin.tsx`: 2,337 lines (~122.8 KB); route composition, data access, state, and many panel implementations are colocated.
 - `src/lib/work.server.ts`: 2,370 lines (~89.6 KB).
