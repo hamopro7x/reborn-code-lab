@@ -2974,7 +2974,6 @@ export type Database = {
       }
       gen_order_code: { Args: never; Returns: string }
       integration_clear_bybit: { Args: never; Returns: boolean }
-      integration_clear_redotpay: { Args: never; Returns: boolean }
       integration_get_bybit: {
         Args: never
         Returns: {
@@ -2982,18 +2981,7 @@ export type Database = {
           api_secret: string
         }[]
       }
-      integration_get_redotpay: {
-        Args: never
-        Returns: {
-          api_key: string
-          api_secret: string
-        }[]
-      }
       integration_set_bybit: {
-        Args: { p_by: string; p_key: string; p_secret: string }
-        Returns: boolean
-      }
-      integration_set_redotpay: {
         Args: { p_by: string; p_key: string; p_secret: string }
         Returns: boolean
       }
