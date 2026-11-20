@@ -1346,12 +1346,22 @@ export function EmployeeWorkView({
       : viewUserId
         ? ["emp-shift-txns", viewUserId]
         : ["my-shift-txns"],
-    queryFn: () =>
-      shiftMode
-        ? shiftTxnsFn({ data: { shiftId: String(viewShiftId), page: 1 } })
-        : viewUserId
-          ? empTxnsFn({ data: { userId: viewUserId, page: 1 } })
-          : txnsFn({ data: { page: 1 } }),
+    // Load every page so long shifts never cut off older purchases.
+    queryFn: async () => {
+      const load = (page: number): Promise<any> =>
+        shiftMode
+          ? shiftTxnsFn({ data: { shiftId: String(viewShiftId), page } })
+          : viewUserId
+            ? empTxnsFn({ data: { userId: viewUserId, page } })
+            : txnsFn({ data: { page } });
+      const first: any = await load(1);
+      const total = Number(first?.total ?? 0);
+      const size = Number(first?.pageSize ?? 50) || 50;
+      const pages = Math.min(Math.ceil(total / size), 50);
+      if (pages <= 1) return first;
+      const rest = await Promise.all(Array.from({ length: pages - 1 }, (_, i) => load(i + 2)));
+      return { ...first, rows: [...(first?.rows ?? []), ...rest.flatMap((r: any) => r?.rows ?? [])] };
+    },
     // Start rows immediately beside the state request. Both row endpoints
     // resolve the relevant shift themselves, so waiting for `st` created an
     // avoidable request waterfall for admins and employees.
