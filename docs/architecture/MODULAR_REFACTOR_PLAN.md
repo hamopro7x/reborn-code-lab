@@ -7,7 +7,10 @@
 
 ## Implementation progress
 - Phase 0: branch and architecture plan created; baseline source inventory completed.
-- Phase 1 (first slice): extracted the `PanelKey` registry and `useAdminRole` hook into `src/modules/admin/admin-access.ts`; the route now consumes that module. Existing panel URL validation and role values (`admin`, `employee`, `customer`) are retained. The hook now ignores late async results after unmount.
+- Phase 1 (admin foundation): extracted the `PanelKey` registry, role-resolution hook, employee base-panel policy, panel visibility policy, and last-selected-panel storage helper into `src/modules/admin/admin-access.ts`.
+- Extracted admin sidebar navigation metadata and employee-filtered navigation projection into `src/modules/admin/admin-navigation.ts`; the route now consumes both modules.
+- Removed the inline role hook, panel registry, navigation metadata, employee base-panel list, navigation filtering, and local-storage read helper from `admin.tsx` while preserving the existing route keys, storage key, labels, role values, and panel visibility behavior.
+- The first extraction keeps panel implementations in the route for now; moving them requires dependency-by-dependency extraction to preserve their server functions and state contracts.
 - Validation status: GitHub Actions reports no workflow runs for the current head commit. The connector cannot run local npm scripts, so lint/typecheck/build remain unverified and must run in a CI/development environment before merge.
 
 ## Baseline findings
