@@ -1,4 +1,5 @@
 import { DateTimeInput } from "@/components/ui/date-time-input";
+import { PanelKey, panelKeys, useAdminRole } from "@/modules/admin/admin-access";
 import { formatLocaleDateTime } from "@/lib/format";
 import { useUiState } from "@/lib/ui-state";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
@@ -67,15 +68,6 @@ import { getPaymentIconUrl, preparePaymentIconUpload } from "@/lib/payments.func
 
 
 
-type PanelKey =
-  | "overview" | "orders" | "categories" | "products" | "customers" | "employees"
-  | "reviews" | "payments" | "currencies" | "timers" | "settings" | "courses" | "devices" | "reports" | "remote" | "cardtx" | "apikey" | "worksheet" | "sheet" | "mail" | "chat";
-
-const panelKeys: PanelKey[] = [
-  "overview", "orders", "categories", "customers", "employees",
-  "reviews", "payments", "currencies", "timers", "settings", "courses", "devices", "reports", "remote", "cardtx", "apikey", "worksheet", "sheet", "mail", "chat",
-];
-
 
 
 export const Route = createFileRoute("/_authenticated/admin")({
@@ -94,24 +86,10 @@ export const Route = createFileRoute("/_authenticated/admin")({
   component: Admin,
 });
 
-function useRole() {
-  const [role, setRole] = useState<string | null>(null);
-  useEffect(() => {
-    supabase.auth.getUser().then(async ({ data }) => {
-      if (!data.user) return;
-      const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", data.user.id);
-      if (roles?.some((r: any) => r.role === "admin")) setRole("admin");
-      else if (roles?.some((r: any) => r.role === "employee")) setRole("employee");
-      else setRole("customer");
-    });
-  }, []);
-  return role;
-}
-
 function Admin() {
   const [adminLang, setAdminLang] = useAdminLang();
   const search = Route.useSearch();
-  const role = useRole();
+  const role = useAdminRole();
   const navigate = useNavigate();
   // آخر قسم فتحه المستخدم — يُستعاد بعد Refresh حتى لو لم يكن في الرابط.
   const LAST_PANEL_KEY = "mp:admin.last-panel";
