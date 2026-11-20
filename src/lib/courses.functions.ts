@@ -24,9 +24,9 @@ export const checkDevice = createServerFn({ method: "POST" })
   .inputValidator((d) => checkSchema.parse(d))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    // نقرأ الدور بمفتاح الخدمة: أي نقص في سياسات user_roles لا يجوز أن يحوّل
-    // الموظف إلى "جهاز غير مصرّح" ويجعل تفعيل الكود بلا أثر.
-    const role = await getRole(supabaseAdmin, context.userId);
+    // Validate the caller through their authenticated own-role SELECT policy.
+    // Admin sign-in must not depend on the privileged device-management client.
+    const role = await getRole(context.supabase, context.userId);
     if (!role) return { ok: false as const, blocked: false, fingerprint: data.fingerprint, error: "هذا الحساب غير مسجّل كموظف — راجع الإدارة" };
 
 
@@ -41,7 +41,7 @@ export const checkDevice = createServerFn({ method: "POST" })
     // نبحث فقط داخل أجهزة هذا المستخدم؛ hw_signature مجرد معرّف مساعد.
     const fps = [data.fingerprint, data.legacy_fingerprint].filter(Boolean) as string[];
 
-    const { data: mine } = await supabaseAdmin
+    const { data: mine, error: deviceError } = await supabaseAdmin
       .from("user_devices")
       .select("id,user_id,device_label,device_fingerprint,hw_signature")
       .eq("user_id", context.userId)
@@ -50,11 +50,13 @@ export const checkDevice = createServerFn({ method: "POST" })
       .limit(1)
       .maybeSingle();
 
+    if (deviceError) throw new Error(`تعذّر التحقق من الجهاز: ${deviceError.message}`);
+
     let approved: any = mine ?? null;
 
     if (!approved && data.hw_signature) {
       // نفس المستخدم + نفس الجهاز الفعلي (بروفايل متصفح مختلف مثلاً)
-      const { data: bySig } = await supabaseAdmin
+      const { data: bySig, error: signatureError } = await supabaseAdmin
         .from("user_devices")
         .select("id,user_id,device_label,device_fingerprint,hw_signature")
         .eq("user_id", context.userId)
@@ -62,6 +64,7 @@ export const checkDevice = createServerFn({ method: "POST" })
         .order("last_seen_at", { ascending: false })
         .limit(1)
         .maybeSingle();
+      if (signatureError) throw new Error(`تعذّر التحقق من الجهاز: ${signatureError.message}`);
       approved = bySig ?? null;
     }
 

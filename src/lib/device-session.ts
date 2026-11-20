@@ -39,17 +39,30 @@ export function ensureDeviceChecked(
       getCachedSignature(),
       getCachedLegacy(),
     ]);
-    try {
-      const res: any = await checkFn({
-        data: { fingerprint, user_agent: navigator.userAgent, hw_signature, legacy_fingerprint },
-      });
-      deviceOk = !!res?.ok;
-      return { ok: deviceOk, fingerprint, ...(res?.error ? { error: String(res.error) } : {}) };
-    } catch (e) {
-      deviceOk = false;
-      // خطأ سيرفر/شبكة ليس "جهاز غير مصرّح": نُظهر السبب الحقيقي للموظف.
-      return { ok: false, fingerprint, error: (e as Error)?.message || "تعذّر التحقق من الجهاز" };
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const res: any = await checkFn({
+          data: { fingerprint, user_agent: navigator.userAgent, hw_signature, legacy_fingerprint },
+        });
+        if (res?.error) throw new Error(String(res.error));
+        if (typeof res?.ok !== "boolean") throw new Error("تعذّر التحقق من الجهاز");
+        deviceOk = res.ok;
+        return { ok: res.ok, fingerprint };
+      } catch (e) {
+        const error = (e as Error)?.message || "تعذّر التحقق من الجهاز";
+        const transient = /internal server|\b50[234]\b|fetch|network|timeout|timed out|شبكة/i.test(error);
+        if (transient && attempt < 2) {
+          await new Promise((resolve) => setTimeout(resolve, 600 * (attempt + 1)));
+          continue;
+        }
+        // A failed check is unknown, not an authorization decision. Do not
+        // retain the rejected promise across navigation or manual retries.
+        deviceOk = null;
+        deviceCheckPromise = null;
+        return { ok: false, fingerprint, error };
+      }
     }
+    return { ok: false, fingerprint, error: "تعذّر التحقق من الجهاز" };
   })();
   return deviceCheckPromise;
 }

@@ -105,6 +105,7 @@ function StaffError({ error: rawError, reset }: import("@tanstack/react-router")
 function DeviceGate() {
   useAdminTheme();
   const checkFn = useServerFn(checkDevice);
+  const [retry, setRetry] = useState(0);
   const [state, setState] = useState<
     | { status: "loading" }
     | { status: "ok" }
@@ -120,7 +121,7 @@ function DeviceGate() {
       else setState({ status: "blocked", fingerprint, ...(error ? { error } : {}) });
     })();
     return () => { cancelled = true; };
-  }, [checkFn]);
+  }, [checkFn, retry]);
 
   if (state.status === "loading") {
     return (
@@ -138,9 +139,11 @@ function DeviceGate() {
           <div className="size-16 rounded-2xl gradient-primary mx-auto flex items-center justify-center glow-purple">
             <ShieldAlert className="size-8 text-white" />
           </div>
-          <h1 className="text-xl font-bold">الموقع محمي</h1>
+          <h1 className="text-xl font-bold">{state.error ? "تعذّر التحقق من الدخول" : "الموقع محمي"}</h1>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            هذا الجهاز غير مصرّح له بالدخول. أرسل الكود التالي للإدارة للحصول على الإذن.
+            {state.error
+              ? "لم يكتمل التحقق من الحساب. أعد المحاولة دون تسجيل الخروج."
+              : "هذا الجهاز غير مصرّح له بالدخول. أرسل الكود التالي للإدارة للحصول على الإذن."}
           </p>
           {state.error ? (
             <p className="text-xs font-mono break-words rounded-lg bg-destructive/10 p-2 text-destructive">
@@ -154,20 +157,21 @@ function DeviceGate() {
               void (async () => {
                 const { resetDeviceCache } = await import("@/lib/device-session");
                 resetDeviceCache();
-                window.location.reload();
+                setState({ status: "loading" });
+                setRetry((value) => value + 1);
               })();
             }}
           >
-            تم التفعيل — أعد المحاولة
+            {state.error ? "أعد المحاولة" : "تم التفعيل — أعد المحاولة"}
           </Button>
-          <div>
+          {!state.error && <div>
             <div className="text-[11px] text-muted-foreground mb-1">كود جهازك</div>
             <div className="p-3 rounded-xl bg-muted/50 font-mono text-xs break-all select-all border border-border">
               {state.fingerprint}
             </div>
-          </div>
+          </div>}
           <div className="flex gap-2 justify-center flex-wrap">
-            <Button
+            {!state.error && <Button
               size="sm"
               variant="outline"
               onClick={async () => {
@@ -176,7 +180,7 @@ function DeviceGate() {
               }}
             >
               <Copy className="size-4 ml-1" /> نسخ الكود
-            </Button>
+            </Button>}
             <Button
               size="sm"
               variant="outline"
@@ -188,9 +192,9 @@ function DeviceGate() {
               <LogOut className="size-4 ml-1" /> تسجيل الخروج
             </Button>
           </div>
-          <p className="text-[11px] text-muted-foreground">
+          {!state.error && <p className="text-[11px] text-muted-foreground">
             بعد تفعيل الجهاز من الإدارة، أعد تحميل الصفحة.
-          </p>
+          </p>}
         </div>
       </div>
     );
