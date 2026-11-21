@@ -2883,19 +2883,10 @@ export type Database = {
     Functions: {
       admin_allow_signup: { Args: { p_email: string }; Returns: boolean }
       agent_claim_pairing: { Args: { p_code: string }; Returns: Json }
-      agent_create_enroll_code:
-        | {
-            Args: { p_employee_name?: string; p_note?: string }
-            Returns: string
-          }
-        | {
-            Args: {
-              p_employee_name?: string
-              p_note?: string
-              p_user_id?: string
-            }
-            Returns: string
-          }
+      agent_create_enroll_code: {
+        Args: { p_employee_name?: string; p_note?: string; p_user_id?: string }
+        Returns: string
+      }
       agent_exchange_signals: {
         Args: { p_device_id: string; p_outgoing?: Json; p_secret: string }
         Returns: Json
