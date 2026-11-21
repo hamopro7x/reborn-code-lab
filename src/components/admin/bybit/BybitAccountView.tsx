@@ -16,7 +16,7 @@ import { cardPurchasePresenter } from "@/lib/bybit-spend";
 import { RefreshCw, CreditCard, ChevronDown } from "lucide-react";
 import { Stat, Chip, Empty, visibleCoins, MerchantLogo, CoinLogo, dt, money, type CoinRow } from "@/components/admin/bybit/BybitVisuals";
 import { CardsPanel, BrandBadge, AddCardDialog, detectBrand } from "@/components/admin/bybit/BybitCardsUI";
-import { BybitAccountInfoCard as AccountInfoCard } from "@/components/admin/bybit/BybitAccountInfoCard";
+import { AccountInfoCard } from "@/components/admin/bybit/BybitAccountInfoCard";
 import { P2PTable } from "@/components/admin/bybit/BybitP2PTable";
 import { AssetTable, TxnDetails } from "@/components/admin/bybit/BybitTransactionTables";
 
