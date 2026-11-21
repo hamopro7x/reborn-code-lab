@@ -19,7 +19,7 @@ DROP POLICY IF EXISTS "bybit ledger staff read" ON public.bybit_ledger;
 DROP POLICY IF EXISTS "bybit ledger admin read" ON public.bybit_ledger;
 CREATE POLICY "bybit ledger admin read" ON public.bybit_ledger
   FOR SELECT TO authenticated
-  USING (private.is_admin(auth.uid()));
+  USING ((select private.is_admin((select auth.uid()))));
 
 -- Account metadata is also available to the employee UI only as server-shaped
 -- work-sheet fields, not as direct access to every account.
@@ -40,7 +40,7 @@ DROP POLICY IF EXISTS "bybit docs staff read" ON storage.objects;
 DROP POLICY IF EXISTS "bybit docs admin read" ON storage.objects;
 CREATE POLICY "bybit docs admin read" ON storage.objects
   FOR SELECT TO authenticated
-  USING (bucket_id = 'bybit-docs' AND private.is_admin(auth.uid()));
+  USING (bucket_id = 'bybit-docs' AND (select private.is_admin((select auth.uid()))));
 
 -- Employees can read only their own shift and assignment metadata. Admins retain
 -- cross-employee visibility. Preserve the mandatory-chat gate inside the scoped
@@ -54,8 +54,8 @@ DROP POLICY IF EXISTS "own or admin read shifts" ON public.work_shifts;
 CREATE POLICY "own or admin read shifts" ON public.work_shifts
   FOR SELECT TO authenticated
   USING (
-    (user_id = auth.uid() OR private.is_admin(auth.uid()))
-    AND public.staff_chat_can_read_work()
+    (user_id = (select auth.uid()) OR (select private.is_admin((select auth.uid()))))
+    AND (select public.staff_chat_can_read_work())
   );
 
 DROP POLICY IF EXISTS "staff read assignments" ON public.work_txn_assignments;
@@ -63,8 +63,8 @@ DROP POLICY IF EXISTS "own or admin read assignments" ON public.work_txn_assignm
 CREATE POLICY "own or admin read assignments" ON public.work_txn_assignments
   FOR SELECT TO authenticated
   USING (
-    (user_id = auth.uid() OR private.is_admin(auth.uid()))
-    AND public.staff_chat_can_read_work()
+    (user_id = (select auth.uid()) OR (select private.is_admin((select auth.uid()))))
+    AND (select public.staff_chat_can_read_work())
   );
 
 -- Transfer notes are tied to an employee-owned withdrawal. The former staff-wide
@@ -74,8 +74,8 @@ DROP POLICY IF EXISTS "own or admin read transfer notes" ON public.work_transfer
 CREATE POLICY "own or admin read transfer notes" ON public.work_transfer_notes
   FOR SELECT TO authenticated
   USING (
-    (user_id = auth.uid() OR private.is_admin(auth.uid()))
-    AND public.staff_chat_can_read_work()
+    (user_id = (select auth.uid()) OR (select private.is_admin((select auth.uid()))))
+    AND (select public.staff_chat_can_read_work())
   );
 
 COMMIT;
