@@ -12,6 +12,8 @@ import { myEntries } from "./work-employee.server";
 import { listManualTxns, listManualCardTxns, mapManualCard, type ManualCardRow } from "./work-manual.server";
 import { transfersByAssignment, p2pByAssignment } from "./work-p2p.server";
 
+const P2P_KINDS = ["p2p_buy", "p2p_sell"];
+
 export async function shiftHistory(userId: string, limit = 100, archivedOnly = false) {
   const db = await admin();
   const readShifts = (columns: string, filterArchived: boolean) => {
