@@ -22,8 +22,6 @@ import { AssetTable, TxnDetails } from "@/components/admin/bybit/BybitTransactio
 
 const TAB_KEY = "bybit_active_tab";
 
-const TAB_KEY = "bybit_active_tab";
-
 export function BybitAccountView({ isAdmin, accountId, accountName, onBack }: { isAdmin: boolean; accountId: string; accountName: string; onBack: () => void }) {
   const qc = useQueryClient();
   // الموظف يشاهد كل بيانات القسم (قراءة فقط). الأدوات الخاصة بالأدمن
