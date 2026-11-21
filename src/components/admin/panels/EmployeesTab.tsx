@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { EmployeeDevices } from "@/components/admin/DeviceMonitorGrid";
 import { livePoll } from "@/lib/live-poll";
 import { useAdminBack } from "@/components/admin/back-nav";
+import { DevicesTab } from "@/components/admin/panels/DevicesTab";
 import { Camera, Download, Loader2, MonitorSmartphone, Plus, Trash2 } from "lucide-react";
 
 export function EmployeesTab() {
