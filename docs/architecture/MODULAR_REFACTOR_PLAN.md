@@ -113,3 +113,15 @@ src/modules/
 - No aggressive sync loop without a documented freshness requirement and concurrency guard.
 - Build, typecheck, lint, regression tests, and production smoke tests pass.
 - Performance improvements are demonstrated with before/after measurements rather than assumed.
+
+
+## Follow-up security audit — agent devices and enrollment
+
+- The separate `public.user_devices` course-access system was reviewed in `src/lib/courses.functions.ts`: employee device checks are scoped to `context.userId`; device enrollment/list/delete/reset functions require admin; authenticated RLS exposes own-device SELECT only, while admin management is separate. No change was made to this system.
+- The MagPro Agent uses a different table, `public.agent_devices`. Its original migration granted authenticated SELECT/UPDATE/DELETE and used staff-wide policies. The device secret is stored as a hash and is not selected by the admin UI, but staff-wide metadata access was broader than required.
+- More importantly, `public.agent_enroll_codes` originally allowed staff-wide SELECT. Enrollment codes are bearer credentials consumed by `agent_register`; an employee able to read unused codes could register an additional device. This was a concrete privilege boundary issue.
+- Added migration `supabase/migrations/20261121110000_agent_device_admin_only.sql`: device metadata SELECT/UPDATE/DELETE is admin-only; enrollment-code SELECT/DELETE is admin-only; staff insert/delete policies are removed. Device registration still occurs through the existing SECURITY DEFINER registration RPC, and enrollment codes continue to be consumed there.
+- The admin device UI reads `agent_devices` directly and creates enrollment codes through the admin RPC, so its intended workflow is preserved. The agent heartbeat/registration fallback route exposes only the allowlisted RPC names and continues to use device credentials.
+- This migration is committed to the feature branch but has not been applied to Supabase. Verify the agent enrollment flow and admin device UI against a staging database after applying it. Do not treat production as hardened until migration status is confirmed.
+- `profiles` self-management remains unchanged: RLS scopes the row to `auth.uid()`, but permits updates to all columns on that row. The inspected employee-management server functions update email through Supabase Auth admin APIs and synchronize `profiles`; before narrowing profile column updates, inspect every profile editor and signup trigger to avoid breaking account flows.
+- No live database changes were made. Build, typecheck, lint, and staging enrollment tests remain unverified for this commit.
