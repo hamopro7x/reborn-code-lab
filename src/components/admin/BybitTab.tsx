@@ -19,7 +19,7 @@ import { BybitLedgerPanel } from "@/components/admin/BybitLedgerPanel";
 import { cardPurchasePresenter } from "@/lib/bybit-spend";
 import { RefreshCw, CreditCard, ChevronDown, Loader2, Trash2, Copy, Pencil, Wallet, BarChart3, Clock, PieChart, Lock } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Stat, Chip, Empty, visibleCoins, MerchantLogo, CoinLogo, CoinBalanceCard, dt } from "@/components/admin/bybit/BybitVisuals";
+import { Stat, Chip, Empty, visibleCoins, MerchantLogo, CoinLogo, dt } from "@/components/admin/bybit/BybitVisuals";
 import { detectBrand, BrandBadge, CardsPanel, AddCardDialog } from "@/components/admin/bybit/BybitCardsUI";
 import { BybitAccountInfoCard as AccountInfoCard } from "@/components/admin/bybit/BybitAccountInfoCard";
 import type { BybitAccountRow } from "@/components/admin/bybit/types";
