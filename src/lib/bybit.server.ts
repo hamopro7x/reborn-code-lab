@@ -1046,6 +1046,48 @@ export async function fetchCards(accountId?: string): Promise<BybitCard[]> {
   return result.sort((a, b) => b.lastUsed - a.lastUsed);
 }
 
+export type LedgerRow = {
+  id: string;
+  accountId: string | null;
+  accountName: string;
+  kind: string;
+  direction: "in" | "out";
+  refId: string;
+  title: string;
+  amount: number;
+  currency: string;
+  fee: number;
+  status: string;
+  time: number;
+  detail: Record<string, string | number | boolean | null>;
+};
+
+export type LedgerPage = {
+  rows: LedgerRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+  counts: Record<string, number>;
+};
+
+type LedgerInsert = {
+  account_id: string | null;
+  kind: string;
+  direction: "in" | "out";
+  ref_id: string;
+  title: string;
+  amount: number;
+  currency: string;
+  fee: number;
+  status: string;
+  occurred_at: string;
+  detail: Record<string, string | number | boolean | null>;
+};
+
+const iso = (ms: number) => new Date(ms > 0 ? ms : Date.now()).toISOString();
+
+/** الأعمدة التي تحدّد «هل تغيّر صف السجل فعلًا؟». */
+
 const LEDGER_COMPARE = [
   "direction",
   "title",
