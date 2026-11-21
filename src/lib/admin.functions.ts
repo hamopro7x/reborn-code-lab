@@ -150,40 +150,8 @@ export const listCustomers = createServerFn({ method: "GET" })
     if (!staff) throw new Error("Forbidden");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: orders } = await supabaseAdmin
-      .from("orders")
-      .select("id, customer_name, customer_email, customer_phone, customer_country, total, currency_code, status, created_at")
-      .order("created_at", { ascending: false })
-      // سقف واضح حتى لا يتحول الاستعلام إلى قراءة كامل الجدول مع نمو الطلبات.
-      .limit(5_000);
-
-
-    type Row = {
-      email: string; name: string; phone: string; country: string;
-      orders: number; confirmed: number; last_at: string;
-      total_by_currency: Record<string, number>;
-    };
-    const map = new Map<string, Row>();
-    for (const o of orders ?? []) {
-      const key = (o.customer_email || o.customer_phone || "").toLowerCase();
-      if (!key) continue;
-      let row = map.get(key);
-      if (!row) {
-        row = {
-          email: o.customer_email, name: o.customer_name, phone: o.customer_phone,
-          country: o.customer_country, orders: 0, confirmed: 0, last_at: o.created_at,
-          total_by_currency: {},
-        };
-        map.set(key, row);
-      }
-      row.orders += 1;
-      if (o.status === "confirmed" || o.status === "completed") {
-        row.confirmed += 1;
-        row.total_by_currency[o.currency_code] = (row.total_by_currency[o.currency_code] ?? 0) + Number(o.total);
-      }
-      if (new Date(o.created_at) > new Date(row.last_at)) row.last_at = o.created_at;
-    }
-    return Array.from(map.values()).sort((a, b) => b.orders - a.orders);
+    const { customerSummary } = await import("./customer-summary.server");
+    return customerSummary(supabaseAdmin);
   });
 
 export const deleteAllOrders = createServerFn({ method: "POST" })

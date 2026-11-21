@@ -20,6 +20,17 @@ const schemaMissing = (error: { code?: string } | null) =>
 /** Paginate explicitly: PostgREST caps a response at 1000 rows. */
 export async function readP2PLinks(db: DB, where: { shiftId?: string; shiftIds?: string[]; userId?: string; ledgerIds?: string[] } = {}) {
   if (where.ledgerIds?.length === 0) return [];
+  // Complete selectors may contain thousands of IDs; keep URLs bounded, including the legacy path.
+  if (where.shiftIds && where.shiftIds.length > 100) {
+    const rows: P2PLink[] = [];
+    for (let from = 0; from < where.shiftIds.length; from += 100) rows.push(...await readP2PLinks(db, { ...where, shiftIds: where.shiftIds.slice(from, from + 100) }));
+    return rows;
+  }
+  if (where.ledgerIds && where.ledgerIds.length > 100) {
+    const rows: P2PLink[] = [];
+    for (let from = 0; from < where.ledgerIds.length; from += 100) rows.push(...await readP2PLinks(db, { ...where, ledgerIds: where.ledgerIds.slice(from, from + 100) }));
+    return rows;
+  }
   const rows: P2PLink[] = [];
   for (let from = 0; ; from += 500) {
     let q = db.from("work_p2p_effective_links").select("*").order("id");

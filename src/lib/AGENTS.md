@@ -13,6 +13,8 @@
 # Launch boundaries
 - Shift tables request one server page with deterministic ordering; full totals use compact sequential server reads, because client page fan-out repeats work and truncates history.
 - Automatic cycle/retention/draft maintenance never deletes historical rows; cycle eligibility and archived storage remain independent.
-- First-time PIN creation is insert-only and verification fails closed on lookup or attempt-save errors, preventing outages from becoming false success.
+- First-time PIN creation is insert-only; attempt updates compare hash/salt/counter/lock and retry bounded conflicts, preventing outages or concurrent writes from becoming false success.
+- Shift selector history preserves its full-array numbering/colour contract through sequential pages and chunked ID filters; customer summaries aggregate all orders server-side without shipping order rows to the UI.
+- P2P inbox candidate scans use timestamp/id cursors and filter linked orders before applying the explicit recent-inbox size, so linked newest pages cannot hide older unlinked orders.
 - Public Agent RPC forwarding streams bounded request bytes and keeps its four-function allowlist and device-secret contract unchanged.
 - SSR diagnostics use structured name/code only, because provider errors can contain secrets or customer data; JSON responses are never shared-cacheable.

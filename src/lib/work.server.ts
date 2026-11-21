@@ -13,6 +13,7 @@ import { readP2PLinks, P2P_SCHEMA_MESSAGE } from "./p2p-links.server";
 import { readPages } from "./read-pages.server";
 import { addWorkSummary, emptyWorkSummary } from "./work-summary";
 import { cairoCalendarRange } from "./cairo-calendar";
+import { hashPin } from "./pin-attempt.server";
 
 type DB = SupabaseClient<any, any, any>;
 
@@ -346,30 +347,35 @@ export async function completedP2P(limit = 200, viewerId?: string, isAdmin = fal
     .maybeSingle();
   const cutoff = typeof (setting as any)?.value === "string" ? String((setting as any).value) : null;
 
-  let q = db
-    .from("bybit_ledger")
-    .select("*")
-    .in("kind", P2P_KINDS)
-    .eq("status", "اكتملت");
-  if (cutoff) q = q.gt("occurred_at", cutoff);
-
-  const { data } = await q
-    .order("occurred_at", { ascending: false })
-    .limit(Math.min(Math.max(limit, 1), 500));
-
-  // Match the pre-rollout linking inbox: linked orders stay in history,
-  // not in the list of recent orders offered for a first link.
-  const allLinks = await readP2PLinks(db, {
-    ledgerIds: (data ?? []).map((r: any) => String(r.id)),
-  });
-  const taken = new Set(allLinks.map((l) => l.ledger_id));
+  const max = Math.min(Math.max(limit, 1), 500);
+  const data: any[] = [];
+  const allLinks: Awaited<ReturnType<typeof readP2PLinks>> = [];
+  let cursor: { time: string; id: string } | null = null;
+  // Apply linked-order eligibility BEFORE the caller's explicit inbox size.
+  // A linked newest page must never mask older unlinked orders.
+  while (data.length < max) {
+    let q = db.from("bybit_ledger").select("*").in("kind", P2P_KINDS).eq("status", "اكتملت")
+      .order("occurred_at", { ascending: false }).order("id", { ascending: false }).limit(200);
+    if (cutoff) q = q.gt("occurred_at", cutoff);
+    if (cursor) q = q.or(`occurred_at.lt.${cursor.time},and(occurred_at.eq.${cursor.time},id.lt.${cursor.id})`);
+    const result = await q;
+    if (result.error) throw new Error("تعذر تحميل طلبات P2P. حاول مرة أخرى.");
+    const candidates: any[] = result.data ?? [];
+    const pageLinks = await readP2PLinks(db, { ledgerIds: candidates.map((r) => String(r.id)) });
+    const taken = new Set(pageLinks.map((l) => l.ledger_id));
+    data.push(...candidates.filter((r) => isAdmin || !taken.has(r.id)).slice(0, max - data.length));
+    allLinks.push(...pageLinks);
+    if (candidates.length < 200) break;
+    const last = candidates.at(-1);
+    if (!last?.occurred_at || !last.id) throw new Error("تعذر متابعة صفحات P2P.");
+    if (cursor && cursor.time === last.occurred_at && cursor.id === last.id) throw new Error("تعذر متابعة صفحات P2P.");
+    cursor = { time: last.occurred_at, id: last.id };
+  }
   const links = allLinks.filter((l) => isAdmin || l.user_id === viewerId);
   const linkNames = await namesFor(db, links.map((l) => l.user_id));
 
   const accounts = await accountNames(db);
-  return (data ?? [])
-    .filter((r: any) => isAdmin || !taken.has(r.id))
-    .map((r: any) => ({
+  return data.map((r: any) => ({
       ledgerId: r.id as string,
       kind: r.kind as string,
       refId: r.ref_id as string,
@@ -1279,22 +1285,25 @@ export async function shiftHistory(userId: string, limit = 100, archivedOnly = f
   const db = await admin();
   const readShifts = (columns: string, filterArchived: boolean) => {
     let q = db.from("work_shifts").select(columns)
-      .eq("user_id", userId).order("started_at", { ascending: false })
-      .limit(Math.min(Math.max(limit, 1), 200));
+      .eq("user_id", userId).order("started_at", { ascending: false }).order("id", { ascending: false });
     // الشفتات المؤرشفة تختفي من القوائم بدون حذف أي سجل.
     if (filterArchived) {
       q = archivedOnly ? q.not("archived_at", "is", null) : q.is("archived_at", null);
     }
     return q;
   };
-  let result = await readShifts("id,started_at,ended_at,ended_reason,reviewed_at,link_group", true);
-  // An unapplied colour/archive-column update must not make actual shift history disappear.
-  if (result.error?.code === "42703") {
-    result = await readShifts("id,started_at,ended_at,ended_reason,reviewed_at", false);
-    if (archivedOnly && !result.error) return [];
+  const data: any[] = [];
+  // The selector's array contract includes global numbering/colours; bounded server pages preserve it.
+  for (let from = 0; ; from += 200) {
+    let result = await readShifts("id,started_at,ended_at,ended_reason,reviewed_at,link_group", true).range(from, from + 199);
+    if (result.error?.code === "42703") {
+      result = await readShifts("id,started_at,ended_at,ended_reason,reviewed_at", false).range(from, from + 199);
+      if (archivedOnly && !result.error) return [];
+    }
+    if (result.error) throw new Error("تعذر تحميل سجل الشفتات. حاول مرة أخرى.");
+    data.push(...(result.data ?? []));
+    if ((result.data ?? []).length < 200) break;
   }
-  if (result.error) throw new Error("تعذر تحميل سجل الشفتات. حاول مرة أخرى.");
-  const data = result.data;
 
   const shifts = (data ?? []) as any[];
   const ids = shifts.map((s) => String(s.id));
@@ -1308,14 +1317,14 @@ export async function shiftHistory(userId: string, limit = 100, archivedOnly = f
     if (result.error) throw new Error("تعذر تحميل روابط الشفتات.");
     for (const row of result.data ?? []) successfulP2P.add(String(row.id));
   }
-  if (ids.length) {
+  for (let index = 0; index < ids.length; index += 100) {
     const q = db
       .from("work_txn_assignments")
       .select("id,shift_id, bybit_ledger!inner(status)")
       .not("bybit_ledger.detail", "cs", '{"side":"2"}')
       .not("bybit_ledger.detail", "cs", '{"side":2}')
       .or(`kind.not.in.(card,refund),${CARD_READ_FILTER}`, { referencedTable: "bybit_ledger" })
-      .in("shift_id", ids)
+      .in("shift_id", ids.slice(index, index + 100))
       .not("kind", "in", "(p2p_buy,p2p_sell)")
       .in("bybit_ledger.status", SUCCESS_STATUSES as unknown as string[]).order("id");
     await readPages<any>((from, to) => q.range(from, to), (rows) => {
@@ -1734,12 +1743,6 @@ function randomSalt(): string {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-async function hashPin(pin: string, salt: string): Promise<string> {
-  const data = new TextEncoder().encode(`${salt}:${pin}`);
-  const digest = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
-}
-
 export async function pinIsSet(userId: string): Promise<boolean> {
   const db = await admin();
   const { data, error } = await db.from("work_pins").select("user_id").eq("user_id", userId).maybeSingle();
@@ -1775,46 +1778,9 @@ export async function clearPin(userId: string) {
 }
 
 /** Verifies a PIN, with a short lockout after 5 wrong tries. */
-export async function verifyPin(userId: string, pin: string) {
-  if (!PIN_RE.test(pin)) return { ok: false as const, reason: "الرمز يجب أن يكون 6 أرقام" };
-  const db = await admin();
-  const { data, error } = await db
-    .from("work_pins")
-    .select("pin_hash, pin_salt, fail_count, locked_until")
-    .eq("user_id", userId)
-    .maybeSingle();
-  if (error) throw new Error("تعذّر التحقق من رمز الاستلام — حاول مرة أخرى");
-  if (!data) return { ok: false as const, reason: "NO_PIN" };
-
-  const locked = data.locked_until ? new Date(data.locked_until).getTime() : 0;
-  if (locked > Date.now()) {
-    const mins = Math.max(1, Math.ceil((locked - Date.now()) / 60_000));
-    return { ok: false as const, reason: `تم إيقاف المحاولات مؤقتًا، أعد المحاولة بعد ${mins} دقيقة` };
-  }
-
-  const same = (await hashPin(pin, data.pin_salt)) === data.pin_hash;
-  if (!same) {
-    const fails = (data.fail_count ?? 0) + 1;
-    const { error: saveError } = await db
-      .from("work_pins")
-      .update({
-        fail_count: fails,
-        locked_until: fails >= 5 ? new Date(Date.now() + 5 * 60_000).toISOString() : null,
-      })
-      .eq("user_id", userId);
-    if (saveError) throw new Error("تعذّر تسجيل المحاولة — حاول مرة أخرى");
-    return {
-      ok: false as const,
-      reason:
-        fails >= 5
-          ? "محاولات خاطئة كثيرة — انتظر 5 دقائق"
-          : `الرمز غير صحيح (${5 - fails} محاولات متبقية)`,
-    };
-  }
-
-  const { error: resetError } = await db.from("work_pins").update({ fail_count: 0, locked_until: null }).eq("user_id", userId);
-  if (resetError) throw new Error("تعذّر إتمام التحقق — حاول مرة أخرى");
-  return { ok: true as const };
+export async function verifyPin(userId: string, pin: string): Promise<{ ok: boolean; reason?: string }> {
+  const { verifyPinAttempt } = await import("./pin-attempt.server");
+  return verifyPinAttempt(await admin(), userId, pin);
 }
 
 /* شفت تمت مشاركته من الأدمن مع موظف — site_settings.shared_shifts = { userId: shiftId } */

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { query, db } = vi.hoisted(() => {
   const query: Record<string, any> = {};
-  for (const method of ["select", "eq", "order", "limit", "is", "not"]) {
+  for (const method of ["select", "eq", "order", "limit", "is", "not", "range"]) {
     query[method] = vi.fn(() => query);
   }
   query.then = (resolve: (value: unknown) => unknown) => Promise.resolve({ data: [], error: null }).then(resolve);

@@ -1,6 +1,9 @@
 # خطة النقل الكامل إلى VPS
 
 ## Launch preparation — 21 November 2026
+- [x] Follow-up from f1868253: full customer aggregation, complete shift selector/counts, chunked P2P links and eligibility-before-limit P2P cursor scan; retained capped/default-limited callers inventoried in readiness document.
+- [x] Live PIN/claim definitions reviewed; bounded conditional PIN updates implemented and tested. Remaining transactional handover/owner-proof/TURN requirements specified without SQL, production writes or PR4 merge.
+- [x] Follow-up full suite: 45 files / 348 tests passed; frozen install and automatic compiler build OK. Exact paths, evidence and untouched compatibility risks documented in LAUNCH-READINESS-2026-11-21.md.
 - [x] Implement confirmed transaction/manual/transfer pagination, complete summary/count aggregation, PIN failure handling, preservation, retired biometrics removal, email lifecycle and request/log safety fixes. Existing Bybit financial rules and Agent remain unchanged.
 - [x] Read live policies/RPC grants/storage/indexes; no production writes/schema/secrets/Fly/DNS/deployment changes. Final dependency scan: no known vulnerabilities in 62 production packages.
 - [x] Frozen-lockfile install; 41 test files / 339 tests passed; automatic compiler build OK; public desktop/mobile preview and real cart-to-checkout read-back passed without order submission. Exact findings/files: LAUNCH-READINESS-2026-11-21.md.
