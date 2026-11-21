@@ -122,73 +122,49 @@ const buf = fs.readFileSync(setupPath);
 const size = buf.byteLength;
 const sha256 = createHash("sha256").update(buf).digest("hex");
 const storagePath = `releases/${setupName}`;
-// قراءة بيانات المخزن من أي ملف إعدادات موجود على الجهاز (المشروع، سطح المكتب،
-// التنزيلات، المستندات، مجلد المستخدم) حتى لا يحتاج المستخدم لأي خطوة يدوية.
-const searchDirs = [
-  ROOT,
-  path.join(ROOT, "selfhost"),
-  path.resolve(ROOT, ".."),
-  os.homedir(),
-  path.join(os.homedir(), "Desktop"),
-  path.join(os.homedir(), "OneDrive", "Desktop"),
-  path.join(os.homedir(), "Downloads"),
-  path.join(os.homedir(), "Documents"),
-  path.join(os.homedir(), "OneDrive", "Documents"),
+// اقرأ الأسرار من متغيرات البيئة أو ملفات إعدادات محددة داخل المشروع.
+// لا تمسح مجلدات المستخدم أو المستندات بحثاً عن مفاتيح حساسة.
+const secretFiles = [
+  path.join(ROOT, ".env"),
+  path.join(ROOT, ".env.local"),
+  path.join(ROOT, "selfhost", ".env"),
+  path.join(ROOT, "fly-secrets.txt"),
+  path.join(os.homedir(), "Desktop", "fly-secrets.txt"),
+  path.join(os.homedir(), "OneDrive", "Desktop", "fly-secrets.txt"),
 ];
-const envCandidates = new Set();
-const looksInteresting = (name) =>
-  /^\.env(\..+)?$/i.test(name) ||
-  /(secret|fly|supabase|service[-_ ]?role|key)/i.test(name) &&
-    /\.(txt|env|md|json|cfg|ini|log|csv|pdf|docx?)$/i.test(name);
-for (const dir of searchDirs) {
-  for (const name of [".env", ".env.local", "fly-secrets.txt", "secrets.txt"]) {
-    envCandidates.add(path.join(dir, name));
-  }
-  try {
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      if (!entry.isFile()) continue;
-      if (looksInteresting(entry.name)) envCandidates.add(path.join(dir, entry.name));
-    }
-  } catch {
-    // المجلد غير موجود أو غير قابل للقراءة — نكمل بباقي المواقع.
-  }
-}
-const KEY_NAMES = /(SUPABASE_SERVICE_ROLE_KEY|SERVICE_ROLE_KEY|TARGET_SUPABASE_SERVICE_ROLE_KEY)/;
-// بعض الملفات (شرح/توثيق) تحتوي أسطراً مثل SUPABASE_URL=<ضع الرابط هنا> — نتجاهلها.
-const isUrlName = (n) => /^(SUPABASE_URL|TARGET_SUPABASE_URL|VITE_SUPABASE_URL)$/.test(n);
-const isKeyName = (n) => KEY_NAMES.test(n);
+const KEY_NAMES = new Set([
+  "SUPABASE_SERVICE_ROLE_KEY",
+  "SERVICE_ROLE_KEY",
+  "TARGET_SUPABASE_SERVICE_ROLE_KEY",
+]);
+const URL_NAMES = new Set([
+  "SUPABASE_URL",
+  "TARGET_SUPABASE_URL",
+  "VITE_SUPABASE_URL",
+]);
 const validUrl = (v) => /^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/i.test((v || "").trim());
 const validKey = (v) => /^[A-Za-z0-9._-]{40,}$/.test((v || "").trim());
-for (const envFile of envCandidates) {
+
+for (const envFile of secretFiles) {
   let content;
   try {
     const st = fs.statSync(envFile);
-    if (!st.isFile() || st.size > 4 * 1024 * 1024) continue;
-    content = fs.readFileSync(envFile, "latin1");
+    if (!st.isFile() || st.size > 64 * 1024) continue;
+    content = fs.readFileSync(envFile, "utf8");
   } catch {
     continue;
   }
   for (const line of content.split(/\r?\n/)) {
-    const m = line.match(/^\s*(?:export\s+)?([A-Za-z0-9_]+)\s*=\s*(.*?)\s*$/);
-    if (!m) continue;
-    const name = m[1];
-    const val = m[2].replace(/^["']|["']$/g, "").trim();
-    if (!val || process.env[name]) continue;
-    if (isUrlName(name) && !validUrl(val)) continue;
-    if (isKeyName(name) && !validKey(val)) continue;
-    process.env[name] = val;
+    const match = line.match(/^\s*(?:export\s+)?([A-Za-z0-9_]+)\s*=\s*(.*?)\s*$/);
+    if (!match) continue;
+    const name = match[1];
+    const value = match[2].replace(/^["']|["']$/g, "").trim();
+    if (!value || process.env[name]) continue;
+    if (URL_NAMES.has(name) && validUrl(value)) process.env[name] = value;
+    if (KEY_NAMES.has(name) && validKey(value)) process.env[name] = value;
   }
-  // بعض الملفات (PDF/Word/نسخ ولصق) لا تكون أسطراً نظيفة، فنبحث في النص كله.
-  const raw = content.replace(/\s+/g, " ");
-  const keyHit = raw.match(
-    new RegExp(`${KEY_NAMES.source}\\s*[=:]\\s*["']?([A-Za-z0-9._\\-]{40,})`),
-  );
-  if (keyHit && !validKey(process.env.SUPABASE_SERVICE_ROLE_KEY)) {
-    process.env.SUPABASE_SERVICE_ROLE_KEY = keyHit[2];
-  }
-  const urlHit = raw.match(/https:\/\/[a-z0-9]{16,}\.supabase\.co/i);
-  if (urlHit && !validUrl(process.env.SUPABASE_URL)) process.env.SUPABASE_URL = urlHit[0];
 }
+
 const url = [
   process.env.SUPABASE_URL,
   process.env.TARGET_SUPABASE_URL,
