@@ -16,6 +16,7 @@
 - Removed the inline role hook, panel registry, navigation metadata, employee base-panel list, navigation filtering, and local-storage read helper from `admin.tsx` while preserving the existing route keys, storage key, labels, role values, and panel visibility behavior.
 - The first extraction keeps panel implementations in the route for now; moving them requires dependency-by-dependency extraction to preserve their server functions and state contracts.
 - Performance/security slice: overview cards now use exact-count HEAD queries and fetch only revenue totals in bounded pages; customer aggregation reads orders in 1,000-row pages against a fixed timestamp snapshot, and the server function enforces the existing employee `customers` panel-sharing rule instead of relying on UI hiding. Query errors are surfaced rather than silently converted to empty data.
+- Work isolation hardening: employee shift lookups are now scoped to the authenticated user; cross-employee shift history requires admin; shared-shift self-read checks the caller's role; transfer-note writes require an active employee shift and a withdrawal within that shift, and employees cannot overwrite another user's note.
 - Validation status: GitHub Actions reports no workflow runs for the current head commit. The connector cannot run local npm scripts, so lint/typecheck/build remain unverified and must run in a CI/development environment before merge.
 
 ## Baseline findings
