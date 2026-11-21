@@ -976,6 +976,9 @@ async function runBootUpdateOnce(attempt = 0) {
       typeof info?.sha256 === "string" && /^[0-9a-f]{64}$/i.test(info.sha256)
         ? info.sha256.toLowerCase()
         : null;
+    if (!expectedHash) {
+      throw new Error("بيانات الإصدار لا تحتوي على بصمة SHA-256 صالحة");
+    }
 
     // لو نفس الملف تم تنزيله والتحقق منه في تشغيل سابق، نثبّته فوراً بدون
     // إعادة تنزيل ولا إعادة حساب البصمة (كان هذا سبب التأخير الطويل).
