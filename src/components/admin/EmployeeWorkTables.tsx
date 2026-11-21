@@ -50,7 +50,7 @@ export function Last4Cell({
 }
 
 /** «المعاملات» in the employee view = card (visa) transactions only. */
-const isCardTxn = (kind: unknown) => /^(card|refund)$/i.test(String(kind ?? ""));
+export const isCardTxn = (kind: unknown) => /^(card|refund)$/i.test(String(kind ?? ""));
 
 /** 10-minute edit window, measured against the SERVER clock (a client clock
  *  that is wrong or tampered with cannot widen it — the server re-checks too). */
@@ -663,7 +663,7 @@ export function ManualSection({
  * من ساعة السيرفر، والتعديل 10 دقائق من وقت الإنشاء (يُفرض على السيرفر أيضًا)،
  * ولا يوجد حذف إطلاقًا. */
 
-const MANUAL_TXN_WINDOW_MS = 10 * 60 * 1000;
+export const MANUAL_TXN_WINDOW_MS = 10 * 60 * 1000;
 
 /** نموذج إضافة معاملة يدوية — بدون اختيار شفت وبدون تاريخ/وقت. */
 export function ManualTxnDialog({
