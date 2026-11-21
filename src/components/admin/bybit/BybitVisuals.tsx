@@ -3,6 +3,7 @@ import tonAsset from "@/assets/ton.png.asset.json";
 import { formatDateTime } from "@/lib/format";
 
 export const dt = (ms: number) => formatDateTime(ms);
+export const money = (n: number, c = "USD") => `${c} ${Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const USDT_LOGO = "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xdAC17F958D2ee523a2206206994597C13D831ec7/logo.png";
 
