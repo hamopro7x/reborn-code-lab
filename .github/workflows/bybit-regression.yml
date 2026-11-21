@@ -31,7 +31,7 @@ jobs:
         run: bunx vitest run
       - name: ESLint (changed source files)
         run: |
-          files=$(git diff --name-only --diff-filter=ACMRT origin/main...HEAD -- '*.ts' '*.tsx' '*.js' '*.jsx' | grep -v -E '^src/lib/(bybit\\.functions|work\\.functions|password\\.functions)\\.ts
+          files=$(git diff --name-only --diff-filter=ACMRT origin/main...HEAD -- '*.ts' '*.tsx' '*.js' '*.jsx' | grep -v -E 'src/lib/(bybit.functions|work.functions|password.functions).ts' || true)
           if [ -n "$files" ]; then
             echo "$files" | xargs -r bunx eslint
           fi
