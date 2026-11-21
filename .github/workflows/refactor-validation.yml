@@ -1,9 +1,6 @@
 name: Refactor validation
 
 on:
-  push:
-    branches:
-      - "refactor/**"
   pull_request:
     branches:
       - main
@@ -13,7 +10,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: refactor-validation-${{ github.head_ref || github.ref_name }}
+  group: refactor-validation-${{ github.event.pull_request.number || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
