@@ -58,7 +58,6 @@ import {
   saveMyManualCardTxn,
   clearMyManualTxns,
   getWorkP2PCompleted,
-  getWorkTransfers,
   getWorkTransferPage,
 
   getEmployeeShiftTxns,
