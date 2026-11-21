@@ -1,17 +1,22 @@
 # MG Pro — application-only Fly.io/VPS release checklist
 
+**Release scope: replace only the MG Pro application container on the existing target after separate deployment approval. This is not a Supabase or infrastructure setup guide.**
+
 ## Architecture and preservation (required)
 - Production stays on the existing Supabase project **kcdsdaytrnzoiharmyxo**, URL `https://kcdsdaytrnzoiharmyxo.supabase.co`.
 - Deploy only the application/runtime to the owner's existing Fly app `m-hamo` or VPS. Lovable is editor/agent/development preview only, not production hosting or Lovable Cloud.
 - Keep existing Auth, users/UUIDs, Storage/buckets, avatars, archived employee-faces, Bybit accounts/credentials/ledger, shifts, PIN, Desktop Agent and all historical records unchanged.
-- Do not create a Supabase project, export/import/migrate the database, copy auth.users, move buckets, replay migrations, rotate credentials or reconfigure OAuth. The legacy export/import/storage/migration utilities are **not part of this release**.
-- No deployment, infrastructure changes or production writes are authorized by this checklist. Existing domain/DNS/proxy/Fly settings remain untouched.
+- Supabase is already provisioned. Keep its Auth configuration, existing users, Storage buckets, database and provider credentials in place; no data transfer, user recreation or setup work belongs in this release.
+- Keep the existing domain `mag-pro1.com`, DNS, SSL, proxy and Fly settings unchanged. Keep Google OAuth client, redirect URI and linked mailbox encryption configuration unchanged.
+- No deployment, infrastructure changes or production writes are authorized by this checklist.
 
 ## 1) Review the application candidate
 Review the committed source and `LAUNCH-READINESS-2026-11-21.md`. Keep existing deployment paths: root Dockerfile for Fly; `selfhost/Dockerfile` for VPS. Both target Nitro `node-server`, Node 22 and `.output/server/index.mjs`. Do not use a Lovable Publish action.
 
-## 2) Verify existing configuration securely — do not recreate it
-Use the existing Fly runtime secrets or the existing VPS `selfhost/.env` in place. Do not overwrite it by copying `.env.example`, generate replacement secrets or paste values into chat/logs. The example lists names, not a new-project setup procedure.
+## 2) Secure app configuration — use already-existing credentials
+Use the existing Fly runtime secrets or the existing VPS `selfhost/.env` in place. Verify configuration privately on the owner-controlled target, without displaying values. Do not overwrite the existing .env, rotate keys, relink providers or paste credentials into chat/logs. `.env.example` is a names-only reference, not a file to copy over production configuration.
+
+The table separates public build inputs from server runtime configuration. Private service credentials are runtime-only; none belongs in VITE_* or Docker build arguments. If an existing required value is unavailable, leave release blocked until the owner supplies that same credential through the existing secure runtime configuration channel.
 
 | Phase | Names | Existing source / requirement |
 |---|---|---|
@@ -22,7 +27,7 @@ Use the existing Fly runtime secrets or the existing VPS `selfhost/.env` in plac
 | Existing Gmail | `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, `GOOGLE_OAUTH_REDIRECT_URI`, `MAIL_TOKEN_ENCRYPTION_KEY`; `MAIL_SYNC_SECRET` or existing `SYNC_HOOK_SECRET` fallback | Preserve existing OAuth configuration, redirect and token encryption key; do not relink mailboxes |
 | Existing TURN (configured option only) | `CLOUDFLARE_TURN_KEY_ID`, `CLOUDFLARE_TURN_API_TOKEN` **or** `TURN_URLS`, `TURN_USERNAME`, `TURN_CREDENTIAL` | Preserve the currently configured relay path; no provider change or credential rotation |
 
-Fly's launcher preserves legacy VITE_* public-key aliases at runtime; this does **not** rebuild/change the browser bundle. VPS launches Nitro directly and needs server runtime names. Runtime private secrets are supplied only at runtime, never Docker build arguments, image layers or client code. Missing existing values need secure owner-side provisioning, not a new Supabase project.
+Fly's launcher preserves legacy VITE_* public-key aliases at runtime; this does **not** rebuild/change the browser bundle. VPS launches Nitro directly and needs server runtime names. Runtime private secrets are supplied only at runtime, never image layers or client code. Both runtime and browser configuration must continue to identify the same existing Supabase project `kcdsdaytrnzoiharmyxo`.
 
 ## 3) Owner-side artifact verification before a separately authorized release
 - Build the Node artifact on the owner-controlled build target without injecting runtime secrets into the build. Verify `.output/server/index.mjs` exists and the container binds port 3000.
@@ -34,7 +39,7 @@ Fly's launcher preserves legacy VITE_* public-key aliases at runtime; this does 
 ## 4) Preserve existing schedulers and service configuration
 Fly has an existing in-process Bybit loop (`SYNC_INTERVAL_MS`); VPS Compose defines Bybit/mail scheduler containers (`SYNC_INTERVAL_SECONDS`, `SYNC_TIMEOUT_SECONDS`, `MAIL_SYNC_INTERVAL_SECONDS`). Preserve the active topology; do not start duplicate schedulers as part of a review.
 
-Any references to Cloud Jobs or older cloud schedulers refer to legacy/existing configuration, **not a requirement to use Lovable hosting**. Do not stop, recreate, move or modify any running job, including Supabase jobs. Verify the existing Fly external Gmail scheduler owner-side without changing it. Do not execute setup-vps.sh, nginx replacement, certbot, DNS changes, backup/export/import or migration utilities during this audit.
+Existing Cloud Jobs/Supabase jobs are existing service configuration, **not a requirement to use Lovable hosting**. Preserve every running job and the current Fly external Gmail scheduler. Review scheduler health without starting, stopping or reconfiguring any service. This checklist includes no infrastructure setup commands.
 
 ## 5) Remaining release gates
 See the readiness report for retained list caps, atomic PIN/handover RPC design, guest-order ownership, compatible TURN auth, assets, authenticated staff/Agent/mail/chat flows and Bybit observation. All require their documented checks/permissions; none authorizes deleting history, moving Supabase or rotating secrets.
