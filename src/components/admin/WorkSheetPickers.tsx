@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Archive, Check, ChevronDown, Eye, EyeOff, ListChecks, Loader2, Trash2, X } from "lucide-react";
+import { Archive, Check, Eye, EyeOff, ListChecks, Loader2, Trash2, X } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { listEmployees } from "@/lib/admin.functions";
@@ -23,7 +23,7 @@ const GROUP_COLOR_CLASSES = [
 
 
 
-type Employee = {
+export type Employee = {
   user_id: string;
   role: string;
   email: string;
@@ -534,4 +534,3 @@ export function ShiftPickerMenu({
  * - واجهة الموظف: كما هي بالكامل (EmployeeWorkView).
  * - واجهة الأدمن: تبويبان (جدول بيانات حر + قسم الموظفين مع sidebar شفتات).
  */
-
