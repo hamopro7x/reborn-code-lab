@@ -51,7 +51,7 @@ RETURNS text
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $
+AS $agent$
 DECLARE
   alphabet text := 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   new_code text;
@@ -82,7 +82,7 @@ BEGIN
   );
   RETURN new_code;
 END;
-$;
+$agent$;
 
 -- Preserve the two-argument API used by older admin screens.
 CREATE OR REPLACE FUNCTION public.agent_create_enroll_code(
@@ -93,9 +93,9 @@ RETURNS text
 LANGUAGE sql
 SECURITY DEFINER
 SET search_path = public
-AS $
+AS $agent$
   SELECT public.agent_create_enroll_code(p_employee_name, p_note, NULL::uuid);
-$;
+$agent$;
 
 REVOKE ALL ON FUNCTION public.agent_create_enroll_code(text, text) FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.agent_create_enroll_code(text, text, uuid) FROM PUBLIC, anon;
