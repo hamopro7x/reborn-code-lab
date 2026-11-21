@@ -1,6 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import { Link } from "@tanstack/react-router";
-import { Construction } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   heroIcon, isInternalUrl, type HeroBadgeItem, type HeroBanner, type HeroButton,
