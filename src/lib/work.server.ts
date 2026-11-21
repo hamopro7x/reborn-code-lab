@@ -468,9 +468,10 @@ export async function myShiftTransfers(userId: string, scope: "external" | "inte
   const { data } = await db
     .from("work_shifts")
     .select("id,user_id,started_at")
+    .eq("user_id", userId)
     .is("ended_at", null)
     .maybeSingle();
-  if (!data || (data as any).user_id !== userId) return [];
+  if (!data) return [];
   return transfersLedger(scope, 200, (data as any).started_at as string);
 }
 
@@ -1251,8 +1252,13 @@ export async function verifyDeviceAssertion(
  */
 export async function myWorkState(userId: string) {
   const db = await admin();
-  const { data } = await db.from("work_shifts").select("id,user_id,started_at").is("ended_at", null).maybeSingle();
-  if (!data || data.user_id !== userId) return { holding: false as const };
+  const { data } = await db
+    .from("work_shifts")
+    .select("id,user_id,started_at")
+    .eq("user_id", userId)
+    .is("ended_at", null)
+    .maybeSingle();
+  if (!data) return { holding: false as const };
   // Successful transactions only — same rule as the rows shown below.
   const { count } = await db
     .from("work_txn_assignments")
