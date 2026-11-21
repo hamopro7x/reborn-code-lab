@@ -1671,7 +1671,7 @@ export async function employeeManualCardTxns(userId: string) {
 
 /* ------------------------------ employee PIN ------------------------------ */
 /**
- * Shift handover is gated by a 6-digit PIN instead of face matching.
+ * Shift handover is gated by a 6-digit PIN.
  * The PIN is never stored in clear text: a random per-user salt plus SHA-256
  * is kept in `work_pins`, which is reachable only through the service role.
  */
