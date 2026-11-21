@@ -1,3 +1,4 @@
+# Also validates desktop-agent and Supabase security changes while this workflow is under review.
 name: Bybit regression tests
 
 on:
