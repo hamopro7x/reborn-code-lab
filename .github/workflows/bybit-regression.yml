@@ -1,4 +1,5 @@
 # Also validates desktop-agent and Supabase security changes while this workflow is under review.
+# Keep agent/updater and migration paths in sync with the pull-request validation scope.
 name: Bybit regression tests
 
 on:
