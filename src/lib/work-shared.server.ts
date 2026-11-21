@@ -67,3 +67,9 @@ export const MANUAL_NO_SHIFT_VISIBLE_MS = 10 * 60 * 1000;
  */
 
 export const MANUAL_CARD_EDIT_MS = 10 * 60 * 1000;
+
+export async function accountNames(db: DB): Promise<Map<string, string>> {
+  const { accountLabels } = await import("./account-labels.server");
+  return accountLabels(db);
+}
+

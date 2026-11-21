@@ -246,11 +246,7 @@ export async function workTable(opts: {
   };
 }
 
-export async function accountNames(db: DB): Promise<Map<string, string>> {
-  const { accountLabels } = await import("./account-labels.server");
-  return accountLabels(db);
-}
-
+export 
 /* ------------------------- P2P: manual linking ------------------------- */
 
 /** Completed P2P orders that are not linked to any shift yet. */
