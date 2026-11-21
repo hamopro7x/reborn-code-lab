@@ -3,7 +3,7 @@ import { createHmac } from "crypto";
 import { admin, bybitConfigured, call, getCreds, listAccounts } from "./bybit-account.server";
 import { fetchP2P, fetchOnChain, fetchInternal } from "./bybit-assets.server";
 import type { AssetRow } from "./bybit-assets.server";
-import { cardRowKey, mapCardTxn, mapStoredRow } from "./bybit-card-mapper";
+import { cardRowKey, mapCardTxn, mapStoredRow, sanitize } from "./bybit-card-mapper";
 import type { CardTxn } from "./bybit-card-mapper";
 export { mapStoredRow } from "./bybit-card-mapper";
 export type { CardTxn } from "./bybit-card-mapper";
