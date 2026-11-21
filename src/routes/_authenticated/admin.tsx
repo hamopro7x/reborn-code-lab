@@ -28,7 +28,8 @@ import { AdminBackProvider, useAdminBackTarget } from "@/components/admin/back-n
 import { BybitTab, ApiKeyPanel } from "@/components/admin/BybitTab";
 import { WorkSheetPanel } from "@/components/admin/WorkSheetPanel";
 import { AdminSheet } from "@/components/admin/AdminSheet";
-import { GmailInbox, MailNotifier } from "@/components/admin/GmailInbox";
+import { GmailInbox } from "@/components/admin/GmailInbox";
+import { MailNotifier } from "@/components/admin/mail/MailNotifications";
 import { StaffChat } from "@/components/admin/StaffChat";
 import { OverviewTab } from "@/components/admin/panels/OverviewTab";
 import { CustomersTab } from "@/components/admin/panels/CustomersTab";
