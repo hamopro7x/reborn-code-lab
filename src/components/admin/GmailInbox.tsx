@@ -21,6 +21,9 @@ import {
   listMailDrafts, saveMailDraft, mailUnreadCount, claimMailNotifications, listMailActivity,
 } from "@/lib/mail.functions";
 
+import { MailNotifier, useMailUnread } from "@/components/admin/mail/MailNotifications";
+import { fmt, sender } from "@/components/admin/mail/MailFormatting";
+
 type View = "inbox" | "sent" | "drafts" | "archive" | "starred" | "spam" | "trash" | "label" | "all";
 const VIEWS: { key: View; label: string; icon: any }[] = [
   { key: "inbox", label: "الوارد", icon: Inbox },
@@ -32,86 +35,6 @@ const VIEWS: { key: View; label: string; icon: any }[] = [
   { key: "trash", label: "المحذوفات", icon: Trash2 },
 ];
 const STATUS: Record<string, string> = { active: "متصل", paused: "موقوف", error: "خطأ مؤقت", reauth_required: "يحتاج إعادة ربط" };
-
-function beep() {
-  try {
-    const ctx = new AudioContext();
-    const o = ctx.createOscillator();
-    const g = ctx.createGain();
-    o.frequency.value = 880;
-    g.gain.setValueAtTime(0.25, ctx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
-    o.connect(g).connect(ctx.destination);
-    o.start();
-    o.stop(ctx.currentTime + 0.6);
-  } catch {}
-}
-const fmt = (d?: string | null) => formatDateTime(d);
-const BRANDS: Record<string, string> = { paypal: "PayPal", tiktok: "TikTok", google: "Google", bybit: "Bybit", facebookmail: "Facebook", facebook: "Facebook", instagram: "Instagram", youtube: "YouTube", linkedin: "LinkedIn", github: "GitHub", openai: "OpenAI", binance: "Binance", amazon: "Amazon", apple: "Apple", microsoft: "Microsoft", netflix: "Netflix", spotify: "Spotify", x: "X", twitter: "X", whatsapp: "WhatsApp", telegram: "Telegram", lovable: "Lovable" };
-const SLD = new Set(["co", "com", "net", "org", "gov", "edu", "ac"]);
-const platformName = (addr: string) => {
-  const parts = (addr.split("@")[1] ?? "").toLowerCase().replace(/>.*/, "").split(".").filter(Boolean);
-  if (parts.length < 2) return "";
-  let i = parts.length - 2;
-  if (SLD.has(parts[i]) && i > 0) i--;
-  const n = parts[i];
-  return BRANDS[n] ?? n.charAt(0).toUpperCase() + n.slice(1);
-};
-const sender = (f?: string | null) => {
-  const raw = f ?? "";
-  const name = raw.replace(/<.*>/, "").replace(/"/g, "").trim();
-  if (name && !name.includes("@")) return name;
-  const addr = raw.match(/<([^>]+)>/)?.[1] ?? name ?? raw;
-  return platformName(addr) || name || raw || "—";
-};
-
-/** Live updates for staff: realtime invalidation (RLS-scoped) with polling fallback in queries. */
-function useMailRealtime() {
-  const qc = useQueryClient();
-  useEffect(() => {
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const keys = new Set<string>();
-    const schedule = (...next: string[]) => {
-      next.forEach((key) => keys.add(key));
-      if (timer !== undefined) return;
-      timer = setTimeout(() => {
-        timer = undefined;
-        void refreshQueries(qc, [...keys].map((key) => [key]));
-        keys.clear();
-      }, 350);
-    };
-    const ch = supabase
-      .channel(`mail-live-${Math.random().toString(36).slice(2)}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "mail_messages" }, () => {
-        schedule("mail-msgs", "mail-notif", "mail-unread");
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "mail_accounts" }, () => schedule("mail-accounts"))
-      .subscribe();
-    return () => { if (timer !== undefined) clearTimeout(timer); supabase.removeChannel(ch); };
-  }, [qc]);
-}
-
-/** Mounted once in the admin shell: in-site + system notifications, de-duplicated per user on the server. */
-export function MailNotifier({ onOpen }: { onOpen?: (messageId: string) => void }) {
-  const claimFn = useServerFn(claimMailNotifications);
-  const q = useQuery({ queryKey: ["mail-notif"], queryFn: () => claimFn(), refetchInterval: livePoll(15000), retry: false, staleTime: 0 });
-  const handled = useRef(new Set<string>());
-  useMailRealtime();
-  useEffect(() => {
-    // Server already claimed these atomically; the local set only guards React re-renders.
-    const fresh = (q.data ?? []).filter((n: any) => !handled.current.has(n.id));
-    if (!fresh.length) return;
-    fresh.forEach((n: any) => handled.current.add(n.id));
-    // Sound only — no popups on screen or from the browser.
-    beep();
-  }, [q.data]);
-  return null;
-}
-
-export function useMailUnread() {
-  const fn = useServerFn(mailUnreadCount);
-  return useQuery({ queryKey: ["mail-unread"], queryFn: () => fn(), refetchInterval: livePoll(15000), retry: false }).data?.unread ?? 0;
-}
 
 function Accounts({ isAdmin }: { isAdmin: boolean }) {
   const qc = useQueryClient();
@@ -247,8 +170,7 @@ function Composer({ accounts, initial, onDone }: { accounts: any[]; initial: any
       </label>
       <div className="flex gap-2">
         <Button onClick={send} disabled={busy || !f.to || !f.accountId}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="ms-1 h-4 w-4" />}إرسال</Button>
-        <Button variant="outline" onClick={saveDraft}>حفظ كمسودة</Button>
-      </div>
+        <Button variant="outline" onClick={saveDraft}>حفظ كمسودة</Button>      </div>
     </div>
   );
 }
@@ -497,8 +419,7 @@ export function GmailInbox({ isAdmin = false }: { isAdmin?: boolean }) {
                     {(drafts.data ?? []).map((d: any) => (
                       <MailListRow key={d.id} sender={`إلى ${d.to_addr || "—"}`} account={acctEmail(d.account_id)} date={fmt(d.updated_at)} preview={d.body}
                         subject={<><span className="me-2 rounded bg-secondary px-1.5 py-0.5 text-[11px]">مسودة في الموقع</span>{d.subject || "(بدون عنوان)"}</>}
-                        onOpen={() => isAdmin ? setCompose({ draftId: d.id, accountId: d.account_id, to: d.to_addr, cc: d.cc_addr, subject: d.subject, body: d.body, replyToId: d.reply_to_message_id ?? undefined }) : setDraftView(d)}
-                        footer={isAdmin ? <Button className="row-start-2 h-6 w-6" size="icon" variant="ghost" onClick={async () => { await draftSaveFn({ data: { id: d.id, remove: true, accountId: d.account_id } }); qc.invalidateQueries({ queryKey: ["mail-drafts"] }); }}><Trash2 className="h-4 w-4" /></Button> : undefined}
+                        onOpen={() => isAdmin ? setCompose({ draftId: d.id, accountId: d.account_id, to: d.to_addr, cc: d.cc_addr, subject: d.subject, body: d.body, replyToId: d.reply_to_message_id ?? undefined }) : setDraftView(d)}                        footer={isAdmin ? <Button className="row-start-2 h-6 w-6" size="icon" variant="ghost" onClick={async () => { await draftSaveFn({ data: { id: d.id, remove: true, accountId: d.account_id } }); qc.invalidateQueries({ queryKey: ["mail-drafts"] }); }}><Trash2 className="h-4 w-4" /></Button> : undefined}
                       />
                     ))}
                   </ul>
