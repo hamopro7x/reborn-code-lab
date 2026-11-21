@@ -118,7 +118,8 @@ export const getStaffShifts = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ userId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    await assertAccess(context.supabase, context.userId);
+    // Cross-employee shift history is management data, not an employee self-service read.
+    await assertAdmin(context.supabase, context.userId);
     const mod = await import("./work.server");
     return mod.shiftsOfUser(data.userId);
   });
@@ -702,6 +703,7 @@ export const setSharedShift = createServerFn({ method: "POST" })
 export const getMySharedShift = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    await assertAccess(context.supabase, context.userId);
     const mod = await import("./work.server");
     const id = await mod.getSharedShiftFor(context.userId);
     if (!id) return null;
