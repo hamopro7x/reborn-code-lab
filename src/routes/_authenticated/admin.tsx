@@ -369,22 +369,6 @@ function AdminBackButton() {
   );
 }
 
-// ============ READ ONLY WRAPPER ============
-
-// ============ OVERVIEW ============
-
-// ============ CUSTOMERS ============
-// ============ REVIEWS ============
-// ============ EMPLOYEES ============
-// ============ ORDERS ============
-// ============ PRODUCTS ============
-
-// ============ CATEGORIES ============
-// ============ PAYMENT METHODS ============
-// ============ CURRENCIES / FX ============
-// ============ TIMERS ============
-// ============ SETTINGS ============
-// ============ COURSES ============
 function ChatNavBadge() {
   const n = useChatBadge();
   if (!n) return null;
