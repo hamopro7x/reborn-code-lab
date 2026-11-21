@@ -27,7 +27,7 @@ $revoke_unsafe_table_privileges$;
 
 -- Keep the same boundary for future tables created by the normal postgres
 -- migration owner. This does not change privileges for service_role/postgres.
-ALTER DEFAULT PRIVILEGES FOR ROLE postgres
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
 REVOKE TRUNCATE, REFERENCES, TRIGGER ON TABLES
 FROM anon, authenticated;
 
