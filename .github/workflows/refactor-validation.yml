@@ -49,6 +49,8 @@ jobs:
           src/lib/bybit-card-admin.functions.ts
           src/lib/bybit-convert.functions.ts
           src/lib/bybit-ledger.functions.ts
+          src/lib/bybit-card-visibility.ts
+          src/lib/bybit-card-visibility.test.ts
           src/lib/work-overview.functions.ts
           src/lib/work-employee.functions.ts
           src/lib/work-admin.functions.ts
