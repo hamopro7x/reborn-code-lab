@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { usePersistentState } from "@/lib/persistent-state";
 import { dt, Chip, Empty, CoinLogo, ChainLogo } from "@/components/admin/bybit/BybitVisuals";
 import { Layers, ArrowUp, ArrowDown, ChevronDown } from "lucide-react";
 
