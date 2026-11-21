@@ -43,7 +43,6 @@ import { P2PShiftLinkMenu } from "./P2PShiftLinkMenu";
 import { formatDateTime, formatTime } from "@/lib/format";
 import { PAGE_SIZE } from "@/lib/pagination";
 import { PaginationBar } from "@/components/ui/pagination-bar";
-import { supabase } from "@/integrations/supabase/client";
 import {
   getMyShiftTxns,
   saveMyTxnEntry,
@@ -75,7 +74,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { getBybitCardBrands } from "@/lib/bybit.functions";
 import { usePinClaim } from "@/components/admin/PinGate";
 import { BrandBadge, LedgerRowDetails, statusBadge } from "@/components/admin/BybitLedgerPanel";
-import { useWorkRealtime } from "@/lib/use-work-realtime";
 import { useLedgerAutoSync } from "@/lib/use-ledger-sync";
 import { livePoll } from "@/lib/live-poll";
 import { useUiState } from "@/lib/ui-state";
@@ -1335,8 +1333,6 @@ export function EmployeeWorkView({
   // إيداع / سحب داخل قسمي التحويلات (فلترة عرض فقط)
   const [flow, setFlow] = useUiState<"in" | "out">("work-sheet", "flow", "in");
 
-  // تحديث لحظي: أي تغيير حقيقي في المركز الرئيسي يحدّث الـqueries المتأثرة فقط.
-  useWorkRealtime({ enabled: !blank, shiftId: viewShiftId ?? null, viewUserId: viewUserId ?? null });
   const txns = useQuery({
     queryKey: shiftMode
       ? ["shift-txns", viewShiftId]
