@@ -39,11 +39,3 @@ jobs:
         run: bunx tsc --noEmit
       - name: Production build
         run: bun run build
- || true)
-          if [ -n "$files" ]; then
-            echo "$files" | xargs -r bunx eslint
-          fi
-      - name: TypeScript
-        run: bunx tsc --noEmit
-      - name: Production build
-        run: bun run build
