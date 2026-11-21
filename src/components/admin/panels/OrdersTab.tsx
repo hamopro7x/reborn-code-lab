@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Check, ExternalLink, Loader2, Trash2, X } from "lucide-react";
 
-function OrdersTab({ isAdmin }: { isAdmin: boolean }) {
+export function OrdersTab({ isAdmin }: { isAdmin: boolean }) {
   const qc = useQueryClient();
   const deleteAllFn = useServerFn(deleteAllOrders);
   const [deleting, setDeleting] = useState(false);
