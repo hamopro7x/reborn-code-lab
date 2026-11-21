@@ -5,7 +5,7 @@ import { sleep } from "./bybit-runtime";
 const BASE = "https://api.bybit.com";
 const RECV = "5000";
 
-type Creds = { key: string; secret: string };
+export type Creds = { key: string; secret: string };
 
 export type BybitAccount = {
   id: string;
@@ -19,7 +19,7 @@ export type BybitAccount = {
   frozenUntil: string | null;
 };
 
-async function admin() {
+export async function admin() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   return supabaseAdmin as any;
 }
@@ -270,7 +270,7 @@ export async function testCreds(c: Creds) {
 }
 
 
-async function call(method: "GET" | "POST", path: string, params: Record<string, unknown> = {}, override?: Creds) {
+export async function call(method: "GET" | "POST", path: string, params: Record<string, unknown> = {}, override?: Creds) {
   const { key, secret } = override ?? (await getCreds());
   let url = `${BASE}${path}`;
   let payload = "";
