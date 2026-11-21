@@ -84,22 +84,11 @@ BEGIN
 END;
 $agent$;
 
--- Preserve the two-argument API used by older admin screens.
-CREATE OR REPLACE FUNCTION public.agent_create_enroll_code(
-  p_employee_name text DEFAULT NULL,
-  p_note text DEFAULT NULL
-)
-RETURNS text
-LANGUAGE sql
-SECURITY DEFINER
-SET search_path = public
-AS $agent$
-  SELECT public.agent_create_enroll_code(p_employee_name, p_note, NULL::uuid);
-$agent$;
+-- Remove the legacy two-argument overload. The three-argument function has
+-- defaults for all optional inputs and supports both old and new RPC callers.
+DROP FUNCTION IF EXISTS public.agent_create_enroll_code(text, text);
 
-REVOKE ALL ON FUNCTION public.agent_create_enroll_code(text, text) FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.agent_create_enroll_code(text, text, uuid) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.agent_create_enroll_code(text, text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.agent_create_enroll_code(text, text, uuid) TO authenticated;
 
 COMMIT;
