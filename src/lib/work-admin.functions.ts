@@ -9,6 +9,10 @@ import { assertShiftView } from "./work-access.server";
  * user id differs (chosen employee instead of the caller). Read-only. */
 
 const empSchema = z.object({ userId: z.string().uuid() });
+const manualReadSchema = z.object({
+  card: z.enum(["wrong", "employee", "receive", "transfer"]).optional(),
+  page: z.number().int().min(1).max(100_000).optional(),
+});
 
 export const getEmployeeWorkState = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
