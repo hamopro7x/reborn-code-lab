@@ -3,20 +3,16 @@ import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-quer
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
-  Loader2, Mail, Send, ArrowRight, Inbox, Archive, Star, ShieldAlert, Trash2, Tag, FileText, Plus,
-  Paperclip, Search, Reply, History, X, RotateCcw,
+  Loader2, Mail, Send, Inbox, Archive, Star, ShieldAlert, Trash2, Tag, FileText, Plus,
+  Paperclip, Search, History, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { MailListRow } from "@/components/admin/MailListRow";
 import { supabase } from "@/integrations/supabase/client";
-import { MailMessageBody } from "@/components/admin/MailMessageBody";
 import { livePoll } from "@/lib/live-poll";
 import {
-  listMailMessages,
-  getMailThread, setMailRead, organizeMail, listMailLabels, saveMailLabel, downloadMailAttachment,
-  listMailDrafts, listMailActivity,
+  listMailAccounts, listMailMessages, setMailRead, listMailLabels, saveMailLabel, listMailDrafts,
 } from "@/lib/mail.functions";
 
 import { fmt, sender } from "@/components/admin/mail/MailFormatting";
