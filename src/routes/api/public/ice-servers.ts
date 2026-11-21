@@ -6,7 +6,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 const STUN_ONLY = [
   { urls: "stun:stun.l.google.com:19302" },
-  { urls: "stun:stun1.l.google.com:3478" },
+  { urls: "stun:stun1.l.google.com:19302" },
   { urls: "stun:stun.cloudflare.com:3478" },
 ];
 
