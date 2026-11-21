@@ -2,7 +2,7 @@
  * Bybit Convert quote and execution API operations.
  * Kept separate from card/ledger synchronization to isolate conversion flows.
  */
-import { call, getCreds } from "./bybit-account.server";
+import { call, getCreds, type Creds } from "./bybit-account.server";
 import { num } from "./bybit-runtime";
 
 const CONVERT_ACCOUNTS = ["eb_convert_funding", "eb_convert_uta", "eb_convert_spot"] as const;
