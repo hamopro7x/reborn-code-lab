@@ -2,7 +2,7 @@
 
 The authenticated admin route is an application shell, not a place for panel implementation.
 
-## Extracted modules
+## Extracted admin modules
 
 Each panel owns its UI, local state, queries, and panel-specific presentation:
 
@@ -18,7 +18,12 @@ Each panel owns its UI, local state, queries, and panel-specific presentation:
 - `EmployeesTab.tsx`
 - `CoursesTab.tsx` (includes lesson management and course access UI)
 
-The route keeps navigation, shared layout, role-aware visibility, and panel selection. Existing independent components remain in `src/components/admin/` (Bybit, Reports, WorkSheet, Gmail, Staff Chat, remote device monitor, and others) and are not duplicated.
+The route keeps navigation, shared layout, role-aware visibility, and panel selection. Existing independent components remain in `src/components/admin/` (Bybit, Reports, Products, WorkSheet, Gmail, Staff Chat, remote device monitor, and others) and are not duplicated.
+
+## Additional extracted domains
+
+- Bybit visual primitives, card presentation/editor, account information card, P2P table, and transaction/asset tables now live under `src/components/admin/bybit/`.
+- Checkout's reusable stepper, payment method icon, and order summary live in `src/components/checkout/CheckoutPresentation.tsx`.
 
 ## Rules for future modules
 
@@ -35,7 +40,7 @@ The route keeps navigation, shared layout, role-aware visibility, and panel sele
 
 - The old inline `DevicesTab` implementation had no render or call sites in the admin route and was removed with its panel-only server-function imports.
 - Imports moved with extracted panels were removed from the route shell.
-- The current shell has no unused named imports according to a static import-reference scan.
+- Static named-import reference scans were performed on the extracted admin modules and route shell; these are not a substitute for TypeScript compilation.
 
 ## Remaining work
 
