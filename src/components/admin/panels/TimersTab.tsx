@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Edit, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
-function TimersTab() {
+export function TimersTab() {
   const qc = useQueryClient();
   const q = useQuery({ queryKey: ["admin-timers"], queryFn: async () => (await supabase.from("countdown_timers").select("*").order("created_at", { ascending: false })).data ?? [] });
   const [editing, setEditing] = useState<any>(null);
