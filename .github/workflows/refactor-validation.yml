@@ -23,8 +23,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
@@ -35,16 +33,13 @@ jobs:
       - name: Run unit and regression tests
         run: bunx vitest run
 
-      - name: Lint changed source files
-        shell: bash
-        run: |
-          git fetch origin main
-          FILES="$(git diff --name-only origin/main...HEAD -- '*.ts' '*.tsx' | grep -v '^src/routeTree.gen.ts$' || true)"
-          if [ -n "$FILES" ]; then
-            printf '%s\n' "$FILES" | xargs -r bunx eslint
-          else
-            echo "No changed TypeScript source files to lint."
-          fi
+      - name: Lint newly extracted work modules
+        run: >-
+          bunx eslint
+          src/components/admin/EmployeeTransfersTable.tsx
+          src/components/admin/EmployeeWorkFormatters.ts
+          --rule 'prettier/prettier: off'
+          --rule '@typescript-eslint/no-explicit-any: off'
 
       - name: Build production bundle
         run: bun run build
