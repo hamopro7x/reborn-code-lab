@@ -3,6 +3,16 @@
 -- functions using the service role; service_role bypasses these RLS policies.
 BEGIN;
 
+-- A separate mandatory-chat policy existed on these tables. PostgreSQL combines
+-- permissive SELECT policies with OR, so that policy could reopen global reads
+-- for employees who had no unread mandatory message. Remove it from raw Bybit
+-- tables: employees must use the scoped server work-sheet functions instead.
+DROP POLICY IF EXISTS "chat_mandatory_read_guard" ON public.bybit_ledger;
+DROP POLICY IF EXISTS "chat_mandatory_read_guard" ON public.bybit_accounts;
+DROP POLICY IF EXISTS "chat_mandatory_read_guard" ON public.bybit_cards;
+DROP POLICY IF EXISTS "chat_mandatory_read_guard" ON public.bybit_account_info;
+DROP POLICY IF EXISTS "chat_mandatory_read_guard" ON public.bybit_card_txns;
+
 -- The ledger contains every account's financial movements. Employees must not
 -- be able to query it directly or receive its rows through Postgres Changes.
 DROP POLICY IF EXISTS "bybit ledger staff read" ON public.bybit_ledger;
@@ -33,19 +43,29 @@ CREATE POLICY "bybit docs admin read" ON storage.objects
   USING (bucket_id = 'bybit-docs' AND private.is_admin(auth.uid()));
 
 -- Employees can read only their own shift and assignment metadata. Admins retain
--- cross-employee visibility. Work-sheet row data is served through scoped
--- server functions, so broad staff SELECT is not required.
+-- cross-employee visibility. Preserve the mandatory-chat gate inside the scoped
+-- policies; do not leave it as a separate permissive policy (which ORs with scope).
+DROP POLICY IF EXISTS "chat_mandatory_read_guard" ON public.work_shifts;
+DROP POLICY IF EXISTS "chat_mandatory_read_guard" ON public.work_txn_assignments;
+DROP POLICY IF EXISTS "chat_mandatory_read_guard" ON public.work_transfer_notes;
+
 DROP POLICY IF EXISTS "staff read shifts" ON public.work_shifts;
 DROP POLICY IF EXISTS "own or admin read shifts" ON public.work_shifts;
 CREATE POLICY "own or admin read shifts" ON public.work_shifts
   FOR SELECT TO authenticated
-  USING (user_id = auth.uid() OR private.is_admin(auth.uid()));
+  USING (
+    (user_id = auth.uid() OR private.is_admin(auth.uid()))
+    AND public.staff_chat_can_read_work()
+  );
 
 DROP POLICY IF EXISTS "staff read assignments" ON public.work_txn_assignments;
 DROP POLICY IF EXISTS "own or admin read assignments" ON public.work_txn_assignments;
 CREATE POLICY "own or admin read assignments" ON public.work_txn_assignments
   FOR SELECT TO authenticated
-  USING (user_id = auth.uid() OR private.is_admin(auth.uid()));
+  USING (
+    (user_id = auth.uid() OR private.is_admin(auth.uid()))
+    AND public.staff_chat_can_read_work()
+  );
 
 -- Transfer notes are tied to an employee-owned withdrawal. The former staff-wide
 -- policy exposed every employee's notes to every other employee.
@@ -53,6 +73,9 @@ DROP POLICY IF EXISTS "staff read transfer notes" ON public.work_transfer_notes;
 DROP POLICY IF EXISTS "own or admin read transfer notes" ON public.work_transfer_notes;
 CREATE POLICY "own or admin read transfer notes" ON public.work_transfer_notes
   FOR SELECT TO authenticated
-  USING (user_id = auth.uid() OR private.is_admin(auth.uid()));
+  USING (
+    (user_id = auth.uid() OR private.is_admin(auth.uid()))
+    AND public.staff_chat_can_read_work()
+  );
 
 COMMIT;
