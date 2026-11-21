@@ -138,3 +138,14 @@ src/modules/
 - The current application paths reviewed do not require employee direct writes to `profiles` or `site-assets`. Product image staff uploads remain unchanged because the product UI explicitly supports staff uploads.
 - This migration is committed to the review branch only. It has NOT been applied to Supabase production or staging.
 - Validation still required: run the full install/lint/typecheck/build/test suite against the updated head and verify signup, profile reads, admin employee edits, agent release upload/download, and product image upload in staging.
+
+### Follow-up source-to-policy verification (2026-11-21)
+
+- Rechecked all known application call sites affected by the new `profiles` and `site-assets` restrictions.
+- `getViewerIdentity` reads only the caller's own profile row; it does not mutate profiles.
+- Profile creation is performed by the SECURITY DEFINER `handle_new_user` trigger and by the admin-only `createEmployee` server function using `supabaseAdmin`.
+- Employee avatar changes are handled by the admin-only `updateEmployeeAvatar` server function using `supabaseAdmin`; the browser upload targets the separate `avatars` bucket and remains governed by owner/admin avatar policies.
+- Admin employee edits update `profiles` through `supabaseAdmin`; no direct authenticated self-profile INSERT/UPDATE path was found in the reviewed source files.
+- The original site-assets policy name was verified as `staff manage site assets`; the migration drops that exact policy while retaining `public read site assets`.
+- The only reviewed application release-storage references are `AGENT_RELEASE.storageBucket = site-assets`, the server-side signed-download route, and `agent/release.mjs` service-role publishing. No employee direct-write call site was found.
+- Product image uploads remain staff-enabled and are intentionally unaffected.
