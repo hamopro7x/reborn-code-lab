@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { syncAllBybitCardTxns } from "./bybit.functions";
+import { syncEmployeeWorkLedger } from "./work.functions";
 import { refreshQueries } from "./refresh-queries";
 import { pollDelay } from "./live-poll";
 
@@ -16,9 +17,11 @@ const LOCK_KEY = "bybit-auto-sync-at";
  * hit sync on the visa page manually. A shared localStorage timestamp keeps
  * several open tabs from syncing at the same time.
  */
-export function useLedgerAutoSync(enabled = true, intervalMs = 5_000) {
+export function useLedgerAutoSync(enabled = true, intervalMs = 5_000, employeeScoped = false) {
   const qc = useQueryClient();
-  const syncFn = useServerFn(syncAllBybitCardTxns);
+  const adminSyncFn = useServerFn(syncAllBybitCardTxns);
+  const employeeSyncFn = useServerFn(syncEmployeeWorkLedger);
+  const syncFn = employeeScoped ? employeeSyncFn : adminSyncFn;
   const running = useRef(false);
   const failures = useRef(0);
   const nextAt = useRef(0);
