@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { adminDb, log, requireAdmin, roleOf } from "./mail/access.server";
+import { listInput } from "./mail-core.functions";
 
 const LIST_COLS = "id, account_id, gmail_thread_id, folder, from_addr, to_addr, subject, snippet, internal_date, has_attachments, is_read, starred, archived, trashed_at, label_ids, sender_logo_url";
 
@@ -139,7 +140,7 @@ export const downloadMailAttachment = createServerFn({ method: "POST" }).middlew
     return { filename: a.filename, mimeType: a.mime_type || "application/octet-stream", base64: String(r.data).replace(/-/g, "+").replace(/_/g, "/") };
   });
 
-const sendInput = z.object({
+export const sendInput = z.object({
   accountId: z.string().uuid(),
   to: z.string().trim().min(3).max(2000),
   cc: z.string().max(2000).optional().default(""),
