@@ -186,9 +186,26 @@ export const getMyShiftTxns = createServerFn({ method: "POST" })
   }))
   .handler(async ({ data, context }) => {
     await assertAccess(context.supabase, context.userId);
-    if (data.page === 1) await (await import("./bybit.server")).pullFromBybit();
     const mod = await import("./work.server");
     return mod.myShiftRows(context.userId, data.page, 50);
+  });
+
+/**
+ * Refresh only the recent Bybit ingestion needed by employee work sheets.
+ * The result contains no account data, totals, or transaction rows; deep
+ * historical sync remains an admin-only operation.
+ */
+export const syncEmployeeWorkLedger = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAccess(context.supabase, context.userId);
+    const mod = await import("./bybit.server");
+    try {
+      await mod.syncAllRecent();
+      return { ok: true as const };
+    } catch {
+      return { ok: false as const, error: "تعذر تحديث بيانات الشفت." };
+    }
   });
 
 /**
