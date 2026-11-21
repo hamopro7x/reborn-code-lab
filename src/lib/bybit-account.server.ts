@@ -1,9 +1,6 @@
 import { createHmac } from "crypto";
 import { normalizeBybitError, type BybitError } from "./bybit-errors";
-import { sleep } from "./bybit-runtime";
-
-const BASE = "https://api.bybit.com";
-const RECV = "5000";
+import { BYBIT_BASE_URL as BASE, BYBIT_RECV_WINDOW as RECV, sleep } from "./bybit-runtime";
 
 export type Creds = { key: string; secret: string };
 
