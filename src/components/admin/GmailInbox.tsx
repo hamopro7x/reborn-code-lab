@@ -12,16 +12,17 @@ import { MailListRow } from "@/components/admin/MailListRow";
 import { supabase } from "@/integrations/supabase/client";
 import { livePoll } from "@/lib/live-poll";
 import {
-  listMailAccounts, listMailMessages, setMailRead, listMailLabels, saveMailLabel, listMailDrafts,
+  listMailAccounts, listMailMessages, setMailRead, listMailLabels, saveMailLabel, listMailDrafts, saveMailDraft,
 } from "@/lib/mail.functions";
 
 import { fmt, sender } from "@/components/admin/mail/MailFormatting";
 
 import { MailAccounts } from "@/components/admin/mail/MailAccounts";
 
-import { MailComposer } from "@/components/admin/mail/MailComposer";
+import { MailComposer as Composer } from "@/components/admin/mail/MailComposer";
 
 import { MailThreadView, MailActivityLog } from "@/components/admin/mail/MailThreadView";
+import { useMailRealtime } from "@/components/admin/mail/MailNotifications";
 
 type View = "inbox" | "sent" | "drafts" | "archive" | "starred" | "spam" | "trash" | "label" | "all";
 const VIEWS: { key: View; label: string; icon: any }[] = [
