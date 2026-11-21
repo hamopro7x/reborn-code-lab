@@ -1337,9 +1337,6 @@ export function EmployeeWorkView({
 
   // تحديث لحظي: أي تغيير حقيقي في المركز الرئيسي يحدّث الـqueries المتأثرة فقط.
   useWorkRealtime({ enabled: !blank, shiftId: viewShiftId ?? null, viewUserId: viewUserId ?? null });
-  // اسحب المعاملات الجديدة من Bybit للشفت المفتوح بدون انتظار مزامنة يدوية.
-  useLedgerAutoSync(!blank && !shiftMode, 5_000, !isAdmin);
-
   const txns = useQuery({
     queryKey: shiftMode
       ? ["shift-txns", viewShiftId]
@@ -1378,6 +1375,14 @@ export function EmployeeWorkView({
   // request before the table can render.
   const workState = txns.data as any;
   const holding = blank ? false : shiftMode || workState?.holding === true;
+
+  // Employees trigger the recent-only refresh only while holding their own open shift.
+  // Admins retain the broader refresh path for review screens.
+  useLedgerAutoSync(
+    !blank && !shiftMode && (isAdmin || workState?.holding === true),
+    5_000,
+    !isAdmin,
+  );
 
   // طلبات P2P: الموظف والأدمن يشاهدون فقط الطلبات المرتبطة بالشفت المختار/المفتوح.
   const p2pCompleted = useQuery({
