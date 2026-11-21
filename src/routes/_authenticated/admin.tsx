@@ -45,6 +45,7 @@ import { EmployeesTab } from "@/components/admin/panels/EmployeesTab";
 import { CoursesTab } from "@/components/admin/panels/CoursesTab";
 import { DeviceMonitorGrid } from "@/components/admin/DeviceMonitorGrid";
 import { livePoll } from "@/lib/live-poll";
+import { getViewerIdentity } from "@/lib/courses.functions";
 
 
 type PanelKey =
