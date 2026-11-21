@@ -21,7 +21,7 @@ import { cardPurchasePresenter } from "@/lib/bybit-spend";
 import { RefreshCw, CreditCard, Layers, ArrowUp, ArrowDown, ChevronDown, Loader2, Trash2, Copy, Pencil, Wallet, BarChart3, Clock, PieChart, Lock } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Stat, Chip, Empty, visibleCoins, MerchantLogo, CoinLogo, CoinBalanceCard, ChainLogo } from "@/components/admin/bybit/BybitVisuals";
-import { detectBrand, CARD_BRANDS, BrandBadge, CardsPanel, AddCardDialog } from "@/components/admin/bybit/BybitCardsUI";
+import { detectBrand, BrandBadge, CardsPanel, AddCardDialog } from "@/components/admin/bybit/BybitCardsUI";
 import { BybitAccountInfoCard as AccountInfoCard } from "@/components/admin/bybit/BybitAccountInfoCard";
 
 const TAB_KEY = "bybit_active_tab";
