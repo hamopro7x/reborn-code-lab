@@ -1,99 +1,37 @@
-# تشغيل الموقع على سيرفرك الخاص (Lovable للبناء فقط)
+# MG Pro — existing self-hosted production
 
-الهدف: التطبيق + قاعدة البيانات + مهمة مزامنة Bybit كلها على سيرفرك، وLovable تُستخدم للتطوير والبناء فقط، بدون استهلاك رصيد تشغيل سحابي.
+MG Pro runs only on the owner's Fly.io/VPS Node deployment with the **existing Supabase project/services**. Lovable is the code editor/agent/development preview only, never production hosting or Lovable Cloud. Keep development integration; do not publish to Lovable.
 
-## 1) نقل قاعدة البيانات إلى حسابك
+## Current targets
+- Fly app: `m-hamo`, existing domain `mag-pro1.com`, root Dockerfile, port 3000.
+- VPS: `selfhost/Dockerfile` and `selfhost/docker-compose.yml`, Node 22 runtime, app bound through `127.0.0.1:3000` behind the existing proxy.
+- Both build the Nitro `node-server` artifact under `.output`; no Worker runtime is a production target.
+- Preserve Supabase account/project/user UUIDs, credentials, storage and all historical records. Do not create a replacement database, replay historical migrations, migrate users or change DNS as launch preparation.
 
-الأسهل: مشروع Supabase خاص بك (نفس الكود يعمل بدون تعديل)، أو Supabase self-hosted بـDocker على سيرفرك.
+## Build and runtime separation
+Public build arguments: `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_SUPABASE_PROJECT_ID`. The current browser client is pinned to the existing Supabase project.
 
-1. أنشئ مشروع Supabase جديد باسمك (أو شغّل supabase self-hosted).
-2. طبّق كل الـmigrations الموجودة في مجلد `supabase/migrations` بالترتيب على القاعدة الجديدة:
-   ```bash
-   psql "$NEW_DB_URL" -f supabase/migrations/<file>.sql   # كل ملف بالترتيب
-   ```
-3. انقل البيانات الحالية (بيانات فقط، من نسخة احتياطية أخذتها من Cloud → Advanced → Export data):
-   ```bash
-   pg_restore --data-only --no-owner -d "$NEW_DB_URL" backup.dump
-   # أو: psql "$NEW_DB_URL" -f data.sql
-   ```
-4. انقل ملفات التخزين بالسكربت الجاهز (لا يحذف شيئًا من القديم):
-   ```bash
-   # جرّب أولًا بدون كتابة
-   DRY_RUN=1 OLD_SUPABASE_URL=... OLD_SERVICE_ROLE_KEY=... \
-   NEW_SUPABASE_URL=... NEW_SERVICE_ROLE_KEY=... \
-   node selfhost/migrate-storage.mjs
+Server runtime credentials: `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` (legacy `SUPABASE_ANON_KEY` alias), `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_PROJECT_ID`. Private keys must never use VITE_* names. Compose supplies runtime variables through its existing `.env` file; Fly supplies its existing runtime secrets. The Docker build must not COPY .env or runtime secrets into any image stage. `.dockerignore` excludes them.
 
-   # ثم النقل الفعلي
-   OLD_SUPABASE_URL=... OLD_SERVICE_ROLE_KEY=... \
-   NEW_SUPABASE_URL=... NEW_SERVICE_ROLE_KEY=... \
-   node selfhost/migrate-storage.mjs
-   ```
-   يشمل: `product-images`, `course-videos`, `employee-faces`, `payment-screenshots`, `site-assets`, `avatars`.
-   تحقق من تساوي عدد الملفات قبل حذف أي شيء من القديم.
-5. **نقل المستخدمين:** حافظ على نفس الـUUIDs لأن `profiles` و`user_roles` و`agent_devices` و`work_shifts` مرتبطة بها.
-   إما نقل `auth.users` مع الـpassword hashes كما هي، أو إعادة إنشاء المستخدمين بنفس الـid وإجبارهم على إعادة تعيين كلمة المرور.
-6. أضف نفس الأسرار (مفاتيح Bybit … إلخ) في `selfhost/.env`.
+Runtime-only service variables include existing `SYNC_HOOK_SECRET`, Bybit fallback keys, Google OAuth settings, `MAIL_TOKEN_ENCRYPTION_KEY`, mail scheduler secret and TURN settings. Review `selfhost/.env.example` and `MAIL_SETUP.md` without rotating or printing any existing secret. Do not change mailbox token encryption keys.
 
+## Node artifact verification — owner-side release gate
+The production build must execute outside the development sandbox with `NITRO_PRESET=node-server` and `NITRO_OUTPUT_DIR=.output` (already set by both Dockerfiles/build:node). Review and run the existing production build verification on the owner-controlled target before any deployment. Startup must find `.output/server/index.mjs` and bind `0.0.0.0:3000`; `scripts/start.mjs` refuses to rebuild a missing artifact in production.
 
-## 2) بناء وتشغيل التطبيق على السيرفر
+The editing environment's automatic compiler and launcher fixture tests do **not** certify this artifact. No real Fly/VPS production container build/boot was run during the audit.
 
-```bash
-git clone <repo> /opt/mag-pro1 && cd /opt/mag-pro1/selfhost
-cp .env.example .env      # املأ القيم
-docker compose up -d --build
-```
+## Schedulers and health
+- Root Fly image launches `scripts/fly-start.mjs`, which validates runtime DB configuration, imports Nitro and runs a bounded local Bybit loop. The script preserves its existing transient-database fallback and secret behavior.
+- VPS image launches Nitro directly. Compose runs separate Bybit and Gmail scheduler containers; do not also enable a duplicate in-process scheduler there.
+- Compose healthcheck GETs `/api/public/build-version` with a ten-second timeout and forty-second startup allowance. It proves HTTP availability only, not database/provider readiness or version agreement.
+- fly.toml currently has no explicit HTTP healthcheck, uses 512MB/shared CPU and may stop all Machines (`min_machines_running=0`). Owner must assess continuous scheduler availability, warm-start latency and memory under real load; this audit did not change Fly settings.
+- The Fly launcher has no in-process Gmail loop; verify the existing external mail scheduler on the actual target. Missing secure scheduler configuration remains an owner-side gate.
+- Sync logs record status only, not DB/provider response bodies. HTTP 200 with `{ok:false}` still needs investigation; current shell loops judge HTTP status, unlike the Fly loop which also checks `ok`.
 
-التطبيق يعمل على `127.0.0.1:3000`. بدون Docker:
+## Existing proxy and storage
+Keep existing DNS/domain/SSL and proxy settings. nginx.conf is a reference, not an instruction to replace production configuration. Its upload limit and timeout must be verified against real attachment/course workflows.
 
-```bash
-bun install
-bun run build:node                    # يعادل: NITRO_PRESET=node-server vite build
-node .output/server/index.mjs        # مع pm2: pm2 start .output/server/index.mjs --name mag-pro1
-```
+Keep `avatars`, `employee-faces` and all other storage/history intact. Face records remain archival and PIN remains operational.
 
-> ملاحظة: البناء الحقيقي بهدف `node-server` لا يمكن اختباره داخل بيئة Lovable sandbox؛
-> لأن حزمة `vite-tanstack-config` تفرض `cloudflare-module` داخل الـsandbox.
-> على السيرفر الخاص (Docker أو VPS) سيعمل `node-server` فعليًا ويُنتج `.output/server/index.mjs`.
-
-## 3) الدومين و SSL
-
-```bash
-cp selfhost/nginx.conf /etc/nginx/sites-available/mag-pro1.conf
-ln -s /etc/nginx/sites-available/mag-pro1.conf /etc/nginx/sites-enabled/
-nginx -t && systemctl reload nginx
-certbot --nginx -d mag-pro1.com -d www.mag-pro1.com
-```
-ثم غيّر DNS للدومين ليشير إلى IP سيرفرك، واحذف الدومين من إعدادات Lovable.
-
-## 4) مزامنة Bybit على سيرفرك
-
-- مع docker compose: خدمة `bybit-cron` تعمل تلقائيًا كل `SYNC_INTERVAL_SECONDS` (افتراضي 5 دقائق).
-- بدون Docker: استخدم `selfhost/bybit-sync.sh` في crontab:
-  ```
-  */5 * * * * APP_URL=http://127.0.0.1:3000 /opt/mag-pro1/selfhost/bybit-sync.sh >> /var/log/bybit-sync.log 2>&1
-  ```
-
-**حماية endpoint المزامنة:** ضع `SYNC_HOOK_SECRET` في `.env` (مثال: `openssl rand -hex 32`).
-عندها يقبل الـendpoint هيدر `x-sync-secret` فقط بدل المفتاح العام. لو تركته فارغًا يظل التحقق القديم
-بالمفتاح العام شغالًا (لا ينكسر شيء) لكنه غير مناسب لسيرفر مكشوف.
-
-**مهم:** بعد تشغيل الكرون على سيرفرك، أوقف المهمة القديمة داخل Lovable من
-More → Cloud → Jobs → `bybit-ledger-auto-sync` → Disable، وإلا ستعمل المزامنة مرتين وتستهلك رصيد تشغيل.
-
-## الأرشيف
-
-بيانات الوجه القديمة وملفات employee-faces تبقى محفوظة للأرشفة فقط؛ استلام الشفت يعمل بالـPIN.
-
-## 5) إيقاف استهلاك السحابة نهائيًا
-
-بعد التأكد أن الموقع يعمل من سيرفرك:
-1. أوقف كل المهام المجدولة في Cloud → Jobs.
-2. ألغِ نشر المشروع من Lovable (Publish → إخفاء/إلغاء النشر) حتى لا يستقبل زيارات.
-3. أوقف/أصغّر النسخة السحابية من Cloud → Advanced settings (Pause).
-4. استمر في استخدام Lovable للتطوير فقط، ثم انسخ التغييرات إلى سيرفرك عبر git + إعادة البناء.
-
-## ملاحظات
-
-- `VITE_*` تُحقن وقت البناء، لذلك أي تغيير فيها يحتاج إعادة بناء (وليس إعادة تشغيل فقط).
-- الأسرار السيرفرية (`SUPABASE_SERVICE_ROLE_KEY`, `BYBIT_*`) تُقرأ وقت التشغيل من `.env` فقط ولا تُرسل للمتصفح.
-- لو استخدمت Postgres عاري بدون Supabase ستحتاج بديلًا لـAuth/Storage/Data API، لذلك Supabase (سحابي خاص أو self-hosted) هو المسار الأقل مخاطرة.
+## Remaining launch risks
+See `LAUNCH-READINESS-2026-11-21.md`: retained capped lists, PIN/claim transaction gap, guest-order owner proof, compatible TURN authorization, authenticated staff/Agent/mail/chat checks and one-hour Bybit observation remain in scope. No deployment, SQL, OAuth or secret change is authorized by this document.

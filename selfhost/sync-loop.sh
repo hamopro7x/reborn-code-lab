@@ -25,8 +25,8 @@ run_once() {
     -H "x-sync-secret: $SYNC_HOOK_SECRET" \
     -d '{}' \
     "$SYNC_URL" || echo 000)
-  body=$(cat /tmp/sync-out 2>/dev/null || true)
-  log "sync http=$code $body"
+  # Provider/DB response bodies may contain sensitive diagnostics; never put them in logs.
+  log "sync http=$code"
   case "$code" in
     2*) return 0 ;;
     401|403) log "unauthorized: SYNC_HOOK_SECRET لا يطابق السر على التطبيق"; return 1 ;;

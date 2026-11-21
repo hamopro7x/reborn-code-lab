@@ -1,6 +1,8 @@
 # خطة النقل الكامل إلى VPS
 
 ## Launch preparation — 21 November 2026
+- [x] Explicit architecture: Fly/VPS Node + existing Supabase only; Lovable is editor/agent/development preview, never hosting. Audited Docker/Fly/Nitro/start/health/environment; removed unsafe VPS secret COPY and Cloud diagnostic/default assumptions, hardened launcher/logs, corrected docs. 46 files / 351 tests passed; no deployment, Fly/DNS/OAuth/secrets/SQL changes.
+- [ ] Owner-side real Node container build/boot/health and asset handling; blockers: no Docker/production artifact available here, Fly health/autostop/memory review, Gmail scheduler confirmation, exact chat wallpaper asset bundling. Existing list/PIN-claim/order/TURN risks remain open in readiness document.
 - [x] Follow-up from f1868253: full customer aggregation, complete shift selector/counts, chunked P2P links and eligibility-before-limit P2P cursor scan; retained capped/default-limited callers inventoried in readiness document.
 - [x] Live PIN/claim definitions reviewed; bounded conditional PIN updates implemented and tested. Remaining transactional handover/owner-proof/TURN requirements specified without SQL, production writes or PR4 merge.
 - [x] Follow-up full suite: 45 files / 348 tests passed; frozen install and automatic compiler build OK. Exact paths, evidence and untouched compatibility risks documented in LAUNCH-READINESS-2026-11-21.md.

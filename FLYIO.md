@@ -1,82 +1,21 @@
-# النشر على Fly.io
+# MG Pro — existing Fly.io production target
 
-## 1) التجهيز المحلي
+Production is the owner's self-hosted Fly.io/VPS Node deployment, not Lovable hosting. Lovable provides development editing/agent/preview only. The existing Fly app is `m-hamo`, with domain `mag-pro1.com` and current Supabase project/services. Do not create another Fly app, database or domain.
 
-تأكد أن ملفات `Dockerfile` و `fly.toml` موجودة في جذر المشروع.
+## Existing launch path
+- Root `Dockerfile`: Bun lockfile build, explicit Nitro `node-server` preset/output, Node 22 runtime.
+- Runtime CMD: `node scripts/fly-start.mjs`; bind port 3000 on 0.0.0.0, matching fly.toml internal_port.
+- Build artifacts: `.output/server/index.mjs` plus `.output/public`; existing `verify-node-build.mjs` checks entry/client remnants, not a real HTTP boot.
+- Website deployments, **only after separate release approval**, use the existing owner `deploy.ps1` workflow. Never release/bump the Desktop Agent without a separate explicit request.
 
-## 2) تثبيت flyctl وتسجيل الدخول
+## Environment
+Only public VITE_SUPABASE_* variables belong in build arguments. Existing SUPABASE_* server secrets and scheduler/Google/mail/TURN credentials are runtime-only. Do not rotate, print or add production secrets as an audit action. Preserve the existing database identity checks and encrypted mailbox data.
 
-```bash
-curl -L https://fly.io/install.sh | sh
-fly auth login
-```
+## Owner-side verification gates
+1. Build/boot the actual Node container outside the development sandbox; verify listening port, `/api/public/build-version`, build identity, private authenticated reads and error handling.
+2. Assess fly.toml's current 512MB/shared CPU, automatic stop/start and zero minimum-running Machines against the always-on Bybit scheduler requirement. No machine sizing/autostop configuration was changed here.
+3. fly.toml has no explicit HTTP healthcheck. Review an appropriate existing build-version/liveness check and startup grace interval before any separately authorized configuration change. HTTP liveness does not prove DB/provider readiness.
+4. Fly launcher runs a secret-protected local Bybit loop; verify no duplicate external loop and confirm mail scheduling separately. The default `.fly.dev` hostname is intentionally rejected by application middleware; use the existing custom domain or local container for verification, not an old fly.dev cron example.
+5. Confirm OAuth callback, TURN credentials, storage ownership and protected staff/PIN/Agent flows without changing any secrets or existing device registration.
 
-## 3) إنشاء التطبيق (مرة واحدة)
-
-```bash
-fly launch
-```
-
-- إذا كان اسم `mag-pro1` مستخدمًا، اختر اسمًا آخر وعدّله في `fly.toml`.
-- `fly launch` ستكتشف `Dockerfile` وتستخدمه تلقائيًا.
-
-## 4) إضافة الأسرار (Runtime secrets)
-
-استبدل القيم داخل الأقواس `< >` بالقيم الفعلية من ملف `selfhost/.env`.
-هذه المتغيرات تُقرأ أثناء التشغيل على السيرفر فقط، ولا تُضمن في الصورة:
-
-```bash
-fly secrets set \
-  SUPABASE_URL="<URL من selfhost/.env>" \
-  SUPABASE_PUBLISHABLE_KEY="<المفتاح العام من selfhost/.env>" \
-  SUPABASE_ANON_KEY="<نفس المفتاح العام>" \
-  SUPABASE_SERVICE_ROLE_KEY="<service role key من selfhost/.env>" \
-  SUPABASE_PROJECT_ID="<PROJECT_ID من selfhost/.env>" \
-  BYBIT_API_KEY="<BYBIT_API_KEY من selfhost/.env أو اتركه فارغًا>" \
-  BYBIT_API_SECRET="<BYBIT_API_SECRET من selfhost/.env أو اتركه فارغًا>" \
-  SYNC_HOOK_SECRET="$(openssl rand -hex 32)"
-```
-
-## 5) النشر
-
-مرّر متغيرات البناء العامة (`VITE_*`) عبر سطر الأوامر:
-
-```bash
-fly deploy \
-  --build-arg VITE_SUPABASE_URL="<URL من selfhost/.env>" \
-  --build-arg VITE_SUPABASE_PUBLISHABLE_KEY="<المفتاح العام من selfhost/.env>" \
-  --build-arg VITE_SUPABASE_PROJECT_ID="<PROJECT_ID من selfhost/.env>"
-```
-
-## 6) فحص التشغيل
-
-```bash
-fly status
-fly logs
-```
-
-افتح الرابط العام:
-
-```bash
-fly open
-```
-
-## 7) مزامنة Bybit (Cron)
-
-Fly.io نفسه لا يقدّم cron بسيط. الخيارات:
-
-1. استخدم خدمة cron خارجية (مجانية مثل cron-job.org) تستدعي:
-   ```
-   https://<اسم-التطبيق>.fly.dev/api/public/hooks/bybit-ledger-sync
-   ```
-   مع الهيدر:
-   ```
-   x-sync-secret: <القيمة اللي عملتها فوق>
-   ```
-2. أو أنشئ Machine ثانية في Fly.io لتشغيل `selfhost/sync-loop.sh`.
-
-## ملاحظات التكلفة
-
-- الخطة المجانية تشمل 3 أجهزة `shared-cpu-1x` بـ 256MB RAM.
-- إعدادنا هنا يستخدم 512MB RAM، لذا قد تُحاسب على الفائض إن تجاوزت الحد المجاني.
-- تقدير تقريبي: 512MB آلة تعمل 24/7 ≈ $3.7/شهر (بالإضافة إلى بيانات الخروج).
+No Fly deployment, Lovable publishing, DNS/domain change or production database write is part of release-readiness work. See `selfhost/README.md` and `LAUNCH-READINESS-2026-11-21.md` for exact blockers and results. Historical platform cost/free-tier estimates are not current billing evidence.

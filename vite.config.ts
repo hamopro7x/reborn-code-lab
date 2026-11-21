@@ -26,9 +26,8 @@ export default defineConfig({
     server: { entry: "server" },
   },
   nitro: {
-    // يُستخدم node-server عند البناء على السيرفر الخاص؛
-    // Lovable Cloud تتجاهل هذا الإعداد وتستخدم cloudflare-module تلقائيًا.
-    preset: process.env["NITRO_PRESET"] || "cloudflare-module",
+    // Production is always Fly/VPS Node. The editor manages its development preview separately.
+    preset: process.env["NITRO_PRESET"] || "node-server",
   },
   vite: {
     plugins,

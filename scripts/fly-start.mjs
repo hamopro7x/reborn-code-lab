@@ -47,7 +47,7 @@ const missing = required.filter((name) => !process.env[name]);
 if (missing.length > 0) {
   console.error(
     `[fly-start] متغيرات ناقصة: ${missing.join(", ")}\n` +
-      `اضبط أسرار قاعدة البيانات على تطبيق mag-pro1 قبل التشغيل.`,
+      `Configure the existing Supabase runtime credentials securely on the m-hamo Fly app.`,
   );
   process.exit(1);
 }
@@ -75,8 +75,8 @@ try {
   if (!response.ok) {
     console.warn(`[fly-start] Database answered ${response.status} at startup; starting anyway.`);
   }
-} catch (error) {
-  console.warn("[fly-start] Database not reachable at startup; starting anyway.", error?.message ?? error);
+} catch {
+  console.warn("[fly-start] Database not reachable at startup; starting anyway.");
 }
 
 // سر داخلي لمزامنة Bybit في الخلفية لو مش مضبوط كسر على Fly.
@@ -106,9 +106,9 @@ const tick = async () => {
     });
     const body = await res.json().catch(() => ({}));
     healthy = res.ok && body?.ok !== false;
-    if (!healthy) console.warn(`[fly-start] bybit sync unhealthy (${res.status}): ${JSON.stringify(body).slice(0, 200)}`);
-  } catch (e) {
-    console.error("[fly-start] background bybit sync failed:", e?.message ?? e);
+    if (!healthy) console.warn(`[fly-start] bybit sync unhealthy (${res.status})`);
+  } catch {
+    console.error("[fly-start] background bybit sync request failed");
   } finally {
     syncDelay = healthy ? SYNC_EVERY_MS : Math.min(syncDelay * 2, SYNC_MAX_BACKOFF_MS);
     setTimeout(tick, syncDelay);

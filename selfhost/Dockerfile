@@ -6,8 +6,7 @@ COPY package.json bun.lock bunfig.toml ./
 RUN bun install --frozen-lockfile
 
 COPY . .
-# نستبدل .env الجذري (الذي قد يحتوي على قيم Lovable القديمة) بملف selfhost/.env
-COPY selfhost/.env ./.env
+# Only public VITE_* build arguments enter the build; runtime secrets stay in Compose env_file.
 
 # متغيرات VITE_* لازم تكون موجودة وقت البناء (تُحقن داخل الـclient bundle)
 ARG VITE_SUPABASE_URL

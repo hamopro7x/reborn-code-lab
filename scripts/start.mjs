@@ -4,10 +4,15 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
+import { pathToFileURL } from "node:url";
 
 const entry = resolve(process.cwd(), ".output/server/index.mjs");
 
 if (!existsSync(entry)) {
+  if (process.env["NODE_ENV"] === "production") {
+    console.error("[start] Missing .output/server/index.mjs; build the Node production artifact before starting.");
+    process.exit(1);
+  }
   console.log("[start] Node server output is missing; building it now...");
   const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
   const build = spawnSync(npmCommand, ["run", "build:node"], {
@@ -32,8 +37,7 @@ if (!existsSync(entry)) {
 const found = entry;
 
 
-// Northflank يوجّه الترافيك إلى البورت المعلن في إعدادات الخدمة.
-// نحترم PORT لو تم ضبطه، وإلا نستخدم 3000، ونربط على كل الواجهات.
+// Fly/VPS: honor the configured port and bind to every interface.
 const port = process.env["PORT"] || "3000";
 const host = process.env["HOST"] || "0.0.0.0";
 process.env["PORT"] = port;
@@ -42,5 +46,5 @@ process.env["NITRO_PORT"] = port;
 process.env["NITRO_HOST"] = host;
 console.log(`[start] server entry: ${found}`);
 console.log(`[start] listening on ${host}:${port}`);
-await import(found);
+await import(pathToFileURL(found).href);
 

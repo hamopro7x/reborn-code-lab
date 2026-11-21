@@ -28,7 +28,7 @@ code=$(curl -sS -o /tmp/bybit-sync-out -w '%{http_code}' \
   -d '{}' \
   "$APP_URL/api/public/hooks/bybit-ledger-sync" || echo 000)
 
-echo "[$(date -u +%FT%TZ)] bybit sync http=$code $(cat /tmp/bybit-sync-out 2>/dev/null || true)"
+echo "[$(date -u +%FT%TZ)] bybit sync http=$code"
 case "$code" in
   2*) exit 0 ;;
   *) exit 1 ;;
