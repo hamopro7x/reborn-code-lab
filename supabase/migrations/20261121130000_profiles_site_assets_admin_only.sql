@@ -16,7 +16,8 @@ USING (auth.uid() = id);
 -- Keep admins able to read all profiles through the existing admin-read policy.
 -- No current client UI needs direct profile INSERT/UPDATE; signup and admin edits
 -- are performed by trusted database/server-side paths.
-REVOKE INSERT, UPDATE ON public.profiles FROM authenticated;
+REVOKE ALL PRIVILEGES ON public.profiles FROM anon;
+REVOKE INSERT, UPDATE, DELETE ON public.profiles FROM authenticated;
 GRANT SELECT ON public.profiles TO authenticated;
 
 -- Site assets are public-read release artifacts. Release uploads use the
