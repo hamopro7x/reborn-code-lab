@@ -776,15 +776,6 @@ function downloadUpdate(url, version, notify = true) {
 }
 
 
-ipcMain.handle("download-update", async (_e, url, version) => {
-  if (typeof url !== "string" || !/^https:\/\//.test(url)) {
-    throw new Error("رابط غير صالح");
-  }
-  return downloadUpdate(url, version, true);
-});
-
-
-
 function cleanupOldDownloads(keepPath = null) {
   // تنظيف ملفات التحديث المؤقتة القديمة (كانت تتراكم بعد كل تحديث)
   try {
@@ -932,7 +923,6 @@ async function installUpdate() {
   return true;
 }
 
-ipcMain.handle("install-update", () => installUpdate());
 ipcMain.handle("check-update", () => runBootUpdate());
 
 
