@@ -1,7 +1,6 @@
 import {
   DateTimeInput } from "@/components/ui/date-time-input";
 import { formatLocaleDateTime } from "@/lib/format";
-import { useUiState } from "@/lib/ui-state";
 import { createFileRoute,
   Link,
   useNavigate } from "@tanstack/react-router";
@@ -61,7 +60,6 @@ import {
   Trash2,
   Edit,
   ExternalLink,
-  Check,
   X,
   Users,
   Loader2,
@@ -69,7 +67,6 @@ import {
   UserCog,
   LogOut,
   Repeat,
-  ArrowUpRight,
   GraduationCap,
   MonitorSmartphone,
   Upload,
@@ -81,10 +78,9 @@ import {
 } from "lucide-react";
 
 import { useServerFn } from "@tanstack/react-start";
-import { createEmployee, deleteEmployee, listEmployees, listCustomers, updateEmployeeAvatar, deleteAllOrders, updateEmployee } from "@/lib/admin.functions";
+import { createEmployee, deleteEmployee, listEmployees, updateEmployeeAvatar, updateEmployee } from "@/lib/admin.functions";
 import { adminListDevices, adminDeleteDevice, adminResetUserDevices, adminAddDevice, adminListEmployees,
   adminListCourseAccess, adminGrantCourseAccess, adminRevokeCourseAccess, checkDevice, getViewerIdentity } from "@/lib/courses.functions";
-import { getDeviceFingerprint } from "@/lib/device";
 import {
   prepareCategoryImageUpload,
   getCategoryImageUrl,
@@ -93,7 +89,6 @@ import {
 } from "@/lib/categories.functions";
 
 import { ShieldAlert } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
 import { ReportsTab } from "@/components/admin/ReportsTab";
 import { ProductsTab } from "@/components/admin/ProductsTab";
 import { AdminBackProvider, useAdminBack, useAdminBackTarget } from "@/components/admin/back-nav";
