@@ -10,23 +10,50 @@ function OverviewTab() {
   const stats = useQuery({
     queryKey: ["admin-stats"],
     queryFn: async () => {
-      const [orders, products, users] = await Promise.all([
-        supabase.from("orders").select("id,total,status,created_at"),
-        supabase.from("products").select("id"),
-        supabase.from("profiles").select("id"),
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayIso = today.toISOString();
+
+      // Use exact-count HEAD requests for cards that only need a count.
+      // This avoids downloading every order, product, and profile row.
+      const [ordersCount, pendingCount, todayCount, productsCount, usersCount] = await Promise.all([
+        supabase.from("orders").select("id", { count: "exact", head: true }),
+        supabase.from("orders").select("id", { count: "exact", head: true }).eq("status", "awaiting_confirmation"),
+        supabase.from("orders").select("id", { count: "exact", head: true }).gte("created_at", todayIso),
+        supabase.from("products").select("id", { count: "exact", head: true }),
+        supabase.from("profiles").select("id", { count: "exact", head: true }),
       ]);
-      const ords = (orders.data ?? []) as any[];
-      const revenue = ords.filter((o) => o.status === "confirmed" || o.status === "completed").reduce((s, o) => s + Number(o.total), 0);
-      const pending = ords.filter((o) => o.status === "awaiting_confirmation").length;
-      const today = new Date(); today.setHours(0, 0, 0, 0);
-      const todayCount = ords.filter((o) => new Date(o.created_at) >= today).length;
+
+      for (const result of [ordersCount, pendingCount, todayCount, productsCount, usersCount]) {
+        if (result.error) throw new Error(result.error.message);
+      }
+
+      // Revenue still needs summing, but fetch only the total column in bounded
+      // pages rather than downloading full order records into the browser.
+      const pageSize = 1_000;
+      let offset = 0;
+      let revenue = 0;
+      while (true) {
+        const { data, error } = await supabase
+          .from("orders")
+          .select("total")
+          .in("status", ["confirmed", "completed"])
+          .order("id", { ascending: true })
+          .range(offset, offset + pageSize - 1);
+
+        if (error) throw new Error(error.message);
+        for (const order of data ?? []) revenue += Number(order.total);
+        if (!data || data.length < pageSize) break;
+        offset += pageSize;
+      }
+
       return {
-        total: ords.length,
+        total: ordersCount.count ?? 0,
         revenue: revenue.toFixed(2),
-        pending,
-        todayCount,
-        products: products.data?.length ?? 0,
-        users: users.data?.length ?? 0,
+        pending: pendingCount.count ?? 0,
+        todayCount: todayCount.count ?? 0,
+        products: productsCount.count ?? 0,
+        users: usersCount.count ?? 0,
       };
     },
   });
