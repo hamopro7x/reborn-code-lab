@@ -6,7 +6,7 @@ import { useServerFn } from "@tanstack/react-start";
 import {
   getBybitOverview, getBybitCardTxns, syncAllBybitCardTxns, getBybitOnChain, getBybitInternal, getBybitP2P,
   getBybitCards, createBybitCard, deleteBybitCard, updateBybitCard, getBybitAccountInfo, saveBybitAccountInfo,
-  listBybitAccounts, addBybitAccount, removeBybitAccount, updateBybitAccount, reorderBybitAccounts,
+  listBybitAccounts, addBybitAccount, removeBybitAccount, updateBybitAccount,
 } from "@/lib/bybit.functions";
 import { formatDateTime } from "@/lib/format";
 import { BybitDocsCard } from "@/components/admin/BybitDocs";
