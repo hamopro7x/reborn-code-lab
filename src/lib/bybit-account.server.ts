@@ -26,12 +26,14 @@ export async function listAccounts(): Promise<BybitAccount[]> {
   const cols = "id, name, uid, email, created_at, sort_order, monthly_cashback";
   // Keep shared-table isolation until independently managed account cleanup is complete.
   // Before the provider column exists every row is a Bybit account.
-  let { data, error: listError } = await db
+  const first = await db
     .from("bybit_accounts")
     .select(cols)
     .or("provider.is.null,provider.eq.bybit")
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true });
+  let data = first.data;
+  const listError = first.error;
   if (listError && (String(listError.code) === "42703" || /provider/i.test(String(listError.message ?? "")))) {
     ({ data } = await db
       .from("bybit_accounts")
