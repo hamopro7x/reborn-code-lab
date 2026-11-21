@@ -38,3 +38,6 @@ agent/node_modules/
 .env
 selfhost/.env
 !.env.example
+
+# Local release credentials
+fly-secrets.txt
