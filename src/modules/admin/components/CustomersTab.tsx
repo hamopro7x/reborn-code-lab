@@ -67,3 +67,5 @@ function CustomersTab() {
     </div>
   );
 }
+
+export { CustomersTab };
