@@ -9,7 +9,7 @@ export type PanelKey =
 
 /** Single source of truth for valid admin panel URL values. */
 export const panelKeys: readonly PanelKey[] = [
-  "overview", "orders", "categories", "customers", "employees",
+  "overview", "orders", "categories", "products", "customers", "employees",
   "reviews", "payments", "currencies", "timers", "settings", "courses", "devices",
   "reports", "remote", "cardtx", "apikey", "worksheet", "sheet", "mail", "chat",
 ];
