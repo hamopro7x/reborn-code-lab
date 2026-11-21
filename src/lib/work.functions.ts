@@ -295,27 +295,6 @@ export const assignWorkTxn = createServerFn({ method: "POST" })
     return { ok: true as const };
   });
 
-/* ------------------------- face enrollment (admin) ------------------------- */
-
-export const saveEmployeeFace = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ userId: z.string().uuid(), image: z.string().min(100).max(4_000_000) }).parse(input),
-  )
-  .handler(async ({ data, context }) => {
-    await assertAdmin(context.supabase, context.userId);
-    const mod = await import("./work.server");
-    return mod.saveFaceEnroll(data.userId, data.image, context.userId);
-  });
-
-export const listEmployeeFaces = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    await assertAdmin(context.supabase, context.userId);
-    const mod = await import("./work.server");
-    return mod.faceEnrollList();
-  });
-
 /* ------------- manual rows: «المعاملات الغلط» / «خاص بالموظف» ------------- */
 
 export const getMyManualTxns = createServerFn({ method: "POST" })
