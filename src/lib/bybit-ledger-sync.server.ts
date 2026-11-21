@@ -1,4 +1,5 @@
 import { SETTLEMENT_COPY_SIDES, SETTLEMENT_COPY_FILTER } from "./bybit-settlement";
+import { mapLimit } from "./bybit-concurrency.server";
 import { createHmac } from "crypto";
 import { admin, bybitConfigured, call, getCreds, listAccounts } from "./bybit-account.server";
 import { fetchP2P, fetchOnChain, fetchInternal } from "./bybit-assets.server";
@@ -35,20 +36,6 @@ import { heavyOnce } from "./bybit-cache.server";
 import { syncAllCardTxns, fetchCards, storedCardTxns, persistCardTxns, fetchRecentCardRows, syncAccountRecent } from "./bybit-card-sync.server";
 import { upsertLedger, cardLedgerRow, assetLedgerRows, markHangVoided, type LedgerRow, type LedgerPage, type LedgerInsert } from "./bybit-ledger-write.server";
 
-async function mapLimit<T>(items: T[], limit: number, fn: (item: T) => Promise<void>) {
-  let next = 0;
-  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
-    while (next < items.length) {
-      const item = items[next++];
-      try {
-        await fn(item);
-      } catch {
-        /* حساب واحد يفشل لا يوقف الباقي */
-      }
-    }
-  });
-  await Promise.all(workers);
-}
 
 export async function syncAccountLedger(accountId: string): Promise<number> {
   const db = await admin();
