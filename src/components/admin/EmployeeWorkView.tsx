@@ -43,7 +43,6 @@ import { P2PShiftLinkMenu } from "./P2PShiftLinkMenu";
 import { formatDateTime, formatTime } from "@/lib/format";
 import { PAGE_SIZE } from "@/lib/pagination";
 import { PaginationBar } from "@/components/ui/pagination-bar";
-import { supabase } from "@/integrations/supabase/client";
 import {
   getMyShiftTxns,
   saveMyTxnEntry,
@@ -75,7 +74,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { getBybitCardBrands } from "@/lib/bybit.functions";
 import { usePinClaim } from "@/components/admin/PinGate";
 import { BrandBadge, LedgerRowDetails, statusBadge } from "@/components/admin/BybitLedgerPanel";
-import { useWorkRealtime } from "@/lib/use-work-realtime";
 import { useLedgerAutoSync } from "@/lib/use-ledger-sync";
 import { livePoll } from "@/lib/live-poll";
 import { useUiState } from "@/lib/ui-state";
@@ -1335,11 +1333,6 @@ export function EmployeeWorkView({
   // إيداع / سحب داخل قسمي التحويلات (فلترة عرض فقط)
   const [flow, setFlow] = useUiState<"in" | "out">("work-sheet", "flow", "in");
 
-  // تحديث لحظي: أي تغيير حقيقي في المركز الرئيسي يحدّث الـqueries المتأثرة فقط.
-  useWorkRealtime({ enabled: !blank, shiftId: viewShiftId ?? null, viewUserId: viewUserId ?? null });
-  // اسحب المعاملات الجديدة من Bybit للشفت المفتوح بدون انتظار مزامنة يدوية.
-  useLedgerAutoSync(!blank && !shiftMode);
-
   const txns = useQuery({
     queryKey: shiftMode
       ? ["shift-txns", viewShiftId]
@@ -1378,6 +1371,14 @@ export function EmployeeWorkView({
   // request before the table can render.
   const workState = txns.data as any;
   const holding = blank ? false : shiftMode || workState?.holding === true;
+
+  // Employees trigger the recent-only refresh only while holding their own open shift.
+  // Admins retain the broader refresh path for review screens.
+  useLedgerAutoSync(
+    !blank && !shiftMode && (isAdmin || workState?.holding === true),
+    5_000,
+    !isAdmin,
+  );
 
   // طلبات P2P: الموظف والأدمن يشاهدون فقط الطلبات المرتبطة بالشفت المختار/المفتوح.
   const p2pCompleted = useQuery({

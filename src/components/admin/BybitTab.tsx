@@ -336,7 +336,7 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
   const [addError, setAddError] = useState<{ message: string; serverIp?: string | null } | null>(null);
   const [editAccount, setEditAccount] = useState<BybitAccountRow | null>(null);
 
-  const accounts = useQuery({ queryKey: ["bybit-accounts"], queryFn: () => listFn() });
+  const accounts = useQuery({ queryKey: ["bybit-accounts"], queryFn: () => listFn(), enabled: isAdmin });
   const list = (((accounts.data as any)?.accounts ?? []) as BybitAccountRow[])
     .slice()
     .sort((a, b) => {
@@ -351,7 +351,7 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
   const syncAllFn = useServerFn(syncAllBybitCardTxns);
   const syncedRef = useRef(false);
   useEffect(() => {
-    if (syncedRef.current || list.length === 0) return;
+    if (!isAdmin || syncedRef.current || list.length === 0) return;
     syncedRef.current = true;
     const t = setTimeout(() => {
       void syncAllFn().then(() => {
@@ -409,6 +409,17 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
   const current = list.find((a) => a.id === selected) ?? null;
 
   useAdminBack(!current && listOpen ? () => setListOpen(false) : null, [!!current, listOpen]);
+
+  // Employee work data is served through the shift-scoped worksheet endpoints.
+  // Never render the all-account Bybit ledger or account summaries in an employee session.
+  if (!isAdmin) {
+    return (
+      <div className="rounded-2xl border border-border/60 bg-card/60 p-6 text-center text-sm text-muted-foreground" dir="rtl">
+        بيانات حسابات Bybit والسجل المركزي متاحة للإدارة فقط.
+        <div className="mt-2">لمتابعة معاملاتك المسندة، افتح «جدول الشغل» أثناء الشفت.</div>
+      </div>
+    );
+  }
 
   if (current) {
     return (

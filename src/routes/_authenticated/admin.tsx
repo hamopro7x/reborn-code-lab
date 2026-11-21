@@ -1,6 +1,17 @@
-import { DateTimeInput } from "@/components/ui/date-time-input";
+import { ADMIN_LAST_PANEL_KEY, canEmployeeViewPanel, canViewAdminPanel, employeeBasePanels, PanelKey, panelKeys, readLastAdminPanel, useAdminRole } from "@/modules/admin/admin-access";
+import { getAdminNavGroups, getVisibleAdminNavGroups } from "@/modules/admin/admin-navigation";
+import { ChatNavBadge } from "@/modules/admin/components/ChatNavBadge";
+import { AdminBackButton } from "@/modules/admin/components/AdminBackButton";
+import { OverviewTab } from "@/modules/admin/components/OverviewTab";
+import { CustomersTab } from "@/modules/admin/components/CustomersTab";
+import { ReviewsTab } from "@/modules/admin/components/ReviewsTab";
+import { OrdersTab } from "@/modules/admin/components/OrdersTab";
+import { CategoriesTab } from "@/modules/admin/components/CategoriesTab";
+import { CurrenciesTab } from "@/modules/admin/components/CurrenciesTab";
+import { TimersTab } from "@/modules/admin/components/TimersTab";
+import { SettingsTab } from "@/modules/admin/components/SettingsTab";
+import { DevicesTab } from "@/modules/admin/components/DevicesTab";
 import { formatLocaleDateTime } from "@/lib/format";
-import { useUiState } from "@/lib/ui-state";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
@@ -12,71 +23,38 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useChatBadge } from "@/lib/chat-badge";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import {
-  SidebarProvider, Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
-  SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarTrigger,
-  SidebarHeader, SidebarFooter,
-} from "@/components/ui/sidebar";
+import { SidebarProvider, Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarTrigger, SidebarHeader, SidebarFooter } from "@/components/ui/sidebar";
 import { SidebarGlider } from "@/components/admin/SidebarGlider";
 import headerMark from "@/assets/mg-metallic-logo-3d.png";
 import { AdminLangToggle, AdminTranslator, useAdminLang } from "@/lib/admin-i18n/translator";
-import {
-  LayoutDashboard, Package, Layers, ShoppingCart, CreditCard, Coins, Clock, Settings2,
-  Plus, Trash2, Edit, ExternalLink, Check, X, TrendingUp, DollarSign, Users, Bell, Loader2,
-  Star, UserCog, LogOut, Repeat, ArrowUpRight, GraduationCap, MonitorSmartphone, Upload, PlayCircle,
-  Lock, Camera, Download, ChevronRight,
-} from "lucide-react";
+import { CreditCard, Coins, Clock, Plus, Trash2, Edit, ExternalLink, X, Loader2, LogOut, MonitorSmartphone, Upload, PlayCircle, Lock, Camera, Download } from "lucide-react";
 
 import { useServerFn } from "@tanstack/react-start";
-import { createEmployee, deleteEmployee, listEmployees, listCustomers, updateEmployeeAvatar, deleteAllOrders, updateEmployee } from "@/lib/admin.functions";
-import { adminListDevices, adminDeleteDevice, adminResetUserDevices, adminAddDevice, adminListEmployees,
-  adminListCourseAccess, adminGrantCourseAccess, adminRevokeCourseAccess, checkDevice, getViewerIdentity } from "@/lib/courses.functions";
-import { getDeviceFingerprint } from "@/lib/device";
-import {
-  prepareCategoryImageUpload,
-  getCategoryImageUrl,
-  saveCategory,
-  deleteCategory,
-} from "@/lib/categories.functions";
+import { createEmployee, deleteEmployee, listEmployees, updateEmployeeAvatar, updateEmployee } from "@/lib/admin.functions";
+import { adminListEmployees, adminListCourseAccess, adminGrantCourseAccess, adminRevokeCourseAccess, checkDevice, getViewerIdentity } from "@/lib/courses.functions";
 
 import { ShieldAlert } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
+
 import { ReportsTab } from "@/components/admin/ReportsTab";
 import { ProductsTab } from "@/components/admin/ProductsTab";
-import { AdminBackProvider, useAdminBack, useAdminBackTarget } from "@/components/admin/back-nav";
+import { AdminBackProvider, useAdminBack } from "@/components/admin/back-nav";
 import { BybitTab, ApiKeyPanel } from "@/components/admin/BybitTab";
-import { FileBarChart, MonitorPlay, Image as ImageIcon, ChevronUp, ChevronDown, WalletCards, KeyRound, ClipboardList, Table2 } from "lucide-react";
+import { Image as ImageIcon, ChevronUp, ChevronDown } from "lucide-react";
 import { WorkSheetPanel } from "@/components/admin/WorkSheetPanel";
 import { AdminSheet } from "@/components/admin/AdminSheet";
 import { GmailInbox, MailNotifier } from "@/components/admin/GmailInbox";
 import { StaffChat } from "@/components/admin/StaffChat";
-import { MessagesSquare } from "lucide-react";
-import { Mail } from "lucide-react";
 
 import { LessonUploader } from "@/components/admin/LessonUploader";
 import { DeviceMonitorGrid } from "@/components/admin/DeviceMonitorGrid";
 import { EmployeeDevices } from "@/components/admin/DeviceMonitorGrid";
 import { HeroBannerManager } from "@/components/admin/HeroBannerManager";
 import { FooterManager } from "@/components/admin/FooterManager";
-import { ensureSlug } from "@/lib/slug";
+
 import { livePoll } from "@/lib/live-poll";
 import { getPaymentIconUrl, preparePaymentIconUpload } from "@/lib/payments.functions";
-
-
-
-type PanelKey =
-  | "overview" | "orders" | "categories" | "products" | "customers" | "employees"
-  | "reviews" | "payments" | "currencies" | "timers" | "settings" | "courses" | "devices" | "reports" | "remote" | "cardtx" | "apikey" | "worksheet" | "sheet" | "mail" | "chat";
-
-const panelKeys: PanelKey[] = [
-  "overview", "orders", "categories", "customers", "employees",
-  "reviews", "payments", "currencies", "timers", "settings", "courses", "devices", "reports", "remote", "cardtx", "apikey", "worksheet", "sheet", "mail", "chat",
-];
-
-
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({ meta: [
@@ -94,36 +72,16 @@ export const Route = createFileRoute("/_authenticated/admin")({
   component: Admin,
 });
 
-function useRole() {
-  const [role, setRole] = useState<string | null>(null);
-  useEffect(() => {
-    supabase.auth.getUser().then(async ({ data }) => {
-      if (!data.user) return;
-      const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", data.user.id);
-      if (roles?.some((r: any) => r.role === "admin")) setRole("admin");
-      else if (roles?.some((r: any) => r.role === "employee")) setRole("employee");
-      else setRole("customer");
-    });
-  }, []);
-  return role;
-}
-
 function Admin() {
   const [adminLang, setAdminLang] = useAdminLang();
   const search = Route.useSearch();
-  const role = useRole();
+  const role = useAdminRole();
   const navigate = useNavigate();
-  // آخر قسم فتحه المستخدم — يُستعاد بعد Refresh حتى لو لم يكن في الرابط.
-  const LAST_PANEL_KEY = "mp:admin.last-panel";
-  const readLastPanel = (): PanelKey | null => {
-    if (typeof window === "undefined") return null;
-    const v = window.localStorage.getItem(LAST_PANEL_KEY) as PanelKey | null;
-    return v && panelKeys.includes(v) ? v : null;
-  };
-  const [panel, setPanelState] = useState<PanelKey>(search.panel ?? readLastPanel() ?? "overview");
+  // Restore the last selected panel when the URL does not specify one.
+  const [panel, setPanelState] = useState<PanelKey>(search.panel ?? readLastAdminPanel() ?? "overview");
   const setPanel = (key: PanelKey) => {
     setPanelState(key);
-    try { window.localStorage.setItem(LAST_PANEL_KEY, key); } catch { /* ignore */ }
+    try { window.localStorage.setItem(ADMIN_LAST_PANEL_KEY, key); } catch { /* ignore */ }
     navigate({ to: "/admin", search: { panel: key }, replace: true });
   };
   // لو فُتحت اللوحة بدون panel في الرابط، نثبّت آخر قسم في الرابط بدل الرجوع للنظرة العامة.
@@ -152,10 +110,9 @@ function Admin() {
     refetchIntervalInBackground: false,
   });
   const shared = sharedQ.data ?? [];
-  const basePanels: PanelKey[] = ["orders", "courses", "worksheet", "mail", "chat"];
-  const employeeAllowed = (key: PanelKey) => basePanels.includes(key) || shared.includes(key);
-  const canView = (key: PanelKey) => adminOnly || employeeAllowed(key);
-  const readOnly = isEmployee && !basePanels.includes(panel);
+  const employeeAllowed = (key: PanelKey) => canEmployeeViewPanel(key, shared);
+  const canView = (key: PanelKey) => canViewAdminPanel(role, key, shared);
+  const readOnly = isEmployee && !employeeBasePanels.includes(panel);
   async function toggleShare(key: PanelKey, on: boolean) {
     const next = on ? Array.from(new Set([...shared, key])) : shared.filter((k) => k !== key);
     const { error } = await supabase.from("site_settings").upsert({ key: "employee_panels", value: { panels: next } as any }, { onConflict: "key" });
@@ -178,7 +135,6 @@ function Admin() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEmployee, sharedQ.isSuccess, panel, shared.join(",")]);
 
-
   if (role === null) return <div className="p-8 text-center">جاري التحقق...</div>;
   if (role !== "admin" && role !== "employee") {
     return (
@@ -192,52 +148,8 @@ function Admin() {
       </div>
     );
   }
-  const navGroups: { label: string; items: { key: PanelKey; label: string; icon: any; adminOnly?: boolean }[] }[] = [
-    {
-      label: "العمليات",
-      items: [
-        { key: "overview", label: "نظرة عامة", icon: LayoutDashboard },
-        { key: "orders", label: "الطلبات", icon: ShoppingCart },
-        { key: "customers", label: "العملاء", icon: Users },
-        { key: "reviews", label: "المراجعات", icon: Star },
-        { key: "reports", label: "التقارير", icon: FileBarChart, adminOnly: true },
-        { key: "cardtx", label: "معاملات الفيزا", icon: WalletCards, adminOnly: true },
-        { key: "worksheet", label: "جدول بيانات الشغل", icon: ClipboardList },
-        { key: "sheet", label: "جدول بيانات خاص", icon: Table2, adminOnly: true },
-        { key: "mail", label: "البريد", icon: Mail },
-        { key: "chat", label: "جروب MG Pro", icon: MessagesSquare },
-
-
-      ],
-    },
-    {
-      label: "الكتالوج",
-      items: [
-        { key: "products", label: "المنتجات", icon: Package, adminOnly: true },
-        { key: "categories", label: "الأقسام", icon: Layers, adminOnly: true },
-        { key: "timers", label: "مؤقتات العروض", icon: Clock },
-      ],
-    },
-    {
-      label: "الإدارة",
-      items: [
-        { key: "employees", label: "الموظفون", icon: UserCog, adminOnly: true },
-        { key: "courses", label: "كورسات التدريب", icon: GraduationCap },
-        
-        { key: "remote", label: "الوصول عن بُعد", icon: MonitorPlay, adminOnly: true },
-        { key: "payments", label: "طرق الدفع", icon: CreditCard, adminOnly: true },
-        { key: "currencies", label: "العملات", icon: Coins, adminOnly: true },
-        { key: "apikey", label: "مفاتيح API (Bybit)", icon: KeyRound, adminOnly: true },
-        { key: "settings", label: "الإعدادات", icon: Settings2, adminOnly: true },
-      ],
-    },
-  ];
-  const visibleNavGroups = isEmployee
-    ? navGroups
-        .map((g) => ({ ...g, items: g.items.filter((i) => employeeAllowed(i.key)) }))
-        .filter((g) => g.items.length > 0)
-    : navGroups;
-
+  const navGroups = getAdminNavGroups();
+  const visibleNavGroups = getVisibleAdminNavGroups(navGroups, isEmployee, employeeAllowed);
 
   return (
     <SidebarProvider>
@@ -248,7 +160,6 @@ function Admin() {
             <div className="flex items-center justify-center px-1 py-1.5">
               <img src={headerMark} alt="MG Pro" className="w-full max-h-24 object-contain" />
             </div>
-
 
           </SidebarHeader>
           <SidebarContent>
@@ -296,7 +207,7 @@ function Admin() {
             <SidebarTrigger />
             <AdminBackButton />
             <h1 className="font-bold">{visibleNavGroups.flatMap((g) => g.items).find((i) => i.key === panel)?.label}</h1>
-            {adminOnly && !basePanels.includes(panel) && (
+            {adminOnly && !employeeBasePanels.includes(panel) && (
               <label className="ms-auto flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
                 <span>إظهار للموظف (قراءة فقط)</span>
                 <Switch checked={shared.includes(panel)} onCheckedChange={(v) => void toggleShare(panel, v)} />
@@ -305,7 +216,7 @@ function Admin() {
             {readOnly && (
               <Badge variant="outline" className="ms-auto gap-1"><Lock className="size-3" />عرض فقط</Badge>
             )}
-            <div className={adminOnly && !basePanels.includes(panel) || readOnly ? "" : "ms-auto"}>
+            <div className={adminOnly && !employeeBasePanels.includes(panel) || readOnly ? "" : "ms-auto"}>
               <AdminLangToggle lang={adminLang} onChange={setAdminLang} />
             </div>
             <AdminTranslator lang={adminLang} />
@@ -342,7 +253,6 @@ function Admin() {
             {panel === "mail" && canView("mail") && <GmailInbox isAdmin={adminOnly} />}
             {panel === "chat" && <StaffChat targetId={search.message} />}
 
-
             
             {panel === "products" && canView("products") && <ProductsTab />}
             {panel === "categories" && canView("categories") && <CategoriesTab />}
@@ -375,266 +285,12 @@ function Admin() {
   );
 }
 
-function AdminBackButton() {
-  const back = useAdminBackTarget();
-  if (!back) return null;
-  return (
-    <Button
-      size="sm"
-      variant="outline"
-      className="rounded-xl gap-1 shrink-0"
-      onClick={back}
-      aria-label="رجوع"
-    >
-      <ChevronRight className="size-4" /> رجوع
-    </Button>
-  );
-}
-
 // ============ READ ONLY WRAPPER ============
 
 // ============ OVERVIEW ============
 
-function OverviewTab() {
-  const qc = useQueryClient();
-  const stats = useQuery({
-    queryKey: ["admin-stats"],
-    queryFn: async () => {
-      const [orders, products, users] = await Promise.all([
-        supabase.from("orders").select("id,total,status,created_at"),
-        supabase.from("products").select("id"),
-        supabase.from("profiles").select("id"),
-      ]);
-      const ords = (orders.data ?? []) as any[];
-      const revenue = ords.filter((o) => o.status === "confirmed" || o.status === "completed").reduce((s, o) => s + Number(o.total), 0);
-      const pending = ords.filter((o) => o.status === "awaiting_confirmation").length;
-      const today = new Date(); today.setHours(0, 0, 0, 0);
-      const todayCount = ords.filter((o) => new Date(o.created_at) >= today).length;
-      return {
-        total: ords.length,
-        revenue: revenue.toFixed(2),
-        pending,
-        todayCount,
-        products: products.data?.length ?? 0,
-        users: users.data?.length ?? 0,
-      };
-    },
-  });
-  const notifQ = useQuery({
-    queryKey: ["admin-notifs"],
-    queryFn: async () => (await supabase.from("admin_notifications").select("*").order("created_at", { ascending: false }).limit(20)).data ?? [],
-  });
-  async function markRead(id: string) {
-    await supabase.from("admin_notifications").update({ read_at: new Date().toISOString() }).eq("id", id);
-    qc.invalidateQueries({ queryKey: ["admin-notifs"] });
-  }
-  const s = stats.data;
-
-  return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        {[
-          { label: "إجمالي الطلبات", value: s?.total ?? "-", icon: ShoppingCart },
-          { label: "الطلبات الجديد", value: s?.pending ?? "-", icon: Loader2 },
-          { label: "طلبات اليوم", value: s?.todayCount ?? "-", icon: TrendingUp },
-          { label: "الإيرادات (ج.م)", value: s?.revenue ?? "-", icon: DollarSign },
-          { label: "المنتجات", value: s?.products ?? "-", icon: Package },
-          { label: "العملاء", value: s?.users ?? "-", icon: Users },
-        ].map((c) => (
-          <div key={c.label} className="card-surface rounded-2xl p-4">
-            <c.icon className="size-5 text-primary mb-2" />
-            <div className="text-[11px] text-muted-foreground">{c.label}</div>
-            <div className="text-xl md:text-2xl font-black mt-1">{c.value}</div>
-          </div>
-        ))}
-      </div>
-
-      <div className="card-surface rounded-2xl p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <Bell className="size-5 text-primary" />
-          <h3 className="font-bold">الإشعارات والتنبيهات</h3>
-          {(notifQ.data ?? []).filter((n: any) => !n.read_at).length > 0 && (
-            <Badge>{(notifQ.data ?? []).filter((n: any) => !n.read_at).length} جديد</Badge>
-          )}
-        </div>
-        <div className="space-y-2 max-h-96 overflow-y-auto">
-          {(notifQ.data ?? []).length === 0 && (
-            <div className="text-center text-sm text-muted-foreground py-6">لا توجد إشعارات</div>
-          )}
-          {(notifQ.data ?? []).map((n: any) => (
-            <div key={n.id} className={`rounded-xl p-3 flex items-start gap-3 ${n.read_at ? "bg-muted/30" : "bg-primary/10 border border-primary/30"}`}>
-              <div className={`size-9 rounded-lg flex items-center justify-center shrink-0 ${n.kind === "repeat_customer" ? "bg-yellow-500/20 text-yellow-500" : "bg-primary/20 text-primary"}`}>
-                {n.kind === "repeat_customer" ? <Repeat className="size-5" /> : <Bell className="size-5" />}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="font-bold text-sm">{n.title}</div>
-                {n.body && <div className="text-xs text-muted-foreground mt-0.5">{n.body}</div>}
-                <div className="text-[10px] text-muted-foreground mt-1">{formatLocaleDateTime(n.created_at, "ar-EG")}</div>
-              </div>
-              {!n.read_at && (
-                <Button size="sm" variant="ghost" onClick={() => markRead(n.id)}><Check className="size-4" /></Button>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ============ CUSTOMERS ============
-function CustomersTab() {
-  const list = useServerFn(listCustomers);
-  const q = useQuery({ queryKey: ["admin-customers"], queryFn: () => list() as Promise<any[]> });
-  const [search, setSearch] = useState("");
-  const rows = (q.data ?? []).filter((r) => {
-    const s = search.toLowerCase();
-    return !s || r.email.toLowerCase().includes(s) || r.name.toLowerCase().includes(s) || r.phone.includes(s);
-  });
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3 justify-between">
-        <div>
-          <h2 className="text-xl font-bold">العملاء ({q.data?.length ?? 0})</h2>
-          <p className="text-xs text-muted-foreground">تحليل سلوك الشراء — العملاء المتكررون في الأعلى</p>
-        </div>
-        <Input placeholder="بحث بالاسم أو الإيميل أو الرقم..." value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />
-      </div>
-      <div className="space-y-3">
-        {rows.map((c) => (
-          <div key={c.email + c.phone} className={`card-surface rounded-2xl p-4 ${c.orders >= 2 ? "border-2 border-yellow-500/40" : ""}`}>
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <div className="font-bold">{c.name}</div>
-                  {c.orders >= 2 && (
-                    <Badge className="bg-yellow-500 text-black gap-1">
-                      <Repeat className="size-3" />عميل متكرر × {c.orders}
-                    </Badge>
-                  )}
-                </div>
-                <div className="text-xs text-muted-foreground">{c.email} · {c.phone} · {c.country}</div>
-                <div className="text-[11px] text-muted-foreground mt-1">آخر طلب: {formatLocaleDateTime(c.last_at, "ar-EG")}</div>
-              </div>
-              <div className="text-left">
-                <div className="text-xs text-muted-foreground">إجمالي المشتريات المؤكدة</div>
-                <div className="space-y-0.5 mt-1">
-                  {Object.entries(c.total_by_currency).map(([code, val]) => (
-                    <div key={code} className="font-bold text-gradient text-sm">{Number(val).toFixed(2)} {code}</div>
-                  ))}
-                  {Object.keys(c.total_by_currency).length === 0 && <div className="text-xs text-muted-foreground">—</div>}
-                </div>
-                <div className="text-[11px] text-muted-foreground mt-1">{c.confirmed} مؤكد / {c.orders} إجمالي</div>
-              </div>
-            </div>
-            {c.orders >= 2 && (
-              <a
-                href={`https://wa.me/${c.phone.replace(/[^0-9]/g, "")}?text=${encodeURIComponent("مرحباً " + c.name + "، شكراً لثقتك بنا 🌟")}`}
-                target="_blank" rel="noreferrer"
-                className="mt-3 inline-flex items-center gap-1 text-xs text-primary hover:underline"
-              >
-                <ArrowUpRight className="size-3" />تواصل عبر واتساب لعرض منتج جديد
-              </a>
-            )}
-          </div>
-        ))}
-        {rows.length === 0 && <div className="card-surface rounded-2xl p-12 text-center text-muted-foreground">لا يوجد عملاء</div>}
-      </div>
-    </div>
-  );
-}
-
 // ============ REVIEWS ============
-function ReviewsTab() {
-  const qc = useQueryClient();
-  const [filter, setFilter] = useUiState<"pending" | "approved" | "all">("orders", "filter", "pending");
-  const q = useQuery({
-    queryKey: ["admin-reviews", filter],
-    queryFn: async () => {
-      let qb = supabase.from("reviews").select("*, product:products(name, slug)").order("created_at", { ascending: false });
-      if (filter === "pending") qb = qb.eq("approved", false);
-      if (filter === "approved") qb = qb.eq("approved", true);
-      return (await qb).data ?? [];
-    },
-  });
-  async function approve(id: string, val: boolean) {
-    await supabase.from("reviews").update({ approved: val }).eq("id", id);
-    qc.invalidateQueries({ queryKey: ["admin-reviews"] });
-    toast.success(val ? "تم النشر" : "تم الإخفاء");
-  }
-  async function del(id: string) {
-    if (!confirm("حذف المراجعة؟")) return;
-    await supabase.from("reviews").delete().eq("id", id);
-    qc.invalidateQueries({ queryKey: ["admin-reviews"] });
-  }
-  const [addOpen, setAddOpen] = useState(false);
-  const [newR, setNewR] = useState<any>({ product_id: "", customer_name: "", rating: 5, comment: "", approved: true });
-  const productsQ = useQuery({ queryKey: ["reviews-products"], queryFn: async () => (await supabase.from("products").select("id,name")).data ?? [] });
-  async function saveNew() {
-    if (!newR.product_id || !newR.customer_name) return toast.error("أكمل البيانات");
-    const { error } = await supabase.from("reviews").insert(newR);
-    if (error) toast.error(error.message);
-    else { toast.success("تم"); setAddOpen(false); setNewR({ product_id: "", customer_name: "", rating: 5, comment: "", approved: true }); qc.invalidateQueries({ queryKey: ["admin-reviews"] }); }
-  }
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-2">
-          {(["pending","approved","all"] as const).map((k) => (
-            <button key={k} onClick={() => setFilter(k)} className={`px-3 py-1.5 rounded-lg text-xs ${filter === k ? "gradient-primary text-white" : "card-surface"}`}>
-              {k === "pending" ? "بانتظار الموافقة" : k === "approved" ? "منشور" : "الكل"}
-            </button>
-          ))}
-        </div>
-        <Button onClick={() => setAddOpen(true)} className="gradient-primary text-white gap-1"><Plus className="size-4" />إضافة مراجعة</Button>
-      </div>
-      <div className="space-y-3">
-        {(q.data ?? []).map((r: any) => (
-          <div key={r.id} className="card-surface rounded-2xl p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-bold">{r.customer_name}</span>
-                  <div className="flex">{[1,2,3,4,5].map((n) => <Star key={n} className={`size-3.5 ${n <= r.rating ? "fill-yellow-400 text-yellow-400" : "text-muted"}`} />)}</div>
-                  {r.approved ? <Badge>منشور</Badge> : <Badge variant="secondary">بانتظار</Badge>}
-                </div>
-                <div className="text-xs text-muted-foreground mt-0.5">على: {r.product?.name}</div>
-                {r.comment && <p className="text-sm mt-2">{r.comment}</p>}
-                <div className="text-[10px] text-muted-foreground mt-1">{formatLocaleDateTime(r.created_at, "ar-EG")}</div>
-              </div>
-              <div className="flex gap-1 shrink-0">
-                <Button size="sm" variant={r.approved ? "outline" : "default"} onClick={() => approve(r.id, !r.approved)} className={!r.approved ? "gradient-primary text-white" : ""}>
-                  {r.approved ? "إخفاء" : <><Check className="size-4 ml-1" />نشر</>}
-                </Button>
-                <Button size="icon" variant="ghost" onClick={() => del(r.id)}><Trash2 className="size-4 text-destructive" /></Button>
-              </div>
-            </div>
-          </div>
-        ))}
-        {(q.data ?? []).length === 0 && <div className="card-surface rounded-2xl p-12 text-center text-muted-foreground">لا توجد مراجعات</div>}
-      </div>
-      <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>إضافة مراجعة يدوية</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div><Label>المنتج</Label>
-              <select value={newR.product_id} onChange={(e) => setNewR({ ...newR, product_id: e.target.value })} className="w-full h-10 rounded-md border border-input bg-input px-3 text-sm">
-                <option value="">— اختر —</option>
-                {(productsQ.data ?? []).map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
-            </div>
-            <div><Label>اسم العميل</Label><Input value={newR.customer_name} onChange={(e) => setNewR({ ...newR, customer_name: e.target.value })} /></div>
-            <div><Label>التقييم (1-5)</Label><Input type="number" min={1} max={5} value={newR.rating} onChange={(e) => setNewR({ ...newR, rating: Number(e.target.value) })} /></div>
-            <div><Label>التعليق</Label><Textarea rows={3} value={newR.comment} onChange={(e) => setNewR({ ...newR, comment: e.target.value })} /></div>
-            <label className="flex items-center gap-2"><Switch checked={newR.approved} onCheckedChange={(v) => setNewR({ ...newR, approved: v })} /> نشر مباشرة</label>
-          </div>
-          <DialogFooter><Button onClick={saveNew} className="gradient-primary text-white">حفظ</Button></DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-}
-
 // ============ EMPLOYEES ============
 function EmployeesTab() {
   const qc = useQueryClient();
@@ -700,7 +356,6 @@ function EmployeesTab() {
     },
     refetchInterval: livePoll(60_000),
   });
-
 
   async function onPickAvatar(userId: string, file: File | null) {
     if (!file) return;
@@ -841,7 +496,6 @@ function EmployeesTab() {
               </div>
             </div>
 
-
           </div>
         </div>
 
@@ -855,8 +509,6 @@ function EmployeesTab() {
             <DevicesTab userId={u.user_id} employeeName={u.full_name} />
           </div>
         </div>
-
-
 
         <Dialog open={!!editing} onOpenChange={(o) => { if (!o) setEditing(null); }}>
           <DialogContent>
@@ -944,7 +596,6 @@ function EmployeesTab() {
         {(q.data ?? []).length === 0 && <div className="card-surface rounded-2xl p-12 text-center text-muted-foreground col-span-full">لا يوجد موظفون</div>}
       </div>
 
-
       <Dialog open={!!editing} onOpenChange={(o) => { if (!o) setEditing(null); }}>
         <DialogContent>
           <DialogHeader><DialogTitle>تعديل بيانات الموظف</DialogTitle></DialogHeader>
@@ -983,292 +634,6 @@ function EmployeesTab() {
 }
 
 // ============ ORDERS ============
-function OrdersTab({ isAdmin }: { isAdmin: boolean }) {
-  const qc = useQueryClient();
-  const deleteAllFn = useServerFn(deleteAllOrders);
-  const [deleting, setDeleting] = useState(false);
-  const [filter, setFilter] = useState<string>("awaiting_confirmation");
-  const [search, setSearch] = useState("");
-  const ordersQ = useQuery({
-    queryKey: ["admin-orders", filter, search],
-    queryFn: async () => {
-      let q = supabase.from("orders").select("*, items:order_items(*), payment_method:payment_methods(name)").order("created_at", { ascending: false });
-      // when searching, ignore the status filter so results come from any tab
-      if (!search.trim() && filter !== "all") q = q.eq("status", filter as any);
-      return (await q).data ?? [];
-    },
-  });
-
-  async function updateStatus(id: string, status: string) {
-    const patch: any = { status };
-    if (status === "confirmed") patch.confirmed_at = new Date().toISOString();
-    const { error } = await supabase.from("orders").update(patch).eq("id", id);
-    if (error) toast.error(error.message);
-    else { toast.success("تم التحديث"); qc.invalidateQueries({ queryKey: ["admin-orders"] }); qc.invalidateQueries({ queryKey: ["admin-stats"] }); }
-  }
-
-  const statusLabel: Record<string, string> = {
-    pending_payment: "بانتظار الدفع",
-    awaiting_confirmation: "الطلبات الجديد",
-    confirmed: "قيد التنفيذ",
-    completed: "مكتمل",
-    rejected: "مرفوض",
-    cancelled: "ملغى",
-  };
-
-  const rows = (ordersQ.data ?? []).filter((o: any) => {
-    const s = search.trim().toLowerCase();
-    if (!s) return true;
-    return (
-      (o.order_code ?? "").toLowerCase().includes(s) ||
-      (o.customer_name ?? "").toLowerCase().includes(s) ||
-      (o.customer_email ?? "").toLowerCase().includes(s) ||
-      (o.customer_phone ?? "").includes(s)
-    );
-  });
-
-  async function handleDeleteAll() {
-    const total = ordersQ.data?.length ?? 0;
-    if (!total) { toast.info("لا توجد طلبات لحذفها"); return; }
-    if (!confirm(`سيتم حذف كل الطلبات (${total}) نهائياً. هل أنت متأكد؟`)) return;
-    if (!confirm("تأكيد أخير: هذا الإجراء لا يمكن التراجع عنه.")) return;
-    setDeleting(true);
-    try {
-      const res = await deleteAllFn();
-      toast.success(`تم حذف ${res.deleted} طلب`);
-      qc.invalidateQueries({ queryKey: ["admin-orders"] });
-      qc.invalidateQueries({ queryKey: ["admin-stats"] });
-    } catch (e: any) {
-      toast.error(e?.message || "فشل الحذف");
-    } finally {
-      setDeleting(false);
-    }
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3 justify-between">
-        <div>
-          <h2 className="text-xl font-bold">الطلبات ({ordersQ.data?.length ?? 0})</h2>
-          <p className="text-xs text-muted-foreground">إدارة ومتابعة حالة الطلبات</p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <Input
-            placeholder="اكتب كود الطلب"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="max-w-sm"
-          />
-          {isAdmin && (
-            <Button
-              type="button"
-              variant="destructive"
-              size="sm"
-              onClick={handleDeleteAll}
-              disabled={deleting}
-              className="gap-1"
-            >
-              {deleting ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
-              حذف كل الطلبات
-            </Button>
-          )}
-        </div>
-      </div>
-      <div className="flex gap-2 flex-wrap">
-        {[["awaiting_confirmation","الطلبات الجديد"],["confirmed","قيد التنفيذ"],["completed","مكتمل"],["cancelled","ملغى"]].map(([k,l]) => (
-          <button key={k} onClick={() => setFilter(k)} className={`px-3 py-1.5 rounded-lg text-xs ${filter === k ? "gradient-primary text-white" : "card-surface"}`}>{l}</button>
-        ))}
-      </div>
-      <div className="space-y-3">
-        {rows.map((o: any) => (
-          <div key={o.id} className="card-surface rounded-2xl p-5">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="font-mono font-bold text-primary">{o.order_code}</span>
-                  <Badge variant={o.status === "confirmed" || o.status === "completed" ? "default" : o.status === "rejected" || o.status === "cancelled" ? "destructive" : "secondary"}>{statusLabel[o.status] ?? o.status}</Badge>
-                </div>
-                <div className="text-sm"><strong>{o.customer_name}</strong> · {o.customer_email}</div>
-                <div className="text-xs text-muted-foreground">{o.dial_code}{o.customer_phone} · {o.customer_country} · {formatLocaleDateTime(o.created_at, "ar-EG")}</div>
-                <div className="mt-2 space-y-0.5 text-xs">
-                  {(o.items ?? []).map((it: any) => <div key={it.id}>• {it.product_name} × {it.quantity} — {it.unit_price} {o.currency_code}</div>)}
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-xl font-black text-gradient">{o.total} {o.currency_code}</div>
-                <div className="text-xs text-muted-foreground">{o.payment_method?.name}</div>
-                {o.payment_screenshot && (
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      const raw = o.payment_screenshot as string;
-                      const path = raw.includes("payment-screenshots/")
-                        ? raw.split("payment-screenshots/")[1]
-                        : raw;
-                      const { data, error } = await supabase.storage
-                        .from("payment-screenshots")
-                        .createSignedUrl(path, 300);
-                      if (error || !data?.signedUrl) { toast.error("تعذر فتح الإثبات"); return; }
-                      window.open(data.signedUrl, "_blank", "noopener");
-                    }}
-                    className="text-xs text-primary hover:underline mt-1 inline-flex items-center gap-1"
-                  ><ExternalLink className="size-3" />الإثبات</button>
-                )}
-              </div>
-            </div>
-            {o.status !== "completed" && o.status !== "cancelled" && o.status !== "rejected" && (
-              <div className="mt-3 flex flex-wrap gap-2 border-t border-border pt-3">
-                {o.status !== "confirmed" && (
-                  <Button size="sm" onClick={() => updateStatus(o.id, "confirmed")} className="bg-blue-600 hover:bg-blue-700 text-white gap-1"><Check className="size-4" />استلام الطلب</Button>
-                )}
-                <Button size="sm" onClick={() => updateStatus(o.id, "completed")} className="bg-green-600 hover:bg-green-700 text-white gap-1"><Check className="size-4" />تأكيد الطلب (مكتمل)</Button>
-                <Button size="sm" variant="destructive" onClick={() => { if (confirm("إلغاء الطلب؟")) updateStatus(o.id, "cancelled"); }} className="gap-1"><X className="size-4" />إلغاء الطلب</Button>
-                {o.status === "awaiting_confirmation" && (
-                  <Button size="sm" variant="outline" onClick={() => { if (confirm("رفض الطلب؟")) updateStatus(o.id, "rejected"); }} className="gap-1"><X className="size-4" />رفض</Button>
-                )}
-              </div>
-            )}
-          </div>
-        ))}
-        {rows.length === 0 && <div className="card-surface rounded-2xl p-12 text-center text-muted-foreground">لا توجد طلبات</div>}
-      </div>
-    </div>
-  );
-}
-
-// ============ PRODUCTS ============
-
-// ============ CATEGORIES ============
-function CategoriesTab() {
-  const qc = useQueryClient();
-  const catsQ = useQuery({ queryKey: ["admin-categories"], queryFn: async () => (await supabase.from("categories").select("*").order("sort_order")).data ?? [] });
-  const [editing, setEditing] = useState<any>(null);
-  const [open, setOpen] = useState(false);
-
-  async function save() {
-    if (!editing.name) return toast.error("الاسم مطلوب");
-    try {
-      await saveCategory({
-        data: {
-          id: editing.id ?? null,
-          name: editing.name,
-          slug: ensureSlug(editing.slug, editing.name),
-          icon: editing.icon ?? null,
-          banner_image: editing.banner_image ?? null,
-          sort_order: Number(editing.sort_order) || 0,
-          active: !!editing.active,
-        },
-      });
-      toast.success("محفوظ");
-      setOpen(false);
-      qc.invalidateQueries({ queryKey: ["admin-categories"] });
-    } catch (e: any) {
-      toast.error(e?.message || "فشل الحفظ");
-    }
-  }
-  async function del(id: string) {
-    if (!confirm("حذف؟")) return;
-    try { await deleteCategory({ data: { id } }); qc.invalidateQueries({ queryKey: ["admin-categories"] }); }
-    catch (e: any) { toast.error(e?.message || "فشل الحذف"); }
-  }
-  async function uploadCategoryBanner(file: File) {
-    try {
-      const { path, token } = await prepareCategoryImageUpload({
-        data: {
-          fileName: file.name,
-          contentType: file.type || "image/png",
-          size: file.size,
-        },
-      });
-      const { error } = await supabase.storage
-        .from("product-images")
-        .uploadToSignedUrl(path, token, file, { contentType: file.type || "image/png" });
-      if (error) throw new Error(error.message);
-      const { url } = await getCategoryImageUrl({ data: { path } });
-      setEditing((prev: any) => ({ ...(prev ?? {}), banner_image: url }));
-      toast.success("تم رفع صورة القسم");
-    } catch (e: any) {
-      toast.error(e?.message || "فشل رفع الصورة");
-    }
-  }
-
-  return (
-    <div>
-      <div className="flex justify-between mb-6">
-        <h2 className="text-xl font-bold">الأقسام</h2>
-        <Button onClick={() => { setEditing({ name: "", slug: "", icon: "🎁", banner_image: null, sort_order: 0, active: true }); setOpen(true); }} className="gradient-primary text-white gap-1"><Plus className="size-4" />قسم جديد</Button>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
-        {(catsQ.data ?? []).map((c: any) => {
-          const label = c.name || "قسم";
-          const initial = label.trim().charAt(0);
-          return (
-            <div key={c.id} className="bg-card border border-border/60 rounded-2xl p-4 flex flex-col items-center text-center gap-3 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all">
-              <div className="relative">
-                <div className="size-20 rounded-full gradient-primary ring-4 ring-background flex items-center justify-center text-2xl font-black text-white shadow-xl">
-                  {initial}
-                </div>
-                <div className="absolute bottom-0 right-0 size-6 rounded-full bg-primary flex items-center justify-center ring-2 ring-background">
-                  <span className="text-[10px] text-white">{c.icon}</span>
-                </div>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="font-bold truncate">{c.name}</div>
-                <div className="text-xs text-muted-foreground">/{c.slug}</div>
-              </div>
-              <div className="flex gap-1.5 w-full justify-center">
-                <Button size="sm" variant="outline" className="rounded-full flex-1" onClick={() => { setEditing(c); setOpen(true); }}><Edit className="size-4" />تعديل</Button>
-                <Button size="sm" variant="outline" className="rounded-full text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => del(c.id)}><Trash2 className="size-4" />حذف</Button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>قسم</DialogTitle></DialogHeader>
-          {editing && (
-            <div className="space-y-3">
-              <div><Label>الاسم</Label><Input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} /></div>
-              <div><Label>الرابط</Label><Input value={editing.slug} onChange={(e) => setEditing({ ...editing, slug: e.target.value })} /></div>
-              <div>
-                <Label>صورة القسم</Label>
-                {editing.banner_image && (
-                  <div className="flex items-center gap-2 my-2">
-                    <img src={editing.banner_image} alt="" className="size-20 rounded-lg object-cover" />
-                    <Button size="sm" variant="outline" onClick={() => setEditing({ ...editing, banner_image: null })}>حذف الصورة</Button>
-                  </div>
-                )}
-                <input
-                  id="cat-banner-input"
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => e.target.files?.[0] && uploadCategoryBanner(e.target.files[0])}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="mt-2 gap-2 w-full"
-                  onClick={() => document.getElementById("cat-banner-input")?.click()}
-                >
-                  <Plus className="size-4" />
-                  {editing.banner_image ? "تغيير الصورة" : "تحميل صورة"}
-                </Button>
-              </div>
-
-              <div><Label>الترتيب</Label><Input type="number" value={editing.sort_order} onChange={(e) => setEditing({ ...editing, sort_order: Number(e.target.value) })} /></div>
-              <label className="flex items-center gap-2"><Switch checked={editing.active} onCheckedChange={(v) => setEditing({ ...editing, active: v })} /> نشط</label>
-            </div>
-          )}
-          <DialogFooter><Button onClick={save} className="gradient-primary text-white">حفظ</Button></DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-}
-
-// ============ PAYMENT METHODS ============
 function PaymentsTab() {
   const qc = useQueryClient();
   const prepareIconUpload = useServerFn(preparePaymentIconUpload);
@@ -1474,232 +839,6 @@ function PaymentsTab() {
 }
 
 // ============ CURRENCIES / FX ============
-function CurrenciesTab() {
-  const qc = useQueryClient();
-  const currsQ = useQuery({ queryKey: ["admin-currencies"], queryFn: async () => (await supabase.from("currencies").select("*").order("code")).data ?? [] });
-  const ratesQ = useQuery({ queryKey: ["admin-rates"], queryFn: async () => (await supabase.from("exchange_rates").select("*, currency:currencies(name,symbol)")).data ?? [] });
-  const [values, setValues] = useState<Record<string, string>>({});
-  useEffect(() => { if (ratesQ.data) { const v: any = {}; ratesQ.data.forEach((r: any) => v[r.currency_code] = String(r.rate_from_egp)); setValues(v); } }, [ratesQ.data]);
-
-  const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<any>(null);
-
-  async function saveAll() {
-    for (const [code, val] of Object.entries(values)) {
-      await supabase.from("exchange_rates").update({ rate_from_egp: Number(val), updated_at: new Date().toISOString() }).eq("currency_code", code);
-    }
-    toast.success("تم تحديث الأسعار");
-    qc.invalidateQueries({ queryKey: ["admin-rates"] });
-  }
-
-  async function saveCurrency() {
-    if (!editing.code || !editing.name || !editing.symbol) return toast.error("أكمل البيانات");
-    const code = editing.code.toUpperCase();
-    const isNew = !editing._original_code;
-    if (isNew) {
-      const { error } = await supabase.from("currencies").insert({ code, name: editing.name, symbol: editing.symbol, active: editing.active ?? true });
-      if (error) return toast.error(error.message);
-      await supabase.from("exchange_rates").insert({ currency_code: code, rate_from_egp: Number(editing.rate_from_egp) || 1 });
-    } else {
-      const { error } = await supabase.from("currencies").update({ name: editing.name, symbol: editing.symbol, active: editing.active }).eq("code", editing._original_code);
-      if (error) return toast.error(error.message);
-      if (editing.rate_from_egp != null) {
-        await supabase.from("exchange_rates").update({ rate_from_egp: Number(editing.rate_from_egp), updated_at: new Date().toISOString() }).eq("currency_code", editing._original_code);
-      }
-    }
-    toast.success("تم الحفظ");
-    setOpen(false);
-    qc.invalidateQueries({ queryKey: ["admin-currencies"] });
-    qc.invalidateQueries({ queryKey: ["admin-rates"] });
-  }
-  async function delCurrency(code: string) {
-    if (!confirm(`حذف العملة ${code}؟`)) return;
-    await supabase.from("exchange_rates").delete().eq("currency_code", code);
-    const { error } = await supabase.from("currencies").delete().eq("code", code);
-    if (error) return toast.error(error.message);
-    toast.success("تم الحذف");
-    qc.invalidateQueries({ queryKey: ["admin-currencies"] });
-    qc.invalidateQueries({ queryKey: ["admin-rates"] });
-  }
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h2 className="text-xl font-bold">العملات</h2>
-            <p className="text-xs text-muted-foreground">إضافة / تعديل / حذف العملات المدعومة</p>
-          </div>
-          <Button onClick={() => { setEditing({ code: "", name: "", symbol: "", rate_from_egp: 1, active: true }); setOpen(true); }} className="gradient-primary text-white gap-1"><Plus className="size-4" />عملة جديدة</Button>
-        </div>
-        <div className="grid md:grid-cols-2 gap-3">
-          {(currsQ.data ?? []).map((c: any) => (
-            <div key={c.code} className="card-surface rounded-2xl p-4 flex items-center justify-between">
-              <div>
-                <div className="font-bold">{c.name} <span className="text-xs text-muted-foreground">({c.code})</span></div>
-                <div className="text-xs text-muted-foreground">الرمز: {c.symbol} {!c.active && "· متوقف"}</div>
-              </div>
-              <div className="flex gap-1">
-                <Button size="icon" variant="ghost" onClick={() => {
-                  const r = ratesQ.data?.find((x: any) => x.currency_code === c.code);
-                  setEditing({ ...c, _original_code: c.code, rate_from_egp: r?.rate_from_egp ?? 1 });
-                  setOpen(true);
-                }}><Edit className="size-4" /></Button>
-                <Button size="icon" variant="ghost" onClick={() => delCurrency(c.code)}><Trash2 className="size-4 text-destructive" /></Button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <h2 className="text-xl font-bold mb-2">أسعار الصرف (من الجنيه المصري)</h2>
-        <p className="text-xs text-muted-foreground mb-4">مثال: 1 ج.م = 0.021 USD يعني تسعير الدولار = السعر بالجنيه × 0.021</p>
-        <div className="grid md:grid-cols-2 gap-3">
-          {(ratesQ.data ?? []).map((r: any) => (
-            <div key={r.currency_code} className="card-surface rounded-2xl p-4">
-              <Label>{r.currency?.name} ({r.currency_code}) {r.currency?.symbol}</Label>
-              <Input type="number" step="any" value={values[r.currency_code] ?? ""} onChange={(e) => setValues({ ...values, [r.currency_code]: e.target.value })} />
-            </div>
-          ))}
-        </div>
-        <Button onClick={saveAll} className="gradient-primary text-white mt-4">حفظ الكل</Button>
-      </div>
-
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>{editing?._original_code ? "تعديل عملة" : "عملة جديدة"}</DialogTitle></DialogHeader>
-          {editing && (
-            <div className="space-y-3">
-              <div><Label>الكود (مثل USD)</Label><Input value={editing.code ?? ""} disabled={!!editing._original_code} onChange={(e) => setEditing({ ...editing, code: e.target.value.toUpperCase() })} maxLength={5} /></div>
-              <div><Label>الاسم</Label><Input value={editing.name ?? ""} onChange={(e) => setEditing({ ...editing, name: e.target.value })} /></div>
-              <div><Label>الرمز</Label><Input value={editing.symbol ?? ""} onChange={(e) => setEditing({ ...editing, symbol: e.target.value })} placeholder="$ / ر.س / ج.م" /></div>
-              <div><Label>سعر الصرف (1 ج.م = ؟ من هذه العملة)</Label><Input type="number" step="any" value={editing.rate_from_egp ?? ""} onChange={(e) => setEditing({ ...editing, rate_from_egp: e.target.value })} /></div>
-              <label className="flex items-center gap-2"><Switch checked={editing.active ?? true} onCheckedChange={(v) => setEditing({ ...editing, active: v })} /> نشط</label>
-            </div>
-          )}
-          <DialogFooter><Button onClick={saveCurrency} className="gradient-primary text-white">حفظ</Button></DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-}
-
-// ============ TIMERS ============
-function TimersTab() {
-  const qc = useQueryClient();
-  const q = useQuery({ queryKey: ["admin-timers"], queryFn: async () => (await supabase.from("countdown_timers").select("*").order("created_at", { ascending: false })).data ?? [] });
-  const [editing, setEditing] = useState<any>(null);
-  const [open, setOpen] = useState(false);
-
-  async function save() {
-    const op = editing.id ? supabase.from("countdown_timers").update({ ...editing, id: undefined }).eq("id", editing.id) : supabase.from("countdown_timers").insert(editing);
-    const { error } = await op;
-    if (error) toast.error(error.message); else { toast.success("محفوظ"); setOpen(false); qc.invalidateQueries({ queryKey: ["admin-timers"] }); }
-  }
-  async function del(id: string) { await supabase.from("countdown_timers").delete().eq("id", id); qc.invalidateQueries({ queryKey: ["admin-timers"] }); }
-
-  return (
-    <div>
-      <div className="flex justify-between mb-4">
-        <h2 className="text-xl font-bold">مؤقتات العروض</h2>
-        <Button onClick={() => { setEditing({ title: "", subtitle: "", ends_at: new Date(Date.now() + 86400000).toISOString(), active: true }); setOpen(true); }} className="gradient-primary text-white gap-1"><Plus className="size-4" />جديد</Button>
-      </div>
-      <div className="space-y-3">
-        {(q.data ?? []).map((t: any) => (
-          <div key={t.id} className="card-surface rounded-2xl p-4 flex items-center justify-between">
-            <div><div className="font-bold">{t.title}</div><div className="text-xs text-muted-foreground">{formatLocaleDateTime(t.ends_at, "ar-EG")}</div></div>
-            <div className="flex gap-1">
-              {t.active ? <Badge>نشط</Badge> : <Badge variant="secondary">متوقف</Badge>}
-              <Button size="icon" variant="ghost" onClick={() => { setEditing(t); setOpen(true); }}><Edit className="size-4" /></Button>
-              <Button size="icon" variant="ghost" onClick={() => del(t.id)}><Trash2 className="size-4 text-destructive" /></Button>
-            </div>
-          </div>
-        ))}
-      </div>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>مؤقت عرض</DialogTitle></DialogHeader>
-          {editing && (
-            <div className="space-y-3">
-              <div><Label>العنوان</Label><Input value={editing.title} onChange={(e) => setEditing({ ...editing, title: e.target.value })} /></div>
-              <div><Label>وصف</Label><Input value={editing.subtitle ?? ""} onChange={(e) => setEditing({ ...editing, subtitle: e.target.value })} /></div>
-              <div><Label>ينتهي في</Label><DateTimeInput label="ينتهي في" value={editing.ends_at} onChange={(ends_at) => setEditing({ ...editing, ends_at })} /></div>
-              <label className="flex items-center gap-2"><Switch checked={editing.active} onCheckedChange={(v) => setEditing({ ...editing, active: v })} /> نشط</label>
-            </div>
-          )}
-          <DialogFooter><Button onClick={save} className="gradient-primary text-white">حفظ</Button></DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-}
-
-// ============ SETTINGS ============
-function SettingsTab() {
-  const qc = useQueryClient();
-  const q = useQuery({ queryKey: ["settings"], queryFn: async () => (await supabase.from("site_settings").select("*")).data ?? [] });
-  const [site, setSite] = useState<any>({});
-  const [banner, setBanner] = useState<any>({ enabled: true, title: "", subtitle: "" });
-  useEffect(() => {
-    const s = q.data?.find((x: any) => x.key === "site"); if (s) setSite(s.value);
-    const b = q.data?.find((x: any) => x.key === "checkout_banner"); if (b) setBanner(b.value);
-  }, [q.data]);
-
-  async function save() {
-    const { error } = await supabase.from("site_settings").update({ value: site, updated_at: new Date().toISOString() }).eq("key", "site");
-    if (error) toast.error(error.message); else toast.success("تم الحفظ");
-    qc.invalidateQueries({ queryKey: ["settings"] });
-  }
-  async function saveBanner() {
-    const { error } = await supabase.from("site_settings").upsert({ key: "checkout_banner", value: banner, updated_at: new Date().toISOString() });
-    if (error) toast.error(error.message); else toast.success("تم حفظ البانر");
-    qc.invalidateQueries({ queryKey: ["settings"] });
-    qc.invalidateQueries({ queryKey: ["checkout-banner"] });
-  }
-
-
-
-  return (
-    <div className="max-w-2xl space-y-6">
-      <div>
-        <h2 className="text-xl font-bold mb-4">إعدادات الموقع</h2>
-        <div className="card-surface rounded-2xl p-6 space-y-3">
-        <div><Label>اسم الموقع</Label><Input value={site.name ?? ""} onChange={(e) => setSite({ ...site, name: e.target.value })} /></div>
-        <div><Label>الوصف</Label><Input value={site.tagline ?? ""} onChange={(e) => setSite({ ...site, tagline: e.target.value })} /></div>
-        <div><Label>رقم WhatsApp</Label><Input value={site.whatsapp ?? ""} onChange={(e) => setSite({ ...site, whatsapp: e.target.value })} /></div>
-        <div><Label>البريد الإلكتروني</Label><Input value={site.email ?? ""} onChange={(e) => setSite({ ...site, email: e.target.value })} /></div>
-        <div><Label>نص الفوتر</Label><Input value={site.footer_text ?? ""} onChange={(e) => setSite({ ...site, footer_text: e.target.value })} /></div>
-        <Button onClick={save} className="gradient-primary text-white">حفظ</Button>
-        </div>
-      </div>
-
-      <div>
-        <h2 className="text-xl font-bold mb-4">بانر صفحة الشراء</h2>
-        <p className="text-xs text-muted-foreground mb-3">يظهر أعلى صفحة إتمام الشراء لجذب العميل وطمأنته.</p>
-        <div className="card-surface rounded-2xl p-6 space-y-3">
-          <label className="flex items-center gap-2">
-            <Switch checked={!!banner.enabled} onCheckedChange={(v) => setBanner({ ...banner, enabled: v })} />
-            تفعيل البانر
-          </label>
-          <div><Label>العنوان الرئيسي</Label><Input value={banner.title ?? ""} onChange={(e) => setBanner({ ...banner, title: e.target.value })} placeholder="🎉 اطلب الآن واستلم خلال دقائق" /></div>
-          <div><Label>النص الفرعي</Label><Textarea rows={2} value={banner.subtitle ?? ""} onChange={(e) => setBanner({ ...banner, subtitle: e.target.value })} placeholder="ضمان استرداد كامل • دعم مباشر • تفعيل فوري" /></div>
-          <Button onClick={saveBanner} className="gradient-primary text-white">حفظ البانر</Button>
-        </div>
-      </div>
-
-      <HeroBannerManager />
-
-      <HeroBannerManager device="mobile" />
-
-      <FooterManager />
-
-
-    </div>
-  );
-}
-
-// ============ COURSES ============
 function CoursesTab({ isAdmin }: { isAdmin: boolean }) {
   const qc = useQueryClient();
   const checkFn = useServerFn(checkDevice);
@@ -1998,7 +1137,6 @@ function LessonsManagerInner({ courseId, courseTitle }: { courseId: string; cour
     })();
   }, [open, lessons.data, courseId, qc]);
 
-
   async function removeLesson(l: any) {
     if (!confirm("حذف المحاضرة؟")) return;
     await supabase.storage.from("course-videos").remove([l.video_path]);
@@ -2122,7 +1260,6 @@ function LessonRow({
   );
 }
 
-
 function CourseAccessManager({ courseId, courseTitle }: { courseId: string; courseTitle: string }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -2203,134 +1340,3 @@ function CourseAccessManager({ courseId, courseTitle }: { courseId: string; cour
 }
 
 // ============ DEVICES ============
-function DevicesTab({ userId, employeeName }: { userId?: string; employeeName?: string | null } = {}) {
-  const scoped = !!userId;
-  const qc = useQueryClient();
-  const listFn = useServerFn(adminListDevices);
-  const delFn = useServerFn(adminDeleteDevice);
-  const resetFn = useServerFn(adminResetUserDevices);
-  const addFn = useServerFn(adminAddDevice);
-  const empFn = useServerFn(adminListEmployees);
-  const devices = useQuery({ queryKey: ["admin-devices"], queryFn: () => listFn() });
-  const employees = useQuery({ queryKey: ["admin-devices-employees"], queryFn: () => empFn(), enabled: !scoped });
-  const [newUserId, setNewUserId] = useState<string>(userId ?? "");
-  const [newFp, setNewFp] = useState<string>("");
-  const [newLabel, setNewLabel] = useState<string>("");
-  const [saving, setSaving] = useState(false);
-  const [filterUser, setFilterUser] = useState<string>("");
-
-
-  async function addDevice() {
-    if (!newUserId || newFp.trim().length < 6) { toast.error("اختر موظف وأدخل معرّف الجهاز"); return; }
-    setSaving(true);
-    try {
-      await addFn({ data: { user_id: newUserId, fingerprint: newFp.trim(), label: newLabel.trim() || undefined } });
-      toast.success("تم تفعيل الجهاز");
-      setNewFp(""); setNewLabel("");
-      qc.invalidateQueries({ queryKey: ["admin-devices"] });
-    } catch (e: any) { toast.error(e.message || "فشل"); }
-    finally { setSaving(false); }
-  }
-
-  const grouped = new Map<string, any[]>();
-  for (const d of (devices.data ?? []) as any[]) {
-    if (scoped && d.user_id !== userId) continue;
-    if (!grouped.has(d.user_id)) grouped.set(d.user_id, []);
-    grouped.get(d.user_id)!.push(d);
-  }
-  const entries = Array.from(grouped.entries()).filter(([uid]) => !filterUser || uid === filterUser);
-
-
-  return (
-    <div className="space-y-4">
-      <div className="card-surface rounded-2xl p-4 space-y-3">
-        <div className="font-bold text-sm">
-          {scoped ? `تفعيل جهاز جديد لـ ${employeeName || "هذا الموظف"}` : "تفعيل جهاز جديد لموظف"}
-        </div>
-        <p className="text-xs text-muted-foreground">اطلب من الموظف فتح صفحة الكورسات ونسخ معرّف الجهاز الظاهر له، ثم ألصقه هنا.</p>
-        <div className={scoped ? "grid grid-cols-1 gap-3" : "grid grid-cols-1 md:grid-cols-2 gap-3"}>
-          {!scoped && (
-            <div>
-              <Label className="text-xs">الموظف</Label>
-              <select value={newUserId} onChange={(e) => setNewUserId(e.target.value)} className="w-full h-10 rounded-xl border border-border/60 bg-background px-3 text-sm">
-                <option value="">— اختر —</option>
-                {(employees.data ?? []).map((u: any) => {
-                  const uid = u.id ?? u.user_id;
-                  return <option key={uid} value={uid}>{u.full_name || u.email}</option>;
-                })}
-              </select>
-            </div>
-          )}
-          <div>
-            <Label className="text-xs">اسم مختصر (اختياري)</Label>
-            <Input value={newLabel} onChange={(e) => setNewLabel(e.target.value)} placeholder="مثلاً: لابتوب المكتب" />
-          </div>
-        </div>
-        <div>
-          <Label className="text-xs">معرّف الجهاز (ID)</Label>
-          <Input value={newFp} onChange={(e) => setNewFp(e.target.value)} placeholder="الصق المعرّف الذي أرسله الموظف" className="font-mono text-xs" />
-        </div>
-        <Button onClick={addDevice} disabled={saving} className="gradient-primary text-white">
-          {saving ? <Loader2 className="size-4 animate-spin ml-1" /> : null}تفعيل الجهاز
-        </Button>
-      </div>
-
-      {!scoped && (
-        <div className="card-surface rounded-2xl p-4 space-y-2">
-          <Label className="text-xs">عرض أجهزة موظف محدد</Label>
-          <select value={filterUser} onChange={(e) => setFilterUser(e.target.value)} className="w-full h-10 rounded-xl border border-border/60 bg-background px-3 text-sm">
-            <option value="">— كل الموظفين —</option>
-            {Array.from(grouped.entries()).map(([uid, list]) => (
-              <option key={uid} value={uid}>{list[0].full_name || list[0].email} ({list.length})</option>
-            ))}
-          </select>
-        </div>
-      )}
-
-
-      {devices.isLoading ? <Loader2 className="animate-spin mx-auto" /> :
-        !entries.length ? <div className="card-surface p-8 text-center text-muted-foreground rounded-2xl">لا توجد أجهزة مسجّلة بعد</div> :
-        <div className="space-y-3">
-          {entries.map(([uid, list]) => (
-
-            <div key={uid} className="card-surface rounded-2xl p-4">
-              <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
-                <div>
-                  <div className="font-bold">{list[0].full_name || list[0].email}</div>
-                  <div className="text-xs text-muted-foreground">{list[0].email} • {list.length} جهاز</div>
-                </div>
-                <Button size="sm" variant="outline" onClick={async () => {
-                  if (!confirm("مسح كل أجهزة هذا الموظف؟")) return;
-                  await resetFn({ data: { user_id: uid } });
-                  qc.invalidateQueries({ queryKey: ["admin-devices"] });
-                }}><Repeat className="size-4 ml-1" />فك الربط بالكامل</Button>
-              </div>
-              <div className="space-y-2">
-                {list.map((d: any) => (
-                  <div key={d.id} className="flex items-center justify-between gap-2 p-2 rounded-xl border border-border/40">
-                    <div className="min-w-0 text-xs">
-                      <div className="font-mono truncate">{d.device_label || d.device_fingerprint.slice(0, 16) + "…"}</div>
-                      <div className="text-muted-foreground truncate">{d.user_agent?.slice(0, 80)}</div>
-                      <div className="text-muted-foreground">آخر ظهور: {formatLocaleDateTime(d.last_seen_at, "ar")}</div>
-                    </div>
-                    <Button size="sm" variant="outline" onClick={async () => {
-                      if (!confirm("حذف هذا الجهاز؟")) return;
-                      await delFn({ data: { device_id: d.id } });
-                      qc.invalidateQueries({ queryKey: ["admin-devices"] });
-                    }}><Trash2 className="size-4 text-destructive" /></Button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      }
-    </div>
-  );
-}
-
-function ChatNavBadge() {
-  const n = useChatBadge();
-  if (!n) return null;
-  return <span className="ms-auto min-w-5 h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-[11px] font-bold flex items-center justify-center">{n > 99 ? "99+" : n}</span>;
-}

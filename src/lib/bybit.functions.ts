@@ -5,7 +5,7 @@ import { accountInput, assertAccess, assertAdmin, requiredId, validateApiCreds }
 export const listBybitAccounts = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await assertAccess(context.supabase, context.userId);
+    await assertAdmin(context.supabase, context.userId);
     const mod = await import("./bybit.server");
     return { accounts: await mod.listAccounts() };
   });
@@ -93,7 +93,7 @@ export const getBybitOverview = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(accountInput)
   .handler(async ({ data, context }) => {
-    await assertAccess(context.supabase, context.userId);
+    await assertAdmin(context.supabase, context.userId);
     const mod = await import("./bybit.server");
     return mod.readOp(data.accountId, () => mod.fetchOverview(data.accountId), {} as any);
   });
@@ -110,8 +110,8 @@ export const getBybitCardTxns = createServerFn({ method: "POST" })
     pageSize: Math.min(Math.max(Number(input?.pageSize ?? 150) || 150, 10), 500),
   }))
   .handler(async ({ data, context }) => {
-    const role = await assertAccess(context.supabase, context.userId);
-    const hideReversed = false; void role;
+    const role = await assertAdmin(context.supabase, context.userId);
+    const hideReversed = false;
     const mod = await import("./bybit.server");
     // The visible table is a database archive, so reading it must not depend on
     // the account's current API key. A missing/restricted Bybit key previously
@@ -151,7 +151,7 @@ export const syncBybitCardTxns = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(accountInput)
   .handler(async ({ data, context }) => {
-    await assertAccess(context.supabase, context.userId);
+    await assertAdmin(context.supabase, context.userId);
     const mod = await import("./bybit.server");
     const res = await mod.readOp(data.accountId, () => mod.syncCardTxns(data.accountId), {
       added: 0,
@@ -166,7 +166,7 @@ export const getBybitOnChain = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(accountInput)
   .handler(async ({ data, context }) => {
-    await assertAccess(context.supabase, context.userId);
+    await assertAdmin(context.supabase, context.userId);
     const mod = await import("./bybit.server");
     return mod.readOp(data.accountId, () => mod.fetchOnChain(data.accountId), {
       deposits: [] as Awaited<ReturnType<typeof mod.fetchOnChain>>["deposits"],
@@ -177,7 +177,7 @@ export const getBybitOnChain = createServerFn({ method: "POST" })
 export const syncAllBybitCardTxns = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await assertAccess(context.supabase, context.userId);
+    await assertAdmin(context.supabase, context.userId);
     const mod = await import("./bybit.server");
     const errs = await import("./bybit-errors");
     try {
@@ -197,7 +197,7 @@ export const getBybitInternal = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(accountInput)
   .handler(async ({ data, context }) => {
-    await assertAccess(context.supabase, context.userId);
+    await assertAdmin(context.supabase, context.userId);
     const mod = await import("./bybit.server");
     return mod.readOp(data.accountId, () => mod.fetchInternal(data.accountId), {
       deposits: [] as Awaited<ReturnType<typeof mod.fetchInternal>>["deposits"],
@@ -219,7 +219,7 @@ export const getBybitP2P = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(accountInput)
   .handler(async ({ data, context }) => {
-    await assertAccess(context.supabase, context.userId);
+    await assertAdmin(context.supabase, context.userId);
     const mod = await import("./bybit.server");
     return mod.readOp(data.accountId, async () => ({ rows: await mod.fetchP2P(data.accountId) }), {
       rows: [] as Awaited<ReturnType<typeof mod.fetchP2P>>,
@@ -256,7 +256,7 @@ export const getBybitCards = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(accountInput)
   .handler(async ({ data, context }) => {
-    await assertAccess(context.supabase, context.userId);
+    await assertAdmin(context.supabase, context.userId);
     const mod = await import("./bybit.server");
     return mod.readOp(data.accountId, async () => ({ cards: await mod.fetchCards(data.accountId) }), {
       cards: [] as Awaited<ReturnType<typeof mod.fetchCards>>,
@@ -440,7 +440,7 @@ export const getBybitLedger = createServerFn({ method: "POST" })
     pageSize: Math.min(Math.max(Number(input?.pageSize ?? 50) || 50, 10), 200),
   }))
   .handler(async ({ data, context }) => {
-    const role = await assertAccess(context.supabase, context.userId);
+    const role = await assertAdmin(context.supabase, context.userId);
     // Reads enforce the effective cycle themselves. Cleanup runs in the deep
     // sync; never block a visible page on destructive maintenance work.
     const mod = await import("./bybit.server");
@@ -451,7 +451,7 @@ export const getBybitLedger = createServerFn({ method: "POST" })
 export const syncBybitLedger = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await assertAccess(context.supabase, context.userId);
+    await assertAdmin(context.supabase, context.userId);
     const mod = await import("./bybit.server");
     try {
       const recent = await mod.syncAllRecent();
@@ -467,7 +467,7 @@ export const syncBybitLedger = createServerFn({ method: "POST" })
 export const getBybitSpendTotals = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await assertAccess(context.supabase, context.userId);
+    await assertAdmin(context.supabase, context.userId);
     const mod = await import("./bybit.server");
     return mod.computeSpendAllAccounts();
   });
