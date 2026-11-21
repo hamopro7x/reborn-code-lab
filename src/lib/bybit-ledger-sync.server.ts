@@ -35,6 +35,21 @@ import { heavyOnce } from "./bybit-cache.server";
 import { syncAllCardTxns, fetchCards, storedCardTxns, persistCardTxns, fetchRecentCardRows, syncAccountRecent } from "./bybit-card-sync.server";
 import { upsertLedger, cardLedgerRow, assetLedgerRows, markHangVoided, type LedgerRow, type LedgerPage, type LedgerInsert } from "./bybit-ledger-write.server";
 
+async function mapLimit<T>(items: T[], limit: number, fn: (item: T) => Promise<void>) {
+  let next = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (next < items.length) {
+      const item = items[next++];
+      try {
+        await fn(item);
+      } catch {
+        /* حساب واحد يفشل لا يوقف الباقي */
+      }
+    }
+  });
+  await Promise.all(workers);
+}
+
 export async function syncAccountLedger(accountId: string): Promise<number> {
   const db = await admin();
   const rows: LedgerInsert[] = [];
