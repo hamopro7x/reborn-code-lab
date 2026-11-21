@@ -21,7 +21,7 @@ Existing independent admin modules remain in place: Bybit, Reports, Products, Wo
 ## Extracted domain UI
 
 - **Bybit:** account view, account summary, card editor/presentation, account information card, P2P table, transaction/asset tables, and visual primitives live under `src/components/admin/bybit/`. The parent `BybitTab.tsx` is now a smaller coordinator.
-- **Work & shifts:** employee/shift pickers are in `WorkSheetPickers.tsx`; P2P orders are in `P2POrdersTable.tsx`; manual entry, transaction detail, and manual card UI are in `EmployeeWorkTables.tsx`; shared number formatting is in `EmployeeWorkFormatters.ts`.
+- **Work & shifts:** employee/shift pickers are in `WorkSheetPickers.tsx`; P2P orders are in `P2POrdersTable.tsx`; manual entry and transaction details are in `EmployeeWorkTables.tsx`; external/internal transfer tables and their editable note cell are in `EmployeeTransfersTable.tsx`; Cairo date and number formatting are in `EmployeeWorkFormatters.ts`.
 - **Gmail:** account management, composer, thread view, activity log, notifications/realtime, and sender formatting are separated under `src/components/admin/mail/`.
 - **Checkout:** shared stepper, payment-method icon, and order summary live in `src/components/checkout/CheckoutPresentation.tsx`.
 - **Hero banners:** the banner renderer is in `src/components/site/HeroBannerView.tsx`; editor preview and field controls are in `src/components/admin/HeroBannerEditorUI.tsx`.
