@@ -91,6 +91,19 @@ export const getWorkTransfers = createServerFn({ method: "POST" })
     return mod.myShiftTransfers(context.userId, data.scope);
   });
 
+export const getWorkTransferPage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({
+    scope: z.enum(["external", "internal"]), direction: z.enum(["in", "out"]),
+    page: z.number().int().min(1).max(100_000), shiftId: z.string().uuid().optional(),
+  }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAccess(context.supabase, context.userId);
+    if (data.shiftId) await assertShiftView(context.supabase, context.userId, data.shiftId);
+    const mod = await import("./work.server");
+    return mod.workTransferPage(context.userId, data.scope, data.direction, data.page, data.shiftId);
+  });
+
 /** حفظ خانة «تحويل الي» في قسم السحب الداخلي (نافذة تعديل 10 دقائق). */
 export const saveTransferNote = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -167,6 +180,7 @@ export const setMyP2PShiftHidden = createServerFn({ method: "POST" })
 
 
 /* ------------------------- employee-scoped reads ------------------------- */
+const manualReadSchema = z.object({ card: z.enum(["wrong", "employee", "receive", "transfer"]).optional(), page: z.number().int().min(1).max(100_000).optional() });
 
 /** Only the caller's own open shift: no other employee's data is returned. */
 export const getMyWorkState = createServerFn({ method: "POST" })
@@ -234,7 +248,7 @@ export const setMyPin = createServerFn({ method: "POST" })
     if (await mod.pinIsSet(context.userId)) {
       return { ok: false as const, error: "لديك رمز بالفعل — تواصل مع الإدارة لتغييره" };
     }
-    return mod.savePin(context.userId, data.pin, context.userId);
+    return mod.savePin(context.userId, data.pin, context.userId, true);
   });
 
 /** PIN verification, then shift handover. */
@@ -277,36 +291,16 @@ export const assignWorkTxn = createServerFn({ method: "POST" })
     return { ok: true as const };
   });
 
-/* ------------------------- face enrollment (admin) ------------------------- */
-
-export const saveEmployeeFace = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ userId: z.string().uuid(), image: z.string().min(100).max(4_000_000) }).parse(input),
-  )
-  .handler(async ({ data, context }) => {
-    await assertAdmin(context.supabase, context.userId);
-    const mod = await import("./work.server");
-    return mod.saveFaceEnroll(data.userId, data.image, context.userId);
-  });
-
-export const listEmployeeFaces = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    await assertAdmin(context.supabase, context.userId);
-    const mod = await import("./work.server");
-    return mod.faceEnrollList();
-  });
-
 /* ------------- manual rows: «المعاملات الغلط» / «خاص بالموظف» ------------- */
 
 export const getMyManualTxns = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator((input: unknown) => manualReadSchema.parse(input ?? {}))
+  .handler(async ({ context, data }) => {
     await assertAccess(context.supabase, context.userId);
     const mod = await import("./work.server");
     // بيانات الشفت الحالي فقط — الشفتات المنتهية تبقى محفوظة كسجل تاريخي.
-    return mod.listMyManualTxns(context.userId);
+    return mod.listMyManualTxns(context.userId, data);
   });
 
 export const addMyManualTxn = createServerFn({ method: "POST" })
@@ -424,14 +418,14 @@ export const getEmployeeShiftTxns = createServerFn({ method: "POST" })
 
 export const getEmployeeManualTxns = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => empSchema.parse(input))
+  .inputValidator((input: unknown) => empSchema.extend(manualReadSchema.shape).parse(input))
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
     const mod = await import("./work.server");
     // الأدمن يرى كل السجلات اليدوية للموظف (كل الشفتات + الصفوف بلا شفت).
     // كان العرض مقيدًا بالشفت المفتوح فقط، فتختفي السجلات عند الأدمن بمجرد
     // إغلاق الشفت أو تسجيلها بدون شفت.
-    return mod.listManualTxns(data.userId);
+    return mod.listManualTxns(data.userId, null, data);
   });
 
 /* ------------------ admin: ONE employee + ONE shift (history) ------------------
@@ -482,13 +476,32 @@ export const getShiftTxns = createServerFn({ method: "POST" })
     return mod.shiftRows(data.shiftId, data.page ?? 1, 50);
   });
 
+export const getWorkSheetSummary = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({
+    shiftId: z.string().uuid().optional(), userId: z.string().uuid().optional(),
+  }).parse(input ?? {}))
+  .handler(async ({ data, context }) => {
+    await assertAccess(context.supabase, context.userId);
+    const mod = await import("./work.server");
+    if (data.shiftId) {
+      await assertShiftView(context.supabase, context.userId, data.shiftId);
+      return mod.workSheetSummary(data.shiftId);
+    }
+    if (data.userId) await assertAdmin(context.supabase, context.userId);
+    const state = data.userId
+      ? await mod.adminEmployeeWorkState(data.userId)
+      : await mod.myWorkState(context.userId);
+    return state.holding ? mod.workSheetSummary(state.shiftId) : { count: 0, amount: 0, egp: 0, entered: 0, externalNotes: 0 };
+  });
+
 export const getShiftManualTxns = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => shiftSchema.parse(input))
+  .inputValidator((input: unknown) => shiftSchema.extend(manualReadSchema.shape).parse(input))
   .handler(async ({ data, context }) => {
     await assertShiftView(context.supabase, context.userId, data.shiftId);
     const mod = await import("./work.server");
-    return mod.shiftManualTxns(data.shiftId);
+    return mod.shiftManualTxns(data.shiftId, data);
   });
 
 export const getShiftTransfers = createServerFn({ method: "POST" })

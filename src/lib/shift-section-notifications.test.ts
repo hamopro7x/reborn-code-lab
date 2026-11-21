@@ -10,6 +10,9 @@ const input = {
   external: [{ note: "تحويل للعميل" }, { note: null }],
 };
 describe("unreviewed shift section notifications", () => {
+  it("uses the complete server count, not just the visible page", () => {
+    expect(shiftSectionNotifications({ ...input, transactionEntryCount: 1401 }).all).toBe(1402);
+  });
   it("counts employee writing in its own section, including saved zero, but not empty or provider-only rows", () => {
     expect(shiftSectionNotifications(input)).toEqual({ all: 3, employee: 1, wrong: 1, receive: 1, transfer: 1, ext: 1, int: 0, p2p: 0 });
   });

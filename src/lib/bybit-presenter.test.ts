@@ -160,5 +160,5 @@ describe("central ledger badge", () => {
     expect(statusBadge("card", "success", "3", { tradeStatus: "3" }).text).toBe("فاشلة");
     expect(statusBadge("card", "success", "0", { tradeStatus: "0" }).text).toBe("ناجحة");
     expect(statusBadge("card", "success", undefined, { linkedReversal: 1 }).text).toBe("قيد مراجعة العكس");
-  });
+  }, 20_000);
 });

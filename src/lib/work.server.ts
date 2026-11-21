@@ -2,14 +2,17 @@
  * «جدول بيانات الشغل» — server layer.
  *
  * This module ONLY reads the original transaction data (public.bybit_ledger) and
- * writes to its own tables (work_shifts / work_txn_assignments / face enroll /
- * webauthn credentials). It never modifies a transaction's original fields.
+ * writes only staff shift/assignment/input tables. It never modifies a
+ * transaction's original fields. Historical biometric records remain untouched.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { isPastLastPage, pageRange } from "./pagination";
 import { enforceRetentionSafe } from "./retention.server";
 import { CARD_READ_FILTER } from "./bybit-confirmation";
 import { readP2PLinks, P2P_SCHEMA_MESSAGE } from "./p2p-links.server";
+import { readPages } from "./read-pages.server";
+import { addWorkSummary, emptyWorkSummary } from "./work-summary";
+import { cairoCalendarRange } from "./cairo-calendar";
 
 type DB = SupabaseClient<any, any, any>;
 
@@ -21,18 +24,6 @@ async function admin(): Promise<DB> {
 const P2P_KINDS = ["p2p_buy", "p2p_sell"];
 
 /* ------------------------------ helpers ------------------------------ */
-
-const b64url = (bytes: Uint8Array) =>
-  btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-
-const fromB64url = (s: string) => {
-  const b = s.replace(/-/g, "+").replace(/_/g, "/");
-  const pad = b.length % 4 ? "=".repeat(4 - (b.length % 4)) : "";
-  const raw = atob(b + pad);
-  const out = new Uint8Array(raw.length);
-  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
-  return out;
-};
 
 /** Day key in Cairo time, so the daily/weekly report matches the working day. */
 export function dayKey(ms: number): string {
@@ -121,12 +112,13 @@ export async function listShifts(limit = 60) {
  */
 export async function productivity(sinceMs: number) {
   const db = await admin();
-  const { data } = await db
+  const q = db
     .from("work_txn_assignments")
-    .select("user_id,occurred_at")
+    .select("id,user_id,occurred_at")
     .gte("occurred_at", new Date(sinceMs).toISOString())
-    .limit(100_000);
-  const rows = data ?? [];
+    .order("id");
+  const rows: any[] = [];
+  await readPages<any>((from, to) => q.range(from, to), (page) => rows.push(...page));
   const names = await namesFor(db, rows.map((r: any) => r.user_id));
 
   const byUser = new Map<string, { days: Map<string, number>; weeks: Map<string, number>; total: number }>();
@@ -184,6 +176,30 @@ export type WorkRow = {
  */
 export const SUCCESS_STATUSES = ["success", "ناجحة", "اكتملت"] as const;
 
+/** Compact totals over the complete shift; provider detail stays on the paged row endpoint. */
+export async function workSheetSummary(shiftId: string) {
+  const db = await admin();
+  const summary = emptyWorkSummary();
+  await readPages<any>((from, to) => db.from("work_txn_assignments")
+    .select("id,bybit_ledger!inner(amount,work_txn_entries(egp,quantity))")
+    .eq("shift_id", shiftId)
+    .in("bybit_ledger.kind", ["card", "refund"])
+    .in("bybit_ledger.status", SUCCESS_STATUSES as unknown as string[])
+    .not("bybit_ledger.detail", "cs", '{"side":"2"}')
+    .not("bybit_ledger.detail", "cs", '{"side":2}')
+    .or(CARD_READ_FILTER, { referencedTable: "bybit_ledger" })
+    .order("id", { ascending: true }).range(from, to),
+    (rows) => rows.forEach((row) => addWorkSummary(summary, row.bybit_ledger ?? {})));
+  const notes = await db.from("work_txn_assignments")
+    .select("id,bybit_ledger!inner(work_transfer_notes!inner(ledger_id))", { count: "exact", head: true })
+    .eq("shift_id", shiftId).in("bybit_ledger.kind", ["deposit", "withdraw"])
+    .in("bybit_ledger.status", SUCCESS_STATUSES as unknown as string[])
+    .not("bybit_ledger.work_transfer_notes.note", "is", null)
+    .neq("bybit_ledger.work_transfer_notes.note", "");
+  if (notes.error) throw new Error(notes.error.message);
+  return { ...summary, externalNotes: Number(notes.count ?? 0) };
+}
+
 export async function workTable(opts: {
   userId?: string;
   shiftId?: string;
@@ -193,6 +209,9 @@ export async function workTable(opts: {
   pageSize?: number;
   /** Employee work data layer: keep successful transactions only. */
   successOnly?: boolean;
+  cardOnly?: boolean;
+  kinds?: string[];
+  direction?: "in" | "out";
 }) {
   const db = await admin();
   const pageSize = Math.min(Math.max(opts.pageSize ?? 50, 10), 200);
@@ -205,21 +224,24 @@ export async function workTable(opts: {
     .not("bybit_ledger.detail", "cs", '{"side":"2"}')
     .not("bybit_ledger.detail", "cs", '{"side":2}')
     .or(`kind.not.in.(card,refund),${CARD_READ_FILTER}`, { referencedTable: "bybit_ledger" })
-    .order("occurred_at", { ascending: false });
+    .order("occurred_at", { ascending: false })
+    .order("id", { ascending: false });
 
   if (opts.successOnly) q = q.in("bybit_ledger.status", SUCCESS_STATUSES as unknown as string[]);
+  if (opts.cardOnly) q = q.in("bybit_ledger.kind", ["card", "refund"]);
+  if (opts.kinds) q = q.in("bybit_ledger.kind", opts.kinds);
+  if (opts.direction) q = q.eq("bybit_ledger.direction", opts.direction);
 
 
   if (opts.userId) q = q.eq("user_id", opts.userId);
   if (opts.shiftId) q = q.eq("shift_id", opts.shiftId);
   if (opts.day) {
-    // Cairo day boundaries (UTC+3, no DST changes applied by Bybit data).
-    q = q.gte("occurred_at", `${opts.day}T00:00:00+03:00`).lt("occurred_at", `${opts.day}T23:59:59.999+03:00`);
+    const bounds = cairoCalendarRange(opts.day);
+    q = q.gte("occurred_at", bounds.start).lt("occurred_at", bounds.end);
   }
   if (opts.week) {
-    const start = new Date(`${opts.week}T00:00:00+03:00`);
-    const end = new Date(start.getTime() + 7 * 86400_000);
-    q = q.gte("occurred_at", start.toISOString()).lt("occurred_at", end.toISOString());
+    const bounds = cairoCalendarRange(opts.week, 7);
+    q = q.gte("occurred_at", bounds.start).lt("occurred_at", bounds.end);
   }
 
   const res = await q.range(from, from + pageSize - 1);
@@ -234,7 +256,7 @@ export async function workTable(opts: {
   }
   if (error) throw new Error(error.message);
 
-  const rows = data ?? [];
+  const rows: any[] = data ?? [];
   const [names, accounts] = await Promise.all([
     namesFor(db, rows.map((r: any) => r.user_id)),
     accountNames(db),
@@ -647,578 +669,6 @@ export async function shiftOptions(limit = 40) {
 }
 
 
-/* --------------------------- face enrollment --------------------------- */
-
-const FACE_BUCKET = "employee-faces";
-
-export async function saveFaceEnroll(userId: string, dataUrl: string, byUserId: string) {
-  const db = await admin();
-  const bytes = dataUrlToBytes(dataUrl);
-  const path = `${userId}.jpg`;
-  const up = await db.storage.from(FACE_BUCKET).upload(path, bytes, { contentType: "image/jpeg", upsert: true });
-  if (up.error) throw new Error(up.error.message);
-  const { error } = await db
-    .from("employee_face_enroll")
-    .upsert({ user_id: userId, image_path: path, created_by: byUserId, updated_at: new Date().toISOString() });
-  if (error) throw new Error(error.message);
-  return { ok: true as const };
-}
-
-export async function faceEnrollList() {
-  const db = await admin();
-  const { data } = await db.from("employee_face_enroll").select("user_id,updated_at");
-  return (data ?? []).map((r: any) => ({ userId: r.user_id, updatedAt: new Date(r.updated_at).getTime() }));
-}
-
-/** Does this employee already have face data enrolled? */
-export async function faceEnrolled(userId: string): Promise<boolean> {
-  const db = await admin();
-  const { data } = await db
-    .from("employee_face_enroll")
-    .select("user_id")
-    .eq("user_id", userId)
-    .maybeSingle();
-  return !!data?.user_id;
-}
-
-/**
- * First-time self enrollment from MULTIPLE frames.
- * Every frame is quality-checked; a single blurred frame is tolerated as long
- * as enough frames show one clear face. The sharpest accepted frame becomes the
- * stored reference, bound to this employee's account only.
- */
-export async function enrollMyFace(userId: string, frames: string[]) {
-  if (await faceEnrolled(userId)) {
-    return { ok: false as const, error: "بيانات الوجه مسجّلة بالفعل لهذا الحساب" };
-  }
-  const list = frames.slice(0, 4);
-  if (!list.length) return { ok: false as const, error: "لم يتم التقاط أي صورة" };
-
-  const checks = await Promise.all(list.map((f) => faceQualityCheck(f)));
-  const good = list.filter((_, i) => checks[i]!.ok);
-  if (good.length === 0) {
-    const reason = checks.find((c) => c.reason)?.reason;
-    return { ok: false as const, error: reason ?? "تعذّر تسجيل الوجه" };
-  }
-  // Need more than one usable frame when several were sent, so enrollment never
-  // rests on a single lucky screenshot.
-  if (list.length >= 3 && good.length < 2) {
-    return {
-      ok: false as const,
-      error: "تأكد من وضوح الوجه بالكامل وجودة الإضاءة ثم حاول مرة أخرى",
-    };
-  }
-  await saveFaceEnroll(userId, good[0]!, userId);
-  return { ok: true as const };
-}
-
-/**
- * Vision provider config. Works with any OpenAI-compatible chat/completions API,
- * so the same code runs on Lovable AI or on a self-hosted server with your own
- * provider key (`VISION_API_KEY` + `VISION_API_URL` + `VISION_MODEL`).
- */
-function visionConfig() {
-  const own = process.env["VISION_API_KEY"] ?? "";
-  const key = own || process.env["LOVABLE_API_KEY"] || "";
-  // Google AI Studio keys start with "AIza" (classic) or "AQ." (new auth keys):
-  // route them to Gemini's OpenAI-compatible endpoint automatically.
-  const isGemini = own.startsWith("AIza") || own.startsWith("AQ.");
-  const url =
-    process.env["VISION_API_URL"] ??
-    (isGemini
-      ? "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
-      : own
-        ? "https://api.openai.com/v1/chat/completions"
-        : "https://ai.gateway.lovable.dev/v1/chat/completions");
-  const forced = process.env["VISION_MODEL"];
-  const models = forced
-    ? [forced]
-    : isGemini
-      ? ["gemini-flash-latest"]
-      : own
-        ? ["gpt-4o-mini"]
-        : ["openai/gpt-6-astra"];
-  return { key, url, model: models[0]!, models };
-}
-
-/** AI check that the frame really contains one clear, unobstructed live face. */
-async function faceQualityCheck(dataUrl: string): Promise<{ ok: boolean; reason?: string }> {
-  const { key, url, model } = visionConfig();
-  // Without a provider we trust the on-device face detection used to capture
-  // the frame instead of refusing enrollment.
-  if (!key) return { ok: true };
-
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
-    body: JSON.stringify({
-      model,
-      messages: [
-        {
-          role: "system",
-          content:
-            'You are a face enrollment quality service. Reply with strict JSON only: {"face":true|false,"clear":true|false,"reason":"short"}. "face" is true only if exactly one real human face is visible (not a photo of a screen). "clear" is true if the face is unobstructed (no mask, no covering) and recognizable: tolerate slight motion blur, moderate head tilt or rotation, and imperfect lighting as long as the facial features are identifiable.',
-        },
-        {
-          role: "user",
-          content: [
-            { type: "text", text: "Evaluate this camera frame for face enrollment." },
-            { type: "image_url", image_url: { url: dataUrl } },
-          ],
-        },
-      ],
-    }),
-  });
-  // Provider unreachable / rejected: do not block enrollment on infrastructure.
-  if (!res.ok) return { ok: true };
-
-  const json: any = await res.json();
-  const text = String(json?.choices?.[0]?.message?.content ?? "");
-  const m = text.match(/\{[\s\S]*\}/);
-  try {
-    const parsed = m ? JSON.parse(m[0]) : null;
-    if (parsed?.face !== true) return { ok: false, reason: "لم يتم اكتشاف وجه داخل إطار التحقق" };
-    if (parsed?.clear !== true)
-      return { ok: false, reason: "تأكد من ظهور وجهك بالكامل وبإضاءة جيدة" };
-    return { ok: true };
-  } catch {
-    return { ok: false, reason: "تعذّر تحليل نتيجة التحقق" };
-  }
-}
-
-
-function dataUrlToBytes(dataUrl: string): Uint8Array {
-  const b64 = dataUrl.includes(",") ? dataUrl.split(",")[1]! : dataUrl;
-  const raw = atob(b64);
-  const out = new Uint8Array(raw.length);
-  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
-  return out;
-}
-
-const bytesToB64 = (bytes: Uint8Array) => {
-  let s = "";
-  for (const b of bytes) s += String.fromCharCode(b);
-  return btoa(s);
-};
-
-/**
- * Face verification against THIS employee's enrolled reference only.
- * Several live frames are compared; a single blurred frame cannot fail the
- * attempt, but the identity threshold itself is not relaxed.
- */
-export async function verifyFace(
-  userId: string,
-  liveFrames: string | string[],
-): Promise<{ ok: boolean; reason?: string }> {
-  // إطار واحد فقط: كان إرسال أكثر من صورة يضاعف زمن الانتظار بلا فائدة.
-  const frames = (Array.isArray(liveFrames) ? liveFrames : [liveFrames]).slice(0, 1);
-
-  if (!frames.length) return { ok: false, reason: "لم يتم التقاط أي صورة" };
-
-  const db = await admin();
-  const { data: enroll } = await db
-    .from("employee_face_enroll")
-    .select("image_path")
-    .eq("user_id", userId)
-    .maybeSingle();
-  if (!enroll?.image_path) return { ok: false, reason: "لا توجد صورة مرجعية مسجّلة لهذا الموظف" };
-
-  // Identity MUST be proven. Without a working vision provider we cannot tell
-  // one employee from another, so the handover is refused instead of accepted.
-  if (!visionConfig().key)
-    return { ok: false, reason: "خدمة التحقق من الوجه غير مهيأة — أبلغ الإدارة" };
-
-  const dl = await db.storage.from(FACE_BUCKET).download(enroll.image_path);
-  if (dl.error || !dl.data)
-    return { ok: false, reason: "تعذّر قراءة الصورة المرجعية — أبلغ الإدارة" };
-  const refUrl = `data:image/jpeg;base64,${bytesToB64(new Uint8Array(await dl.data.arrayBuffer()))}`;
-
-  /**
-   * Frames are compared ONE AT A TIME (never in parallel): firing three image
-   * requests at once is what triggered the provider rate limit (429) and made a
-   * legitimate attempt fail with "الخدمة مشغولة". A decisive answer also stops
-   * the loop early, so the usual attempt costs a single request.
-   */
-  let match = 0;
-  let mismatch = 0;
-  let lastError: string | undefined;
-  for (const f of frames) {
-    const r = await compareOnePair(refUrl, f);
-    if (!r.decided) {
-      lastError = r.error ?? lastError;
-      continue;
-    }
-    if (r.same && r.confidence >= 0.6) {
-      match++;
-      break; // a confident positive is enough
-    }
-    if (!r.same) {
-      mismatch++;
-      break; // a confident mismatch is final — never keep trying other frames
-    }
-  }
-
-  if (mismatch > 0) return { ok: false, reason: "الوجه لا يطابق الصورة المسجّلة لهذا الحساب" };
-  if (match >= 1) return { ok: true };
-  return { ok: false, reason: lastError ?? "تعذّر التحقق من الوجه، حاول مرة أخرى" };
-}
-
-
-
-async function compareOnePair(
-  refUrl: string,
-  liveUrl: string,
-): Promise<{ decided: boolean; same: boolean; confidence: number; error?: string }> {
-  const { key, url, models } = visionConfig();
-  const model = models[0]!;
-  if (!key) return { decided: false, same: false, confidence: 0, error: "مفتاح الرؤية مفقود" };
-  // One bounded request only. Model fallbacks and retries made one verification
-  // wait for several provider timeouts in sequence.
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 7000);
-
-  try {
-    const res = await fetch(url, {
-      method: "POST",
-      signal: ctrl.signal,
-      headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
-      body: JSON.stringify({
-        model,
-        messages: [
-          {
-            role: "system",
-            content:
-              'You are a face verification service. Compare the two photos of possibly different people. Reply with strict JSON only: {"same":true|false,"confidence":0-1}. Judge identity from facial structure; ignore mirroring, head tilt/rotation, slight motion blur, lighting and background differences. Set a high confidence only when you are sure.',
-          },
-          {
-            role: "user",
-            content: [
-              { type: "text", text: "Photo 1 = enrolled reference. Photo 2 = live camera frame." },
-              { type: "image_url", image_url: { url: refUrl } },
-              { type: "image_url", image_url: { url: liveUrl } },
-            ],
-          },
-        ],
-      }),
-    });
-    if (!res.ok) {
-      const body = (await res.text().catch(() => "")).slice(0, 200);
-      const error =
-        res.status === 401 || res.status === 403
-          ? "مفتاح الخدمة غير صالح — أبلغ الإدارة"
-          : res.status === 429
-            ? "انتهت حصة خدمة التحقق لهذا المفتاح — أبلغ الإدارة"
-            : `خطأ ${res.status} من خدمة الرؤية${body ? ` — ${body}` : ""}`;
-      return { decided: false, same: false, confidence: 0, error };
-    }
-    const json: any = await res.json();
-    const text = String(json?.choices?.[0]?.message?.content ?? "");
-    const m = text.match(/\{[\s\S]*\}/);
-    if (!m) {
-      return { decided: false, same: false, confidence: 0, error: "رد غير مفهوم من خدمة الرؤية" };
-    }
-    const parsed = JSON.parse(m[0]);
-    return {
-      decided: typeof parsed?.same === "boolean",
-      same: parsed?.same === true,
-      confidence: Number(parsed?.confidence ?? 0),
-    };
-  } catch (e: any) {
-    const aborted = e?.name === "AbortError";
-    return {
-      decided: false,
-      same: false,
-      confidence: 0,
-      error: aborted
-        ? "خدمة التحقق تأخرت في الرد — حاول مرة أخرى"
-        : String(e?.message ?? e).slice(0, 160),
-    };
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-
-/* ------------------- dynamic movement challenge ------------------- */
-
-export type FaceDir = "right" | "left";
-
-/**
- * Issues a RANDOM movement sequence, stored server-side. The client cannot
- * choose the order, so a replayed recording of an old attempt fails.
- */
-export async function startFaceChallenge(userId: string) {
-  const db = await admin();
-  // A SINGLE random movement per attempt (kept simple for employees).
-  const pool: FaceDir[][] = [["right"], ["left"]];
-  const steps = pool[Math.floor(Math.random() * pool.length)]!;
-  await db.from("work_auth_challenges").delete().eq("user_id", userId).eq("purpose", "liveness");
-  const { error } = await db.from("work_auth_challenges").insert({
-    user_id: userId,
-    purpose: "liveness",
-    challenge: steps.join(","),
-    expires_at: new Date(Date.now() + 3 * 60_000).toISOString(),
-  });
-  if (error) throw new Error(error.message);
-  return { steps };
-}
-
-/** Reads + burns the pending challenge and checks the client followed it. */
-export async function consumeFaceChallenge(
-  userId: string,
-  steps: FaceDir[],
-): Promise<{ ok: boolean; reason?: string }> {
-  const db = await admin();
-  const { data } = await db
-    .from("work_auth_challenges")
-    .select("challenge,expires_at")
-    .eq("user_id", userId)
-    .eq("purpose", "liveness")
-    .maybeSingle();
-  await db.from("work_auth_challenges").delete().eq("user_id", userId).eq("purpose", "liveness");
-  if (!data?.challenge) return { ok: false, reason: "انتهت جلسة التحقق — ابدأ من جديد" };
-  if (new Date(data.expires_at).getTime() < Date.now())
-    return { ok: false, reason: "انتهت مدة التحقق — حاول مرة أخرى" };
-  if (String(data.challenge) !== steps.join(","))
-    return { ok: false, reason: "لم يتم تنفيذ الحركة المطلوبة بالترتيب — حاول مرة أخرى" };
-  return { ok: true };
-}
-
-async function askVision(system: string, text: string, images: string[]) {
-  const { key, url, model } = visionConfig();
-  if (!key) return null;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: "system", content: system },
-        {
-          role: "user",
-          content: [
-            { type: "text", text },
-            ...images.map((url) => ({ type: "image_url", image_url: { url } })),
-          ],
-        },
-      ],
-    }),
-  });
-  if (!res.ok) return null;
-  const json: any = await res.json();
-  const raw = String(json?.choices?.[0]?.message?.content ?? "");
-  const m = raw.match(/\{[\s\S]*\}/);
-  if (!m) return null;
-  try {
-    return JSON.parse(m[0]) as any;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Open-eye verification on the frontal frames.
- *
- * The precise, per-frame eye measurement now happens on the device (geometric
- * landmarks, smoothed over time — see `src/lib/face-mesh.ts`), so this server
- * pass is a deliberately TOLERANT backstop: it only rejects when the model is
- * confident the eyes are fully closed in EVERY frame. Head angle, motion,
- * lighting, low camera quality and a natural blink never fail it.
- */
-export async function checkEyesOpen(frames: string[]): Promise<{ ok: boolean; reason?: string }> {
-  const list = frames.slice(0, 3);
-  if (!list.length) return { ok: false, reason: "لم يتم التقاط أي صورة" };
-  const parsed = await askVision(
-    'You check whether a person is awake with eyes open. Reply with strict JSON only: {"allFramesFullyClosed":true|false,"reason":"short"}. Set allFramesFullyClosed to true ONLY when you are highly confident the eyelids are completely shut in every single frame (a sleeping person or a blink held across all frames). If the eyes are open, partly open, squinting, hidden behind glasses/reflections, the head is turned, the frame is blurry, dark, low quality, or you are unsure — set it to false.',
-    "Are the eyes fully closed in all of these camera frames?",
-    list,
-  );
-  // Undecided / gateway failure must not block a legitimate employee.
-  if (!parsed) return { ok: true };
-  if (parsed.allFramesFullyClosed === true)
-    return { ok: false, reason: "افتح عينيك وانظر إلى الكاميرا ثم حاول مرة أخرى" };
-  return { ok: true };
-}
-
-/**
- * Active liveness following the SERVER-ISSUED movement sequence. All frames come
- * from the same preview crop, so the analysed movement is exactly the movement
- * the employee saw on screen.
- */
-export async function checkHeadTurnLiveness(input: {
-  center: string;
-  steps: Array<{ dir: FaceDir; image: string }>;
-  back?: string;
-}): Promise<{ ok: boolean; reason?: string }> {
-  const steps = input.steps.slice(0, 4);
-  if (steps.length < 1) return { ok: false, reason: "لم يتم رصد الحركة — حاول مرة أخرى" };
-  const images = [input.center, ...steps.map((s) => s.image), ...(input.back ? [input.back] : [])];
-  const expected = steps
-    .map((s, i) => `frame ${i + 2}: head turned to the person's own ${s.dir}`)
-    .join("; ");
-
-  /**
-   * The head turns are already measured geometrically ON DEVICE (Face
-   * Landmarker yaw), and every step frame is captured at the exact moment the
-   * requested yaw was reached. So this server pass keeps the real security
-   * checks (live person, same person) but is TOLERANT about the direction: it
-   * only rejects when the model is confident the frames show NO turn at all or
-   * a clearly opposite turn — a single blurry / small-angle shot never fails a
-   * movement that the landmarker detected correctly.
-   */
-  const parsed = await askVision(
-    'You are a face liveness service. Frame 1 is the person looking forward; the following frames were captured while the person turned their head. Reply with strict JSON only: {"live":true|false,"samePerson":true|false,"clearlyWrong":true|false,"reason":"short"}. Set "clearlyWrong" to true ONLY if you are highly confident that the frames show no head movement at all compared with frame 1, or every turn goes to the opposite side of what was requested. Small turns, motion blur, low light, partial faces or uncertainty => clearlyWrong is false. "live" is false only if the frames look like a printed photo, a screen replay, or identical static images.',
-    `Expected movement: ${expected}. Evaluate the frames in order.`,
-    images,
-  );
-  // Gateway failure must not block a legitimate employee whose device already
-  // proved the movement geometrically.
-  if (!parsed) return { ok: true };
-  if (parsed.live === false)
-    return { ok: false, reason: "تم رفض المحاولة — يجب أن يكون الوجه حقيقيًا أمام الكاميرا" };
-  if (parsed.samePerson === false) return { ok: false, reason: "تعذّر التحقق من الوجه، حاول مرة أخرى" };
-  if (parsed.clearlyWrong === true)
-    return { ok: false, reason: "لم يتم رصد الحركة المطلوبة — اتبع السهم ببطء" };
-  return { ok: true };
-}
-
-
-/* ------------------- device biometric (WebAuthn) ------------------- */
-
-export async function newChallenge(userId: string, purpose: "register" | "auth") {
-  const db = await admin();
-  const bytes = crypto.getRandomValues(new Uint8Array(32));
-  const challenge = b64url(bytes);
-  await db.from("work_auth_challenges").delete().eq("user_id", userId).eq("purpose", purpose);
-  const { error } = await db.from("work_auth_challenges").insert({
-    user_id: userId,
-    purpose,
-    challenge,
-    expires_at: new Date(Date.now() + 5 * 60_000).toISOString(),
-  });
-  if (error) throw new Error(error.message);
-  return { challenge };
-}
-
-export async function registerCredential(
-  userId: string,
-  input: { credentialId: string; publicKey: string; label?: string },
-) {
-  const db = await admin();
-  const { error } = await db.from("webauthn_credentials").upsert(
-    {
-      user_id: userId,
-      credential_id: input.credentialId,
-      public_key: input.publicKey,
-      label: input.label ?? null,
-    },
-    { onConflict: "credential_id" },
-  );
-  if (error) throw new Error(error.message);
-  return { ok: true as const };
-}
-
-export async function listCredentials(userId: string) {
-  const db = await admin();
-  const { data } = await db.from("webauthn_credentials").select("credential_id,label,created_at").eq("user_id", userId);
-  return (data ?? []).map((c: any) => ({ id: c.credential_id, label: c.label, createdAt: new Date(c.created_at).getTime() }));
-}
-
-/** ASN.1 DER (r,s) signature -> raw 64-byte form WebCrypto expects. */
-function derToRaw(der: Uint8Array): Uint8Array {
-  let i = 2;
-  if (der[1]! & 0x80) i = 2 + (der[1]! & 0x7f);
-  const readInt = () => {
-    i++; // 0x02
-    const len = der[i++]!;
-    let v = der.slice(i, i + len);
-    i += len;
-    while (v.length > 32 && v[0] === 0) v = v.slice(1);
-    const out = new Uint8Array(32);
-    out.set(v, 32 - v.length);
-    return out;
-  };
-  const r = readInt();
-  const s = readInt();
-  const raw = new Uint8Array(64);
-  raw.set(r, 0);
-  raw.set(s, 32);
-  return raw;
-}
-
-/**
- * Verifies the device biometric assertion (Face ID / Touch ID / Android
- * Biometric). No biometric data is stored — only the device public key.
- */
-export async function verifyDeviceAssertion(
-  userId: string,
-  input: { credentialId: string; clientDataJSON: string; authenticatorData: string; signature: string },
-): Promise<{ ok: boolean; reason?: string }> {
-  const db = await admin();
-
-  const { data: cred } = await db
-    .from("webauthn_credentials")
-    .select("public_key,user_id")
-    .eq("credential_id", input.credentialId)
-    .maybeSingle();
-  if (!cred || cred.user_id !== userId) return { ok: false, reason: "جهاز غير مسجّل لهذا الحساب" };
-
-  const { data: ch } = await db
-    .from("work_auth_challenges")
-    .select("challenge,expires_at")
-    .eq("user_id", userId)
-    .eq("purpose", "auth")
-    .maybeSingle();
-  if (!ch || new Date(ch.expires_at).getTime() < Date.now()) return { ok: false, reason: "انتهت صلاحية طلب المصادقة" };
-
-  let clientData: any;
-  try {
-    clientData = JSON.parse(new TextDecoder().decode(fromB64url(input.clientDataJSON)));
-  } catch {
-    return { ok: false, reason: "بيانات مصادقة غير صالحة" };
-  }
-  if (clientData?.type !== "webauthn.get" || clientData?.challenge !== ch.challenge) {
-    return { ok: false, reason: "تحدي المصادقة غير مطابق" };
-  }
-
-  const authData = fromB64url(input.authenticatorData);
-  const clientHash = new Uint8Array(
-    await crypto.subtle.digest("SHA-256", fromB64url(input.clientDataJSON) as unknown as ArrayBuffer),
-  );
-  const signed = new Uint8Array(authData.length + clientHash.length);
-  signed.set(authData, 0);
-  signed.set(clientHash, authData.length);
-
-  let ok = false;
-  try {
-    const key = await crypto.subtle.importKey(
-      "spki",
-      fromB64url(cred.public_key) as unknown as ArrayBuffer,
-      { name: "ECDSA", namedCurve: "P-256" },
-      false,
-      ["verify"],
-    );
-    const sig = derToRaw(fromB64url(input.signature));
-    ok = await crypto.subtle.verify(
-      { name: "ECDSA", hash: "SHA-256" },
-      key,
-      sig as unknown as ArrayBuffer,
-      signed as unknown as ArrayBuffer,
-    );
-  } catch {
-    ok = false;
-  }
-
-  if (ok) {
-    await db.from("work_auth_challenges").delete().eq("user_id", userId).eq("purpose", "auth");
-    await db
-      .from("webauthn_credentials")
-      .update({ last_used_at: new Date().toISOString() })
-      .eq("credential_id", input.credentialId);
-  }
-  return ok ? { ok: true } : { ok: false, reason: "فشلت مصادقة الجهاز" };
-}
-
 /* ---------------------- employee-scoped (non-admin) ---------------------- */
 
 /**
@@ -1251,7 +701,7 @@ export async function myWorkState(userId: string) {
 export async function myShiftRows(userId: string, page = 1, pageSize = 50) {
   const state = await myWorkState(userId);
   if (!state.holding) return { page: 1, pageSize, total: 0, rows: [] as any[], holding: false as const };
-  const res = await workTable({ userId, shiftId: state.shiftId, page, pageSize, successOnly: true });
+  const res = await workTable({ userId, shiftId: state.shiftId, page, pageSize, successOnly: true, cardOnly: true });
 
   const entries = await myEntries(res.rows.map((r: any) => r.ledgerId));
   const rows = res.rows.map((r: any) => {
@@ -1345,7 +795,7 @@ export async function adminEmployeeShiftRows(userId: string, page = 1, pageSize 
       holding: false as const,
       live: state.live,
     };
-  const res = await workTable({ userId, shiftId: state.shiftId, page, pageSize, successOnly: true });
+  const res = await workTable({ userId, shiftId: state.shiftId, page, pageSize, successOnly: true, cardOnly: true });
 
   const entries = await myEntries(res.rows.map((r: any) => r.ledgerId));
   const rows = res.rows.map((r: any) => {
@@ -1482,27 +932,14 @@ export const MANUAL_EMPTY_ROW_TTL_MS = 5 * 60 * 1000;
  * الصفوف التي فيها أي بيانات لا تُلمس إطلاقًا.
  */
 export async function purgeEmptyManualTxns(userId?: string | null) {
-  const db = await admin();
-  const cutoff = new Date(Date.now() - MANUAL_EMPTY_ROW_TTL_MS).toISOString();
-  let q = db
-    .from("work_manual_txns")
-    .delete()
-    .is("amount", null)
-    .or("details.is.null,details.eq.")
-    .lt("created_at", cutoff);
-  if (userId) q = q.eq("user_id", userId);
-  try {
-    await q;
-  } catch {
-    /* التنظيف صيانة: فشله لا يوقف العرض. */
-  }
+  // Draft/empty rows are historical too; reads must never delete employee data.
 }
 
 export async function listManualTxns(
   userId: string,
   shiftId?: string | null,
   /** طبقة الصفحات الإضافية: بدونها يبقى السلوك القديم كما هو تمامًا. */
-  paging?: { card?: ManualCard | null; page?: number; pageSize?: number; ascending?: boolean },
+  paging?: { card?: ManualCard | null; page?: number; pageSize?: number; ascending?: boolean; visibleOpenShift?: string | null },
 ) {
   await purgeEmptyManualTxns(userId);
   const db = await admin();
@@ -1513,6 +950,11 @@ export async function listManualTxns(
     .eq("user_id", userId);
   if (shiftId) q = q.eq("shift_id", shiftId);
   if (paging?.card) q = q.eq("card", paging.card);
+  if (paging && "visibleOpenShift" in paging) {
+    const since = new Date(Date.now() - MANUAL_NO_SHIFT_VISIBLE_MS).toISOString();
+    if (paging.visibleOpenShift) q = q.or(`shift_id.eq.${paging.visibleOpenShift},and(shift_id.is.null,created_at.gte.${since})`);
+    else q = q.is("shift_id", null).gte("created_at", since);
+  }
   const asc = paging?.ascending === true;
   q = q.order("created_at", { ascending: asc }).order("id", { ascending: asc });
   const usePaging = !!paging && (paging.page !== undefined || paging.pageSize !== undefined);
@@ -1520,7 +962,15 @@ export async function listManualTxns(
     const { from, to } = pageRange(paging!.page, paging!.pageSize);
     q = q.range(from, to);
   }
-  const { data, count } = await q;
+  let data: any[] = [];
+  let count: number | null = null;
+  if (usePaging) {
+    const result = await q;
+    if (result.error) throw new Error(result.error.message);
+    data = result.data ?? []; count = result.count;
+  } else {
+    await readPages<any>((from, to) => q.range(from, to), (rows) => data.push(...rows));
+  }
   const r0 = pageRange(paging?.page, paging?.pageSize);
   return {
     serverNow: new Date().toISOString(),
@@ -1543,12 +993,13 @@ export async function listManualTxns(
 /** The employee's currently OPEN shift id (null when he holds none). */
 export async function openShiftId(userId: string): Promise<string | null> {
   const db = await admin();
-  const { data } = await db
+  const { data, error } = await db
     .from("work_shifts")
     .select("id")
     .eq("user_id", userId)
     .is("ended_at", null)
     .maybeSingle();
+  if (error) throw new Error("تعذّر قراءة الشفت الحالي — حاول مرة أخرى");
   return data ? ((data as any).id as string) : null;
 }
 
@@ -1559,7 +1010,7 @@ export const MANUAL_NO_SHIFT_VISIBLE_MS = 10 * 60 * 1000;
  * صفوف الموظف الظاهرة الآن: صفوف الشفت المفتوح (طوال الشفت) + الصفوف التي
  * أُنشئت بدون شفت خلال آخر 10 دقائق. لا شيء يُحذف من قاعدة البيانات.
  */
-export async function listMyManualTxns(userId: string) {
+export async function listMyManualTxns(userId: string, paging?: { card?: ManualCard; page?: number }) {
   const shiftId = await openShiftId(userId);
   if (shiftId) {
     // صفوف اتسجلت قبل فتح الشفت بدقائق تتربط به بدل ما تختفي بعد 10 دقائق.
@@ -1576,13 +1027,7 @@ export async function listMyManualTxns(userId: string) {
       /* الربط تحسين: فشله لا يوقف العرض. */
     }
   }
-  const all = await listManualTxns(userId);
-  const now = Date.now();
-  const rows = all.rows.filter((r: any) => {
-    if (r.shiftId) return shiftId ? r.shiftId === shiftId : false;
-    return now - new Date(r.createdAt).getTime() < MANUAL_NO_SHIFT_VISIBLE_MS;
-  });
-  return { serverNow: all.serverNow, rows };
+  return listManualTxns(userId, null, { ...paging, visibleOpenShift: shiftId });
 }
 
 /** الإضافة مسموحة دائمًا: بشفت مفتوح أو بدونه (shift_id = null، بلا شفت وهمي). */
@@ -1716,12 +1161,14 @@ function mapManualCard(r: any): ManualCardRow {
 /** صفوف المعاملات اليدوية لشفت محدد (أو الشفت المفتوح للموظف). */
 export async function listManualCardTxns(userId: string, shiftId: string) {
   const db = await admin();
-  const { data } = await db
+  const q = db
     .from("work_manual_card_txns")
     .select("id,merchant,amount,egp,quantity,pan4,created_at")
     .eq("user_id", userId)
     .eq("shift_id", shiftId)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false }).order("id", { ascending: false });
+  const data: any[] = [];
+  await readPages<any>((from, to) => q.range(from, to), (rows) => data.push(...rows));
   return {
     serverNow: new Date().toISOString(),
     editWindowMs: MANUAL_CARD_EDIT_MS,
@@ -1862,19 +1309,21 @@ export async function shiftHistory(userId: string, limit = 100, archivedOnly = f
     for (const row of result.data ?? []) successfulP2P.add(String(row.id));
   }
   if (ids.length) {
-    const { data: asg } = await db
+    const q = db
       .from("work_txn_assignments")
-      .select("shift_id, bybit_ledger!inner(status)")
+      .select("id,shift_id, bybit_ledger!inner(status)")
       .not("bybit_ledger.detail", "cs", '{"side":"2"}')
       .not("bybit_ledger.detail", "cs", '{"side":2}')
       .or(`kind.not.in.(card,refund),${CARD_READ_FILTER}`, { referencedTable: "bybit_ledger" })
       .in("shift_id", ids)
       .not("kind", "in", "(p2p_buy,p2p_sell)")
-      .in("bybit_ledger.status", SUCCESS_STATUSES as unknown as string[]);
-    for (const a of (asg ?? []) as any[]) {
-      const k = String(a.shift_id);
-      tally.set(k, (tally.get(k) ?? 0) + 1);
-    }
+      .in("bybit_ledger.status", SUCCESS_STATUSES as unknown as string[]).order("id");
+    await readPages<any>((from, to) => q.range(from, to), (rows) => {
+      for (const a of rows) {
+        const k = String(a.shift_id);
+        tally.set(k, (tally.get(k) ?? 0) + 1);
+      }
+    });
   }
   for (const link of p2pLinks) if (link.shift_id && successfulP2P.has(link.ledger_id)) {
     tally.set(link.shift_id, (tally.get(link.shift_id) ?? 0) + 1);
@@ -1928,7 +1377,7 @@ async function shiftOwner(shiftId: string): Promise<string | null> {
 export async function shiftRows(shiftId: string, page = 1, pageSize = 50) {
   const userId = await shiftOwner(shiftId);
   if (!userId) return { page: 1, pageSize, total: 0, rows: [] as any[], holding: false as const };
-  const res = await workTable({ userId, shiftId, page, pageSize, successOnly: true });
+  const res = await workTable({ userId, shiftId, page, pageSize, successOnly: true, cardOnly: true });
   const entries = await myEntries(res.rows.map((r: any) => r.ledgerId));
   const rows = res.rows.map((r: any) => {
     const e = entries.get(r.ledgerId);
@@ -1944,10 +1393,10 @@ export async function shiftRows(shiftId: string, page = 1, pageSize = 50) {
 }
 
 /** السجلات اليدوية (الغلط / خاص بالموظف / الاستلام / التحويل) لشفت معيّن. */
-export async function shiftManualTxns(shiftId: string) {
+export async function shiftManualTxns(shiftId: string, paging?: { card?: ManualCard; page?: number }) {
   const userId = await shiftOwner(shiftId);
-  if (!userId) return { serverNow: new Date().toISOString(), rows: [] as any[] };
-  return listManualTxns(userId, shiftId);
+  if (!userId) return { serverNow: new Date().toISOString(), total: 0, ...pageRange(paging?.page), rows: [] as any[] };
+  return listManualTxns(userId, shiftId, paging);
 }
 
 /** الإيداع والسحب الخارجي / الداخلي — بحسب شفت واحد أو كل شفتات موظف. */
@@ -1963,9 +1412,9 @@ async function transfersByAssignment(
     .in("bybit_ledger.status", SUCCESS_STATUSES as unknown as string[]);
   if (where.shiftId) q = q.eq("shift_id", where.shiftId);
   if (where.userId) q = q.eq("user_id", where.userId);
-  // سقف واضح للصفوف: بدونه كان الاستعلام يجلب كل تاريخ التحويلات في كل
-  // تحديث فيتباطأ جدول الشغل كلما كبرت البيانات.
-  const { data } = await q.order("id", { ascending: false }).limit(500);
+  const data: any[] = [];
+  q = q.order("id", { ascending: false });
+  await readPages<any>((from, to) => q.range(from, to), (rows) => data.push(...rows));
 
 
   const accounts = await accountNames(db);
@@ -2014,6 +1463,21 @@ async function transfersByAssignment(
 /** الإيداع والسحب الخارجي / الداخلي المرتبط بشفت معيّن (نفس شكل صفوف الموظف). */
 export async function shiftTransfers(shiftId: string, scope: "external" | "internal") {
   return transfersByAssignment({ shiftId }, scope);
+}
+
+/** Interactive transfer table: filter BEFORE pagination, retaining exact totals. */
+export async function workTransferPage(userId: string, scope: "external" | "internal", direction: "in" | "out", page: number, shiftId?: string) {
+  const resolvedShift = shiftId ?? await openShiftId(userId);
+  if (!resolvedShift) return { page, pageSize: 50, total: 0, rows: [] };
+  const result = await workTable({ shiftId: resolvedShift, kinds: [...TRANSFER_KINDS[scope]], direction, successOnly: true, page, pageSize: 50 });
+  const db = await admin();
+  const notes = new Map<string, { note: string; saved_at: string }>();
+  if (scope === "external" && result.rows.length) {
+    const response = await db.from("work_transfer_notes").select("ledger_id,note,saved_at").in("ledger_id", result.rows.map((r) => r.ledgerId));
+    if (response.error) throw new Error(response.error.message);
+    for (const row of response.data ?? []) notes.set(row.ledger_id, row);
+  }
+  return { ...result, rows: result.rows.map((row) => ({ ...row, note: notes.get(row.ledgerId)?.note ?? null, noteAt: notes.get(row.ledgerId)?.saved_at ?? null })) };
 }
 
 /**
@@ -2115,7 +1579,7 @@ export async function employeeArchive(
 
   // 1) المعاملات (فيزا) — كل الشفتات، مع صفحات متتابعة حتى نهاية السجل.
   const apiRows: any[] = [];
-  for (let page = 1; page <= 20; page++) {
+  for (let page = 1; ; page++) {
     const res = await workTable({ userId, page, pageSize: 200, successOnly: true });
     apiRows.push(...res.rows);
     if (apiRows.length >= res.total || res.rows.length === 0) break;
@@ -2241,12 +1705,13 @@ export async function shiftManualCardTxns(shiftId: string) {
 /** كل المعاملات اليدوية لموظف معيّن (كل الشفتات) — أدمن، قراءة فقط. */
 export async function employeeManualCardTxns(userId: string) {
   const db = await admin();
-  const { data } = await db
+  const q = db
     .from("work_manual_card_txns")
     .select("id,merchant,amount,egp,quantity,pan4,created_at")
     .eq("user_id", userId)
-    .order("created_at", { ascending: false })
-    .limit(500);
+    .order("created_at", { ascending: false }).order("id", { ascending: false });
+  const data: any[] = [];
+  await readPages<any>((from, to) => q.range(from, to), (page) => data.push(...page));
   return {
     serverNow: new Date().toISOString(),
     editWindowMs: MANUAL_CARD_EDIT_MS,
@@ -2277,26 +1742,27 @@ async function hashPin(pin: string, salt: string): Promise<string> {
 
 export async function pinIsSet(userId: string): Promise<boolean> {
   const db = await admin();
-  const { data } = await db.from("work_pins").select("user_id").eq("user_id", userId).maybeSingle();
+  const { data, error } = await db.from("work_pins").select("user_id").eq("user_id", userId).maybeSingle();
+  if (error) throw new Error("تعذّر التحقق من رمز الاستلام — حاول مرة أخرى");
   return !!data;
 }
 
 /** Creates or replaces a PIN. `by` records who changed it (self or admin). */
-export async function savePin(userId: string, pin: string, by: string) {
+export async function savePin(userId: string, pin: string, by: string, createOnly = false) {
   if (!PIN_RE.test(pin)) return { ok: false as const, error: "الرمز يجب أن يكون 6 أرقام" };
   const salt = randomSalt();
   const db = await admin();
-  const { error } = await db.from("work_pins").upsert(
-    {
+  const row = {
       user_id: userId,
       pin_hash: await hashPin(pin, salt),
       pin_salt: salt,
       fail_count: 0,
       locked_until: null,
       set_by: by,
-    },
-    { onConflict: "user_id" },
-  );
+    };
+  const { error } = createOnly
+    ? await db.from("work_pins").insert(row)
+    : await db.from("work_pins").upsert(row, { onConflict: "user_id" });
   if (error) return { ok: false as const, error: error.message };
   return { ok: true as const };
 }
@@ -2312,11 +1778,12 @@ export async function clearPin(userId: string) {
 export async function verifyPin(userId: string, pin: string) {
   if (!PIN_RE.test(pin)) return { ok: false as const, reason: "الرمز يجب أن يكون 6 أرقام" };
   const db = await admin();
-  const { data } = await db
+  const { data, error } = await db
     .from("work_pins")
     .select("pin_hash, pin_salt, fail_count, locked_until")
     .eq("user_id", userId)
     .maybeSingle();
+  if (error) throw new Error("تعذّر التحقق من رمز الاستلام — حاول مرة أخرى");
   if (!data) return { ok: false as const, reason: "NO_PIN" };
 
   const locked = data.locked_until ? new Date(data.locked_until).getTime() : 0;
@@ -2328,13 +1795,14 @@ export async function verifyPin(userId: string, pin: string) {
   const same = (await hashPin(pin, data.pin_salt)) === data.pin_hash;
   if (!same) {
     const fails = (data.fail_count ?? 0) + 1;
-    await db
+    const { error: saveError } = await db
       .from("work_pins")
       .update({
         fail_count: fails,
         locked_until: fails >= 5 ? new Date(Date.now() + 5 * 60_000).toISOString() : null,
       })
       .eq("user_id", userId);
+    if (saveError) throw new Error("تعذّر تسجيل المحاولة — حاول مرة أخرى");
     return {
       ok: false as const,
       reason:
@@ -2344,7 +1812,8 @@ export async function verifyPin(userId: string, pin: string) {
     };
   }
 
-  await db.from("work_pins").update({ fail_count: 0, locked_until: null }).eq("user_id", userId);
+  const { error: resetError } = await db.from("work_pins").update({ fail_count: 0, locked_until: null }).eq("user_id", userId);
+  if (resetError) throw new Error("تعذّر إتمام التحقق — حاول مرة أخرى");
   return { ok: true as const };
 }
 

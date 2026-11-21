@@ -9,3 +9,10 @@
 - Chat reads retain confirmed query data on background failure and retry with capped backoff; batch live refreshes without cancelling in-flight reads so outages do not erase the transcript.
 - The ordinary unread divider uses an account-scoped device-local cursor and excludes self/deleted messages; it never changes server notifications or mandatory acknowledgments because it is presentation-only.
 - Exempt only courses.functions.ts/checkDevice from the mandatory-read barrier while retaining its authentication and user-scoped device checks; otherwise pending chat reads can be cached as device rejection when the layout remounts.
+
+# Launch boundaries
+- Shift tables request one server page with deterministic ordering; full totals use compact sequential server reads, because client page fan-out repeats work and truncates history.
+- Automatic cycle/retention/draft maintenance never deletes historical rows; cycle eligibility and archived storage remain independent.
+- First-time PIN creation is insert-only and verification fails closed on lookup or attempt-save errors, preventing outages from becoming false success.
+- Public Agent RPC forwarding streams bounded request bytes and keeps its four-function allowlist and device-secret contract unchanged.
+- SSR diagnostics use structured name/code only, because provider errors can contain secrets or customer data; JSON responses are never shared-cacheable.

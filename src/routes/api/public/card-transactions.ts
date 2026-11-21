@@ -3,7 +3,7 @@ import { z } from "zod";
 
 const txSchema = z.object({
   external_id: z.string().trim().min(1).max(200).optional(),
-  occurred_at: z.string().trim().min(4).max(40).optional(),
+  occurred_at: z.string().trim().min(4).max(40).refine((value) => Number.isFinite(Date.parse(value)), "Invalid timestamp").optional(),
   amount: z.coerce.number().finite(),
   currency_code: z.string().trim().min(2).max(6).default("USD"),
   merchant: z.string().trim().min(1).max(200),
@@ -44,10 +44,11 @@ export const Route = createFileRoute("/api/public/card-transactions")({
         }
 
         let parsed: z.infer<typeof bodySchema>;
+        const { BodyLimitError, readLimitedBody } = await import("@/lib/limited-body.server");
         try {
-          parsed = bodySchema.parse(await request.json());
-        } catch {
-          return Response.json({ error: "invalid payload" }, { status: 400, headers: cors });
+          parsed = bodySchema.parse(JSON.parse(await readLimitedBody(request, 2 * 1024 * 1024)));
+        } catch (error) {
+          return Response.json({ error: error instanceof BodyLimitError ? "payload too large" : "invalid payload" }, { status: error instanceof BodyLimitError ? 413 : 400, headers: cors });
         }
 
         const list = "transactions" in parsed ? parsed.transactions : [parsed];
@@ -72,14 +73,14 @@ export const Route = createFileRoute("/api/public/card-transactions")({
             .from("card_transactions")
             .upsert(withId, { onConflict: "source,external_id", ignoreDuplicates: false });
           if (error) {
-            console.error("card ingest upsert failed", error.message);
+            console.error("card ingest upsert failed", error.code);
             return Response.json({ error: "save failed" }, { status: 500, headers: cors });
           }
         }
         if (withoutId.length) {
           const { error } = await supabaseAdmin.from("card_transactions").insert(withoutId);
           if (error) {
-            console.error("card ingest insert failed", error.message);
+            console.error("card ingest insert failed", error.code);
             return Response.json({ error: "save failed" }, { status: 500, headers: cors });
           }
         }

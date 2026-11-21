@@ -21,9 +21,14 @@ export const Route = createFileRoute("/api/public/agent-rpc/$fn")({
         if (!ALLOWED.has(fn)) {
           return new Response(JSON.stringify({ message: "not allowed" }), { status: 404 });
         }
-        const body = await request.text();
-        if (body.length > MAX_BODY) {
-          return new Response(JSON.stringify({ message: "too large" }), { status: 413 });
+        const { BodyLimitError, readLimitedBody } = await import("@/lib/limited-body.server");
+        let body: string;
+        try {
+          body = await readLimitedBody(request, MAX_BODY);
+          const parsed = JSON.parse(body || "{}");
+          if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("invalid payload");
+        } catch (error) {
+          return Response.json({ message: error instanceof BodyLimitError ? "too large" : "invalid payload" }, { status: error instanceof BodyLimitError ? 413 : 400 });
         }
         const url = (process.env["SUPABASE_URL"] || DATABASE_URL).replace(/\/$/, "");
         const key =

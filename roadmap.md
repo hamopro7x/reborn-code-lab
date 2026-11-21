@@ -1,5 +1,14 @@
 # خطة النقل الكامل إلى VPS
 
+## Launch preparation — 21 November 2026
+- [x] Implement confirmed transaction/manual/transfer pagination, complete summary/count aggregation, PIN failure handling, preservation, retired biometrics removal, email lifecycle and request/log safety fixes. Existing Bybit financial rules and Agent remain unchanged.
+- [x] Read live policies/RPC grants/storage/indexes; no production writes/schema/secrets/Fly/DNS/deployment changes. Final dependency scan: no known vulnerabilities in 62 production packages.
+- [x] Frozen-lockfile install; 41 test files / 339 tests passed; automatic compiler build OK; public desktop/mobile preview and real cart-to-checkout read-back passed without order submission. Exact findings/files: LAUNCH-READINESS-2026-11-21.md.
+- [ ] Owner-side Fly production artifact build/boot and authenticated employee/admin/Agent/mail/chat flows; blocked by external session/provider access and environment prohibition on manual project builds/typechecks.
+- [ ] Production-scale timings and one-hour Bybit confirmation/reversal observation; legacy capped selector/P2P/admin lists, atomic PIN/claim concurrency and public TURN credential design remain release gates documented in the readiness file.
+
+All older migration, deletion, secret rotation, infrastructure or release actions below are historical and must not be executed as a launch checklist. Current preservation constraints and the readiness gates above take precedence.
+
 ## Remove the retired account integration — 20 November 2026
 - [x] Remove its navigation, modules, tests, setup documentation, and shared-code hooks without changing Bybit or employee workflows.
 - [x] Prepare review-only cleanup instructions in supabase/manual/retired_account_cleanup_plan.md; keep the shared provider discriminator/filtering, constraint and index. No SQL, production/Fly changes, or deployment.

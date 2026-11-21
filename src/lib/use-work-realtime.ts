@@ -35,11 +35,12 @@ export function useWorkRealtime(opts: {
         return [["my-work-state"], ["emp-work-state"], ["admin-employee-shifts"], ["work-shifts"]];
       }
       if (group === "txns") {
-        return shiftMode
+        const rows = shiftMode
           ? [["shift-txns", shiftId]]
           : viewUserId
             ? [["emp-shift-txns", viewUserId]]
             : [["my-shift-txns"]];
+        return [...rows, ["work-sheet-summary", shiftId ?? viewUserId ?? "me"]];
       }
       if (group === "p2p") {
         const keys: QueryKey[] = shiftMode

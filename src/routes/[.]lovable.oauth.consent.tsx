@@ -19,7 +19,8 @@ export const Route = createFileRoute("/.lovable/oauth/consent")({
     }
   },
   loader: async ({ location }) => {
-    const authorizationId = new URLSearchParams(location.search).get("authorization_id")!;
+    const authorizationId = new URLSearchParams(location.search).get("authorization_id");
+    if (!authorizationId) throw new Error("Missing authorization_id");
     const { data, error } = await supabase.auth.oauth.getAuthorizationDetails(authorizationId);
     if (error) throw error;
     const immediate = (data as any)?.redirect_url ?? (data as any)?.redirect_to;
@@ -35,7 +36,15 @@ export const Route = createFileRoute("/.lovable/oauth/consent")({
       </div>
     </main>
   ),
-  head: () => ({ meta: [{ title: "ربط تطبيق | mag-pro1.com" }, { name: "robots", content: "noindex, nofollow" }] }),
+  head: () => ({ meta: [
+    { title: "MG Pro | الموافقة على ربط تطبيق" },
+    { name: "description", content: "إدارة الموافقة على ربط تطبيق بحساب MG Pro." },
+    { property: "og:title", content: "MG Pro | الموافقة على ربط تطبيق" },
+    { property: "og:description", content: "الموافقة أو رفض ربط تطبيق بحساب MG Pro." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+    { name: "robots", content: "noindex, nofollow" },
+  ] }),
 });
 
 function Consent() {

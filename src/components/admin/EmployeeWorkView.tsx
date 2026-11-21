@@ -59,6 +59,7 @@ import {
   clearMyManualTxns,
   getWorkP2PCompleted,
   getWorkTransfers,
+  getWorkTransferPage,
 
   getEmployeeShiftTxns,
   getEmployeeManualTxns,
@@ -70,6 +71,7 @@ import {
   getMyShiftP2P,
 
   getMyAvatarUrl,
+  getWorkSheetSummary,
 } from "@/lib/work.functions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { getBybitCardBrands } from "@/lib/bybit.functions";
@@ -479,11 +481,8 @@ function TransfersTable({
 
 
 function txnTime(ms: number) {
-  const d = new Date(ms);
-  const p = (n: number) => String(n).padStart(2, "0");
-  const h24 = d.getHours();
-  const h = ((h24 + 11) % 12) + 1;
-  return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(h)}:${p(d.getMinutes())} ${h24 < 12 ? "ص" : "م"}`;
+  const date = fmtShiftDate(ms);
+  return `${date.day} - ${date.date} - ${date.time}`;
 }
 
 const num = (n: number, digits = 2) =>
@@ -1050,6 +1049,9 @@ function ManualSection({
   const [clearing, setClearing] = useState<ManualKind | null>(null);
   const [newestId, setNewestId] = useState<string | null>(null);
   const readOnly = !!viewUserId || !!viewShiftId || blank;
+  const [page, setPage] = useState(1);
+  const card = cards[0]?.card;
+  useEffect(() => setPage(1), [viewShiftId, viewUserId, card]);
   const listKey = viewShiftId
     ? ["shift-manual-txns", viewShiftId]
     : viewUserId
@@ -1057,23 +1059,28 @@ function ManualSection({
       : ["my-manual-txns"];
 
   const q = useQuery({
-    queryKey: listKey,
+    queryKey: [...listKey, card, page],
     queryFn: () =>
       viewShiftId
-        ? shiftListFn({ data: { shiftId: viewShiftId } })
+        ? shiftListFn({ data: { shiftId: viewShiftId, card, page } })
         : viewUserId
-          ? empListFn({ data: { userId: viewUserId } })
-          : listFn({ data: undefined as any }),
+          ? empListFn({ data: { userId: viewUserId, card, page } })
+          : listFn({ data: { card, page } }),
     enabled: !blank,
     // التحديث اللحظي يتولى تحديث هذه القائمة، فلا داعي لإعادة جلبها من
     // الصفر مع كل فتح للقسم — كان ذلك أحد أسباب بطء ظهور البيانات.
     staleTime: 3_000,
     // عرض الأدمن: تحديث دوري كاحتياطي لو التحديث اللحظي فوّت تغيير.
-    refetchInterval: readOnly ? livePoll(5_000) : false,
+    refetchInterval: readOnly ? livePoll(15_000) : false,
     refetchIntervalInBackground: false,
   });
 
   const all = blank ? [] : ((q.data as any)?.rows ?? []);
+  useEffect(() => {
+    if (!q.isSuccess) return;
+    const last = Math.max(1, Math.ceil(Number(q.data?.total ?? 0) / PAGE_SIZE));
+    if (page > last) setPage(last);
+  }, [q.isSuccess, q.data?.total, page]);
   const serverNow = (q.data as any)?.serverNow ?? null;
   const refresh = () => void qc.invalidateQueries({ queryKey: listKey });
 
@@ -1127,6 +1134,8 @@ function ManualSection({
           readOnly={readOnly}
         />
       ))}
+      {q.isError && <div role="alert" className="text-destructive">تعذّر تحميل التسجيلات. <Button variant="outline" onClick={() => void q.refetch()}>أعد المحاولة</Button></div>}
+      <PaginationBar page={page} total={Number(q.data?.total ?? 0)} pageSize={PAGE_SIZE} onPage={setPage} />
     </div>
   );
 }
@@ -1332,8 +1341,13 @@ export function EmployeeWorkView({
   const [savedTab, setTab] = useUiState<string>("work-sheet", "tab", "all");
   const tab = TOP_TABS.find((item) => item.key === savedTab)?.key ?? "all";
   const reviewPending = isAdmin && shiftMode && viewShift?.reviewed === false;
+  const [txnPage, setTxnPage] = useState(1);
+  useEffect(() => setTxnPage(1), [viewShiftId, viewUserId]);
+  const sheetPoll = shiftMode && viewShift?.endedAt ? false : livePoll(15_000);
   // إيداع / سحب داخل قسمي التحويلات (فلترة عرض فقط)
   const [flow, setFlow] = useUiState<"in" | "out">("work-sheet", "flow", "in");
+  const [transferPage, setTransferPage] = useState(1);
+  useEffect(() => setTransferPage(1), [flow, tab, viewShiftId]);
 
   // تحديث لحظي: أي تغيير حقيقي في المركز الرئيسي يحدّث الـqueries المتأثرة فقط.
   useWorkRealtime({ enabled: !blank, shiftId: viewShiftId ?? null, viewUserId: viewUserId ?? null });
@@ -1342,42 +1356,44 @@ export function EmployeeWorkView({
 
   const txns = useQuery({
     queryKey: shiftMode
-      ? ["shift-txns", viewShiftId]
+      ? ["shift-txns", viewShiftId, txnPage]
       : viewUserId
-        ? ["emp-shift-txns", viewUserId]
-        : ["my-shift-txns"],
-    // Load every page so long shifts never cut off older purchases.
-    queryFn: async () => {
-      const load = (page: number): Promise<any> =>
+        ? ["emp-shift-txns", viewUserId, txnPage]
+        : ["my-shift-txns", txnPage],
+    // One server page per request; older rows remain reachable through pagination.
+    queryFn: () =>
         shiftMode
-          ? shiftTxnsFn({ data: { shiftId: String(viewShiftId), page } })
+          ? shiftTxnsFn({ data: { shiftId: String(viewShiftId), page: txnPage } })
           : viewUserId
-            ? empTxnsFn({ data: { userId: viewUserId, page } })
-            : txnsFn({ data: { page } });
-      const first: any = await load(1);
-      // Only a single shift is bounded; other views stay on one page so polling stays light.
-      if (!shiftMode) return first;
-      const total = Number(first?.total ?? 0);
-      const size = Number(first?.pageSize ?? 50) || 50;
-      const pages = Math.min(Math.ceil(total / size), 6);
-      const rows = [...(first?.rows ?? [])];
-      for (let p = 2; p <= pages; p++) {
-        const r: any = await load(p);
-        rows.push(...(r?.rows ?? []));
-      }
-      return { ...first, rows };
-    },
+            ? empTxnsFn({ data: { userId: viewUserId, page: txnPage } })
+            : txnsFn({ data: { page: txnPage } }),
     // Start rows immediately beside the state request. Both row endpoints
     // resolve the relevant shift themselves, so waiting for `st` created an
     // avoidable request waterfall for admins and employees.
     enabled: !blank,
-    refetchInterval: livePoll(5_000),
+    refetchInterval: sheetPoll,
     refetchIntervalInBackground: false,
   });
   // The rows response includes the shift state, avoiding a second authenticated
   // request before the table can render.
   const workState = txns.data as any;
   const holding = blank ? false : shiftMode || workState?.holding === true;
+  const txnTotal = Number(workState?.total ?? 0);
+  useEffect(() => {
+    if (!txns.isSuccess) return;
+    const lastPage = Math.max(1, Math.ceil(txnTotal / 50));
+    if (txnPage > lastPage) setTxnPage(lastPage);
+  }, [txnTotal, txnPage, txns.isSuccess]);
+  const summaryFn = useServerFn(getWorkSheetSummary);
+  const sheetSummary = useQuery({
+    queryKey: ["work-sheet-summary", viewShiftId ?? viewUserId ?? "me"],
+    queryFn: () => summaryFn({ data: {
+      ...(viewShiftId ? { shiftId: viewShiftId } : viewUserId ? { userId: viewUserId } : {}),
+    } }),
+    enabled: !blank && (tab === "all" || reviewPending),
+    refetchInterval: sheetPoll,
+    refetchIntervalInBackground: false,
+  });
 
   // طلبات P2P: الموظف والأدمن يشاهدون فقط الطلبات المرتبطة بالشفت المختار/المفتوح.
   const p2pCompleted = useQuery({
@@ -1393,8 +1409,8 @@ export function EmployeeWorkView({
           ? empP2PFn({ data: { userId: viewUserId } })
           : myP2PFn({ data: undefined as any }),
     // الأدمن: لا تُحمّل بيانات P2P إلا بعد اختيار شفت محدد.
-    enabled: !blank && (!viewUserId || shiftMode),
-    refetchInterval: livePoll(5_000),
+    enabled: !blank && (!viewUserId || shiftMode) && (tab === "all" || tab === "p2p"),
+    refetchInterval: sheetPoll,
     refetchIntervalInBackground: false,
   });
 
@@ -1403,8 +1419,8 @@ export function EmployeeWorkView({
   const p2pOpen = useQuery({
     queryKey: ["work-p2p-open"],
     queryFn: () => openP2PFn({ data: undefined as any }),
-    enabled: !blank && !viewUserId && !shiftMode,
-    refetchInterval: livePoll(5_000),
+    enabled: !blank && !viewUserId && !shiftMode && tab === "p2p",
+    refetchInterval: sheetPoll,
     refetchIntervalInBackground: false,
   });
 
@@ -1417,25 +1433,19 @@ export function EmployeeWorkView({
 
 
   // Read-only filters over the same central ledger: external / internal.
-  const transfersFn = useServerFn(getWorkTransfers);
+  const transfersFn = useServerFn(getWorkTransferPage);
   const extQ = useQuery({
-    queryKey: shiftMode ? ["shift-transfers", viewShiftId, "external"] : ["work-transfers", "external"],
-    queryFn: () =>
-      shiftMode
-        ? shiftTransfersFn({ data: { shiftId: String(viewShiftId), scope: "external" as const } })
-        : transfersFn({ data: { scope: "external" as const } }),
-    enabled: (tab === "ext" || reviewPending) && !blank,
-    refetchInterval: livePoll(5_000),
+    queryKey: shiftMode ? ["shift-transfers", viewShiftId, "external", flow, transferPage] : ["work-transfers", "external", flow, transferPage],
+    queryFn: () => transfersFn({ data: { scope: "external", direction: flow, page: transferPage, ...(viewShiftId ? { shiftId: viewShiftId } : {}) } }),
+    enabled: tab === "ext" && !blank,
+    refetchInterval: sheetPoll,
     refetchIntervalInBackground: false,
   });
   const intQ = useQuery({
-    queryKey: shiftMode ? ["shift-transfers", viewShiftId, "internal"] : ["work-transfers", "internal"],
-    queryFn: () =>
-      shiftMode
-        ? shiftTransfersFn({ data: { shiftId: String(viewShiftId), scope: "internal" as const } })
-        : transfersFn({ data: { scope: "internal" as const } }),
+    queryKey: shiftMode ? ["shift-transfers", viewShiftId, "internal", flow, transferPage] : ["work-transfers", "internal", flow, transferPage],
+    queryFn: () => transfersFn({ data: { scope: "internal", direction: flow, page: transferPage, ...(viewShiftId ? { shiftId: viewShiftId } : {}) } }),
     enabled: tab === "int" && !blank,
-    refetchInterval: livePoll(5_000),
+    refetchInterval: sheetPoll,
     refetchIntervalInBackground: false,
   });
 
@@ -1448,6 +1458,12 @@ export function EmployeeWorkView({
     staleTime: 300_000,
   });
   const brands = (brandsQ.data?.brands ?? {}) as Record<string, string>;
+  useEffect(() => {
+    const query = tab === "ext" ? extQ : tab === "int" ? intQ : null;
+    if (!query?.isSuccess) return;
+    const last = Math.max(1, Math.ceil(Number(query.data?.total ?? 0) / 50));
+    if (transferPage > last) setTransferPage(last);
+  }, [tab, extQ.isSuccess, intQ.isSuccess, extQ.data?.total, intQ.data?.total, transferPage]);
 
   const allRows: any[] = blank ? [] : ((txns.data as any)?.rows ?? []);
   const txnServerNow: string | null = (txns.data as any)?.serverNow ?? null;
@@ -1470,13 +1486,13 @@ export function EmployeeWorkView({
 
   const [detailRow, setDetailRow] = useState<any | null>(null);
   const refetchRows = () =>
-    void qc.invalidateQueries({
+    void Promise.all([qc.invalidateQueries({ queryKey: ["work-sheet-summary"] }), qc.invalidateQueries({
       queryKey: shiftMode
         ? ["shift-txns", viewShiftId]
         : viewUserId
           ? ["emp-shift-txns", viewUserId]
           : ["my-shift-txns"],
-    });
+    })]);
 
   /* ---- معاملات يدوية: عند الموظف (تعديل) وعند الأدمن (قراءة فقط) ---- */
   const manualCardFn = useServerFn(getMyManualCardTxns);
@@ -1495,29 +1511,12 @@ export function EmployeeWorkView({
           ? manualEmpFn({ data: { userId: viewUserId } })
           : manualCardFn({ data: undefined as any }),
     enabled: !blank && (tab === "all" || reviewPending),
-    refetchInterval: livePoll(5_000),
+    refetchInterval: sheetPoll,
     refetchIntervalInBackground: false,
   });
   const manualRows: any[] = blank || tab !== "all" ? [] : ((manualCardQ.data as any)?.rows ?? []);
 
   const shiftManualNotesFn = useServerFn(getShiftManualTxns);
-  const reviewTransactions = useQuery({
-    queryKey: ["shift-review-entries", viewShiftId, txns.dataUpdatedAt],
-    queryFn: async () => {
-      if (!viewShiftId) return [];
-      const first = txns.data as { rows?: any[]; total?: number; pageSize?: number } | undefined;
-      const entries = [...(first?.rows ?? [])];
-      const pages = Math.ceil(Number(first?.total ?? entries.length) / Number(first?.pageSize ?? 50));
-      for (let page = 2; page <= pages; page++) {
-        const next = await shiftTxnsFn({ data: { shiftId: viewShiftId, page } });
-        entries.push(...next.rows);
-      }
-      return entries;
-    },
-    enabled: reviewPending && txns.isSuccess && !blank,
-    staleTime: Infinity,
-    gcTime: 30_000,
-  });
   const shiftManualNotes = useQuery({
     queryKey: ["shift-manual-txns", viewShiftId],
     queryFn: () => viewShiftId
@@ -1525,15 +1524,17 @@ export function EmployeeWorkView({
       : Promise.resolve({ rows: [] }),
     enabled: reviewPending && !blank,
     staleTime: 3_000,
-    refetchInterval: livePoll(5_000),
+    refetchInterval: sheetPoll,
     refetchIntervalInBackground: false,
   });
   const notifications = shiftSectionNotifications({
     isAdmin, shiftId: viewShiftId, reviewed: viewShift?.reviewed,
-    transactions: reviewTransactions.data ?? allRows,
+    transactionEntryCount: sheetSummary.data?.entered,
+    transactions: allRows,
     manualCards: (manualCardQ.data as any)?.rows ?? [],
     manual: (shiftManualNotes.data as any)?.rows ?? [],
-    external: (extQ.data ?? []) as any[],
+    external: extQ.data?.rows ?? [],
+    externalNoteCount: sheetSummary.data?.externalNotes,
   });
 
   const [manualOpen, setManualOpen] = useState(false);
@@ -1568,14 +1569,16 @@ export function EmployeeWorkView({
       const x = Number(String(v ?? "").replace(/[^\d.-]/g, ""));
       return Number.isFinite(x) ? x : 0;
     };
-    const count = mergedRows.length;
-    const amount = mergedRows.reduce((s, r: any) => s + Math.abs(n(r.amount)), 0);
-    const egp = shiftEgpTotal(mergedRows);
+    const count = sheetSummary.data ? sheetSummary.data.count + manualRows.length : mergedRows.length;
+    const amount = sheetSummary.data
+      ? sheetSummary.data.amount + manualRows.reduce((s, r: any) => s + Math.abs(n(r.amount)), 0)
+      : mergedRows.reduce((s, r: any) => s + Math.abs(n(r.amount)), 0);
+    const egp = sheetSummary.data ? sheetSummary.data.egp + shiftEgpTotal(manualRows) : shiftEgpTotal(mergedRows);
     const p2pRows = (viewUserId && !shiftMode ? [] : ((p2pCompleted.data ?? []) as any[])) as any[];
     const p2pEgp = p2pRows.reduce((s, r: any) => s + Math.abs(n((r.detail ?? {}).fiatAmount)), 0);
     const p2pUsdt = p2pRows.reduce((s, r: any) => s + Math.abs(n(r.amount)), 0);
     return { count, amount, egp, p2pEgp, p2pUsdt };
-  }, [mergedRows, p2pCompleted.data, viewUserId, shiftMode]);
+  }, [mergedRows, manualRows, sheetSummary.data, p2pCompleted.data, viewUserId, shiftMode]);
 
 
   /* --------------------- identity / claim / clock --------------------- */
@@ -1802,7 +1805,7 @@ export function EmployeeWorkView({
         />
       ) : tab === "ext" ? (
         <TransfersTable
-          rows={((extQ.data ?? []) as any[]).filter((r) => String(r.direction) === flow)}
+          rows={extQ.data?.rows ?? []}
           loading={extQ.isLoading}
           onDetails={setDetailRow}
           noteColumn={flow === "out"}
@@ -1811,7 +1814,7 @@ export function EmployeeWorkView({
         />
       ) : tab === "int" ? (
         <TransfersTable
-          rows={((intQ.data ?? []) as any[]).filter((r) => String(r.direction) === flow)}
+          rows={intQ.data?.rows ?? []}
           loading={intQ.isLoading}
           onDetails={setDetailRow}
           readOnly={viewing}
@@ -1907,7 +1910,12 @@ export function EmployeeWorkView({
                       : "لا توجد شفتات لهذا الموظف."}
                   </td>
                 </tr>
-              ) : holding && txns.isLoading ? (
+              ) : txns.isError && !txns.data ? (
+                <tr><td colSpan={COLUMNS.length} className="py-6">
+                  <span className="text-destructive">تعذّر تحميل المعاملات. </span>
+                  <Button variant="outline" onClick={() => void txns.refetch()}>أعد المحاولة</Button>
+                </td></tr>
+              ) : txns.isLoading ? (
                 <tr>
                   <td colSpan={COLUMNS.length} className="py-8">
                     <Loader2 className="mx-auto size-4 animate-spin text-muted-foreground" />
@@ -1986,8 +1994,14 @@ export function EmployeeWorkView({
             </tbody>
           </table>
         </div>
+        <PaginationBar page={txnPage} pageSize={50} total={txnTotal} onPage={setTxnPage} />
       </div>
       )}
+
+      {(tab === "ext" || tab === "int") && <>
+        {(tab === "ext" ? extQ.isError : intQ.isError) && <div role="alert" className="text-destructive">تعذّر تحميل التحويلات. <Button variant="outline" onClick={() => void (tab === "ext" ? extQ : intQ).refetch()}>أعد المحاولة</Button></div>}
+        <PaginationBar page={transferPage} pageSize={50} total={Number((tab === "ext" ? extQ.data : intQ.data)?.total ?? 0)} onPage={setTransferPage} />
+      </>}
 
       <TxnDetailsDialog row={detailRow} onClose={() => setDetailRow(null)} />
       {!viewing && (

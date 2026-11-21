@@ -5,6 +5,11 @@ import { safeEmailDocument } from "@/lib/mail/mime";
 /** Keep the email hidden until its images and final document height are ready. */
 export function MailMessageBody({ html }: { html: string }) {
   const document = useMemo(() => safeEmailDocument(html), [html]);
+  // A new email needs a new measurement/ready lifecycle; old done/height must not leak.
+  return <MeasuredEmail key={document} document={document} />;
+}
+
+function MeasuredEmail({ document }: { document: string }) {
   const [ready, setReady] = useState(false);
   const observer = useRef<ResizeObserver | null>(null);
   const frame = useRef<number | null>(null);

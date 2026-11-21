@@ -56,6 +56,7 @@ export function useLedgerAutoSync(enabled = true, intervalMs = 5_000) {
           ["bybit-spend-totals"],
           ["my-shift-txns"],
           ["emp-shift-txns"],
+          ["work-sheet-summary"],
           ["shift-txns"],
           ["work-transfers"],
           ["work-p2p-open"],

@@ -80,18 +80,9 @@ certbot --nginx -d mag-pro1.com -d www.mag-pro1.com
 **مهم:** بعد تشغيل الكرون على سيرفرك، أوقف المهمة القديمة داخل Lovable من
 More → Cloud → Jobs → `bybit-ledger-auto-sync` → Disable، وإلا ستعمل المزامنة مرتين وتستهلك رصيد تشغيل.
 
-## 4.1) الذكاء الاصطناعي (فحص ومقارنة الوجه)
+## الأرشيف
 
-الكود يستخدم أي مزود متوافق مع OpenAI. على سيرفرك ضع في `.env`:
-
-```
-VISION_API_KEY=sk-...
-VISION_API_URL=https://api.openai.com/v1/chat/completions
-VISION_MODEL=gpt-4o-mini
-```
-
-لو تُركت `VISION_API_KEY` فارغة، تبقى ميزة فحص الوجه معطلة بأمان وبقية الموقع يعمل طبيعيًا.
-
+بيانات الوجه القديمة وملفات employee-faces تبقى محفوظة للأرشفة فقط؛ استلام الشفت يعمل بالـPIN.
 
 ## 5) إيقاف استهلاك السحابة نهائيًا
 
