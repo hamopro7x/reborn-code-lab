@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { prepareCategoryImageUpload, getCategoryImageUrl, saveCategory, deleteCategory } from "@/lib/categories.functions";
