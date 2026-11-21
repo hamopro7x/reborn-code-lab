@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: refactor-validation-${{ github.ref }}
+  group: refactor-validation-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
