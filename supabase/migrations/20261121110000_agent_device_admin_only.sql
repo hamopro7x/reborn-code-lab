@@ -39,4 +39,67 @@ CREATE POLICY "admins delete enroll codes" ON public.agent_enroll_codes
   FOR DELETE TO authenticated
   USING (private.is_admin(auth.uid()));
 
+
+-- The enrollment-code RPC was originally callable by any staff member.
+-- Lock the SECURITY DEFINER entrypoint itself to admins as well as the table RLS.
+CREATE OR REPLACE FUNCTION public.agent_create_enroll_code(
+  p_employee_name text DEFAULT NULL,
+  p_note text DEFAULT NULL,
+  p_user_id uuid DEFAULT NULL
+)
+RETURNS text
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $
+DECLARE
+  alphabet text := 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  new_code text;
+  raw bytea;
+  i int;
+BEGIN
+  IF auth.uid() IS NULL OR NOT private.is_admin(auth.uid()) THEN
+    RAISE EXCEPTION 'not authorized';
+  END IF;
+
+  LOOP
+    raw := decode(replace(gen_random_uuid()::text, '-', ''), 'hex')
+        || decode(replace(gen_random_uuid()::text, '-', ''), 'hex');
+    new_code := '';
+    FOR i IN 0..9 LOOP
+      new_code := new_code || substr(alphabet, 1 + (get_byte(raw, i) % 32), 1);
+    END LOOP;
+    EXIT WHEN NOT EXISTS (SELECT 1 FROM public.agent_enroll_codes WHERE code = new_code);
+  END LOOP;
+
+  INSERT INTO public.agent_enroll_codes(code, employee_name, note, created_by, target_user_id)
+  VALUES (
+    new_code,
+    nullif(trim(coalesce(p_employee_name, '')), ''),
+    nullif(trim(coalesce(p_note, '')), ''),
+    auth.uid(),
+    p_user_id
+  );
+  RETURN new_code;
+END;
+$;
+
+-- Preserve the two-argument API used by older admin screens.
+CREATE OR REPLACE FUNCTION public.agent_create_enroll_code(
+  p_employee_name text DEFAULT NULL,
+  p_note text DEFAULT NULL
+)
+RETURNS text
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $
+  SELECT public.agent_create_enroll_code(p_employee_name, p_note, NULL::uuid);
+$;
+
+REVOKE ALL ON FUNCTION public.agent_create_enroll_code(text, text) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.agent_create_enroll_code(text, text, uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.agent_create_enroll_code(text, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.agent_create_enroll_code(text, text, uuid) TO authenticated;
+
 COMMIT;
