@@ -1,6 +1,4 @@
 /**
-import { P2POrdersTable } from "@/components/admin/P2POrdersTable";
-import { num } from "@/components/admin/EmployeeWorkFormatters";
  * Employee execution view — visual design is fixed by the approved reference:
  * black surface with blue neon accents, a top section bar, a horizontal shift
  * strip, the shift's inner section bar, then the transactions grid.
@@ -86,6 +84,9 @@ import { useUiState } from "@/lib/ui-state";
 import { Button } from "@/components/ui/button";
 import { shiftEgpTotal } from "@/lib/shift-egp-total";
 import { shiftSectionNotifications, type ShiftSection } from "@/lib/shift-section-notifications";
+
+import { P2POrdersTable } from "@/components/admin/P2POrdersTable";
+import { num } from "@/components/admin/EmployeeWorkFormatters";
 
 type ManualKind = "wrong" | "employee" | "receive" | "transfer";
 
