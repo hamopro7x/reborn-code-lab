@@ -118,7 +118,8 @@ export const getStaffShifts = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ userId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    await assertAccess(context.supabase, context.userId);
+    // Cross-employee shift history is management data, not an employee self-service read.
+    await assertAdmin(context.supabase, context.userId);
     const mod = await import("./work.server");
     return mod.shiftsOfUser(data.userId);
   });
@@ -185,9 +186,26 @@ export const getMyShiftTxns = createServerFn({ method: "POST" })
   }))
   .handler(async ({ data, context }) => {
     await assertAccess(context.supabase, context.userId);
-    if (data.page === 1) await (await import("./bybit.server")).pullFromBybit();
     const mod = await import("./work.server");
     return mod.myShiftRows(context.userId, data.page, 50);
+  });
+
+/**
+ * Refresh only the recent Bybit ingestion needed by employee work sheets.
+ * The result contains no account data, totals, or transaction rows; deep
+ * historical sync remains an admin-only operation.
+ */
+export const syncEmployeeWorkLedger = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAccess(context.supabase, context.userId);
+    const mod = await import("./bybit.server");
+    try {
+      await mod.syncAllRecent();
+      return { ok: true as const };
+    } catch {
+      return { ok: false as const, error: "تعذر تحديث بيانات الشفت." };
+    }
   });
 
 /**
@@ -275,27 +293,6 @@ export const assignWorkTxn = createServerFn({ method: "POST" })
     });
     if (error) return { ok: false as const, error: error.message };
     return { ok: true as const };
-  });
-
-/* ------------------------- face enrollment (admin) ------------------------- */
-
-export const saveEmployeeFace = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ userId: z.string().uuid(), image: z.string().min(100).max(4_000_000) }).parse(input),
-  )
-  .handler(async ({ data, context }) => {
-    await assertAdmin(context.supabase, context.userId);
-    const mod = await import("./work.server");
-    return mod.saveFaceEnroll(data.userId, data.image, context.userId);
-  });
-
-export const listEmployeeFaces = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    await assertAdmin(context.supabase, context.userId);
-    const mod = await import("./work.server");
-    return mod.faceEnrollList();
   });
 
 /* ------------- manual rows: «المعاملات الغلط» / «خاص بالموظف» ------------- */
@@ -702,6 +699,7 @@ export const setSharedShift = createServerFn({ method: "POST" })
 export const getMySharedShift = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    await assertAccess(context.supabase, context.userId);
     const mod = await import("./work.server");
     const id = await mod.getSharedShiftFor(context.userId);
     if (!id) return null;
