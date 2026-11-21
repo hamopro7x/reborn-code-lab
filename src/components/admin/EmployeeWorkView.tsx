@@ -73,9 +73,9 @@ import { shiftSectionNotifications, type ShiftSection } from "@/lib/shift-sectio
 
 import { P2POrdersTable } from "@/components/admin/P2POrdersTable";
 import { FlowChip, TransfersTable } from "@/components/admin/EmployeeTransfersTable";
-import { fmtShiftDate, num } from "@/components/admin/EmployeeWorkFormatters";
+import { num, txnTime } from "@/components/admin/EmployeeWorkFormatters";
 
-import { Last4Cell, EntryCell, TxnDetailsDialog, ManualSection, ManualTxnDialog, ManualTxnCell, type ManualKind } from "@/components/admin/EmployeeWorkTables";
+import { Last4Cell, EntryCell, TxnDetailsDialog, ManualSection, ManualTxnDialog, ManualTxnCell, isCardTxn, MANUAL_TXN_WINDOW_MS, type ManualKind } from "@/components/admin/EmployeeWorkTables";
 
 /** DOM order = right-to-left order in the reference. */
 const TOP_TABS: { key: ShiftSection; label: string; icon: typeof ListOrdered }[] = [
