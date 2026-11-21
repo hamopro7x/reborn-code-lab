@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertAccess, assertAdmin } from "./bybit-access";
-import { assertShiftView } from "./work-access";
+import { assertShiftView } from "./work-access.server";
 
 /* ------------------- admin: view ONE employee's work sheet -------------------
  * Same data source and shapes used by the employee view; only the resolved

@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertAccess, assertAdmin } from "./bybit-access";
-import { assertShiftView } from "./work-access";
+import { assertShiftView } from "./work-access.server";
 
 /* --------------------- admin-only management reads --------------------- */
 /**

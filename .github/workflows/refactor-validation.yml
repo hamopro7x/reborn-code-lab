@@ -52,7 +52,12 @@ jobs:
           src/lib/work-overview.functions.ts
           src/lib/work-employee.functions.ts
           src/lib/work-admin.functions.ts
-          src/lib/work-access.ts
+                    src/lib/admin-access.server.ts
+                    src/lib/admin-employees.functions.ts
+                    src/lib/admin-operations.functions.ts
+                    src/lib/courses-access.server.ts
+                    src/lib/courses-device.functions.ts
+                    src/lib/courses-access.functions.ts
           src/lib/mail/access.server.ts
           src/lib/mail-core.functions.ts
           src/lib/mail-read.functions.ts
