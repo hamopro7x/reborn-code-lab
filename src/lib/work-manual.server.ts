@@ -155,7 +155,7 @@ export async function saveManualTxn(
       .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
       .replace(/[\u06f0-\u06f9]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
       .replace(/[\u066b\u060c,]/g, ".")
-      .replace(/[^\d.\-]/g, "")
+      .replace(/[^\d.-]/g, "")
       .trim();
     const n = Number(norm);
     patch = { amount: norm === "" || !Number.isFinite(n) ? null : n };
@@ -259,7 +259,7 @@ function parseNum(value: string) {
     .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
     .replace(/[\u06f0-\u06f9]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
     .replace(/[\u066b\u060c,]/g, ".")
-    .replace(/[^\d.\-]/g, "")
+    .replace(/[^\d.-]/g, "")
     .trim();
   if (norm === "") return null;
   const n = Number(norm);
