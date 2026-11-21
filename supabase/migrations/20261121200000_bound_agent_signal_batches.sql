@@ -14,8 +14,13 @@ AS $function$
 DECLARE
   incoming jsonb;
 BEGIN
-  IF p_outgoing IS NULL OR jsonb_typeof(p_outgoing) IS DISTINCT FROM 'array'
-     OR jsonb_array_length(p_outgoing) > 250
+  -- Validate the JSON type before calling array-only functions. Keeping this
+  -- in a separate IF avoids evaluating jsonb_array_length on scalar JSON.
+  IF p_outgoing IS NULL OR jsonb_typeof(p_outgoing) IS DISTINCT FROM 'array' THEN
+    RAISE EXCEPTION 'invalid signal batch' USING ERRCODE = '22023';
+  END IF;
+
+  IF jsonb_array_length(p_outgoing) > 250
      OR octet_length(p_outgoing::text) > 1048576 THEN
     RAISE EXCEPTION 'invalid signal batch' USING ERRCODE = '22023';
   END IF;
