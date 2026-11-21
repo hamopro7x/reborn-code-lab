@@ -53,7 +53,7 @@ export const deleteMailAccount = createServerFn({ method: "POST" }).middleware([
       const { revokeToken } = await import("@/lib/mail/google.server");
       const { data: s } = await db.from("mail_account_secrets").select("refresh_token_ciphertext").eq("account_id", data.id).maybeSingle();
       if (s) await revokeToken(await decryptSecret(s.refresh_token_ciphertext));
-    } catch {}
+    } catch { /* token revocation is best-effort; account cleanup continues. */ }
     // Cascade removes secrets, messages, attachments, drafts, notifications, tombstones. Gmail is untouched.
     const { error } = await db.from("mail_accounts").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
