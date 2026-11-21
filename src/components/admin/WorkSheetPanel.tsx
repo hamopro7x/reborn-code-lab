@@ -1,14 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Archive, Check, ChevronDown, Eye, EyeOff, History, ListChecks, Loader2, Trash2, X } from "lucide-react";
-import { usePersistentState } from "@/lib/persistent-state";
+import { Check, History } from "lucide-react";
 import { EmployeePinMenu } from "@/components/admin/EmployeePinMenu";
 import { EmployeeWorkView } from "@/components/admin/EmployeeWorkView";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { listEmployees } from "@/lib/admin.functions";
-import { getEmployeeShiftList, deleteEmployeeShift, getSharedShiftId, setSharedShift, getMySharedShift, markShiftReviewed, archiveEmployeeShifts } from "@/lib/work.functions";
+import { getMySharedShift } from "@/lib/work.functions";
 import employeesBg from "@/assets/employees-bg.png.asset.json";
 import { livePoll } from "@/lib/live-poll";
 
@@ -20,7 +18,7 @@ const CHIP_ON =
 const CHIP_OFF =
   "bg-[#0d0d0d] opacity-80 shadow-[0_6px_20px_-6px_rgba(0,0,0,0.9)] hover:opacity-95 hover:ring-1 hover:ring-blue-500/20";
 
-import { EmployeePickerMenu, ShiftPickerMenu, type Shift } from "@/components/admin/WorkSheetPickers";
+import { EmployeePickerMenu, ShiftPickerMenu, type Employee, type Shift } from "@/components/admin/WorkSheetPickers";
 
 export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
   const [pickerOpen, setPickerOpen] = useState(false);
