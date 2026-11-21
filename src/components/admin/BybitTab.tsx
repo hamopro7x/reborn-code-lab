@@ -3,15 +3,12 @@ import { usePersistentState } from "@/lib/persistent-state";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { syncAllBybitCardTxns, listBybitAccounts, addBybitAccount, removeBybitAccount, updateBybitAccount } from "@/lib/bybit.functions";
-import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
 import { FintechBackdrop } from "@/components/admin/FintechBackdrop";
 import { useAdminBack } from "@/components/admin/back-nav";
 import { BybitLedgerPanel } from "@/components/admin/BybitLedgerPanel";
 import { Loader2, Wallet } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { BybitAccountView } from "@/components/admin/bybit/BybitAccountView";
 import type { BybitAccountRow } from "@/components/admin/bybit/types";
 import { AccountSummaryCard } from "@/components/admin/bybit/AccountSummaryCard";
@@ -209,4 +206,3 @@ export function BybitTab({ isAdmin }: { isAdmin: boolean }) {
     </div>
   );
 }
-
