@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Check, Plus, Star, Trash2 } from "lucide-react";
 
-function ReviewsTab() {
+export function ReviewsTab() {
   const qc = useQueryClient();
   const [filter, setFilter] = useUiState<"pending" | "approved" | "all">("orders", "filter", "pending");
   const q = useQuery({
