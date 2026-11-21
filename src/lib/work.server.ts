@@ -479,9 +479,20 @@ export async function saveTransferNote(userId: string, ledgerId: string, note: s
   const text = String(note ?? "").trim().slice(0, 200);
   if (!text) return { ok: false as const, error: "اكتب قيمة أولًا" };
 
+  const { data: roles, error: rolesError } = await db
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId);
+  if (rolesError) return { ok: false as const, error: "تعذر التحقق من صلاحيات المستخدم." };
+  const roleList = (roles ?? []).map((r: any) => r.role);
+  const isAdmin = roleList.includes("admin");
+  if (!isAdmin && !roleList.includes("employee")) {
+    return { ok: false as const, error: "غير مصرح." };
+  }
+
   const { data: led } = await db
     .from("bybit_ledger")
-    .select("kind,status")
+    .select("kind,status,occurred_at")
     .eq("id", ledgerId)
     .maybeSingle();
   if (!led || String((led as any).kind) !== "withdraw") {
@@ -491,17 +502,29 @@ export async function saveTransferNote(userId: string, ledgerId: string, note: s
     return { ok: false as const, error: "هذه المعاملة غير ناجحة." };
   }
 
+  // Employees may annotate only withdrawals visible in their own current shift.
+  // Admins retain the existing ability to review or correct any successful withdrawal.
+  if (!isAdmin) {
+    const { data: shift, error: shiftError } = await db
+      .from("work_shifts")
+      .select("started_at")
+      .eq("user_id", userId)
+      .is("ended_at", null)
+      .maybeSingle();
+    if (shiftError) return { ok: false as const, error: "تعذر التحقق من الشفت الحالي." };
+    if (!shift || new Date((led as any).occurred_at).getTime() < new Date((shift as any).started_at).getTime()) {
+      return { ok: false as const, error: "المعاملة ليست ضمن شفتك الحالي." };
+    }
+  }
+
   const { data: existing } = await db
     .from("work_transfer_notes")
     .select("ledger_id,saved_at,user_id")
     .eq("ledger_id", ledgerId)
     .maybeSingle();
 
-  if (existing && (existing as any).user_id && (existing as any).user_id !== userId) {
-    const { data: roles } = await db.from("user_roles").select("role").eq("user_id", userId);
-    if (!(roles ?? []).some((r: any) => r.role === "admin")) {
-      return { ok: false as const, error: "هذه الملاحظة خاصة بموظف آخر." };
-    }
+  if (existing && (existing as any).user_id !== userId && !isAdmin) {
+    return { ok: false as const, error: "هذه الملاحظة خاصة بمستخدم آخر." };
   }
 
   const now = new Date();
