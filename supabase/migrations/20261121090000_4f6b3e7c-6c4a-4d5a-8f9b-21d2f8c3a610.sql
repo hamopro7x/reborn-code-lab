@@ -47,4 +47,12 @@ CREATE POLICY "own or admin read assignments" ON public.work_txn_assignments
   FOR SELECT TO authenticated
   USING (user_id = auth.uid() OR private.is_admin(auth.uid()));
 
+-- Transfer notes are tied to an employee-owned withdrawal. The former staff-wide
+-- policy exposed every employee's notes to every other employee.
+DROP POLICY IF EXISTS "staff read transfer notes" ON public.work_transfer_notes;
+DROP POLICY IF EXISTS "own or admin read transfer notes" ON public.work_transfer_notes;
+CREATE POLICY "own or admin read transfer notes" ON public.work_transfer_notes
+  FOR SELECT TO authenticated
+  USING (user_id = auth.uid() OR private.is_admin(auth.uid()));
+
 COMMIT;
