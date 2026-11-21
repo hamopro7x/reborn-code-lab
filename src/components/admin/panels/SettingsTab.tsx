@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { HeroBannerManager } from "@/components/admin/HeroBannerManager";
 import { FooterManager } from "@/components/admin/FooterManager";
 
-function SettingsTab() {
+export function SettingsTab() {
   const qc = useQueryClient();
   const q = useQuery({ queryKey: ["settings"], queryFn: async () => (await supabase.from("site_settings").select("*")).data ?? [] });
   const [site, setSite] = useState<any>({});
