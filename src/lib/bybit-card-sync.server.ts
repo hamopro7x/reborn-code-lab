@@ -39,7 +39,7 @@ const MAX_TXNS = 10_000_000;
 
 const PRUNE_TO_DELETE = 3_000_000;
 
-function sameStoredValue(a: unknown, b: unknown): boolean {
+export function sameStoredValue(a: unknown, b: unknown): boolean {
   if (a == null && b == null) return true;
   if (a == null || b == null) return false;
   const sa = String(a), sb = String(b);
@@ -55,7 +55,7 @@ function sameStoredValue(a: unknown, b: unknown): boolean {
   return false;
 }
 
-const detailText = (v: unknown) => v == null ? null : String(v);
+export const detailText = (v: unknown) => v == null ? null : String(v);
 
 /**
  * Persist fetched rows. Only transactions of the CURRENT monthly cycle are
