@@ -1,6 +1,7 @@
 # خطة النقل الكامل إلى VPS
 
 ## Launch preparation — 21 November 2026
+- [x] Correct VPS checklist/README/env example for application-only release using existing Supabase kcdsdaytrnzoiharmyxo; remove new-project/migration/credential regeneration instructions. Preserve jobs/settings; document exact build/runtime names. Narrow public liveness exception passes host-policy tests; full suite 47 files / 360 tests; automatic build OK 20:52:08 UTC. Development Fly Host is rejected by Vite (403 before middleware); actual Node host/health verification remains an owner-side gate, not claimed tested.
 - [x] Explicit architecture: Fly/VPS Node + existing Supabase only; Lovable is editor/agent/development preview, never hosting. Audited Docker/Fly/Nitro/start/health/environment; removed unsafe VPS secret COPY and Cloud diagnostic/default assumptions, hardened launcher/logs, corrected docs. 46 files / 351 tests passed; no deployment, Fly/DNS/OAuth/secrets/SQL changes.
 - [ ] Owner-side real Node container build/boot/health and asset handling; blockers: no Docker/production artifact available here, Fly health/autostop/memory review, Gmail scheduler confirmation, exact chat wallpaper asset bundling. Existing list/PIN-claim/order/TURN risks remain open in readiness document.
 - [x] Follow-up from f1868253: full customer aggregation, complete shift selector/counts, chunked P2P links and eligibility-before-limit P2P cursor scan; retained capped/default-limited callers inventoried in readiness document.

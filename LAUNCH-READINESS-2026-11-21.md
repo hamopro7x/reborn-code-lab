@@ -3,6 +3,14 @@
 ## Status
 Code fixes implemented, not deployed. This is **not yet a certified production-ready release**: Fly production artifact execution, authenticated staff flows, provider observation and the items below remain release gates. No production SQL, data writes, secret rotation, Fly/DNS changes or Agent release occurred.
 
+## Existing-Supabase clarification — 21 November, 20:52 UTC
+- Production stays on **kcdsdaytrnzoiharmyxo**, with its existing Auth/Storage/users/UUIDs/Bybit ledger/shifts/history. Release is application/runtime-only; no new project, database export/import/migration, auth.users copying, storage moving or provider credential rotation/re-entry.
+- Replaced the still-obsolete `selfhost/VPS-CHECKLIST.md` database-move procedure; expanded `selfhost/README.md` and corrected `.env.example` comments to verify existing secure configuration rather than overwrite .env/generate secrets. Exact build/runtime/provider variable names and Fly-vs-VPS scheduler differences are documented. Existing jobs, OAuth, secrets, Fly/DNS and database remain untouched.
+- `src/start.ts` now uses `src/lib/production-host.ts`: preserve 410 for default Fly pages/RPCs/writes; permit only GET/HEAD of the exact already-public `/api/public/build-version` liveness endpoint. Custom-domain/internal hosts are unaffected; endpoint authorization and forwarded-host handling are unchanged. Nine regression cases cover this contract; rule recorded in `src/lib/AGENTS.md` (root instructions at their size budget).
+- Full suite **47 files / 360 tests passed**, started 20:51:52 UTC, duration 15.42s; automatic compiler **build OK 20:52:08 UTC**. No standalone production artifact build/boot was run.
+- Attempted actual development HTTP with Host `m-hamo.fly.dev`: Vite rejects that host with **403 before application middleware**, so it cannot establish target 410/200 behavior. No Vite allowlist was weakened. Host-policy unit tests pass; correct self-hosted Node integration/health probes remain an owner-side gate. fly.toml still has no HTTP check; no running job or production setting was changed.
+- This pass changes only checklist/README/environment example, host policy/middleware/test, lib instructions, readiness report and roadmap. Retained list caps, atomic PIN/handover, guest-order owner proof, compatible TURN auth, real authenticated checks and production build gates remain open as described below.
+
 ## Explicit production architecture and hosting audit
 
 **Production is exclusively the owner's self-hosted Fly.io/VPS Node deployment using the existing Supabase project/services. Lovable is editor/agent/development preview only; it is never a production hosting or database target.** No Lovable publishing, Fly/VPS deployment, DNS/domain change, secret/OAuth change, production write/migration or PR4 merge occurred.

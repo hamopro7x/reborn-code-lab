@@ -18,3 +18,4 @@
 - P2P inbox candidate scans use timestamp/id cursors and filter linked orders before applying the explicit recent-inbox size, so linked newest pages cannot hide older unlinked orders.
 - Public Agent RPC forwarding streams bounded request bytes and keeps its four-function allowlist and device-secret contract unchanged.
 - SSR diagnostics use structured name/code only, because provider errors can contain secrets or customer data; JSON responses are never shared-cacheable.
+- Default Fly-host rejection is centralized in production-host.ts with only the exact public GET/HEAD build-version exception; internal probes must remain usable without exposing pages or bypassing endpoint auth.

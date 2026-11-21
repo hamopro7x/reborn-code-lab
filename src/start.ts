@@ -4,6 +4,7 @@ import { renderErrorPage } from "./lib/error-page";
 import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
 import { enforceChatAccess } from "@/lib/chat-access";
 import { logSafeError } from "@/lib/http-safety";
+import { rejectFlyHost } from "@/lib/production-host";
 
 const errorMiddleware = createMiddleware().server(async ({ next }) => {
   try {
@@ -23,8 +24,7 @@ const errorMiddleware = createMiddleware().server(async ({ next }) => {
 // Disable the default Fly hostname so only the custom domain serves the site.
 const customDomainOnlyMiddleware = createMiddleware().server(
   async ({ request, next }) => {
-    const host = request.headers.get("host") ?? new URL(request.url).host;
-    if (host.split(":")[0]?.endsWith(".fly.dev")) {
+    if (rejectFlyHost(request)) {
       return new Response("Gone", {
         status: 410,
         headers: {
