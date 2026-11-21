@@ -16,7 +16,7 @@ import { livePoll } from "@/lib/live-poll";
 import {
   listMailAccounts, startMailLink, setMailAccountPaused, deleteMailAccount, syncMailNow, listMailMessages,
   getMailThread, setMailRead, organizeMail, listMailLabels, saveMailLabel, downloadMailAttachment, sendMail,
-  listMailDrafts, saveMailDraft, mailUnreadCount, claimMailNotifications, listMailActivity,
+  listMailDrafts, saveMailDraft, listMailActivity,
 } from "@/lib/mail.functions";
 
 import { fmt, sender } from "@/components/admin/mail/MailFormatting";
