@@ -28,3 +28,9 @@ export function fmtShiftDate(ts: number) {
     time: `${get("hour")}:${get("minute")} ${ampm}`,
   };
 }
+
+
+export function txnTime(ms: number) {
+  const date = fmtShiftDate(ms);
+  return `${date.day} - ${date.date} - ${date.time}`;
+}
