@@ -13,12 +13,14 @@ import { BybitDocsCard } from "@/components/admin/BybitDocs";
 import { useAdminBack } from "@/components/admin/back-nav";
 import { BybitLedgerPanel } from "@/components/admin/BybitLedgerPanel";
 import { cardPurchasePresenter } from "@/lib/bybit-spend";
-import { RefreshCw, CreditCard, ChevronDown, Loader2, Trash2, Copy, Pencil, Wallet, BarChart3, Clock, PieChart, Lock } from "lucide-react";
-import { Stat, Chip, Empty, visibleCoins, MerchantLogo, CoinLogo, CoinBalanceCard, dt, money, type CoinRow } from "@/components/admin/bybit/BybitVisuals";
+import { RefreshCw, CreditCard, ChevronDown } from "lucide-react";
+import { Stat, Chip, Empty, visibleCoins, MerchantLogo, CoinLogo, dt, money, type CoinRow } from "@/components/admin/bybit/BybitVisuals";
 import { CardsPanel, BrandBadge, AddCardDialog, detectBrand } from "@/components/admin/bybit/BybitCardsUI";
 import { BybitAccountInfoCard as AccountInfoCard } from "@/components/admin/bybit/BybitAccountInfoCard";
 import { P2PTable } from "@/components/admin/bybit/BybitP2PTable";
 import { AssetTable, TxnDetails } from "@/components/admin/bybit/BybitTransactionTables";
+
+const TAB_KEY = "bybit_active_tab";
 
 const TAB_KEY = "bybit_active_tab";
 
