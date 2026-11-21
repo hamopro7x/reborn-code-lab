@@ -1,20 +1,17 @@
--- PostgreSQL row-level security does not apply to TRUNCATE, and clients
--- never need to create triggers or foreign keys on application data tables.
--- Remove these non-row-scoped privileges from API roles while preserving the
--- existing SELECT/INSERT/UPDATE/DELETE grants and RLS policy behavior.
+-- Row-level security does not apply to TRUNCATE, and API clients never
+-- need to create triggers or foreign keys on application tables. Apply this
+-- consistently to the existing public schema, not only the currently audited
+-- sensitive tables. Ordinary row-level CRUD grants and RLS policies are intact.
 BEGIN;
 
-REVOKE TRUNCATE, REFERENCES, TRIGGER ON TABLE
-  public.agent_devices,
-  public.agent_enroll_codes,
-  public.bybit_account_info,
-  public.bybit_accounts,
-  public.bybit_card_txns,
-  public.bybit_cards,
-  public.bybit_ledger,
-  public.work_shifts,
-  public.work_transfer_notes,
-  public.work_txn_assignments
+REVOKE TRUNCATE, REFERENCES, TRIGGER
+ON ALL TABLES IN SCHEMA public
+FROM anon, authenticated;
+
+-- Keep the same boundary for future tables created by the normal postgres
+-- migration owner. This does not change privileges for service_role/postgres.
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres
+REVOKE TRUNCATE, REFERENCES, TRIGGER ON TABLES
 FROM anon, authenticated;
 
 COMMIT;
