@@ -11,7 +11,7 @@ import {
 } from "./bybit-spend";
 import { num } from "./bybit-runtime";
 
-function cardRowKey(t: any) {
+export function cardRowKey(t: any) {
   return String(
     t?.txnId
       ?? t?.orderNo
@@ -53,7 +53,7 @@ export type CardTxn = {
   reversed?: boolean;
 };
 
-function sanitize(o: Record<string, unknown>): Record<string, string | number | null> {
+export function sanitize(o: Record<string, unknown>): Record<string, string | number | null> {
   const out: Record<string, string | number | null> = {};
   for (const [k, v] of Object.entries(o)) {
     if (v === null || v === undefined) out[k] = null;
