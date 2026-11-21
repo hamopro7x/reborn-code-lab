@@ -26,23 +26,24 @@
           "openWorldHint": false
         },
         "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
           "type": "object",
           "properties": {
             "search": {
-              "type": "string",
-              "description": "Optional text to match against product name or description."
+              "description": "Optional text to match against product name or description.",
+              "type": "string"
             },
             "active_only": {
-              "type": "boolean",
-              "description": "Only return products that are currently active. Defaults to true."
+              "description": "Only return products that are currently active. Defaults to true.",
+              "type": "boolean"
             },
             "limit": {
+              "description": "Maximum number of products to return. Defaults to 25.",
               "type": "integer",
-              "description": "Maximum number of products to return. Defaults to 25."
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
             }
-          },
-          "additionalProperties": false,
-          "$schema": "http://json-schema.org/draft-07/schema#"
+          }
         },
         "outputSchema": null
       },
@@ -56,6 +57,7 @@
           "openWorldHint": false
         },
         "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
           "type": "object",
           "properties": {
             "slug": {
@@ -65,9 +67,7 @@
           },
           "required": [
             "slug"
-          ],
-          "additionalProperties": false,
-          "$schema": "http://json-schema.org/draft-07/schema#"
+          ]
         },
         "outputSchema": null
       },
@@ -81,27 +81,28 @@
           "openWorldHint": false
         },
         "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
           "type": "object",
           "properties": {
             "status": {
-              "type": "string",
-              "description": "Filter by order status, e.g. 'pending', 'confirmed', 'cancelled'."
+              "description": "Filter by order status, e.g. 'pending', 'confirmed', 'cancelled'.",
+              "type": "string"
             },
             "from": {
-              "type": "string",
-              "description": "Only orders created on or after this ISO date, e.g. '2026-07-01'."
+              "description": "Only orders created on or after this ISO date, e.g. '2026-07-01'.",
+              "type": "string"
             },
             "to": {
-              "type": "string",
-              "description": "Only orders created on or before this ISO date."
+              "description": "Only orders created on or before this ISO date.",
+              "type": "string"
             },
             "limit": {
+              "description": "Maximum number of orders to return. Defaults to 25.",
               "type": "integer",
-              "description": "Maximum number of orders to return. Defaults to 25."
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
             }
-          },
-          "additionalProperties": false,
-          "$schema": "http://json-schema.org/draft-07/schema#"
+          }
         },
         "outputSchema": null
       },
@@ -115,6 +116,7 @@
           "openWorldHint": false
         },
         "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
           "type": "object",
           "properties": {
             "order_code": {
@@ -124,9 +126,7 @@
           },
           "required": [
             "order_code"
-          ],
-          "additionalProperties": false,
-          "$schema": "http://json-schema.org/draft-07/schema#"
+          ]
         },
         "outputSchema": null
       },
@@ -140,19 +140,18 @@
           "openWorldHint": false
         },
         "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
           "type": "object",
           "properties": {
             "from": {
-              "type": "string",
-              "description": "Start ISO date of the range, e.g. '2026-07-01'. Defaults to the last 30 days."
+              "description": "Start ISO date of the range, e.g. '2026-07-01'. Defaults to the last 30 days.",
+              "type": "string"
             },
             "to": {
-              "type": "string",
-              "description": "End ISO date of the range."
+              "description": "End ISO date of the range.",
+              "type": "string"
             }
-          },
-          "additionalProperties": false,
-          "$schema": "http://json-schema.org/draft-07/schema#"
+          }
         },
         "outputSchema": null
       }
