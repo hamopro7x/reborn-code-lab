@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { HeroBannerView } from "@/components/site/HeroBannerView";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Construction } from "lucide-react";
 import {
   type HeroBanner,
 } from "@/lib/hero-banners";
