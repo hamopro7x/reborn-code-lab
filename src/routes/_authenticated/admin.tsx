@@ -243,7 +243,7 @@ function Admin() {
             {readOnly && (
               <Badge variant="outline" className="ms-auto gap-1"><Lock className="size-3" />عرض فقط</Badge>
             )}
-            <div className={adminOnly && !basePanels.includes(panel) || readOnly ? "" : "ms-auto"}>
+            <div className={adminOnly && !employeeBasePanels.includes(panel) || readOnly ? "" : "ms-auto"}>
               <AdminLangToggle lang={adminLang} onChange={setAdminLang} />
             </div>
             <AdminTranslator lang={adminLang} />
