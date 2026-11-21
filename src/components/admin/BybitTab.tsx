@@ -1,14 +1,8 @@
-import { Fragment, useEffect, useState, useRef } from "react";
-import { useUiState } from "@/lib/ui-state";
+import { useEffect, useState, useRef } from "react";
 import { usePersistentState } from "@/lib/persistent-state";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import {
-  getBybitOverview, getBybitCardTxns, syncAllBybitCardTxns, getBybitOnChain, getBybitInternal, getBybitP2P,
-  getBybitCards, createBybitCard, deleteBybitCard, updateBybitCard,
-  listBybitAccounts, addBybitAccount, removeBybitAccount, updateBybitAccount,
-} from "@/lib/bybit.functions";
-import { BybitDocsCard } from "@/components/admin/BybitDocs";
+import { syncAllBybitCardTxns, listBybitAccounts, addBybitAccount, removeBybitAccount, updateBybitAccount } from "@/lib/bybit.functions";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,16 +10,11 @@ import { Button } from "@/components/ui/button";
 import { FintechBackdrop } from "@/components/admin/FintechBackdrop";
 import { useAdminBack } from "@/components/admin/back-nav";
 import { BybitLedgerPanel } from "@/components/admin/BybitLedgerPanel";
-import { cardPurchasePresenter } from "@/lib/bybit-spend";
 import { RefreshCw, CreditCard, ChevronDown, Loader2, Wallet } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Stat, Chip, Empty, visibleCoins, MerchantLogo, CoinLogo, dt } from "@/components/admin/bybit/BybitVisuals";
-import { detectBrand, BrandBadge, CardsPanel, AddCardDialog } from "@/components/admin/bybit/BybitCardsUI";
 import { BybitAccountView } from "@/components/admin/bybit/BybitAccountView";
 import type { BybitAccountRow } from "@/components/admin/bybit/types";
 import { AccountSummaryCard } from "@/components/admin/bybit/AccountSummaryCard";
-import { P2PTable } from "@/components/admin/bybit/BybitP2PTable";
-import { AssetTable, TxnDetails } from "@/components/admin/bybit/BybitTransactionTables";
 
 
 
