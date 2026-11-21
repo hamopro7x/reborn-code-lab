@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { EmployeeDevices } from "@/components/admin/DeviceMonitorGrid";
 import { Camera, Download, Loader2, MonitorSmartphone, Plus, Trash2 } from "lucide-react";
 
-function EmployeesTab() {
+export function EmployeesTab() {
   const qc = useQueryClient();
   const list = useServerFn(listEmployees);
   const create = useServerFn(createEmployee);
