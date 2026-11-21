@@ -54,4 +54,3 @@ export async function verifyPinAttempt(db: any, userId: string, pin: string, con
   if (!saved) return retryConflict();
   return { ok: true as const };
 }
-
