@@ -142,7 +142,7 @@ const SHIFT_DAY_AR: Record<string, string> = {
   Thu: "الخميس", Fri: "الجمعة", Sat: "السبت",
 };
 
-const fmtShift = (ms: number) => {
+export const fmtShift = (ms: number) => {
   const parts = shiftFmt.formatToParts(new Date(ms));
   const get = (t: string) => parts.find((x) => x.type === t)?.value ?? "";
   const ampm = get("dayPeriod").toLowerCase().includes("a") ? "ص" : "م";
