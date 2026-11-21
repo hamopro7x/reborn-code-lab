@@ -1,5 +1,7 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Copy, Download, Lock, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 
@@ -299,5 +301,151 @@ export function CardsPanel({ q, isAdmin, onAdd, onDelete, onEdit, onToggleFreeze
         </div>
       )}
     </div>
+  );
+}
+
+
+export function AddCardDialog({ open, onClose, onSubmit, busy, card }: {
+  open: boolean;
+  card?: any;
+  onClose: () => void;
+  onSubmit: (data: { pan4: string; brand: string; currency: string; status: string; name: string; fullNumber: string; cvv: string; expiry: string }) => void;
+  busy: boolean;
+}) {
+  const initial = { name: "", pan4: "", fullNumber: "", brand: "Visa", currency: "USD", status: "active", cvv: "", expiry: "", kind: "virtual" };
+  const [form, setForm] = useState(initial);
+  useEffect(() => {
+    if (!open) { setForm(initial); return; }
+    if (card) {
+      setForm({
+        name: card.name ?? "",
+        pan4: card.pan4 ?? "",
+        fullNumber: card.fullNumber ?? "",
+        brand: card.brand ?? "Visa",
+        currency: card.currency ?? "USD",
+        status: card.status ?? "active",
+        cvv: card.cvv ?? "",
+        expiry: card.expiry ?? "",
+        kind: card.virtual === false ? "physical" : "virtual",
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, card]);
+  const field = (k: keyof typeof form) => ({
+    value: form[k],
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
+      setForm((s) => {
+        const next = { ...s, [k]: e.target.value };
+        if (k === "fullNumber") {
+          const auto = detectBrand(e.target.value);
+          if (auto) next.brand = auto;
+        }
+        return next;
+      }),
+  });
+  const setBrand = (brand: string) => setForm((s) => ({ ...s, brand }));
+  const copy = (v: string) => navigator.clipboard?.writeText(v || "");
+  const inputCls =
+    "rounded-xl bg-transparent border-border/60 h-12 text-right placeholder:text-muted-foreground/50";
+  const pick = (active: boolean) =>
+    `h-12 flex-1 rounded-xl border text-sm font-bold transition-colors ${
+      active
+        ? "border-[#f7a600] text-[#f7a600] bg-transparent"
+        : "border-border/60 text-foreground/80 bg-transparent hover:border-border"
+    }`;
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="sm:max-w-lg rounded-2xl bg-[#0f1013] border-border/50" dir="rtl">
+        <DialogHeader>
+          <DialogTitle className="text-right text-xl font-bold">{card ? "تعديل الكرت" : "كرت جديد"}</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-4 py-1 text-right">
+          <div className="grid gap-2">
+            <label className="text-sm text-muted-foreground">اسم صاحب البطاقة</label>
+            <Input placeholder="مثال: أحمد محمد" {...field("name")} className={inputCls} />
+          </div>
+
+          <div className="grid gap-2">
+            <div className="flex items-center justify-between">
+              <button type="button" onClick={() => copy(form.fullNumber)} className="text-sm text-[#f7a600] hover:underline">نسخ</button>
+              <label className="text-sm text-muted-foreground">رقم البطاقة</label>
+            </div>
+            <Input placeholder="5596 1234 5678 4938" {...field("fullNumber")} className={inputCls} dir="ltr" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-2">
+              <div className="flex items-center justify-between">
+                <button type="button" onClick={() => copy(form.cvv)} className="text-sm text-[#f7a600] hover:underline">نسخ</button>
+                <label className="text-sm text-muted-foreground">رمز CVV</label>
+              </div>
+              <Input placeholder="123" {...field("cvv")} className={inputCls} dir="ltr" />
+            </div>
+            <div className="grid gap-2">
+              <label className="text-sm text-muted-foreground">تاريخ الانتهاء</label>
+              <Input placeholder="07/29" {...field("expiry")} className={inputCls} dir="ltr" />
+            </div>
+          </div>
+
+          <div className="grid gap-2">
+            <label className="text-sm text-muted-foreground">النوع</label>
+            <div className="flex gap-3">
+              <button type="button" onClick={() => setForm((s) => ({ ...s, kind: "virtual" }))} className={pick(form.kind === "virtual")}>
+                افتراضية
+              </button>
+              <button type="button" onClick={() => setForm((s) => ({ ...s, kind: "physical" }))} className={pick(form.kind === "physical")}>
+                فعلية
+              </button>
+            </div>
+          </div>
+
+          <div className="grid gap-2">
+            <label className="text-sm text-muted-foreground">حالة البطاقة</label>
+            <div className="flex gap-3">
+              <button type="button" onClick={() => setForm((s) => ({ ...s, status: "active" }))} className={pick(form.status === "active")}>
+                نشطة
+              </button>
+              <button type="button" onClick={() => setForm((s) => ({ ...s, status: "frozen" }))} className={pick(form.status === "frozen")}>
+                مجمدة
+              </button>
+            </div>
+          </div>
+
+          <div className="grid gap-2">
+            <label className="text-sm text-muted-foreground">الأيقونة</label>
+            <p className="text-[11px] text-muted-foreground/70">يتم التعرف على النوع تلقائيا من رقم البطاقة، ويمكنك تغييره يدويا.</p>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {CARD_BRANDS.map((b) => (
+                <button
+                  key={b}
+                  type="button"
+                  onClick={() => setBrand(b)}
+                  className={`${pick(form.brand === b)} inline-flex items-center justify-center gap-2 px-2`}
+                >
+                  <span className="text-xs">{b}</span>
+                  <BrandBadge brand={b} />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <Button
+              disabled={busy}
+              onClick={() =>
+                onSubmit({
+                  ...form,
+                  pan4: form.pan4 || form.fullNumber.replace(/\D/g, "").slice(-4),
+                })
+              }
+              className="rounded-xl h-11 px-7 bg-muted text-foreground hover:bg-muted/80 font-bold"
+            >
+              {busy ? <Loader2 className="size-4 animate-spin" /> : card ? "حفظ" : "إضافة"}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
