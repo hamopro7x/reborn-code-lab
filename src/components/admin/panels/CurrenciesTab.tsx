@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Edit, Plus, Trash2 } from "lucide-react";
 
-function CurrenciesTab() {
+export function CurrenciesTab() {
   const qc = useQueryClient();
   const currsQ = useQuery({ queryKey: ["admin-currencies"], queryFn: async () => (await supabase.from("currencies").select("*").order("code")).data ?? [] });
   const ratesQ = useQuery({ queryKey: ["admin-rates"], queryFn: async () => (await supabase.from("exchange_rates").select("*, currency:currencies(name,symbol)")).data ?? [] });
