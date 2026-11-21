@@ -246,7 +246,6 @@ export async function workTable(opts: {
   };
 }
 
-export 
 /* ------------------------- P2P: manual linking ------------------------- */
 
 /** Completed P2P orders that are not linked to any shift yet. */
