@@ -1,4 +1,3 @@
-import { DateTimeInput } from "@/components/ui/date-time-input";
 import { ADMIN_LAST_PANEL_KEY, canEmployeeViewPanel, canViewAdminPanel, employeeBasePanels, PanelKey, panelKeys, readLastAdminPanel, useAdminRole } from "@/modules/admin/admin-access";
 import { getAdminNavGroups, getVisibleAdminNavGroups } from "@/modules/admin/admin-navigation";
 import { ChatNavBadge } from "@/modules/admin/components/ChatNavBadge";
@@ -26,59 +25,36 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import {
-  SidebarProvider, Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
-  SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarTrigger,
-  SidebarHeader, SidebarFooter,
-} from "@/components/ui/sidebar";
+import { SidebarProvider, Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarTrigger, SidebarHeader, SidebarFooter } from "@/components/ui/sidebar";
 import { SidebarGlider } from "@/components/admin/SidebarGlider";
 import headerMark from "@/assets/mg-metallic-logo-3d.png";
 import { AdminLangToggle, AdminTranslator, useAdminLang } from "@/lib/admin-i18n/translator";
-import {
-  LayoutDashboard, Package, Layers, ShoppingCart, CreditCard, Coins, Clock, Settings2,
-  Plus, Trash2, Edit, ExternalLink, Check, X, TrendingUp, DollarSign, Users, Bell, Loader2,
-  UserCog, LogOut, Repeat, ArrowUpRight, GraduationCap, MonitorSmartphone, Upload, PlayCircle,
-  Lock, Camera, Download, ChevronRight,
-} from "lucide-react";
+import { CreditCard, Coins, Clock, Plus, Trash2, Edit, ExternalLink, X, Loader2, LogOut, MonitorSmartphone, Upload, PlayCircle, Lock, Camera, Download } from "lucide-react";
 
 import { useServerFn } from "@tanstack/react-start";
-import { createEmployee, deleteEmployee, listEmployees, listCustomers, updateEmployeeAvatar, deleteAllOrders, updateEmployee } from "@/lib/admin.functions";
-import { adminListDevices, adminDeleteDevice, adminResetUserDevices, adminAddDevice, adminListEmployees,
-  adminListCourseAccess, adminGrantCourseAccess, adminRevokeCourseAccess, checkDevice, getViewerIdentity } from "@/lib/courses.functions";
-import { getDeviceFingerprint } from "@/lib/device";
-import {
-  prepareCategoryImageUpload,
-  getCategoryImageUrl,
-  saveCategory,
-  deleteCategory,
-} from "@/lib/categories.functions";
+import { createEmployee, deleteEmployee, listEmployees, updateEmployeeAvatar, updateEmployee } from "@/lib/admin.functions";
+import { adminListEmployees, adminListCourseAccess, adminGrantCourseAccess, adminRevokeCourseAccess, checkDevice, getViewerIdentity } from "@/lib/courses.functions";
 
 import { ShieldAlert } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
+
 import { ReportsTab } from "@/components/admin/ReportsTab";
 import { ProductsTab } from "@/components/admin/ProductsTab";
 import { AdminBackProvider, useAdminBack } from "@/components/admin/back-nav";
 import { BybitTab, ApiKeyPanel } from "@/components/admin/BybitTab";
-import { FileBarChart, MonitorPlay, Image as ImageIcon, ChevronUp, ChevronDown, WalletCards, KeyRound, ClipboardList, Table2 } from "lucide-react";
+import { Image as ImageIcon, ChevronUp, ChevronDown } from "lucide-react";
 import { WorkSheetPanel } from "@/components/admin/WorkSheetPanel";
 import { AdminSheet } from "@/components/admin/AdminSheet";
 import { GmailInbox, MailNotifier } from "@/components/admin/GmailInbox";
 import { StaffChat } from "@/components/admin/StaffChat";
-import { MessagesSquare } from "lucide-react";
-import { Mail } from "lucide-react";
 
 import { LessonUploader } from "@/components/admin/LessonUploader";
 import { DeviceMonitorGrid } from "@/components/admin/DeviceMonitorGrid";
 import { EmployeeDevices } from "@/components/admin/DeviceMonitorGrid";
 import { HeroBannerManager } from "@/components/admin/HeroBannerManager";
 import { FooterManager } from "@/components/admin/FooterManager";
-import { ensureSlug } from "@/lib/slug";
+
 import { livePoll } from "@/lib/live-poll";
 import { getPaymentIconUrl, preparePaymentIconUpload } from "@/lib/payments.functions";
-
-
-
-
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({ meta: [
@@ -159,7 +135,6 @@ function Admin() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEmployee, sharedQ.isSuccess, panel, shared.join(",")]);
 
-
   if (role === null) return <div className="p-8 text-center">جاري التحقق...</div>;
   if (role !== "admin" && role !== "employee") {
     return (
@@ -176,7 +151,6 @@ function Admin() {
   const navGroups = getAdminNavGroups();
   const visibleNavGroups = getVisibleAdminNavGroups(navGroups, isEmployee, employeeAllowed);
 
-
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background" dir="rtl">
@@ -186,7 +160,6 @@ function Admin() {
             <div className="flex items-center justify-center px-1 py-1.5">
               <img src={headerMark} alt="MG Pro" className="w-full max-h-24 object-contain" />
             </div>
-
 
           </SidebarHeader>
           <SidebarContent>
@@ -279,7 +252,6 @@ function Admin() {
             {panel === "sheet" && adminOnly && <AdminSheet />}
             {panel === "mail" && canView("mail") && <GmailInbox isAdmin={adminOnly} />}
             {panel === "chat" && <StaffChat targetId={search.message} />}
-
 
             
             {panel === "products" && canView("products") && <ProductsTab />}
@@ -384,7 +356,6 @@ function EmployeesTab() {
     },
     refetchInterval: livePoll(60_000),
   });
-
 
   async function onPickAvatar(userId: string, file: File | null) {
     if (!file) return;
@@ -525,7 +496,6 @@ function EmployeesTab() {
               </div>
             </div>
 
-
           </div>
         </div>
 
@@ -539,8 +509,6 @@ function EmployeesTab() {
             <DevicesTab userId={u.user_id} employeeName={u.full_name} />
           </div>
         </div>
-
-
 
         <Dialog open={!!editing} onOpenChange={(o) => { if (!o) setEditing(null); }}>
           <DialogContent>
@@ -627,7 +595,6 @@ function EmployeesTab() {
         ))}
         {(q.data ?? []).length === 0 && <div className="card-surface rounded-2xl p-12 text-center text-muted-foreground col-span-full">لا يوجد موظفون</div>}
       </div>
-
 
       <Dialog open={!!editing} onOpenChange={(o) => { if (!o) setEditing(null); }}>
         <DialogContent>
@@ -1170,7 +1137,6 @@ function LessonsManagerInner({ courseId, courseTitle }: { courseId: string; cour
     })();
   }, [open, lessons.data, courseId, qc]);
 
-
   async function removeLesson(l: any) {
     if (!confirm("حذف المحاضرة؟")) return;
     await supabase.storage.from("course-videos").remove([l.video_path]);
@@ -1293,7 +1259,6 @@ function LessonRow({
     </div>
   );
 }
-
 
 function CourseAccessManager({ courseId, courseTitle }: { courseId: string; courseTitle: string }) {
   const qc = useQueryClient();
