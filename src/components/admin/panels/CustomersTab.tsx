@@ -7,7 +7,7 @@ import { listCustomers } from "@/lib/admin.functions";
 import { formatLocaleDateTime } from "@/lib/format";
 import { ArrowUpRight, Repeat } from "lucide-react";
 
-function CustomersTab() {
+export function CustomersTab() {
   const list = useServerFn(listCustomers);
   const q = useQuery({ queryKey: ["admin-customers"], queryFn: () => list() as Promise<any[]> });
   const [search, setSearch] = useState("");
