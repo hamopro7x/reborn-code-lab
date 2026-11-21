@@ -3,7 +3,7 @@ const heavyInflight = new Map<string, Promise<any>>();
 
 const heavyLast = new Map<string, { at: number; value: any }>();
 
-async function heavyOnce<T>(key: string, cooldownMs: number, run: () => Promise<T>): Promise<T> {
+export async function heavyOnce<T>(key: string, cooldownMs: number, run: () => Promise<T>): Promise<T> {
   const running = heavyInflight.get(key);
   if (running) return running as Promise<T>;
   const last = heavyLast.get(key);
