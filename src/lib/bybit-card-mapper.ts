@@ -96,7 +96,7 @@ function stageOf(t: any): string | null {
   return map[ts] ?? null;
 }
 
-function mapCardTxn(t: any): CardTxn {
+export function mapCardTxn(t: any): CardTxn {
     const side = String(t.side ?? "");
     // Shared rule (bybit-spend.cardRecordOutcome). A reversed («معكوسة»)
     // authorisation was never charged, so it is stored as "failed" and never
