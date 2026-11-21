@@ -55,6 +55,13 @@ jobs:
           src/lib/work-employee.functions.ts
           src/lib/work-admin.functions.ts
           src/lib/work-access.server.ts
+                    src/lib/work-shared.server.ts
+                    src/lib/work-analytics.server.ts
+                    src/lib/work-p2p.server.ts
+                    src/lib/work-employee.server.ts
+                    src/lib/work-manual.server.ts
+                    src/lib/work-history.server.ts
+                    src/lib/work.server.ts
           src/lib/admin-access.server.ts
           src/lib/admin-employees.functions.ts
           src/lib/admin-operations.functions.ts

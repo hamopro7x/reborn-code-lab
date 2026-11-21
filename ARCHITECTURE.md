@@ -28,6 +28,7 @@ MG Pro remains a **modular monolith**: one TanStack Start application, one deplo
 Server-function facades preserve stable imports while implementations are grouped by responsibility:
 
 - `work.functions.ts` → overview, employee actions, admin/history actions, and shared-shift access modules.
+- `work.server.ts` → analytics, P2P/transfers, employee state, manual rows, shared helpers, and shift-history modules.
 - `bybit.functions.ts` → account, read/sync, card administration, conversion, and ledger endpoints.
 - `mail.functions.ts` → account lifecycle, message operations, composition, and notifications.
 - `admin.functions.ts` → employee management and admin operations.
