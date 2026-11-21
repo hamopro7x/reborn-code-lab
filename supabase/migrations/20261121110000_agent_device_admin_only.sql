@@ -7,21 +7,21 @@ DROP POLICY IF EXISTS "staff read devices" ON public.agent_devices;
 DROP POLICY IF EXISTS "admins read devices" ON public.agent_devices;
 CREATE POLICY "admins read devices" ON public.agent_devices
   FOR SELECT TO authenticated
-  USING (private.is_admin(auth.uid()));
+  USING ((select private.is_admin((select auth.uid()))));
 
 -- Keep device approval, reassignment, and removal admin-only.
 DROP POLICY IF EXISTS "staff update devices" ON public.agent_devices;
 DROP POLICY IF EXISTS "admins update devices" ON public.agent_devices;
 CREATE POLICY "admins update devices" ON public.agent_devices
   FOR UPDATE TO authenticated
-  USING (private.is_admin(auth.uid()))
-  WITH CHECK (private.is_admin(auth.uid()));
+  USING ((select private.is_admin((select auth.uid()))))
+  WITH CHECK ((select private.is_admin((select auth.uid()))));
 
 DROP POLICY IF EXISTS "staff delete devices" ON public.agent_devices;
 DROP POLICY IF EXISTS "admins delete devices" ON public.agent_devices;
 CREATE POLICY "admins delete devices" ON public.agent_devices
   FOR DELETE TO authenticated
-  USING (private.is_admin(auth.uid()));
+  USING ((select private.is_admin((select auth.uid()))));
 
 -- Enrollment codes are bearer credentials: employees must not be able to
 -- read unused codes or create/delete them directly. Registration consumes a
@@ -30,14 +30,14 @@ DROP POLICY IF EXISTS "staff can read enroll codes" ON public.agent_enroll_codes
 DROP POLICY IF EXISTS "admins can read enroll codes" ON public.agent_enroll_codes;
 CREATE POLICY "admins can read enroll codes" ON public.agent_enroll_codes
   FOR SELECT TO authenticated
-  USING (private.is_admin(auth.uid()));
+  USING ((select private.is_admin((select auth.uid()))));
 
 DROP POLICY IF EXISTS "staff can insert enroll codes" ON public.agent_enroll_codes;
 DROP POLICY IF EXISTS "staff can delete enroll codes" ON public.agent_enroll_codes;
 DROP POLICY IF EXISTS "admins delete enroll codes" ON public.agent_enroll_codes;
 CREATE POLICY "admins delete enroll codes" ON public.agent_enroll_codes
   FOR DELETE TO authenticated
-  USING (private.is_admin(auth.uid()));
+  USING ((select private.is_admin((select auth.uid()))));
 
 
 -- The enrollment-code RPC was originally callable by any staff member.
@@ -58,7 +58,7 @@ DECLARE
   raw bytea;
   i int;
 BEGIN
-  IF auth.uid() IS NULL OR NOT private.is_admin(auth.uid()) THEN
+  IF auth.uid() IS NULL OR NOT (select private.is_admin((select auth.uid()))) THEN
     RAISE EXCEPTION 'not authorized';
   END IF;
 
