@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Edit, Plus, Trash2 } from "lucide-react";
 
-function CategoriesTab() {
+export function CategoriesTab() {
   const qc = useQueryClient();
   const catsQ = useQuery({ queryKey: ["admin-categories"], queryFn: async () => (await supabase.from("categories").select("*").order("sort_order")).data ?? [] });
   const [editing, setEditing] = useState<any>(null);
