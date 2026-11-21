@@ -2,6 +2,7 @@
  * Stable public facade for the Bybit domain.
  * Provider reads, card synchronization, spend summaries and ledger writes
  * live in focused server-only modules. Preserve this import path for callers.
+ * Keep provider orchestration out of this facade.
  */
 export { cardRecordRank, isUnsupportedCardTypeError, mergeCardTypeResults, isLateSettlementRecord } from "./bybit-card-api.server";
 export { spendWindows, computeSpend, fetchOverview, computeSpendAllAccounts, cardBrandsByPan, clearBybitSpendCache } from "./bybit-overview.server";
