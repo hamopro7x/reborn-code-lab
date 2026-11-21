@@ -1338,7 +1338,7 @@ export function EmployeeWorkView({
   // تحديث لحظي: أي تغيير حقيقي في المركز الرئيسي يحدّث الـqueries المتأثرة فقط.
   useWorkRealtime({ enabled: !blank, shiftId: viewShiftId ?? null, viewUserId: viewUserId ?? null });
   // اسحب المعاملات الجديدة من Bybit للشفت المفتوح بدون انتظار مزامنة يدوية.
-  useLedgerAutoSync(!blank && !shiftMode);
+  useLedgerAutoSync(!blank && !shiftMode, 5_000, !isAdmin);
 
   const txns = useQuery({
     queryKey: shiftMode
