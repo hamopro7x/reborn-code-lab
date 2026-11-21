@@ -1,7 +1,11 @@
 -- Restrict profile writes and release-asset mutations to trusted server/admin paths.
 -- The signup trigger and admin server functions use SECURITY DEFINER/service_role.
+-- Idempotent: these policy names may already exist if the hardening was applied
+-- manually before its migration was recorded.
+BEGIN;
 
 DROP POLICY IF EXISTS "profiles user self manage" ON public.profiles;
+DROP POLICY IF EXISTS "profiles user read own" ON public.profiles;
 
 CREATE POLICY "profiles user read own"
 ON public.profiles
@@ -19,6 +23,9 @@ GRANT SELECT ON public.profiles TO authenticated;
 -- service-role key in agent/release.mjs; application release downloads use
 -- supabaseAdmin signed URLs. No employee direct-write path is required.
 DROP POLICY IF EXISTS "staff manage site assets" ON storage.objects;
+DROP POLICY IF EXISTS "admins insert site assets" ON storage.objects;
+DROP POLICY IF EXISTS "admins update site assets" ON storage.objects;
+DROP POLICY IF EXISTS "admins delete site assets" ON storage.objects;
 
 CREATE POLICY "admins insert site assets"
 ON storage.objects
@@ -38,3 +45,5 @@ ON storage.objects
 FOR DELETE
 TO authenticated
 USING (bucket_id = 'site-assets' AND private.is_admin(auth.uid()));
+
+COMMIT;
