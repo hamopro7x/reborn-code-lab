@@ -39,10 +39,7 @@ jobs:
         shell: bash
         run: |
           git fetch origin main
-          FILES="$(git diff --name-only origin/main...HEAD -- '*.ts' '*.tsx' | grep -v '^src/routeTree.gen.ts
-      - name: Build production bundle
-        run: bun run build
- || true)"
+          FILES="$(git diff --name-only origin/main...HEAD -- '*.ts' '*.tsx' | grep -v '^src/routeTree.gen.ts$' || true)"
           if [ -n "$FILES" ]; then
             printf '%s\n' "$FILES" | xargs -r bunx eslint
           else
