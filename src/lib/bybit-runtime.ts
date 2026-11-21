@@ -1,2 +1,4 @@
-/** Shared short delay helper for Bybit retry and pagination backoff. */
+/** Shared Bybit API constants and short retry/backoff delay helper. */
+export const BYBIT_BASE_URL = "https://api.bybit.com";
+export const BYBIT_RECV_WINDOW = "5000";
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
