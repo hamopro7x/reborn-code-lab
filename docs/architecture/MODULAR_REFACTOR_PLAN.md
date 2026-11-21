@@ -129,3 +129,12 @@ src/modules/
 - Follow-up compatibility check found the legacy two-argument `agent_create_enroll_code` overload coexisted with the newer three-argument overload whose parameters all had defaults. That could make two-argument RPC resolution ambiguous. The migration now drops the legacy overload and retains the three-argument function with defaults, which supports old two-parameter and newer targeted-employee calls through one unambiguous signature. The admin UI call shape (`p_employee_name`, `p_user_id`) was checked against that signature.
 
 - Release-script secret handling audit: `agent/release.mjs` previously searched the user's home, Desktop, Downloads, Documents, parent folders, and arbitrary files (including document formats) for service-role credentials, then copied a discovered key into the project `.env`. It now reads only process environment variables and a small explicit allowlist (`.env`, `.env.local`, `selfhost/.env`, project/Desktop `fly-secrets.txt`); arbitrary folder/file scanning and whole-document key extraction were removed. `fly-secrets.txt` is now ignored by Git. This preserves the documented Desktop `fly-secrets.txt` workflow while limiting secret discovery. The release script has not yet been executed or syntax-checked in this environment.
+
+## Security follow-up — profiles and site-assets (2026-11-21)
+
+- Added `supabase/migrations/20261121130000_profiles_site_assets_admin_only.sql`.
+- Replaced the broad self-profile ALL policy with own-row SELECT; revoked direct authenticated INSERT/UPDATE on `profiles`. Signup profile creation remains through the SECURITY DEFINER signup trigger, and administrative profile edits remain through service-role server functions.
+- Replaced staff-wide `site-assets` management with admin-only INSERT/UPDATE/DELETE. Public reads remain unchanged. The agent release publisher uploads with the service-role key, and the public download route creates signed URLs server-side.
+- The current application paths reviewed do not require employee direct writes to `profiles` or `site-assets`. Product image staff uploads remain unchanged because the product UI explicitly supports staff uploads.
+- This migration is committed to the review branch only. It has NOT been applied to Supabase production or staging.
+- Validation still required: run the full install/lint/typecheck/build/test suite against the updated head and verify signup, profile reads, admin employee edits, agent release upload/download, and product image upload in staging.
