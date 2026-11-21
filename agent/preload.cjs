@@ -5,8 +5,6 @@ contextBridge.exposeInMainWorld("agent", {
   getScreenSource: () => ipcRenderer.invoke("get-screen-source"),
   enableAutoLaunch: () => ipcRenderer.invoke("enable-auto-launch"),
   openExternal: (url) => ipcRenderer.invoke("open-external", url),
-  downloadUpdate: (url, version) => ipcRenderer.invoke("download-update", url, version),
-  installUpdate: () => ipcRenderer.invoke("install-update"),
   checkUpdate: () => ipcRenderer.invoke("check-update"),
   rendererPulse: () => ipcRenderer.send("renderer-pulse"),
   reloadRenderer: () => ipcRenderer.send("reload-renderer"),

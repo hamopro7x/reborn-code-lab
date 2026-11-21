@@ -25,11 +25,16 @@ export const TABLE_QUERY_KEYS: Record<string, string[]> = {
     "my-shift-txns", "my-shift-p2p", "emp-shift-txns", "emp-shift-p2p", "emp-archive",
   ],
   work_transfer_notes: ["shift-transfers", "work-transfers", "emp-archive"],
-  work_manual_card_txns: ["my-manual-card-txns", "emp-archive", "emp-manual-card-txns"],
+  work_manual_card_txns: ["my-manual-card-txns", "emp-archive", "emp-manual-card-txns", "shift-manual-card-txns"],
   work_manual_txns: ["my-manual-txns", "emp-archive", "emp-manual-txns", "shift-manual-txns"],
   work_shifts: [
-    "my-work-state", "work-my-shifts-link", "admin-employee-shifts",
-    "employee-panels", "emp-archive",
+    "my-work-state", "emp-work-state", "work-shifts", "work-my-shifts-link",
+    "admin-employee-shifts", "employee-panels", "emp-archive",
+    "my-shift-txns", "emp-shift-txns", "shift-txns",
+  ],
+  work_p2p_shift_links: [
+    "shift-p2p", "my-shift-p2p", "emp-shift-p2p", "p2p-order-links",
+    "emp-archive", "my-work-state", "emp-work-state",
   ],
 
   // ---- Bybit / الأرصدة والكروت ----

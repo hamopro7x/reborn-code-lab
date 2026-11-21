@@ -293,6 +293,10 @@ function clamp01(v) {
 
 
 function sendText(s) {
+  // Remote-control messages arrive over a network data channel. Bound text
+  // injection per message so a malformed/hostile peer cannot enqueue an
+  // unbounded number of Unicode keystrokes into the Windows input process.
+  if (typeof s !== "string" || s.length > 4096) return;
   const codes = [];
   for (const ch of String(s)) {
     const cp = ch.codePointAt(0);
