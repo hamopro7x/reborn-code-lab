@@ -181,6 +181,7 @@ export const listCustomers = createServerFn({ method: "GET" })
     };
     const map = new Map<string, Row>();
     const pageSize = 1_000;
+    const snapshotAt = new Date().toISOString();
     let offset = 0;
 
     // Aggregate incrementally so memory usage is bounded by customer count,
@@ -190,6 +191,7 @@ export const listCustomers = createServerFn({ method: "GET" })
       const { data: orders, error: ordersError } = await supabaseAdmin
         .from("orders")
         .select("id, customer_name, customer_email, customer_phone, customer_country, total, currency_code, status, created_at")
+        .lte("created_at", snapshotAt)
         .order("created_at", { ascending: false })
         .order("id", { ascending: false })
         .range(offset, offset + pageSize - 1);
