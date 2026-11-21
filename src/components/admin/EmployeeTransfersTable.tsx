@@ -24,7 +24,7 @@ const TRANSFER_LABEL: Record<string, string> = {
 };
 
 /** كبسولة إيداع/سحب بنفس شكل القسم المركزي. */
-function FlowChip({
+export function FlowChip({
   active,
   children,
   onClick,
@@ -120,7 +120,7 @@ function TransferNoteCell({ row, onSaved, readOnly }: { row: any; onSaved: () =>
   );
 }
 
-function TransfersTable({
+export function TransfersTable({
   rows,
   loading,
   onDetails,
