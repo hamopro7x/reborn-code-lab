@@ -5,7 +5,6 @@
  * writes only staff shift/assignment/input tables. It never modifies a
  * transaction's original fields. Historical biometric records remain untouched.
  */
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { isPastLastPage, pageRange } from "./pagination";
 import { enforceRetentionSafe } from "./retention.server";
 import { CARD_READ_FILTER } from "./bybit-confirmation";
@@ -15,12 +14,7 @@ import { addWorkSummary, emptyWorkSummary } from "./work-summary";
 import { cairoCalendarRange } from "./cairo-calendar";
 import { hashPin } from "./pin-attempt.server";
 
-type DB = SupabaseClient<any, any, any>;
-
-async function admin(): Promise<DB> {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  return supabaseAdmin as unknown as DB;
-}
+import { admin, namesFor, type DB } from "./work-db.server";
 
 const P2P_KINDS = ["p2p_buy", "p2p_sell"];
 
@@ -247,8 +241,7 @@ export async function workTable(opts: {
 
   const res = await q.range(from, from + pageSize - 1);
   let { data, error, count } = res;
-  if (isPastLastPage(error)) {
-    // Page past the end after the list shrank: an empty page, not a failure.
+  if (isPastLastPage(error)) {    // Page past the end after the list shrank: an empty page, not a failure.
     const head = await q.range(0, 0);
     if (head.error) throw new Error(head.error.message);
     data = [];
@@ -497,8 +490,7 @@ export async function myShiftTransfers(userId: string, scope: "external" | "inte
     .from("work_shifts")
     .select("id,user_id,started_at")
     .is("ended_at", null)
-    .maybeSingle();
-  if (!data || (data as any).user_id !== userId) return [];
+    .maybeSingle();  if (!data || (data as any).user_id !== userId) return [];
   return transfersLedger(scope, 200, (data as any).started_at as string);
 }
 
@@ -747,8 +739,7 @@ export async function adminEmployeeWorkState(userId: string) {
   /**
    * عدّ المعاملات الناجحة لكل الشفتات في استعلام واحد بدل استعلام لكل شفت،
    * وهو ما كان يجعل فتح جدول بيانات الشغل بطيئًا جدًا (حتى 20 رحلة للسيرفر).
-   */
-  const { data: assigns } = await db
+   */  const { data: assigns } = await db
     .from("work_txn_assignments")
     .select("shift_id, bybit_ledger!inner(status)")
     .not("bybit_ledger.detail", "cs", '{"side":"2"}')
@@ -997,8 +988,7 @@ export async function listManualTxns(
 }
 
 /** The employee's currently OPEN shift id (null when he holds none). */
-export async function openShiftId(userId: string): Promise<string | null> {
-  const db = await admin();
+export async function openShiftId(userId: string): Promise<string | null> {  const db = await admin();
   const { data, error } = await db
     .from("work_shifts")
     .select("id")
@@ -1247,8 +1237,7 @@ export async function saveMyManualCardTxn(
     .maybeSingle();
   if (!row) return { ok: false as const, error: "الصف غير موجود" };
 
-  const now = new Date();
-  // كل الخانات (بما فيها «جنية») متاحة للتعديل 10 دقائق فقط.
+  const now = new Date();  // كل الخانات (بما فيها «جنية») متاحة للتعديل 10 دقائق فقط.
   if (now.getTime() - new Date((row as any).created_at).getTime() >= MANUAL_CARD_EDIT_MS) {
     return {
       ok: false as const,
@@ -1497,8 +1486,7 @@ async function p2pByAssignment(where: { shiftId?: string; userId?: string }, vie
   const db = await admin();
   const links = await readP2PLinks(db, { ...where, ...(viewerId ? { userId: viewerId } : {}) });
   const ledgerIds = [...new Set(links.map((l) => l.ledger_id))];
-  if (!ledgerIds.length) return [];
-  const allLinks = await readP2PLinks(db, { ledgerIds, ...(viewerId ? { userId: viewerId } : {}) });
+  if (!ledgerIds.length) return [];  const allLinks = await readP2PLinks(db, { ledgerIds, ...(viewerId ? { userId: viewerId } : {}) });
   const names = await namesFor(db, allLinks.map((l) => l.user_id));
   const data: any[] = [];
   for (let from = 0; from < ledgerIds.length; from += 100) {
@@ -1747,8 +1735,7 @@ export async function pinIsSet(userId: string): Promise<boolean> {
   const db = await admin();
   const { data, error } = await db.from("work_pins").select("user_id").eq("user_id", userId).maybeSingle();
   if (error) throw new Error("تعذّر التحقق من رمز الاستلام — حاول مرة أخرى");
-  return !!data;
-}
+  return !!data;}
 
 /** Creates or replaces a PIN. `by` records who changed it (self or admin). */
 export async function savePin(userId: string, pin: string, by: string, createOnly = false) {
