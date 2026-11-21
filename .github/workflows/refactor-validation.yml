@@ -36,6 +36,7 @@ jobs:
           src/components/admin/EmployeeTransfersTable.tsx
           src/components/admin/EmployeeWorkFormatters.ts
           src/lib/bybit-account.server.ts
+          src/lib/bybit-assets.server.ts
           src/lib/bybit-runtime.ts
           src/lib/work-pin.server.ts
           --rule 'prettier/prettier: off'
