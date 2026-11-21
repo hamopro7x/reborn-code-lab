@@ -1,96 +1,35 @@
-import {
-  DateTimeInput } from "@/components/ui/date-time-input";
-import { formatLocaleDateTime } from "@/lib/format";
-import { createFileRoute,
-  Link,
-  useNavigate } from "@tanstack/react-router";
-import { useQuery,
-  useQueryClient } from "@tanstack/react-query";
-import { useEffect,
-  useRef,
-  useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-import { Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue } from "@/components/ui/select";
-import { useChatBadge } from "@/lib/chat-badge";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
-  SidebarProvider,
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarTrigger,
-  SidebarHeader,
-  SidebarFooter,
-  } from "@/components/ui/sidebar";
+  SidebarProvider, Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
+  SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
+  SidebarTrigger, SidebarHeader, SidebarFooter,
+} from "@/components/ui/sidebar";
 import { SidebarGlider } from "@/components/admin/SidebarGlider";
 import headerMark from "@/assets/mg-metallic-logo-3d.png";
-import { AdminLangToggle,
-  AdminTranslator,
-  useAdminLang } from "@/lib/admin-i18n/translator";
+import { AdminLangToggle, AdminTranslator, useAdminLang } from "@/lib/admin-i18n/translator";
 import {
-  LayoutDashboard,
-  Package,
-  Layers,
-  ShoppingCart,
-  CreditCard,
-  Coins,
-  Clock,
-  Settings2,
-  Plus,
-  Trash2,
-  Edit,
-  ExternalLink,
-  X,
-  Users,
-  Loader2,
-  Star,
-  UserCog,
-  LogOut,
-  Repeat,
-  GraduationCap,
-  MonitorSmartphone,
-  Upload,
-  PlayCircle,
-  Lock,
-  Camera,
-  Download,
-  ChevronRight,
+  LayoutDashboard, Package, Layers, ShoppingCart, CreditCard, Coins, Clock,
+  Settings2, ExternalLink, X, Users, Star, UserCog, LogOut, GraduationCap,
+  Lock, ChevronRight, FileBarChart, MonitorPlay, WalletCards, KeyRound,
+  ClipboardList, Table2, MessagesSquare, Mail,
 } from "lucide-react";
-
-import { useServerFn } from "@tanstack/react-start";
-
-import { ShieldAlert } from "lucide-react";
+import { useChatBadge } from "@/lib/chat-badge";
 import { ReportsTab } from "@/components/admin/ReportsTab";
 import { ProductsTab } from "@/components/admin/ProductsTab";
-import { AdminBackProvider, useAdminBack, useAdminBackTarget } from "@/components/admin/back-nav";
+import { AdminBackProvider, useAdminBackTarget } from "@/components/admin/back-nav";
 import { BybitTab, ApiKeyPanel } from "@/components/admin/BybitTab";
-import { FileBarChart, MonitorPlay, Image as ImageIcon, ChevronUp, ChevronDown, WalletCards, KeyRound, ClipboardList, Table2 } from "lucide-react";
 import { WorkSheetPanel } from "@/components/admin/WorkSheetPanel";
 import { AdminSheet } from "@/components/admin/AdminSheet";
 import { GmailInbox, MailNotifier } from "@/components/admin/GmailInbox";
 import { StaffChat } from "@/components/admin/StaffChat";
-import { MessagesSquare } from "lucide-react";
-import { Mail } from "lucide-react";
 import { OverviewTab } from "@/components/admin/panels/OverviewTab";
 import { CustomersTab } from "@/components/admin/panels/CustomersTab";
 import { ReviewsTab } from "@/components/admin/panels/ReviewsTab";
@@ -102,11 +41,8 @@ import { CurrenciesTab } from "@/components/admin/panels/CurrenciesTab";
 import { PaymentsTab } from "@/components/admin/panels/PaymentsTab";
 import { EmployeesTab } from "@/components/admin/panels/EmployeesTab";
 import { CoursesTab } from "@/components/admin/panels/CoursesTab";
-
 import { DeviceMonitorGrid } from "@/components/admin/DeviceMonitorGrid";
-import { EmployeeDevices } from "@/components/admin/DeviceMonitorGrid";
 import { livePoll } from "@/lib/live-poll";
-
 
 
 type PanelKey =
