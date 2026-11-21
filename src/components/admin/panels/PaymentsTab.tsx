@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Plus, CreditCard, Edit, Trash2, Upload, Coins } from "lucide-react";
 
-function PaymentsTab() {
+export function PaymentsTab() {
   const qc = useQueryClient();
   const prepareIconUpload = useServerFn(preparePaymentIconUpload);
   const getIconUrl = useServerFn(getPaymentIconUrl);
