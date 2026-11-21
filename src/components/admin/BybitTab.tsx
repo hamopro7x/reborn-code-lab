@@ -1,10 +1,32 @@
 import { Fragment, useEffect, useState, useRef } from "react";
-import { Stat, Chip, Empty, visibleCoins, MerchantLogo, CoinLogo, CoinBalanceCard, ChainLogo } from "@/components/admin/bybit/BybitVisuals";
 import { useUiState } from "@/lib/ui-state";
 import { usePersistentState } from "@/lib/persistent-state";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import {
+  getBybitOverview, getBybitCardTxns, syncAllBybitCardTxns, getBybitOnChain, getBybitInternal, getBybitP2P,
+  getBybitCards, createBybitCard, deleteBybitCard, updateBybitCard, getBybitAccountInfo, saveBybitAccountInfo,
+  listBybitAccounts, addBybitAccount, removeBybitAccount, updateBybitAccount, reorderBybitAccounts,
+} from "@/lib/bybit.functions";
+import { formatDateTime } from "@/lib/format";
+import { BybitDocsCard } from "@/components/admin/BybitDocs";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { FintechBackdrop } from "@/components/admin/FintechBackdrop";
+import { useAdminBack } from "@/components/admin/back-nav";
+import { BybitLedgerPanel } from "@/components/admin/BybitLedgerPanel";
+import { cardPurchasePresenter } from "@/lib/bybit-spend";
+import { RefreshCw, CreditCard, Layers, ArrowUp, ArrowDown, ChevronDown, Loader2, Trash2, Plus, Download, Copy, Pencil, ChevronLeft, Wallet, ArrowDownUp, Search, BarChart3, Clock, PieChart, Lock } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Stat, Chip, Empty, visibleCoins, MerchantLogo, CoinLogo, CoinBalanceCard, ChainLogo } from "@/components/admin/bybit/BybitVisuals";
 
-/** Official USDT token logo from TrustWallet (works on Fly and Lovable). */
+const TAB_KEY = "bybit_active_tab";
+const money = (n: number, c = "USD") => `${c} ${Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const dt = (ms: number) => formatDateTime(ms);
+
 type BybitAccountRow = {
   id: string;
   name: string;
