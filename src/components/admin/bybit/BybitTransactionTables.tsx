@@ -1,4 +1,4 @@
-import { Fragment, useState } from "react";
+import { Fragment } from "react";
 import { dt, Chip, Empty, CoinLogo, ChainLogo } from "@/components/admin/bybit/BybitVisuals";
 import { Layers, ArrowUp, ArrowDown, ChevronDown } from "lucide-react";
 
