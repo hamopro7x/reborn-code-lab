@@ -184,8 +184,9 @@ const key = [
 
 if (!url || !key) {
   console.error(`\n>> المُثبِّت جاهز على: ${setupPath}`);
-  console.error(">> تم البحث في هذه المجلدات:");
-  for (const dir of searchDirs) console.error(`   - ${dir}`);
+  console.error(">> لم يتم العثور على مفتاح صالح في متغيرات البيئة أو ملفات الإعدادات المحددة.");
+  console.error(">> الملفات المدعومة: .env أو .env.local أو selfhost/.env أو fly-secrets.txt داخل المشروع،");
+  console.error("   أو Desktop/fly-secrets.txt أو OneDrive/Desktop/fly-secrets.txt.");
   throw new Error(
     "مفتاح الرفع غير موجود على هذا الجهاز. أنشئ ملفاً باسم fly-secrets.txt على سطح المكتب\n" +
       "يحتوي السطر التالي فقط:\n" +
