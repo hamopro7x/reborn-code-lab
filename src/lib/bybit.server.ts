@@ -21,7 +21,6 @@ import {
   sumSpend,
   sumSpendByCard,
   auditSpend,
-  getCanonicalTransactionIdentity,
   cardRecordOutcome,
   isCardReversalEvent,
   type SpendRow,
