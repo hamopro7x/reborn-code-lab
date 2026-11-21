@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Bell, Check, DollarSign, Loader2, Package, Repeat, ShoppingCart, TrendingUp, Users } from "lucide-react";
 
-function OverviewTab() {
+export function OverviewTab() {
   const qc = useQueryClient();
   const stats = useQuery({
     queryKey: ["admin-stats"],
