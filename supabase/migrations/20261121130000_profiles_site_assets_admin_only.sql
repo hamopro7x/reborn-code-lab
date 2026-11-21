@@ -11,7 +11,7 @@ CREATE POLICY "profiles user read own"
 ON public.profiles
 FOR SELECT
 TO authenticated
-USING (auth.uid() = id);
+USING ((select auth.uid()) = id);
 
 -- Keep admins able to read all profiles through the existing admin-read policy.
 -- No current client UI needs direct profile INSERT/UPDATE; signup and admin edits
@@ -32,19 +32,19 @@ CREATE POLICY "admins insert site assets"
 ON storage.objects
 FOR INSERT
 TO authenticated
-WITH CHECK (bucket_id = 'site-assets' AND private.is_admin(auth.uid()));
+WITH CHECK (bucket_id = 'site-assets' AND (select private.is_admin((select auth.uid()))));
 
 CREATE POLICY "admins update site assets"
 ON storage.objects
 FOR UPDATE
 TO authenticated
-USING (bucket_id = 'site-assets' AND private.is_admin(auth.uid()))
-WITH CHECK (bucket_id = 'site-assets' AND private.is_admin(auth.uid()));
+USING (bucket_id = 'site-assets' AND (select private.is_admin((select auth.uid()))))
+WITH CHECK (bucket_id = 'site-assets' AND (select private.is_admin((select auth.uid()))));
 
 CREATE POLICY "admins delete site assets"
 ON storage.objects
 FOR DELETE
 TO authenticated
-USING (bucket_id = 'site-assets' AND private.is_admin(auth.uid()));
+USING (bucket_id = 'site-assets' AND (select private.is_admin((select auth.uid()))));
 
 COMMIT;
