@@ -94,14 +94,6 @@ if (verBadgeEl) verBadgeEl.textContent = "v" + AGENT_VERSION;
 
 
 
-const updateEl = document.getElementById("update");
-const updVerEl = document.getElementById("upd-ver");
-const updBtn = document.getElementById("upd-btn");
-const updBar = document.getElementById("upd-bar");
-const updFill = document.getElementById("upd-fill");
-const updProg = document.getElementById("upd-progress");
-const updLater = document.getElementById("upd-later");
-
 const size = (n) => {
   const v = Number(n) || 0;
   return v >= 1073741824 ? (v / 1073741824).toFixed(2) + " GB" : (v / 1048576).toFixed(1) + " MB";
@@ -132,87 +124,6 @@ window.agent.onUpdateProgress?.((p) => {
   if (!p) return;
   showProgress(p.received || 0, p.total || 0, p.percent);
 });
-
-async function startDownload(info, autoInstall = false) {
-  if (!info?.url) return;
-  if (updateBusy) return; // منع تحميل ثانٍ متزامن على نفس الملف
-  updateBusy = true;
-  // بدون إشعارات أو أزرار — يظهر شريط التقدّم فقط أسفل رقم الإصدار
-  updateEl.style.display = "none";
-  showProgress(0, 0, 0);
-  try {
-    await window.agent.downloadUpdate(info.url, info.version);
-    updFill.style.width = "100%";
-    updProg.textContent = "تم التحميل — جاهز للتثبيت";
-    updBtn.textContent = "تثبيت";
-    updBtn.disabled = false;
-    const install = async () => {
-      updBtn.disabled = true;
-      updBtn.textContent = "جارٍ التثبيت…";
-      updProg.textContent = "سيتم إعادة تشغيل البرنامج بعد التثبيت…";
-      try {
-        await window.agent.installUpdate();
-      } catch (err) {
-        updProg.textContent = "فشل التثبيت: " + (err?.message || err);
-        updBtn.textContent = "إعادة المحاولة";
-        updBtn.disabled = false;
-      }
-    };
-    updBtn.onclick = install;
-    if (autoInstall) void install();
-  } catch (err) {
-    updProg.textContent = "فشل التحميل: " + (err?.message || err) + " — إعادة المحاولة تلقائياً…";
-    updBtn.textContent = "جارٍ التحديث تلقائياً…";
-    updBtn.disabled = true;
-    updBtn.onclick = null;
-    // إعادة محاولة تلقائية بدون تدخل الموظف
-    setTimeout(() => {
-      updateBusy = false;
-      void startDownload(info, true);
-    }, 30000);
-  } finally {
-    // مهم: بدون تصفير الحالة كان الفحص التلقائي للتحديث يتوقف للأبد
-    updateBusy = false;
-  }
-}
-
-function cmpVersion(a, b) {
-  const pa = String(a).split(".").map(Number);
-  const pb = String(b).split(".").map(Number);
-  for (let i = 0; i < 3; i++) {
-    if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) - (pb[i] || 0);
-  }
-  return 0;
-}
-
-let updateBusy = false;
-let dismissedVersion = null;
-
-async function checkUpdate() {
-  if (updateBusy) return; // تحميل/تثبيت جارٍ
-  try {
-    // المصدر الوحيد للتحديث = الموقع المنشور. لا يظهر أي تحديث للموظف
-    // إلا بعد نشر النسخة الجديدة من لوحة الموقع (Publish changes).
-    const res = await fetch("https://mag-pro1.com/api/public/agent-version", {
-      cache: "no-store",
-    });
-    const info = await res.json();
-    if (!info?.version || cmpVersion(info.version, AGENT_VERSION) <= 0) return;
-    // تحديث صامت بالكامل: بدون أي إشعار أو زر — ينزل ويثبت في الخلفية.
-    updateEl.style.display = "none";
-    void startDownload(
-      { version: info.version, url: "https://mag-pro1.com/api/public/agent-download.exe" },
-      true,
-    );
-  } catch {
-    /* تجاهل — نحاول لاحقاً */
-  }
-}
-
-
-
-// عملية Electron الخلفية هي المصدر الوحيد للتحديث، حتى لا يبدأ تنزيلان لنفس
-// الملف من الواجهة والخلفية في الوقت نفسه.
 
 function rand(len) {
   const b = new Uint8Array(len);
