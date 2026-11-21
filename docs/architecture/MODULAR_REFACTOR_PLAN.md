@@ -21,7 +21,7 @@
 - Employee refresh remains live without granting deep-sync access: the employee shift read no longer launches `pullFromBybit()`; a separate authenticated refresh endpoint runs only the throttled recent-ingestion pass and returns no account or ledger data. Admin screens retain the full sync path.
 - Database RLS hardening: a new migration removes employee direct-read policies from the global Bybit ledger, account metadata, card records (including full PAN/CVV/expiry), account-info credentials/MFA, raw card transactions, and Bybit documents. Shift and assignment reads are narrowed to own rows plus admins. Server work-sheet reads continue through service-role functions. The migration is committed but must be reviewed and applied to Supabase before deployment.
 - Transfer-note reads are also narrowed to the owning employee plus admins; manual transaction and work-entry tables retain their existing own-row policies.
-- Validation status: GitHub Actions reports no workflow runs for the current head commit. The connector cannot run local npm scripts, so lint/typecheck/build remain unverified and must run in a CI/development environment before merge.
+- Validation status: GitHub Actions run `44849198185` for the current branch completed successfully; dependency installation and the `Card status, reversal, mirror and ledger regressions` test step passed. This does not establish that lint, typecheck, or production build passed; those checks remain unverified and must run before merge.
 
 ## Baseline findings
 - `src/routes/_authenticated/admin.tsx`: 2,337 lines (~122.8 KB); route composition, data access, state, and many panel implementations are colocated.
