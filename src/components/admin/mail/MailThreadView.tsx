@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, ArrowRight, Mail, Reply, Star, Archive, RotateCcw, Trash2, Paperclip } from "lucide-react";
 import { MailMessageBody } from "@/components/admin/MailMessageBody";
 import { MailComposer } from "@/components/admin/mail/MailComposer";
-import { fmt, sender } from "@/components/admin/mail/MailFormatting";
+import { fmt } from "@/components/admin/mail/MailFormatting";
 import { livePoll } from "@/lib/live-poll";
 import { getMailThread, setMailRead, organizeMail, downloadMailAttachment, listMailActivity } from "@/lib/mail.functions";
 
