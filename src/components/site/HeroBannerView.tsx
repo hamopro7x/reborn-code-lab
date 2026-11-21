@@ -1,0 +1,444 @@
+import { useRef } from "react";
+import { Link } from "@tanstack/react-router";
+import { Button } from "@/components/ui/button";
+import {
+  heroIcon, isInternalUrl, type HeroBadgeItem, type HeroBanner, type HeroButton,
+  type HeroLayerKey, type HeroPositions,
+} from "@/lib/hero-banners";
+
+const alignClass = {
+  start: "items-start text-start",
+  center: "items-center text-center",
+  end: "items-end text-end",
+} as const;
+
+const justifyClass = { start: "justify-start", center: "justify-center", end: "justify-end" } as const;
+
+function HeroButtonItem({
+  banner,
+  b,
+  size,
+  compact,
+  variant,
+}: {
+  banner: HeroBanner;
+  b: HeroButton;
+  size?: number;
+  compact?: boolean;
+  variant?: HeroButton["variant"] | "outline-white";
+}) {
+  const Icon = heroIcon(b.icon);
+  const v = variant ?? b.variant;
+  const cls =
+    v === "teal"
+      ? "bg-teal text-teal-foreground hover:bg-teal/90"
+      : v === "outline-white"
+        ? "bg-transparent border border-white text-white hover:bg-white/10"
+        : v === "outline"
+          ? "bg-transparent border border-border text-foreground hover:bg-muted"
+          : "";
+  const buttonSize = size ?? banner.button_size;
+  const px = compact ? "px-2.5" : "px-6";
+  const gap = compact ? "gap-1" : "gap-2";
+  const iconSize = compact ? "size-3" : "size-4";
+  const inner = (
+    <Button
+      className={`${px} rounded-full font-bold ${gap} ${cls}`}
+      style={{ height: buttonSize, fontSize: Math.max(compact ? 10 : 13, Math.round(buttonSize * 0.34)) }}
+    >
+      {b.label}
+      {Icon && <Icon className={iconSize} style={{ color: v === "outline-white" ? "#ffffff" : "#87939f" }} />}
+    </Button>
+  );
+  return isInternalUrl(b.url) ? (
+    <Link to={b.url as any}>{inner}</Link>
+  ) : (
+    <a href={b.url} target="_blank" rel="noreferrer noopener">
+      {inner}
+    </a>
+  );
+}
+
+function BadgeCard({ b }: { b: HeroBadgeItem }) {
+  const Icon = heroIcon(b.icon);
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2.5 w-[170px]">
+      {Icon && (
+        <span
+          className="flex size-9 shrink-0 items-center justify-center rounded-lg text-white"
+          style={{ backgroundColor: b.color }}
+        >
+          <Icon className="size-4" />
+        </span>
+      )}
+      <span className="flex flex-col min-w-0">
+        {b.title && <span className="text-[11px] text-muted-foreground truncate">{b.title}</span>}
+        {b.value && <span className="text-sm font-bold text-foreground truncate">{b.value}</span>}
+      </span>
+    </div>
+  );
+}
+
+function Media({ banner, preview }: { banner: HeroBanner; preview?: boolean }) {
+  const fit = banner.media_fit === "contain" ? "object-contain" : "object-cover";
+  if (banner.media_type === "video" && banner.media_url) {
+    return (
+      <video
+        key={banner.media_url}
+        src={banner.media_url}
+        poster={banner.poster_url ?? undefined}
+        autoPlay={banner.video_autoplay}
+        muted={banner.video_muted || banner.video_autoplay}
+        loop={banner.video_loop}
+        playsInline
+        controls={false}
+        preload={preview ? "metadata" : "auto"}
+        className={`w-full h-full ${fit}`}
+      />
+    );
+  }
+  if (banner.media_type === "image" && banner.media_url) {
+    return (
+      <img
+        key={banner.media_url}
+        src={banner.media_url}
+        alt={banner.title || "بانر"}
+        width={900}
+        height={600}
+        className={`w-full h-full ${fit}`}
+        loading={preview ? "lazy" : "eager"}
+        decoding={preview ? "async" : "sync"}
+        {...(preview ? {} : { fetchPriority: "high" as const })}
+      />
+    );
+  }
+  return <div className="w-full h-full" style={{ backgroundColor: banner.background_color ?? undefined }} />;
+}
+
+/** عرض بانر واحد — يُستخدم في الصفحة الرئيسية وفي المعاينة داخل لوحة الإدارة. */
+export function HeroBannerView({
+  banner,
+  preview,
+  editable,
+  onPositionsChange,
+  forceDevice,
+}: {
+  banner: HeroBanner;
+  preview?: boolean;
+  /** يسمح بتحريك كل عنصر بالماوس داخل المعاينة. */
+  editable?: boolean;
+  onPositionsChange?: (p: HeroPositions) => void;
+  /** يفرض عرض تخطيط جهاز معيّن (مفيد في معاينة لوحة الإدارة). */
+  forceDevice?: "desktop" | "mobile";
+}) {
+  const desktopWrapCls =
+    forceDevice === "mobile" ? "hidden" : forceDevice === "desktop" ? "block" : "hidden xl:block";
+  const mobileWrapCls = forceDevice === "mobile" ? "block" : forceDevice === "desktop" ? "hidden" : "xl:hidden";
+  const overlayMobileCls = forceDevice === "mobile" ? "" : forceDevice === "desktop" ? "hidden" : "xl:hidden";
+  const overlayDesktopCls =
+    forceDevice === "mobile" ? "hidden" : forceDevice === "desktop" ? "block" : "hidden xl:block";
+  const hasMedia = banner.media_type !== "none";
+  const sideButtons = banner.buttons_position === "side";
+  const pos = banner.positions ?? {};
+  const rootRef = useRef<HTMLDivElement>(null);
+  const canDrag = Boolean(editable && onPositionsChange);
+
+  const buttons = banner.buttons.filter((b) => b.enabled && b.label.trim());
+  const badges = banner.badges.filter((b) => b.enabled && (b.title.trim() || b.value.trim()));
+
+  function startDrag(key: HeroLayerKey, e: React.PointerEvent<HTMLDivElement>) {
+    if (!canDrag) return;
+    const root = rootRef.current;
+    if (!root) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const el = e.currentTarget;
+    const box = el.getBoundingClientRect();
+    const container = root.getBoundingClientRect();
+    const grabX = e.clientX - box.left;
+    const grabY = e.clientY - box.top;
+
+    const move = (ev: PointerEvent) => {
+      const maxX = Math.max(0, container.width - box.width);
+      const maxY = Math.max(0, container.height - box.height);
+      const px = Math.min(maxX, Math.max(0, ev.clientX - container.left - grabX));
+      const py = Math.min(maxY, Math.max(0, ev.clientY - container.top - grabY));
+      onPositionsChange?.({
+        ...pos,
+        [key]: { x: (px / container.width) * 100, y: (py / container.height) * 100 },
+      });
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  }
+
+  /** غلاف عنصر: إمّا في التخطيط الطبيعي أو بموضع حر مطلق. */
+  function Layer({
+    k,
+    className,
+    style,
+    children,
+  }: {
+    k: HeroLayerKey;
+    className?: string;
+    style?: React.CSSProperties;
+    children: React.ReactNode;
+  }) {
+    const p = pos[k];
+    const dragCls = canDrag ? "cursor-move touch-none outline-dashed outline-1 outline-offset-2 outline-border" : "";
+    if (p) {
+      return (        <div
+          onPointerDown={(e) => startDrag(k, e)}
+          className={`absolute z-10 ${dragCls} ${className ?? ""}`}
+          style={{ left: `${p.x}%`, top: `${p.y}%`, ...style }}
+        >
+          {children}
+        </div>
+      );
+    }
+    return (
+      <div onPointerDown={(e) => startDrag(k, e)} className={`${dragCls} ${className ?? ""}`} style={style}>
+        {children}
+      </div>
+    );
+  }
+
+  /** العناصر التي لها موضع حر تُرسم مباشرة داخل الحاوية بدل التخطيط الطبيعي. */
+  const freeKeys = new Set(Object.keys(pos));
+
+  const titleNode =
+    banner.show_title && banner.title ? (
+      <h1
+        className="font-black leading-tight line-clamp-2 md:line-clamp-3 text-white drop-shadow-sm"
+        style={{ fontSize: `clamp(${banner.title_size_mobile}px, 4vw, ${banner.title_size}px)`, textShadow: "0 1px 4px rgba(0,0,0,0.6)" }}
+      >
+        {banner.title}
+      </h1>
+    ) : null;
+
+  const subtitleNode =
+    banner.show_subtitle && banner.subtitle ? (
+      <p
+        className="text-hero-foreground/70 line-clamp-2 md:line-clamp-3 max-w-md"
+        style={{ fontSize: `clamp(${banner.subtitle_size_mobile}px, 2vw, ${banner.subtitle_size}px)` }}
+      >
+        {banner.subtitle}
+      </p>
+    ) : null;
+
+  const subtitle2Node =
+    banner.show_subtitle2 && banner.subtitle2 ? (
+      <p
+        className="text-hero-foreground/70 line-clamp-2 md:line-clamp-3 max-w-md"
+        style={{ fontSize: `clamp(${banner.subtitle2_size_mobile}px, 2vw, ${banner.subtitle2_size}px)` }}
+      >
+        {banner.subtitle2}
+      </p>
+    ) : null;
+
+  const titleEl = titleNode ? <Layer k="title">{titleNode}</Layer> : null;
+  const subtitleEl = subtitleNode ? (
+    <Layer k="subtitle" style={freeKeys.has("subtitle") ? undefined : { marginTop: banner.gap_title_subtitle }}>
+      {subtitleNode}
+    </Layer>
+  ) : null;
+  const subtitle2El = subtitle2Node ? (
+    <Layer k="subtitle2" style={freeKeys.has("subtitle2") ? undefined : { marginTop: banner.gap_title_subtitle }}>
+      {subtitle2Node}
+    </Layer>
+  ) : null;
+
+  const buttonEls = buttons.map((b) => (
+    <Layer key={b.id} k={`btn:${b.id}`}>
+      <HeroButtonItem banner={banner} b={b} />
+    </Layer>
+  ));
+
+  const badgeEls = badges.map((b) => (
+    <Layer key={b.id} k={`bdg:${b.id}`}>
+      <BadgeCard b={b} />
+    </Layer>
+  ));
+
+  const flowButtons = buttons.filter((b) => !freeKeys.has(`btn:${b.id}`));
+  const flowBadges = badges.filter((b) => !freeKeys.has(`bdg:${b.id}`));
+
+  const buttonRow = flowButtons.length ? (
+    <div
+      className={`flex flex-wrap items-center gap-3 ${justifyClass[banner.text_align]}`}
+      style={{ marginTop: banner.gap_subtitle_buttons }}
+    >
+      {buttonEls.filter((_, i) => !freeKeys.has(`btn:${buttons[i]!.id}`))}
+    </div>
+  ) : null;
+
+  const badgesColumn = flowBadges.length ? (
+    <div className="flex flex-col gap-3">{badgeEls.filter((_, i) => !freeKeys.has(`bdg:${badges[i]!.id}`))}</div>
+  ) : null;
+
+  return (
+    <div
+      ref={rootRef}
+      className={`relative overflow-hidden ${
+        forceDevice === "mobile"
+          ? "h-full"
+          : forceDevice === "desktop"
+            ? "h-[230px]"
+            : "aspect-[13/5] w-full xl:aspect-auto xl:h-[230px]"
+      }`}
+      style={{ backgroundColor: banner.background_color ?? undefined }}
+    >
+      {/* الخلفية / الوسائط — تغطي كامل مساحة البنر */}
+      {hasMedia && (
+        <div className="absolute inset-0 overflow-hidden">
+          <Media banner={banner} preview={preview} />
+        </div>
+      )}
+
+      {/* طبقة التعتيم فوق الوسائط وتحت المحتوى */}
+      {hasMedia && banner.overlay_enabled && (
+        <>
+          <div
+            className={`absolute inset-0 ${overlayMobileCls}`}
+            style={{
+              background: `linear-gradient(270deg, ${banner.overlay_color}f2 0%, ${banner.overlay_color}e6 38%, ${banner.overlay_color}8c 54%, transparent 72%)`,
+            }}
+          />
+          <div
+            className={`absolute inset-0 ${overlayDesktopCls}`}
+            style={{ backgroundColor: banner.overlay_color, opacity: banner.overlay_opacity }}
+          />
+        </>
+      )}
+
+
+      {/* ============= Desktop layout ============= */}
+      <div className={`${desktopWrapCls} relative h-full`}>
+        {/* العناصر ذات المواضع الحرة */}
+        {freeKeys.has("title") && titleEl}
+        {freeKeys.has("subtitle") && subtitleEl}
+        {freeKeys.has("subtitle2") && subtitle2El}
+        {buttonEls.filter((_, i) => freeKeys.has(`btn:${buttons[i]!.id}`))}
+        {badgeEls.filter((_, i) => freeKeys.has(`bdg:${badges[i]!.id}`))}
+
+        {/* التخطيط الطبيعي لبقية العناصر */}
+        <div className="relative h-full grid grid-cols-[auto_minmax(0,1fr)]">
+          <div
+            className={`relative order-2 p-10 flex flex-col min-w-0 overflow-hidden ${justifyClass[banner.content_position_y]} ${alignClass[banner.content_position_x]}`}
+          >
+            {!freeKeys.has("title") && titleEl}
+            {!freeKeys.has("subtitle") && subtitleEl}
+            {!freeKeys.has("subtitle2") && subtitle2El}
+            {!sideButtons && buttonRow}
+          </div>
+
+          {(badgesColumn || sideButtons) && (
+            <div className="order-1 flex flex-col justify-center gap-3 p-6 min-w-0">
+              {badgesColumn}
+              {sideButtons && buttonRow}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ============= Mobile layout — مطابق لتصميم كانفا + تحكم حر بالمواضع ============= */}
+      <div className={`${mobileWrapCls} relative z-10 h-full`}>
+        {(() => {
+          const mTitle =
+            banner.show_title && banner.title ? (
+              <h1
+                className="font-black leading-tight whitespace-nowrap text-[15px] text-right text-white drop-shadow-sm"
+                style={{ textShadow: "0 1px 4px rgba(0,0,0,0.6)" }}
+              >
+                {banner.title}
+              </h1>
+            ) : null;
+          const mSubtitle =
+            banner.show_subtitle && banner.subtitle ? (
+              <p className="text-white/85 leading-snug line-clamp-2 text-[9px] text-right">{banner.subtitle}</p>
+            ) : null;
+          const mSubtitle2 =
+            banner.show_subtitle2 && banner.subtitle2 ? (
+              <p className="text-white/85 leading-snug line-clamp-2 text-[9px] text-right">{banner.subtitle2}</p>
+            ) : null;
+
+          const shoppingIdx = buttons.findIndex((b) => /تسوق|shop/i.test(b.label));
+          const otherIdx = buttons.findIndex((_, i) => i !== shoppingIdx);
+          const otherVariant = otherIdx >= 0 ? buttons[otherIdx]!.variant : "teal";
+          const shoppingVariant = otherVariant === "teal" ? "outline-white" : "teal";
+          const mButton = (b: HeroButton, i: number) => (
+            <HeroButtonItem
+              banner={banner}
+              b={b}
+              size={22}
+              compact
+              variant={i === shoppingIdx ? shoppingVariant : undefined}
+            />
+          );
+
+          const freeNodes = (
+            <>
+              {freeKeys.has("title") && mTitle && <Layer k="title">{mTitle}</Layer>}
+              {freeKeys.has("subtitle") && mSubtitle && <Layer k="subtitle">{mSubtitle}</Layer>}
+              {freeKeys.has("subtitle2") && mSubtitle2 && <Layer k="subtitle2">{mSubtitle2}</Layer>}
+              {buttons.map((b, i) =>
+                freeKeys.has(`btn:${b.id}`) ? (
+                  <Layer key={b.id} k={`btn:${b.id}`}>
+                    {mButton(b, i)}
+                  </Layer>
+                ) : null,              )}
+              {badges.map((b) =>
+                freeKeys.has(`bdg:${b.id}`) ? (
+                  <Layer key={b.id} k={`bdg:${b.id}`}>
+                    <BadgeCard b={b} />
+                  </Layer>
+                ) : null,
+              )}
+            </>
+          );
+
+          const flowBtns = buttons.filter((b) => !freeKeys.has(`btn:${b.id}`));
+
+          return (
+            <>
+              {freeNodes}
+              {/* النص والأزرار على يمين البانر — لأي عنصر لم يُحرَّك يدويًا */}
+              <div className="absolute inset-y-0 right-0 w-[52%] flex flex-col justify-center gap-1 px-3 text-right items-end">
+                {!freeKeys.has("title") && mTitle && (
+                  <Layer k="title" className="w-full">
+                    {mTitle}
+                  </Layer>
+                )}
+                {!freeKeys.has("subtitle") && mSubtitle && (
+                  <Layer k="subtitle" className="w-full">
+                    {mSubtitle}
+                  </Layer>
+                )}
+                {!freeKeys.has("subtitle2") && mSubtitle2 && (
+                  <Layer k="subtitle2" className="w-full">
+                    {mSubtitle2}
+                  </Layer>
+                )}
+                {flowBtns.length > 0 && (
+                  <div className="flex flex-nowrap justify-end gap-1.5 mt-1.5 w-full">
+                    {flowBtns.map((b) => (
+                      <Layer key={b.id} k={`btn:${b.id}`}>
+                        {mButton(b, buttons.indexOf(b))}
+                      </Layer>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          );
+        })()}
+      </div>
+
+
+    </div>
+  );
+}
