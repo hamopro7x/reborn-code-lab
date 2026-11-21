@@ -31,7 +31,6 @@ import {
   Package,
   DollarSign,
   Wallet,
-  Trash2,
   Plus,
 
   
@@ -40,29 +39,20 @@ import {
 import { toast } from "sonner";
 import { MerchantLogo } from "./MerchantLogo";
 import { P2PShiftLinkMenu } from "./P2PShiftLinkMenu";
-import { formatDateTime, formatTime } from "@/lib/format";
-import { PAGE_SIZE } from "@/lib/pagination";
+import { formatTime } from "@/lib/format";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { supabase } from "@/integrations/supabase/client";
 import {
   getMyShiftTxns,
-  saveMyTxnEntry,
   saveTransferNote,
-  getMyManualTxns,
-  addMyManualTxn,
-  saveMyManualTxn,
   getMyManualCardTxns,
   getShiftManualCardTxns,
   getEmployeeManualCardTxns,
-  addMyManualCardTxn,
-  saveMyManualCardTxn,
-  clearMyManualTxns,
-  getWorkP2PCompleted,
+    getWorkP2PCompleted,
   getWorkTransferPage,
 
   getEmployeeShiftTxns,
-  getEmployeeManualTxns,
-  getEmployeeShiftP2P,
+    getEmployeeShiftP2P,
   getShiftTxns,
   getShiftManualTxns,
   getShiftTransfers,
@@ -72,10 +62,9 @@ import {
   getMyAvatarUrl,
   getWorkSheetSummary,
 } from "@/lib/work.functions";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { getBybitCardBrands } from "@/lib/bybit.functions";
 import { usePinClaim } from "@/components/admin/PinGate";
-import { BrandBadge, LedgerRowDetails, statusBadge } from "@/components/admin/BybitLedgerPanel";
+import { statusBadge } from "@/components/admin/BybitLedgerPanel";
 import { useWorkRealtime } from "@/lib/use-work-realtime";
 import { useLedgerAutoSync } from "@/lib/use-ledger-sync";
 import { livePoll } from "@/lib/live-poll";
