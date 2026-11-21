@@ -32,7 +32,7 @@ export const cardInflight = new Map<string, Promise<any[]>>();
  * that errors is skipped by every walker).
  */
 
-export const spendCache = new Map<string, { at: number; value: Promise<Awaited<ReturnType<typeof computeSpendUncached>>> }>();
+export const spendCache = new Map<string, { at: number; value: Promise<any> }>();
 
 /**
  * Cached front of {@link computeSpendUncached}: reading a full month of card
