@@ -20,7 +20,7 @@ export type BybitCard = {
 
 /** يحدد نوع البطاقة من رقمها (IIN) */
 
-function brandFromNumber(input: string): string | null {
+export function brandFromNumber(input: string): string | null {
   const n = String(input || "").replace(/\D/g, "");
   if (!n) return null;
   if (/^4/.test(n)) return "Visa";
