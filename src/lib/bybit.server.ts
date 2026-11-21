@@ -676,39 +676,6 @@ async function storedCardTxns(limit: number, accountId?: string): Promise<CardTx
 }
 
 /** Maps one archived row to the shape the UI reads. */
-export function mapStoredRow(r: any): CardTxn {
-  const detail = (r.detail ?? {}) as Record<string, string | number | null>;
-  const side = String(detail.side ?? r.txn_type ?? "");
-  const linked = durableCardReversal(detail);
-  const outcome = linked ? "reversed" : cardRecordOutcome(detail.tradeStatus, side, cryptoSoldOf(detail));
-  // Bybit's own raw status wins whenever it says refund / reversed / failed:
-  // older rows were stored as "success" while Bybit had reversed them.
-  const stored: CardTxn["status"] | null =
-    r.status === "success" || r.status === "failed" || r.status === "refund" ? r.status : null;
-  const status: CardTxn["status"] =
-    outcome === "refund"
-      ? "refund"
-      : outcome === "reversed" || outcome === "failed"
-        ? "failed"
-        : legacyReversalUnproven(detail) || detail.reconciliationState === "needs_review" ? "review" : (stored ?? "success");
-
-
-
-
-  return {
-    id: r.txn_id,
-    merchant: r.merchant ?? "—",
-    amount: num(r.amount),
-    currency: r.currency ?? "USD",
-    status,
-    time: Number(r.txn_time ?? 0),
-    pan4: r.pan4 ?? "",
-    type: r.txn_type ?? "",
-    detail,
-    reversed: outcome === "reversed" || (!legacyReversalUnproven(detail) && r.status === "reversed"),
-  };
-}
-
 export type CardTxnPage = {
   rows: CardTxn[];
   total: number;
