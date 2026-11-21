@@ -21,7 +21,7 @@ function beep() {
 }
 
 /** Live updates for staff: realtime invalidation (RLS-scoped) with polling fallback in queries. */
-function useMailRealtime() {
+export function useMailRealtime() {
   const qc = useQueryClient();
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined;
