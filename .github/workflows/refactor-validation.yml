@@ -51,6 +51,14 @@ jobs:
           src/lib/bybit-ledger.functions.ts
           src/lib/bybit-card-visibility.ts
           src/lib/bybit-card-visibility.test.ts
+          src/lib/bybit-cache.server.ts
+          src/lib/bybit-card-api.server.ts
+          src/lib/bybit-overview.server.ts
+          src/lib/bybit-card-sync.server.ts
+          src/lib/bybit-ledger-write.server.ts
+          src/lib/bybit-ledger-sync.server.ts
+          src/lib/bybit-concurrency.server.ts
+          src/lib/bybit.server.ts
           src/lib/work-overview.functions.ts
           src/lib/work-employee.functions.ts
           src/lib/work-admin.functions.ts
@@ -80,5 +88,7 @@ jobs:
           --rule 'prettier/prettier: off'
           --rule '@typescript-eslint/no-explicit-any: off'
 
+      - name: Type-check TypeScript
+        run: bunx tsc --noEmit
       - name: Build production bundle
         run: bun run build
