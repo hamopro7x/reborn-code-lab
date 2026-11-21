@@ -15,7 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { LessonUploader } from "@/components/admin/LessonUploader";
 import { ChevronDown, ChevronUp, Clock, Edit, Image as ImageIcon, Loader2, Lock, PlayCircle, Plus, ShieldAlert, Trash2, Upload } from "lucide-react";
 
-function CoursesTab({ isAdmin }: { isAdmin: boolean }) {
+export function CoursesTab({ isAdmin }: { isAdmin: boolean }) {
   const qc = useQueryClient();
   const checkFn = useServerFn(checkDevice);
   const identityFn = useServerFn(getViewerIdentity);
