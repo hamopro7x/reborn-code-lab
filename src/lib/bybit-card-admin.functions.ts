@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { accountInput, assertAccess, assertAdmin, requiredId, validateApiCreds } from "./bybit-access";
+import { cardsVisibleTo } from "./bybit-card-visibility";
 
 export const saveBybitApiKeys = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -32,11 +33,20 @@ export const getBybitCards = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(accountInput)
   .handler(async ({ data, context }) => {
-    await assertAccess(context.supabase, context.userId);
+    const role = await assertAccess(context.supabase, context.userId);
     const mod = await import("./bybit.server");
-    return mod.readOp(data.accountId, async () => ({ cards: await mod.fetchCards(data.accountId) }), {
-      cards: [] as Awaited<ReturnType<typeof mod.fetchCards>>,
-    });
+    const result = await mod.readOp(
+      data.accountId,
+      async () => ({ cards: await mod.fetchCards(data.accountId) }),
+      { cards: [] as Awaited<ReturnType<typeof mod.fetchCards>> },
+    );
+
+    // Employees may be granted read-only access to this panel, but full PAN,
+    // CVV, and expiry data must remain admin-only and never reach their client.
+    return {
+      ...result,
+      cards: cardsVisibleTo(role, result.cards ?? []),
+    };
   });
 
 export const createBybitCard = createServerFn({ method: "POST" })
