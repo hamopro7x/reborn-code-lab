@@ -145,18 +145,34 @@ export const updateEmployeeAvatar = createServerFn({ method: "POST" })
 export const listCustomers = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data: roles } = await context.supabase.from("user_roles").select("role").eq("user_id", context.userId);
-    const staff = (roles ?? []).some((r: any) => r.role === "admin" || r.role === "employee");
-    if (!staff) throw new Error("Forbidden");
+    const { data: roles, error: rolesError } = await context.supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", context.userId);
+    if (rolesError) throw new Error(rolesError.message);
+
+    const roleList = (roles ?? []).map((r: any) => r.role);
+    const isAdmin = roleList.includes("admin");
+    const isEmployee = roleList.includes("employee");
+    if (!isAdmin && !isEmployee) throw new Error("Forbidden");
+
+    // The UI hides unshared panels, but server functions must enforce the same
+    // policy because an employee can invoke this endpoint directly.
+    if (!isAdmin) {
+      const { data: sharing, error: sharingError } = await context.supabase
+        .from("site_settings")
+        .select("value")
+        .eq("key", "employee_panels")
+        .maybeSingle();
+      if (sharingError) throw new Error(sharingError.message);
+
+      const sharedPanels = (sharing?.value as { panels?: unknown } | null)?.panels;
+      if (!Array.isArray(sharedPanels) || !sharedPanels.includes("customers")) {
+        throw new Error("Forbidden");
+      }
+    }
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: orders } = await supabaseAdmin
-      .from("orders")
-      .select("id, customer_name, customer_email, customer_phone, customer_country, total, currency_code, status, created_at")
-      .order("created_at", { ascending: false })
-      // سقف واضح حتى لا يتحول الاستعلام إلى قراءة كامل الجدول مع نمو الطلبات.
-      .limit(5_000);
-
 
     type Row = {
       email: string; name: string; phone: string; country: string;
@@ -164,28 +180,48 @@ export const listCustomers = createServerFn({ method: "GET" })
       total_by_currency: Record<string, number>;
     };
     const map = new Map<string, Row>();
-    for (const o of orders ?? []) {
-      const key = (o.customer_email || o.customer_phone || "").toLowerCase();
-      if (!key) continue;
-      let row = map.get(key);
-      if (!row) {
-        row = {
-          email: o.customer_email, name: o.customer_name, phone: o.customer_phone,
-          country: o.customer_country, orders: 0, confirmed: 0, last_at: o.created_at,
-          total_by_currency: {},
-        };
-        map.set(key, row);
+    const pageSize = 1_000;
+    let offset = 0;
+
+    // Aggregate incrementally so memory usage is bounded by customer count,
+    // not by the full order history. A stable secondary order prevents rows
+    // with identical created_at timestamps from moving between pages.
+    while (true) {
+      const { data: orders, error: ordersError } = await supabaseAdmin
+        .from("orders")
+        .select("id, customer_name, customer_email, customer_phone, customer_country, total, currency_code, status, created_at")
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(offset, offset + pageSize - 1);
+
+      if (ordersError) throw new Error(ordersError.message);
+
+      for (const o of orders ?? []) {
+        const key = (o.customer_email || o.customer_phone || "").toLowerCase();
+        if (!key) continue;
+        let row = map.get(key);
+        if (!row) {
+          row = {
+            email: o.customer_email, name: o.customer_name, phone: o.customer_phone,
+            country: o.customer_country, orders: 0, confirmed: 0, last_at: o.created_at,
+            total_by_currency: {},
+          };
+          map.set(key, row);
+        }
+        row.orders += 1;
+        if (o.status === "confirmed" || o.status === "completed") {
+          row.confirmed += 1;
+          row.total_by_currency[o.currency_code] = (row.total_by_currency[o.currency_code] ?? 0) + Number(o.total);
+        }
+        if (new Date(o.created_at) > new Date(row.last_at)) row.last_at = o.created_at;
       }
-      row.orders += 1;
-      if (o.status === "confirmed" || o.status === "completed") {
-        row.confirmed += 1;
-        row.total_by_currency[o.currency_code] = (row.total_by_currency[o.currency_code] ?? 0) + Number(o.total);
-      }
-      if (new Date(o.created_at) > new Date(row.last_at)) row.last_at = o.created_at;
+
+      if (!orders || orders.length < pageSize) break;
+      offset += pageSize;
     }
+
     return Array.from(map.values()).sort((a, b) => b.orders - a.orders);
   });
-
 export const deleteAllOrders = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
