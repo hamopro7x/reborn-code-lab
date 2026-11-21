@@ -38,6 +38,8 @@ jobs:
           src/lib/bybit-account.server.ts
           src/lib/bybit-assets.server.ts
           src/lib/bybit-card-mapper.ts
+          src/lib/bybit-cards.server.ts
+          src/lib/bybit-convert.server.ts
           src/lib/bybit-runtime.ts
           src/lib/work-pin.server.ts
           --rule 'prettier/prettier: off'
