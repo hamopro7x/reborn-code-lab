@@ -47,14 +47,16 @@ export function FlowChip({
 }
 
 /** نافذة تعديل 10 دقائق لخانة «تحويل الي» (السيرفر يعيد التحقق أيضًا). */
+function isNoteExpired(savedAt: string | null | undefined) {
+  return !!savedAt && Date.now() - new Date(savedAt).getTime() >= 10 * 60 * 1000;
+}
+
 function useNoteEditWindow(savedAt: string | null | undefined) {
-  const expired = () =>
-    !!savedAt && Date.now() - new Date(savedAt).getTime() >= 10 * 60 * 1000;
-  const [locked, setLocked] = useState(expired);
+  const [locked, setLocked] = useState(() => isNoteExpired(savedAt));
   useEffect(() => {
-    setLocked(expired());
+    setLocked(isNoteExpired(savedAt));
     if (!savedAt) return;
-    const t = window.setInterval(() => setLocked(expired()), 5000);
+    const t = window.setInterval(() => setLocked(isNoteExpired(savedAt)), 5000);
     return () => window.clearInterval(t);
   }, [savedAt]);
   return locked;
