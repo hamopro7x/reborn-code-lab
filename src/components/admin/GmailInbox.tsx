@@ -12,8 +12,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { MailListRow } from "@/components/admin/MailListRow";
 import { supabase } from "@/integrations/supabase/client";
 import { MailMessageBody } from "@/components/admin/MailMessageBody";
-import { formatDateTime } from "@/lib/format";
-import { refreshQueries } from "@/lib/refresh-queries";
 import { livePoll } from "@/lib/live-poll";
 import {
   listMailAccounts, startMailLink, setMailAccountPaused, deleteMailAccount, syncMailNow, listMailMessages,
@@ -21,7 +19,6 @@ import {
   listMailDrafts, saveMailDraft, mailUnreadCount, claimMailNotifications, listMailActivity,
 } from "@/lib/mail.functions";
 
-import { MailNotifier, useMailUnread } from "@/components/admin/mail/MailNotifications";
 import { fmt, sender } from "@/components/admin/mail/MailFormatting";
 
 type View = "inbox" | "sent" | "drafts" | "archive" | "starred" | "spam" | "trash" | "label" | "all";
