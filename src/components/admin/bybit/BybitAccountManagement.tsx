@@ -34,7 +34,7 @@ export function Field({ label, error, children }: { label: string; error?: strin
   );
 }
 
-function formatLeft(ms: number) {
+export function formatLeft(ms: number) {
   const total = Math.max(0, Math.floor(ms / 1000));
   const d = Math.floor(total / 86400);
   const h = Math.floor((total % 86400) / 3600);
