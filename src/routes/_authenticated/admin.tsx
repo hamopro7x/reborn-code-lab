@@ -82,10 +82,6 @@ import { createEmployee, deleteEmployee, listEmployees, updateEmployeeAvatar, up
 import { adminListDevices, adminDeleteDevice, adminResetUserDevices, adminAddDevice, adminListEmployees,
   adminListCourseAccess, adminGrantCourseAccess, adminRevokeCourseAccess, checkDevice, getViewerIdentity } from "@/lib/courses.functions";
 import {
-  prepareCategoryImageUpload,
-  getCategoryImageUrl,
-  saveCategory,
-  deleteCategory,
 } from "@/lib/categories.functions";
 
 import { ShieldAlert } from "lucide-react";
@@ -104,13 +100,14 @@ import { OverviewTab } from "@/components/admin/panels/OverviewTab";
 import { CustomersTab } from "@/components/admin/panels/CustomersTab";
 import { ReviewsTab } from "@/components/admin/panels/ReviewsTab";
 import { OrdersTab } from "@/components/admin/panels/OrdersTab";
+import { CategoriesTab } from "@/components/admin/panels/CategoriesTab";
+import { TimersTab } from "@/components/admin/panels/TimersTab";
 
 import { LessonUploader } from "@/components/admin/LessonUploader";
 import { DeviceMonitorGrid } from "@/components/admin/DeviceMonitorGrid";
 import { EmployeeDevices } from "@/components/admin/DeviceMonitorGrid";
 import { HeroBannerManager } from "@/components/admin/HeroBannerManager";
 import { FooterManager } from "@/components/admin/FooterManager";
-import { ensureSlug } from "@/lib/slug";
 import { livePoll } from "@/lib/live-poll";
 import { getPaymentIconUrl, preparePaymentIconUpload } from "@/lib/payments.functions";
 
@@ -797,135 +794,6 @@ function EmployeesTab() {
 // ============ PRODUCTS ============
 
 // ============ CATEGORIES ============
-function CategoriesTab() {
-  const qc = useQueryClient();
-  const catsQ = useQuery({ queryKey: ["admin-categories"], queryFn: async () => (await supabase.from("categories").select("*").order("sort_order")).data ?? [] });
-  const [editing, setEditing] = useState<any>(null);
-  const [open, setOpen] = useState(false);
-
-  async function save() {
-    if (!editing.name) return toast.error("الاسم مطلوب");
-    try {
-      await saveCategory({
-        data: {
-          id: editing.id ?? null,
-          name: editing.name,
-          slug: ensureSlug(editing.slug, editing.name),
-          icon: editing.icon ?? null,
-          banner_image: editing.banner_image ?? null,
-          sort_order: Number(editing.sort_order) || 0,
-          active: !!editing.active,
-        },
-      });
-      toast.success("محفوظ");
-      setOpen(false);
-      qc.invalidateQueries({ queryKey: ["admin-categories"] });
-    } catch (e: any) {
-      toast.error(e?.message || "فشل الحفظ");
-    }
-  }
-  async function del(id: string) {
-    if (!confirm("حذف؟")) return;
-    try { await deleteCategory({ data: { id } }); qc.invalidateQueries({ queryKey: ["admin-categories"] }); }
-    catch (e: any) { toast.error(e?.message || "فشل الحذف"); }
-  }
-  async function uploadCategoryBanner(file: File) {
-    try {
-      const { path, token } = await prepareCategoryImageUpload({
-        data: {
-          fileName: file.name,
-          contentType: file.type || "image/png",
-          size: file.size,
-        },
-      });
-      const { error } = await supabase.storage
-        .from("product-images")
-        .uploadToSignedUrl(path, token, file, { contentType: file.type || "image/png" });
-      if (error) throw new Error(error.message);
-      const { url } = await getCategoryImageUrl({ data: { path } });
-      setEditing((prev: any) => ({ ...(prev ?? {}), banner_image: url }));
-      toast.success("تم رفع صورة القسم");
-    } catch (e: any) {
-      toast.error(e?.message || "فشل رفع الصورة");
-    }
-  }
-
-  return (
-    <div>
-      <div className="flex justify-between mb-6">
-        <h2 className="text-xl font-bold">الأقسام</h2>
-        <Button onClick={() => { setEditing({ name: "", slug: "", icon: "🎁", banner_image: null, sort_order: 0, active: true }); setOpen(true); }} className="gradient-primary text-white gap-1"><Plus className="size-4" />قسم جديد</Button>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
-        {(catsQ.data ?? []).map((c: any) => {
-          const label = c.name || "قسم";
-          const initial = label.trim().charAt(0);
-          return (
-            <div key={c.id} className="bg-card border border-border/60 rounded-2xl p-4 flex flex-col items-center text-center gap-3 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all">
-              <div className="relative">
-                <div className="size-20 rounded-full gradient-primary ring-4 ring-background flex items-center justify-center text-2xl font-black text-white shadow-xl">
-                  {initial}
-                </div>
-                <div className="absolute bottom-0 right-0 size-6 rounded-full bg-primary flex items-center justify-center ring-2 ring-background">
-                  <span className="text-[10px] text-white">{c.icon}</span>
-                </div>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="font-bold truncate">{c.name}</div>
-                <div className="text-xs text-muted-foreground">/{c.slug}</div>
-              </div>
-              <div className="flex gap-1.5 w-full justify-center">
-                <Button size="sm" variant="outline" className="rounded-full flex-1" onClick={() => { setEditing(c); setOpen(true); }}><Edit className="size-4" />تعديل</Button>
-                <Button size="sm" variant="outline" className="rounded-full text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => del(c.id)}><Trash2 className="size-4" />حذف</Button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>قسم</DialogTitle></DialogHeader>
-          {editing && (
-            <div className="space-y-3">
-              <div><Label>الاسم</Label><Input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} /></div>
-              <div><Label>الرابط</Label><Input value={editing.slug} onChange={(e) => setEditing({ ...editing, slug: e.target.value })} /></div>
-              <div>
-                <Label>صورة القسم</Label>
-                {editing.banner_image && (
-                  <div className="flex items-center gap-2 my-2">
-                    <img src={editing.banner_image} alt="" className="size-20 rounded-lg object-cover" />
-                    <Button size="sm" variant="outline" onClick={() => setEditing({ ...editing, banner_image: null })}>حذف الصورة</Button>
-                  </div>
-                )}
-                <input
-                  id="cat-banner-input"
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => e.target.files?.[0] && uploadCategoryBanner(e.target.files[0])}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="mt-2 gap-2 w-full"
-                  onClick={() => document.getElementById("cat-banner-input")?.click()}
-                >
-                  <Plus className="size-4" />
-                  {editing.banner_image ? "تغيير الصورة" : "تحميل صورة"}
-                </Button>
-              </div>
-
-              <div><Label>الترتيب</Label><Input type="number" value={editing.sort_order} onChange={(e) => setEditing({ ...editing, sort_order: Number(e.target.value) })} /></div>
-              <label className="flex items-center gap-2"><Switch checked={editing.active} onCheckedChange={(v) => setEditing({ ...editing, active: v })} /> نشط</label>
-            </div>
-          )}
-          <DialogFooter><Button onClick={save} className="gradient-primary text-white">حفظ</Button></DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-}
-
 // ============ PAYMENT METHODS ============
 function PaymentsTab() {
   const qc = useQueryClient();
@@ -1244,55 +1112,6 @@ function CurrenciesTab() {
 }
 
 // ============ TIMERS ============
-function TimersTab() {
-  const qc = useQueryClient();
-  const q = useQuery({ queryKey: ["admin-timers"], queryFn: async () => (await supabase.from("countdown_timers").select("*").order("created_at", { ascending: false })).data ?? [] });
-  const [editing, setEditing] = useState<any>(null);
-  const [open, setOpen] = useState(false);
-
-  async function save() {
-    const op = editing.id ? supabase.from("countdown_timers").update({ ...editing, id: undefined }).eq("id", editing.id) : supabase.from("countdown_timers").insert(editing);
-    const { error } = await op;
-    if (error) toast.error(error.message); else { toast.success("محفوظ"); setOpen(false); qc.invalidateQueries({ queryKey: ["admin-timers"] }); }
-  }
-  async function del(id: string) { await supabase.from("countdown_timers").delete().eq("id", id); qc.invalidateQueries({ queryKey: ["admin-timers"] }); }
-
-  return (
-    <div>
-      <div className="flex justify-between mb-4">
-        <h2 className="text-xl font-bold">مؤقتات العروض</h2>
-        <Button onClick={() => { setEditing({ title: "", subtitle: "", ends_at: new Date(Date.now() + 86400000).toISOString(), active: true }); setOpen(true); }} className="gradient-primary text-white gap-1"><Plus className="size-4" />جديد</Button>
-      </div>
-      <div className="space-y-3">
-        {(q.data ?? []).map((t: any) => (
-          <div key={t.id} className="card-surface rounded-2xl p-4 flex items-center justify-between">
-            <div><div className="font-bold">{t.title}</div><div className="text-xs text-muted-foreground">{formatLocaleDateTime(t.ends_at, "ar-EG")}</div></div>
-            <div className="flex gap-1">
-              {t.active ? <Badge>نشط</Badge> : <Badge variant="secondary">متوقف</Badge>}
-              <Button size="icon" variant="ghost" onClick={() => { setEditing(t); setOpen(true); }}><Edit className="size-4" /></Button>
-              <Button size="icon" variant="ghost" onClick={() => del(t.id)}><Trash2 className="size-4 text-destructive" /></Button>
-            </div>
-          </div>
-        ))}
-      </div>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>مؤقت عرض</DialogTitle></DialogHeader>
-          {editing && (
-            <div className="space-y-3">
-              <div><Label>العنوان</Label><Input value={editing.title} onChange={(e) => setEditing({ ...editing, title: e.target.value })} /></div>
-              <div><Label>وصف</Label><Input value={editing.subtitle ?? ""} onChange={(e) => setEditing({ ...editing, subtitle: e.target.value })} /></div>
-              <div><Label>ينتهي في</Label><DateTimeInput label="ينتهي في" value={editing.ends_at} onChange={(ends_at) => setEditing({ ...editing, ends_at })} /></div>
-              <label className="flex items-center gap-2"><Switch checked={editing.active} onCheckedChange={(v) => setEditing({ ...editing, active: v })} /> نشط</label>
-            </div>
-          )}
-          <DialogFooter><Button onClick={save} className="gradient-primary text-white">حفظ</Button></DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-}
-
 // ============ SETTINGS ============
 function SettingsTab() {
   const qc = useQueryClient();
