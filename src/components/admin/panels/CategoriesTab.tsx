@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+
 import { prepareCategoryImageUpload, getCategoryImageUrl, saveCategory, deleteCategory } from "@/lib/categories.functions";
 import { ensureSlug } from "@/lib/slug";
-import { listAdminCategories } from "@/lib/categories.queries";
+import { listAdminCategories, uploadCategoryImage } from "@/lib/categories.queries";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -53,9 +53,7 @@ export function CategoriesTab() {
           size: file.size,
         },
       });
-      const { error } = await supabase.storage
-        .from("product-images")
-        .uploadToSignedUrl(path, token, file, { contentType: file.type || "image/png" });
+      const { error } = await uploadCategoryImage(path, token, file, file.type || "image/png");
       if (error) throw new Error(error.message);
       const { url } = await getCategoryImageUrl({ data: { path } });
       setEditing((prev: any) => ({ ...(prev ?? {}), banner_image: url }));
