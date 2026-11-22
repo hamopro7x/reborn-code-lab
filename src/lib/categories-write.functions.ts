@@ -24,7 +24,7 @@ function safeExtension(fileName: string, contentType: string) {
 }
 
 function assertCategoryPath(path: string) {
-  if (!/^categories\/[\w.\-]+$/.test(path)) throw new Error("Invalid category image path");
+  if (!/^categories\/[\w.-]+$/.test(path)) throw new Error("Invalid category image path");
 }
 
 const prepareSchema = z.object({
