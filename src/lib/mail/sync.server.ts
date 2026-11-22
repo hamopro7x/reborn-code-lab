@@ -236,7 +236,7 @@ export async function syncAllMail(admin: any, onlyAccountId?: string) {
   if (error) throw new Error(error.message);
   const results: { id: string; imported?: number; error?: string; skipped?: boolean }[] = [];
   for (const acc of accounts ?? []) {
-    const { data: locked } = await admin.from("mail_accounts")
+    const { data: locked, error: leaseError } = await admin.from("mail_accounts")
       .update({ sync_lease_until: new Date(now.getTime() + LEASE_MS).toISOString() })
       .eq("id", acc.id)
       .or(`sync_lease_until.is.null,sync_lease_until.lt.${now.toISOString()}`)
