@@ -30,8 +30,8 @@ export const Route = createFileRoute("/")({
       supabase.from("hero_banners").select("*").eq("active", true).order("sort_order"),
     ]);
     return {
-      categories: categories.data ?? [],
-      products: products.data ?? [],
+      categories,
+      products,
       timer: timer.data ?? null,
       rates: rates.data ?? [],
       currencies: currencies.data ?? [],
@@ -155,10 +155,10 @@ function Home() {
       ratesQ.data.forEach((r: any) => { map[r.currency_code] = Number(r.rate_from_egp); });
       setRates(map);
     }
-  }, [ratesQ.data]);
+  }, [ratesQ.data, setRates]);
   useEffect(() => {
     if (currenciesQ.data && currenciesQ.data.length) setCurrencies(currenciesQ.data as any);
-  }, [currenciesQ.data]);
+  }, [currenciesQ.data, setCurrencies]);
 
   const categories = categoriesQ.data ?? [];
 
