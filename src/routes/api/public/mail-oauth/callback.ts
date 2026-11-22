@@ -58,7 +58,10 @@ export const Route = createFileRoute("/api/public/mail-oauth/callback")({
             ? await admin.from("mail_account_secrets").select("account_id").eq("account_id", existing.id).maybeSingle()
             : { data: null, error: null };
           if (oldSecretError) throw new Error("تعذر التحقق من بيانات اعتماد الحساب المرتبط");
-          if (!tok.refresh_token && !oldSecret) return page(false, "Google لم يرسل صلاحية دائمة، أزل وصول التطبيق من حساب Google ثم أعد المحاولة");
+          if (!tok.refresh_token && !oldSecret) {
+            await revokeToken(tok.access_token);
+            return page(false, "Google لم يرسل صلاحية دائمة، أزل وصول التطبيق من حساب Google ثم أعد المحاولة");
+          }
 
           let accountId: string;
           if (existing) accountId = existing.id;
