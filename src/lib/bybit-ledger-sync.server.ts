@@ -120,7 +120,10 @@ export function runDeepSyncIfDue(force = false): void {
     } catch {
       /* keep going to the ledger */
     }
-    await syncAllLedger();
+    const ledgerResult = await syncAllLedger();
+    if (ledgerResult.failedAccounts.length) {
+      console.error("Bybit deep ledger sync partially failed for accounts:", ledgerResult.failedAccounts);
+    }
   }).catch((e) => console.error("deep bybit sync failed:", (e as Error)?.message));
 }
 
