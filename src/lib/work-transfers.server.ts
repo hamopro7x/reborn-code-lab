@@ -109,7 +109,8 @@ export async function saveTransferNote(userId: string, ledgerId: string, note: s
     return { ok: false as const, error: "هذه المعاملة غير ناجحة." };
   }
 
-  // Employees may annotate only withdrawals assigned to their own open shift.
+  // Employees may annotate only withdrawals visible in their own current shift.
+  // The UI filter is not an authorization boundary: validate the same scope here.
   const { data: roles } = await db.from("user_roles").select("role").eq("user_id", userId);
   const isAdmin = (roles ?? []).some((r: any) => r.role === "admin");
   if (!isAdmin) {
@@ -119,7 +120,9 @@ export async function saveTransferNote(userId: string, ledgerId: string, note: s
       .eq("user_id", userId)
       .is("ended_at", null)
       .maybeSingle();
-    if (!shift) return { ok: false as const, error: "ليس لديك شفت مفتوح حاليًا." };
+    if (!shift) {
+      return { ok: false as const, error: "ليس لديك شفت مفتوح حاليًا." };
+    }
     const { data: assignment } = await db
       .from("work_txn_assignments")
       .select("id")
@@ -127,7 +130,9 @@ export async function saveTransferNote(userId: string, ledgerId: string, note: s
       .eq("user_id", userId)
       .eq("ledger_id", ledgerId)
       .maybeSingle();
-    if (!assignment) return { ok: false as const, error: "هذه المعاملة ليست ضمن شفتك الحالي." };
+    if (!assignment) {
+      return { ok: false as const, error: "هذه المعاملة ليست ضمن شفتك الحالي." };
+    }
   }
 
   const { data: existing } = await db
@@ -137,10 +142,7 @@ export async function saveTransferNote(userId: string, ledgerId: string, note: s
     .maybeSingle();
 
   if (existing && (existing as any).user_id && (existing as any).user_id !== userId && !isAdmin) {
-    const { data: roles } = await db.from("user_roles").select("role").eq("user_id", userId);
-    if (!(roles ?? []).some((r: any) => r.role === "admin")) {
-      return { ok: false as const, error: "هذه الملاحظة خاصة بموظف آخر." };
-    }
+    return { ok: false as const, error: "هذه الملاحظة خاصة بموظف آخر." };
   }
 
   const now = new Date();
