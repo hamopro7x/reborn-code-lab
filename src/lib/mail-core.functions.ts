@@ -21,7 +21,8 @@ export const startMailLink = createServerFn({ method: "POST" }).middleware([requ
   const db = await adminDb();
   const state = randomToken(32);
   const nonce = randomToken(32);
-  await db.from("mail_oauth_states").delete().lt("expires_at", new Date().toISOString());
+  const { error: cleanupError } = await db.from("mail_oauth_states").delete().lt("expires_at", new Date().toISOString());
+  if (cleanupError) throw new Error(cleanupError.message);
   const { error } = await db.from("mail_oauth_states").insert({ state_hash: await oauthStateKey(state, nonce), user_id: context.userId, expires_at: new Date(Date.now() + 10 * 60_000).toISOString() });
   if (error) throw new Error(error.message);
   // HttpOnly nonce ties the flow to THIS browser; a leaked/forwarded consent link cannot complete elsewhere.
