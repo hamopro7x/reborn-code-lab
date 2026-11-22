@@ -5,35 +5,13 @@ import { brandFromNumber } from "./bybit-cards.server";
 import type { BybitCard } from "./bybit-cards.server";
 import type { CardTxn } from "./bybit-card-mapper";
 import type { Creds } from "./bybit-account.server";
-import { num, sleep } from "./bybit-runtime";
-import {
-  sumSpend,
-  sumSpendByCard,
-  auditSpend,
-  cardRecordOutcome,
-  isCardReversalEvent,
-  type SpendRow,
-  cryptoSoldOf,
-  isExplicitReversal,
-  cardLinkIds,
-  findLinkedReversals,
-  REVERSAL_LINK_WINDOW_MS,
-  type LinkCandidate,
-  cardPurchaseGroup,
-  cardFilterMatches,
-  LEDGER_CARD_FILTERS,
-  legacyReversalUnproven,
-  durableCardReversal,
-} from "./bybit-spend";
+import { num } from "./bybit-runtime";
+import { sumSpendByCard, isCardReversalEvent, type SpendRow, cardPurchaseGroup, cardFilterMatches } from "./bybit-spend";
 import { currentBybitCycle, currentBybitRows } from "./monthly-cycle.server";
 import { cardConfirmed, archivedCardReadable, legacyCardReadable } from "./bybit-confirmation";
 import { heavyOnce, cardCache, spendCache } from "./bybit-cache.server";
 import { callCard, callCardPage, mergeCardTypeResults, isUnsupportedCardTypeError, isLateSettlementRecord, CARD_QUERY_TYPES } from "./bybit-card-api.server";
 import { upsertLedger, mirrorStoredCardRows, markHangVoided } from "./bybit-ledger-write.server";
-
-const MAX_TXNS = 10_000_000;
-
-const PRUNE_TO_DELETE = 3_000_000;
 
 // Compatibility exports; shared implementations live outside sync/persistence modules.
 export { sameStoredValue, detailText } from "./bybit-value-helpers";
@@ -383,63 +361,6 @@ async function backfillChunk(
   void accountId;
   void creds;
   return { rows: [], done: true };
-}
-
-/** Kept for reference only; no longer part of any sync path. */
-
-async function backfillChunkLegacy(
-  accountId: string | undefined,
-  creds: Creds,
-): Promise<{ rows: CardTxn[]; done: boolean }> {
-  const key = accountId ?? "default";
-  const cursor = await readCursor(key);
-  if (cursor.done) return { rows: [], done: true };
-
-
-
-  const collected: any[] = [];
-  let { typeIndex, page } = cursor;
-  const deadline = Date.now() + BACKFILL_BUDGET_MS;
-
-  try {
-    while (typeIndex < CARD_QUERY_TYPES.length && Date.now() < deadline) {
-      let result: any;
-      try {
-        result = await callCardPage({ limit: 100, page, type: CARD_QUERY_TYPES[typeIndex] }, creds);
-      } catch (e) {
-        if (!isUnsupportedCardTypeError(e)) throw e;
-        // Rejected type: move on so the cursor never sticks on it forever.
-        console.warn(`bybit backfill type ${CARD_QUERY_TYPES[typeIndex]} skipped:`, (e as Error)?.message);
-        typeIndex++;
-        page = 1;
-        continue;
-      }
-      const rows = Array.isArray(result?.data) ? result.data : [];
-      collected.push(...rows);
-
-
-      const totalCount = Number(result?.totalCount ?? 0);
-      const pageSize = Number(result?.pageSize ?? 100);
-      const exhausted = !rows.length || (totalCount > 0 && page * pageSize >= totalCount);
-      if (exhausted) {
-        typeIndex++;
-        page = 1;
-      } else {
-        page++;
-      }
-      await sleep(120);
-    }
-  } catch {
-    /* keep whatever this chunk managed to read; retry from the cursor later */
-  }
-
-  const mapped = collected.map(mapCardTxn);
-  for (let i = 0; i < mapped.length; i += 500) {
-    await persistCardTxns(mapped.slice(i, i + 500), accountId);
-  }
-  const done = typeIndex >= CARD_QUERY_TYPES.length;
-  await writeCursor(key, { version: BACKFILL_VERSION, typeIndex, page, done });
-  return { rows: mapped, done };
 }
 
 /** Cards linked to the account. Stored cards are merged with spend derived from
