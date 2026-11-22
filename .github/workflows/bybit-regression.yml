@@ -37,6 +37,7 @@ jobs:
           src/lib/bybit-concurrency.server.ts
           src/lib/bybit-convert.functions.ts
           src/lib/bybit-ledger-sync.server.ts
+          src/lib/bybit-ledger-read.server.ts
           src/lib/bybit-ledger-write.server.ts
           src/lib/bybit-ledger-compare.ts
           src/lib/bybit-ledger-compare.test.ts
