@@ -22,7 +22,7 @@ export function cardRecordRank(t: any): number {
 /** True when Bybit rejected the request itself, not a network/auth/rate-limit error. */
 const TRANSIENT_OR_AUTH_CODES = new Set(["10002", "10003", "10004", "10005", "10006", "10016", "10018"]);
 export function isUnsupportedCardTypeError(err: unknown): boolean {
-  const m = /^Bybit (\\d+):/.exec(String((err as Error)?.message ?? err ?? ""));
+  const m = /^Bybit (\d+):/.exec(String((err as Error)?.message ?? err ?? ""));
   return Boolean(m && !TRANSIENT_OR_AUTH_CODES.has(m[1]));
 }
 
