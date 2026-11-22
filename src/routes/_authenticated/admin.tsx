@@ -6,44 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import {
-  SidebarProvider, Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
-  SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
-  SidebarTrigger, SidebarHeader, SidebarFooter,
-} from "@/components/ui/sidebar";
-import { SidebarGlider } from "@/components/admin/SidebarGlider";
-import headerMark from "@/assets/mg-metallic-logo-3d.png";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminLangToggle, AdminTranslator, useAdminLang } from "@/lib/admin-i18n/translator";
-import {
-  LayoutDashboard, Package, Layers, ShoppingCart, CreditCard, Coins, Clock,
-  Settings2, ExternalLink, X, Users, Star, UserCog, LogOut, GraduationCap,
-  Lock, ChevronRight, FileBarChart, MonitorPlay, WalletCards, KeyRound,
-  ClipboardList, Table2, MessagesSquare, Mail,
-} from "lucide-react";
-import { useChatBadge } from "@/lib/chat-badge";
-import { ReportsTab } from "@/components/admin/ReportsTab";
-import { ProductsTab } from "@/components/admin/ProductsTab";
+import { X, Lock, ChevronRight } from "lucide-react";
 import { AdminBackProvider, useAdminBackTarget } from "@/components/admin/back-nav";
-import { BybitTab } from "@/components/admin/BybitTab";
-import { ApiKeyPanel } from "@/components/admin/bybit/BybitAccountManagement";
-import { WorkSheetPanel } from "@/components/admin/WorkSheetPanel";
-import { AdminSheet } from "@/components/admin/AdminSheet";
-import { GmailInbox } from "@/components/admin/GmailInbox";
-import { MailNotifier } from "@/components/admin/mail/MailNotifications";
-import { StaffChat } from "@/components/admin/StaffChat";
-import { OverviewTab } from "@/components/admin/panels/OverviewTab";
-import { CustomersTab } from "@/components/admin/panels/CustomersTab";
-import { ReviewsTab } from "@/components/admin/panels/ReviewsTab";
-import { OrdersTab } from "@/components/admin/panels/OrdersTab";
-import { CategoriesTab } from "@/components/admin/panels/CategoriesTab";
-import { TimersTab } from "@/components/admin/panels/TimersTab";
-import { SettingsTab } from "@/components/admin/panels/SettingsTab";
-import { CurrenciesTab } from "@/components/admin/panels/CurrenciesTab";
-import { PaymentsTab } from "@/components/admin/panels/PaymentsTab";
-import { EmployeesTab } from "@/components/admin/panels/EmployeesTab";
-import { CoursesTab } from "@/components/admin/panels/CoursesTab";
-import { DeviceMonitorGrid } from "@/components/admin/DeviceMonitorGrid";
 import { livePoll } from "@/lib/live-poll";
+import { ADMIN_NAV_GROUPS } from "@/lib/admin-navigation";
+import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { AdminPanelContent } from "@/components/admin/AdminPanelContent";
 import { BASE_EMPLOYEE_PANELS, PANEL_KEYS, SHAREABLE_EMPLOYEE_PANELS, canEmployeeViewPanel, type PanelKey } from "@/lib/admin-panel-access";
 
 
@@ -160,103 +130,24 @@ function Admin() {
       </div>
     );
   }
-  const navGroups: { label: string; items: { key: PanelKey; label: string; icon: any; adminOnly?: boolean }[] }[] = [
-    {
-      label: "العمليات",
-      items: [
-        { key: "overview", label: "نظرة عامة", icon: LayoutDashboard },
-        { key: "orders", label: "الطلبات", icon: ShoppingCart },
-        { key: "customers", label: "العملاء", icon: Users },
-        { key: "reviews", label: "المراجعات", icon: Star },
-        { key: "reports", label: "التقارير", icon: FileBarChart, adminOnly: true },
-        { key: "cardtx", label: "معاملات الفيزا", icon: WalletCards, adminOnly: true },
-        { key: "worksheet", label: "جدول بيانات الشغل", icon: ClipboardList },
-        { key: "sheet", label: "جدول بيانات خاص", icon: Table2, adminOnly: true },
-        { key: "mail", label: "البريد", icon: Mail },
-        { key: "chat", label: "جروب MG Pro", icon: MessagesSquare },
-
-
-      ],
-    },
-    {
-      label: "الكتالوج",
-      items: [
-        { key: "products", label: "المنتجات", icon: Package, adminOnly: true },
-        { key: "categories", label: "الأقسام", icon: Layers, adminOnly: true },
-        { key: "timers", label: "مؤقتات العروض", icon: Clock },
-      ],
-    },
-    {
-      label: "الإدارة",
-      items: [
-        { key: "employees", label: "الموظفون", icon: UserCog, adminOnly: true },
-        { key: "courses", label: "كورسات التدريب", icon: GraduationCap },
-        
-        { key: "remote", label: "الوصول عن بُعد", icon: MonitorPlay, adminOnly: true },
-        { key: "payments", label: "طرق الدفع", icon: CreditCard, adminOnly: true },
-        { key: "currencies", label: "العملات", icon: Coins, adminOnly: true },
-        { key: "apikey", label: "مفاتيح API (Bybit)", icon: KeyRound, adminOnly: true },
-        { key: "settings", label: "الإعدادات", icon: Settings2, adminOnly: true },
-      ],
-    },
-  ];
   const visibleNavGroups = isEmployee
-    ? navGroups
+    ? ADMIN_NAV_GROUPS
         .map((g) => ({ ...g, items: g.items.filter((i) => employeeAllowed(i.key)) }))
         .filter((g) => g.items.length > 0)
-    : navGroups;
+    : ADMIN_NAV_GROUPS;
 
 
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background" dir="rtl">
 
-        <Sidebar side="right" collapsible="icon">
-          <SidebarHeader className="p-0">
-            <div className="flex items-center justify-center px-1 py-1.5">
-              <img src={headerMark} alt="MG Pro" className="w-full max-h-24 object-contain" />
-            </div>
-
-
-          </SidebarHeader>
-          <SidebarContent>
-            <SidebarGlider activeKey={panel}>
-              {visibleNavGroups.map((g) => (
-                <SidebarGroup key={g.label}>
-                  <SidebarGroupLabel>{g.label}</SidebarGroupLabel>
-                  <SidebarGroupContent>
-                    <SidebarMenu>
-                      {g.items.filter((i) => adminOnly || employeeAllowed(i.key)).map((i) => (
-                        <SidebarMenuItem key={i.key}>
-                          <SidebarMenuButton isActive={panel === i.key} onClick={() => setPanel(i.key)}>
-                            <i.icon className="size-4" />
-                            <span>{i.label}</span>{i.key === "chat" && <ChatNavBadge />}
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      ))}
-                    </SidebarMenu>
-                  </SidebarGroupContent>
-                </SidebarGroup>
-              ))}
-            </SidebarGlider>
-          </SidebarContent>
-          <SidebarFooter className="border-t border-sidebar-border">
-            <SidebarMenu>
-              {adminOnly && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                    <Link to="/"><ExternalLink className="size-4" /><span>عرض الموقع</span></Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={async () => { await supabase.auth.signOut(); window.location.replace("/auth"); }}>
-                  <LogOut className="size-4" /><span>خروج</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarFooter>
-        </Sidebar>
+        <AdminSidebar
+          visibleNavGroups={visibleNavGroups}
+          panel={panel}
+          setPanel={setPanel}
+          adminOnly={adminOnly}
+          employeeAllowed={employeeAllowed}
+        />
 
         <AdminBackProvider>
         <div className="flex-1 flex flex-col min-w-0">
@@ -296,44 +187,14 @@ function Admin() {
                 </a>
               </div>
             )}
-            <div className="min-w-0">
-            {canView("mail") && <MailNotifier onOpen={() => setPanel("mail")} />}
-            {panel === "overview" && canView("overview") && <OverviewTab />}
-            {panel === "orders" && <OrdersTab isAdmin={adminOnly} />}
-
-            {panel === "customers" && canView("customers") && <CustomersTab />}
-            {panel === "reviews" && canView("reviews") && <ReviewsTab />}
-            {panel === "reports" && canView("reports") && <ReportsTab />}
-            {panel === "cardtx" && canView("cardtx") && <BybitTab isAdmin={adminOnly} />}
-            {panel === "worksheet" && canView("worksheet") && <WorkSheetPanel isAdmin={adminOnly} />}
-            {panel === "sheet" && adminOnly && <AdminSheet />}
-            {panel === "mail" && canView("mail") && <GmailInbox isAdmin={adminOnly} />}
-            {panel === "chat" && <StaffChat targetId={search.message} />}
-
-
-            
-            {panel === "products" && canView("products") && <ProductsTab />}
-            {panel === "categories" && canView("categories") && <CategoriesTab />}
-            {panel === "timers" && canView("timers") && <TimersTab />}
-            {panel === "employees" && canView("employees") && <EmployeesTab />}
-            {panel === "courses" && <CoursesTab isAdmin={adminOnly} />}
-
-            {panel === "remote" && canView("remote") && <DeviceMonitorGrid screensOnly />}
-            {panel === "payments" && canView("payments") && <PaymentsTab />}
-            {panel === "currencies" && canView("currencies") && <CurrenciesTab />}
-            {panel === "apikey" && adminOnly && (
-              <div className="space-y-4 text-right" dir="rtl">
-                <div className="rounded-2xl border border-border/60 bg-card/50 p-4">
-                  <h2 className="text-sm font-black">مفاتيح API — حسابات Bybit</h2>
-                  <p className="mt-1 text-[12px] text-muted-foreground leading-6">
-                    من هنا تربط حسابات Bybit بمفتاح API (قراءة فقط). الحسابات المضافة تظهر تلقائياً في قسم معاملات الفيزا.
-                  </p>
-                </div>
-                <ApiKeyPanel />
-              </div>
-            )}
-            {panel === "settings" && canView("settings") && <SettingsTab />}
-            </div>
+            <AdminPanelContent
+              panel={panel}
+              isEmployee={isEmployee}
+              isAdmin={adminOnly}
+              canView={canView}
+              setPanel={setPanel}
+              messageId={search.message}
+            />
           </main>
 
         </div>
@@ -359,8 +220,3 @@ function AdminBackButton() {
   );
 }
 
-function ChatNavBadge() {
-  const n = useChatBadge();
-  if (!n) return null;
-  return <span className="ms-auto min-w-5 h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-[11px] font-bold flex items-center justify-center">{n > 99 ? "99+" : n}</span>;
-}
