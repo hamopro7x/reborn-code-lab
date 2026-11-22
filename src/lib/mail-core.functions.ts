@@ -69,10 +69,3 @@ export const syncMailNow = createServerFn({ method: "POST" }).middleware([requir
     return syncAllMail(await adminDb(), data.accountId);
   });
 
-export const listInput = z.object({
-  view: z.enum(["inbox", "sent", "drafts", "archive", "starred", "spam", "trash", "label", "all"]).default("inbox"),
-  accountId: z.string().uuid().optional(),
-  labelId: z.string().uuid().optional(),
-  search: z.string().max(200).optional(),
-  before: z.string().max(40).optional(),
-});
