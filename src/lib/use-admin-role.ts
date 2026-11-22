@@ -7,11 +7,7 @@ export function useAdminRole() {
   useEffect(() => {
     let active = true;
     supabase.auth.getUser().then(async ({ data }) => {
-      if (!active) return;
-      if (!data.user) {
-        setRole("customer");
-        return;
-      }
+      if (!active || !data.user) return;
       const { data: roles } = await supabase
         .from("user_roles")
         .select("role")
@@ -20,8 +16,6 @@ export function useAdminRole() {
       if (roles?.some((row: any) => row.role === "admin")) setRole("admin");
       else if (roles?.some((row: any) => row.role === "employee")) setRole("employee");
       else setRole("customer");
-    }).catch(() => {
-      if (active) setRole("customer");
     });
     return () => { active = false; };
   }, []);
