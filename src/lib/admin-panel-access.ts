@@ -16,7 +16,7 @@ export const BASE_EMPLOYEE_PANELS: PanelKey[] = ["orders", "courses", "worksheet
  * Do not add editable admin panels here unless they implement and enforce
  * a real read-only mode in both UI and server-side operations.
  */
-export const SHAREABLE_EMPLOYEE_PANELS: PanelKey[] = ["overview", "customers", "reports", "cardtx"];
+export const SHAREABLE_EMPLOYEE_PANELS: PanelKey[] = ["overview", "customers", "reports"];
 
 export function canEmployeeViewPanel(key: PanelKey, shared: PanelKey[]) {
   return BASE_EMPLOYEE_PANELS.includes(key) ||
