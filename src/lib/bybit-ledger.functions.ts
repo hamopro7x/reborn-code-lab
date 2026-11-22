@@ -12,12 +12,12 @@ export const getBybitLedger = createServerFn({ method: "POST" })
     pageSize: Math.min(Math.max(Number(input?.pageSize ?? 50) || 50, 10), 200),
   }))
   .handler(async ({ data, context }) => {
-    await assertAccess(context.supabase, context.userId);
+    const role = await assertAccess(context.supabase, context.userId);
     // Reads enforce the effective cycle themselves. Cleanup runs in the deep
     // sync; never block a visible page on destructive maintenance work.
     const mod = await import("./bybit.server");
     if (data.page === 1) await mod.pullFromBybit();
-    return mod.fetchLedgerPage({ ...data, hideReversed: false });
+    return mod.fetchLedgerPage({ ...data, hideReversed: role === "employee" });
   });
 
 export const syncBybitLedger = createServerFn({ method: "POST" })
@@ -65,7 +65,7 @@ export const resolveBybitReversalCase = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { accountId: string; eventId: string; targetId: string | null; candidates: string[] }) => {
     if (!/^[0-9a-f-]{36}$/i.test(input?.accountId ?? "") || !/^(legacy:)?[\w-]{1,200}$/.test(input?.eventId ?? "")) throw new Error("معرف غير صالح");
-    if (!Array.isArray(input.candidates) || input.candidates.length > 100 || input.candidates.some((id) => !/^[\w-]{1,200}$/.test(id))) throw new Error("مرشحون غير صالحين");
+    if (!Array.isArray(input.candidates) || input.candidates.length > 100 || input.candidates.some((id) => !/^[\w-]{1,200}$/.test(id))) throw new Error("مرشحون غير صالحون");
     if (input.targetId !== null && !input.candidates.includes(input.targetId)) throw new Error("اختيار غير صالح");
     return input;
   })
