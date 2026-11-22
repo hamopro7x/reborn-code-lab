@@ -12,9 +12,11 @@ export async function logActivity(admin: any, row: { actor_id?: string | null; a
 
 /** Fetches one Gmail message and stores it locally (idempotent). Returns new local id or null. */
 export async function importMessage(admin: any, token: string, account: any, gmailId: string, notify = true): Promise<string | null> {
-  const { data: tomb } = await admin.from("mail_local_tombstones").select("gmail_message_id").eq("account_id", account.id).eq("gmail_message_id", gmailId).maybeSingle();
+  const { data: tomb, error: tombError } = await admin.from("mail_local_tombstones").select("gmail_message_id").eq("account_id", account.id).eq("gmail_message_id", gmailId).maybeSingle();
+  if (tombError) throw new Error(tombError.message);
   if (tomb) return null;
-  const { data: existing } = await admin.from("mail_messages").select("id").eq("account_id", account.id).eq("gmail_message_id", gmailId).maybeSingle();
+  const { data: existing, error: existingError } = await admin.from("mail_messages").select("id").eq("account_id", account.id).eq("gmail_message_id", gmailId).maybeSingle();
+  if (existingError) throw new Error(existingError.message);
   if (existing) return null;
   let m: any;
   try {
