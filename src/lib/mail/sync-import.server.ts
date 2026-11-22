@@ -1,5 +1,5 @@
 // Idempotent Gmail message import and local persistence helpers.
-import { gmail, GmailHttpError } from "./google.server";
+import { gmail, GmailHttpError } from "./gmail-api.server";
 import { folderFromLabels, header, parsePayload } from "./mime-parse";
 import { extractLogoUrl } from "./mime-sanitize";
 
