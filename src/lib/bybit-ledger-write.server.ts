@@ -5,25 +5,7 @@ import type { AssetRow } from "./bybit-assets.server";
 import { mapStoredRow, sanitize } from "./bybit-card-mapper";
 import type { CardTxn } from "./bybit-card-mapper";
 import { num } from "./bybit-runtime";
-import {
-  sumSpend,
-  sumSpendByCard,
-  auditSpend,
-  cardRecordOutcome,
-  isCardReversalEvent,
-  type SpendRow,
-  cryptoSoldOf,
-  isExplicitReversal,
-  cardLinkIds,
-  findLinkedReversals,
-  REVERSAL_LINK_WINDOW_MS,
-  type LinkCandidate,
-  cardPurchaseGroup,
-  cardFilterMatches,
-  LEDGER_CARD_FILTERS,
-  legacyReversalUnproven,
-  durableCardReversal,
-} from "./bybit-spend";
+import { sumSpend, auditSpend, isCardReversalEvent, type SpendRow } from "./bybit-spend";
 import { currentBybitCycle } from "./monthly-cycle.server";
 import { cardConfirmed } from "./bybit-confirmation";
 import { isLedgerRowChanged } from "./bybit-ledger-compare";
@@ -183,7 +165,8 @@ export function cardLedgerRow(accountId: string, c: any): LedgerInsert {
   const status: string = t.status === "review" ? "review" : reversed ? "reversed" : t.status;
   const isRefund = status === "refund";
   const src = (t.detail ?? {}) as Record<string, any>;
-  const { raw: _raw, ...original } = src;
+  const original = { ...src };
+  delete original.raw;
   // Fee comes straight from the source account's own fee field (totalFees).
   const rawSrc = (src["raw"] ?? {}) as Record<string, any>;
   const feeRaw =
