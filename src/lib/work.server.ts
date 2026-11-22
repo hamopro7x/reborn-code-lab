@@ -6,6 +6,7 @@
 export * from "./work-shared.server";
 export * from "./work-analytics.server";
 export * from "./work-p2p.server";
+export * from "./work-transfers.server";
 export * from "./work-employee.server";
 export * from "./work-manual.server";
 export * from "./work-history.server";
