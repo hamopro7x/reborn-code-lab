@@ -55,6 +55,8 @@ jobs:
           src/lib/bybit-card-api.server.ts
           src/lib/bybit-overview.server.ts
           src/lib/bybit-card-sync.server.ts
+          src/lib/bybit-value-helpers.ts
+          src/lib/bybit-value-helpers.test.ts
           src/lib/bybit-ledger-write.server.ts
           src/lib/bybit-ledger-sync.server.ts
           src/lib/bybit-concurrency.server.ts
