@@ -65,16 +65,15 @@ function Admin() {
   const isEmployee = role === "employee";
   const adminOnly = role === "admin";
   const qc = useQueryClient();
-  const sharedQ = useQuery({
+  const sharedQ = useQuery<PanelKey[]>({
     queryKey: ["employee-panels"],
-    queryFn: async () => {
+    queryFn: async (): Promise<PanelKey[]> => {
       const { data } = await supabase.from("site_settings").select("value").eq("key", "employee_panels").maybeSingle();
-      const v = (data?.value ?? {}) as any;
-      return Array.isArray(v.panels)
-        ? v.panels.filter((key): key is PanelKey =>
-            PANEL_KEYS.includes(key as PanelKey) && SHAREABLE_EMPLOYEE_PANELS.includes(key as PanelKey),
-          )
-        : [];
+      const value = (data?.value ?? {}) as { panels?: unknown };
+      const panels: unknown[] = Array.isArray(value.panels) ? value.panels : [];
+      return panels.filter((key): key is PanelKey =>
+        typeof key === "string" && PANEL_KEYS.includes(key as PanelKey) && SHAREABLE_EMPLOYEE_PANELS.includes(key as PanelKey),
+      );
     },
     // Panel sharing changes rarely; a 5s poll on every admin session was pure
     // overhead. Still automatic, just far cheaper and only while visible.
