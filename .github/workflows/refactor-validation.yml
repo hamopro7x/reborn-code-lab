@@ -6,12 +6,12 @@ on:
       - refactor/orders-customers-products
       - refactor/employee-shifts-transfers
       - fix/employee-transfer-note-scope
-      - fix/employee-transfer-note-scope
       - fix/employee-hide-reversed
   pull_request:
     branches:
       - main
       - refactor/employee-shifts-transfers
+      - fix/employee-transfer-note-scope
   workflow_dispatch:
 
 permissions:
