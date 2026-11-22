@@ -146,10 +146,6 @@ export async function pullFromBybit(maxWaitMs = 0): Promise<void> {
 
 export { fetchLedgerPage } from "./bybit-ledger-read.server";
 
-  };
-}
-
-
 /**
  * Same spend/fee rules as a single visa account, aggregated over every account
  * currently present in the system. Each account is summed with the shared spend
