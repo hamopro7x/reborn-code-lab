@@ -34,7 +34,7 @@ export const sendMail = createServerFn({ method: "POST" }).middleware([requireSu
     return { ok: true };
   });
 
-// Local (site-only) drafts: every staff member can read them; only admins create/edit/send/delete.
+// Local (site-only) drafts may contain unsent sensitive content; admins only.
 export const listMailDrafts = createServerFn({ method: "GET" }).middleware([requireSupabaseAuth]).handler(async ({ context }) => {
   // Drafts may contain unsent sensitive content; employees have read-only inbox access.
   await requireAdmin(context);
