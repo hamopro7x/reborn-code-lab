@@ -53,6 +53,8 @@ jobs:
           src/lib/bybit-card-visibility.test.ts
           src/lib/bybit-cache.server.ts
           src/lib/bybit-card-api.server.ts
+          src/lib/bybit-card-records.ts
+          src/lib/bybit-card-records.test.ts
           src/lib/bybit-overview.server.ts
           src/lib/bybit-card-sync.server.ts
           src/lib/bybit-value-helpers.ts
