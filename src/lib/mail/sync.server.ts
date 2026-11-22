@@ -17,7 +17,6 @@ export async function importMessage(admin: any, token: string, account: any, gma
   if (tomb) return null;
   const { data: existing, error: existingError } = await admin.from("mail_messages").select("id").eq("account_id", account.id).eq("gmail_message_id", gmailId).maybeSingle();
   if (existingError) throw new Error(existingError.message);
-  if (existing) return null;
   let m: any;
   try {
     m = await gmail(token, `/messages/${gmailId}?format=full`);
@@ -59,22 +58,29 @@ export async function importMessage(admin: any, token: string, account: any, gma
     ({ data: ins, error } = await admin.from("mail_messages").upsert(rest as typeof row, { onConflict: "account_id,gmail_message_id", ignoreDuplicates: true }).select("id").maybeSingle());
   }
   if (error) throw new Error(error.message);
-  if (!ins) return null;
+  // ignoreDuplicates may return no row when another worker inserted the same message.
+  // Resolve the canonical id so attachment/notification side effects can be repaired.
+  const messageId = ins?.id ?? existing?.id ?? (await admin.from("mail_messages").select("id").eq("account_id", account.id).eq("gmail_message_id", gmailId).maybeSingle()).data?.id;
+  if (!messageId) throw new Error("Unable to resolve imported Gmail message");
   if (body.attachments.length) {
-    const { error: attachmentError } = await admin.from("mail_attachments").insert(body.attachments.map((a) => ({
-      message_id: ins.id, gmail_attachment_id: a.attachmentId, filename: a.filename.slice(0, 300), mime_type: a.mimeType, size_bytes: a.size,
-    })));
+    const attachmentRows = body.attachments.map((a) => ({
+      message_id: messageId, gmail_attachment_id: a.attachmentId, filename: a.filename.slice(0, 300), mime_type: a.mimeType, size_bytes: a.size,
+    }));
+    const { error: attachmentError } = await admin.from("mail_attachments").upsert(attachmentRows, {
+      onConflict: "message_id,gmail_attachment_id", ignoreDuplicates: true,
+    });
     if (attachmentError) throw new Error(attachmentError.message);
   }
   if (notify && (folder === "inbox" || folder === "spam" || folder === "other")) {
-    const { data: staff } = await admin.from("user_roles").select("user_id, role");
+    const { data: staff, error: staffError } = await admin.from("user_roles").select("user_id, role");
+    if (staffError) throw new Error(staffError.message);
     const ids = [...new Set((staff ?? []).filter((r: any) => r.role === "admin" || r.role === "employee").map((r: any) => r.user_id))];
     if (ids.length) {
-      const { error: notificationError } = await admin.from("mail_notifications").upsert(ids.map((u) => ({ user_id: u, message_id: ins.id })), { onConflict: "user_id,message_id", ignoreDuplicates: true });
+      const { error: notificationError } = await admin.from("mail_notifications").upsert(ids.map((u) => ({ user_id: u, message_id: messageId })), { onConflict: "user_id,message_id", ignoreDuplicates: true });
       if (notificationError) throw new Error(notificationError.message);
     }
   }
-  return ins.id;
+  return ins?.id ?? null;
 }
 
 async function removeLocal(admin: any, accountId: string, gmailIds: string[]) {
@@ -84,17 +90,14 @@ async function removeLocal(admin: any, accountId: string, gmailIds: string[]) {
   }
 }
 
-/** Ids already stored or tombstoned, so replays never re-fetch them from Gmail. */
+/** Tombstoned ids are skipped; existing messages are replayed to repair partial side effects. */
 async function knownIds(admin: any, accountId: string, ids: string[]): Promise<Set<string>> {
   const known = new Set<string>();
   for (let i = 0; i < ids.length; i += 200) {
     const chunk = ids.slice(i, i + 200);
-    const [a, b] = await Promise.all([
-      admin.from("mail_messages").select("gmail_message_id").eq("account_id", accountId).in("gmail_message_id", chunk),
-      admin.from("mail_local_tombstones").select("gmail_message_id").eq("account_id", accountId).in("gmail_message_id", chunk),
-    ]);
-    if (a.error || b.error) throw new Error((a.error ?? b.error).message);
-    for (const r of [...(a.data ?? []), ...(b.data ?? [])]) known.add(r.gmail_message_id);
+    const { data, error } = await admin.from("mail_local_tombstones").select("gmail_message_id").eq("account_id", accountId).in("gmail_message_id", chunk);
+    if (error) throw new Error(error.message);
+    for (const r of data ?? []) known.add(r.gmail_message_id);
   }
   return known;
 }
