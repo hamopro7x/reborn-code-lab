@@ -17,6 +17,12 @@ describe("mail rules", () => {
     expect(d).not.toContain("onerror");
     expect(d).not.toContain("alert(2)");
   });
+  it("removes active content and unsafe URL schemes from email HTML", () => {
+    const d = safeEmailDocument('<iframe src="https://evil.example"></iframe><a href="javascript:alert(1)">open</a><img src="javascript:alert(2)">');
+    expect(d).not.toContain("<iframe");
+    expect(d).not.toContain("javascript:");
+    expect(d).not.toContain('src="https://evil.example"');
+  });
   it("allows external https images by default", () => {
     const d = safeEmailDocument("<p>hi</p>");
     expect(d).toContain("img-src data: cid: https:");
