@@ -24,7 +24,7 @@ import {
   getProductImageUrl,
   prepareProductImageUpload,
   saveProduct,
-} from "@/lib/categories.functions";
+} from "@/lib/products.functions";
 import { ensureSlug } from "@/lib/slug";
 
 type ProductDraft = {
