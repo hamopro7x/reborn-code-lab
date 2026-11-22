@@ -50,14 +50,17 @@ export const getMailThread = createServerFn({ method: "POST" }).middleware([requ
   .handler(async ({ data, context }) => {
     await roleOf(context.supabase, context.userId);
     const db = await adminDb();
-    const { data: msg } = await db.from("mail_messages").select("*").eq("id", data.id).maybeSingle();
+    const { data: msg, error: messageError } = await db.from("mail_messages").select("*").eq("id", data.id).maybeSingle();
+    if (messageError) throw new Error(messageError.message);
     if (!msg) throw new Error("الرسالة غير موجودة");
     // Shared read state: only log on an actual unread → read transition. Gmail is never changed.
-    const { data: flipped } = await db.from("mail_messages").update({ is_read: true, read_at: new Date().toISOString(), read_by: context.userId })
+    const { data: flipped, error: readError } = await db.from("mail_messages").update({ is_read: true, read_at: new Date().toISOString(), read_by: context.userId })
       .eq("id", data.id).eq("is_read", false).select("id").maybeSingle();
+    if (readError) throw new Error(readError.message);
     if (flipped) await log(db, { actor_id: context.userId, action: "read", account_id: msg.account_id, message_id: msg.id });
     // كل رسالة تُعرض وحدها: لا تجميع محادثات على الموقع.
-    const { data: atts } = await db.from("mail_attachments").select("id, message_id, filename, mime_type, size_bytes").eq("message_id", msg.id);
+    const { data: atts, error: attachmentError } = await db.from("mail_attachments").select("id, message_id, filename, mime_type, size_bytes").eq("message_id", msg.id);
+    if (attachmentError) throw new Error(attachmentError.message);
     return { thread: [msg], attachments: atts ?? [] };
   });
 
@@ -66,10 +69,14 @@ export const setMailRead = createServerFn({ method: "POST" }).middleware([requir
   .handler(async ({ data, context }) => {
     await roleOf(context.supabase, context.userId); // employees + admin
     const db = await adminDb();
-    const { data: changed } = await db.from("mail_messages")
+    const { data: changed, error } = await db.from("mail_messages")
       .update(data.read ? { is_read: true, read_at: new Date().toISOString(), read_by: context.userId } : { is_read: false, read_at: null, read_by: null })
       .in("id", data.ids).eq("is_read", !data.read).select("id, account_id");
-    if (changed?.length) await db.from("mail_activity").insert(changed.map((m: any) => ({ actor_id: context.userId, action: data.read ? "marked_read" : "marked_unread", account_id: m.account_id, message_id: m.id })));
+    if (error) throw new Error(error.message);
+    if (changed?.length) {
+      const { error: activityError } = await db.from("mail_activity").insert(changed.map((m: any) => ({ actor_id: context.userId, action: data.read ? "marked_read" : "marked_unread", account_id: m.account_id, message_id: m.id })));
+      if (activityError) throw new Error(activityError.message);
+    }
     return { ok: true };
   });
 
@@ -82,8 +89,10 @@ export const organizeMail = createServerFn({ method: "POST" }).middleware([requi
   .handler(async ({ data, context }) => {
     await requireAdmin(context);
     const db = await adminDb();
-    const { data: msgs } = await db.from("mail_messages").select("id, account_id, gmail_message_id, label_ids").in("id", data.ids);
-    const set = (patch: any) => db.from("mail_messages").update(patch).in("id", data.ids);
+    const { data: msgs, error: messagesError } = await db.from("mail_messages").select("id, account_id, gmail_message_id, label_ids").in("id", data.ids);
+    if (messagesError) throw new Error(messagesError.message);
+    if (!msgs?.length) throw new Error("لم يتم العثور على الرسائل المطلوبة");
+    const set = async (patch: any) => { const { error } = await db.from("mail_messages").update(patch).in("id", data.ids); if (error) throw new Error(error.message); };
     switch (data.action) {
       case "star": await set({ starred: true }); break;
       case "unstar": await set({ starred: false }); break;
@@ -92,8 +101,10 @@ export const organizeMail = createServerFn({ method: "POST" }).middleware([requi
       case "trash": await set({ trashed_at: new Date().toISOString() }); break;
       case "restore": await set({ trashed_at: null }); break;
       case "delete":
-        await db.from("mail_local_tombstones").upsert((msgs ?? []).map((m: any) => ({ account_id: m.account_id, gmail_message_id: m.gmail_message_id, deleted_by: context.userId })), { onConflict: "account_id,gmail_message_id" });
-        await db.from("mail_messages").delete().in("id", data.ids);
+        const { error: tombstoneError } = await db.from("mail_local_tombstones").upsert((msgs ?? []).map((m: any) => ({ account_id: m.account_id, gmail_message_id: m.gmail_message_id, deleted_by: context.userId })), { onConflict: "account_id,gmail_message_id" });
+        if (tombstoneError) throw new Error(tombstoneError.message);
+        const { error: deleteError } = await db.from("mail_messages").delete().in("id", data.ids);
+        if (deleteError) throw new Error(deleteError.message);
         break;
       case "add_label":
       case "remove_label":
@@ -101,18 +112,21 @@ export const organizeMail = createServerFn({ method: "POST" }).middleware([requi
         for (const m of msgs ?? []) {
           const cur: string[] = m.label_ids ?? [];
           const next = data.action === "add_label" ? [...new Set([...cur, data.labelId])] : cur.filter((x) => x !== data.labelId);
-          await db.from("mail_messages").update({ label_ids: next }).eq("id", m.id);
+          const { error } = await db.from("mail_messages").update({ label_ids: next }).eq("id", m.id);
+          if (error) throw new Error(error.message);
         }
     }
-    await db.from("mail_activity").insert((msgs ?? []).map((m: any) => ({
+    const { error: activityError } = await db.from("mail_activity").insert((msgs ?? []).map((m: any) => ({
       actor_id: context.userId, action: data.action, account_id: m.account_id, message_id: data.action === "delete" ? null : m.id, meta: { gmail_message_id: data.action === "delete" ? m.gmail_message_id : undefined, label_id: data.labelId },
     })));
+    if (activityError) throw new Error(activityError.message);
     return { ok: true };
   });
 
 export const listMailLabels = createServerFn({ method: "GET" }).middleware([requireSupabaseAuth]).handler(async ({ context }) => {
   await roleOf(context.supabase, context.userId);
-  const { data } = await (await adminDb()).from("mail_labels").select("id, name, color").order("name");
+  const { data, error } = await (await adminDb()).from("mail_labels").select("id, name, color").order("name");
+  if (error) throw new Error(error.message);
   return data ?? [];
 });
 
@@ -132,7 +146,8 @@ export const downloadMailAttachment = createServerFn({ method: "POST" }).middlew
   .handler(async ({ data, context }) => {
     await roleOf(context.supabase, context.userId);
     const db = await adminDb();
-    const { data: a } = await db.from("mail_attachments").select("filename, mime_type, gmail_attachment_id, mail_messages!inner(account_id, gmail_message_id)").eq("id", data.id).maybeSingle();
+    const { data: a, error } = await db.from("mail_attachments").select("filename, mime_type, gmail_attachment_id, mail_messages!inner(account_id, gmail_message_id)").eq("id", data.id).maybeSingle();
+    if (error) throw new Error(error.message);
     if (!a) throw new Error("المرفق غير موجود");
     const { accessTokenFor, gmail } = await import("@/lib/mail/google.server");
     const m: any = (a as any).mail_messages;
