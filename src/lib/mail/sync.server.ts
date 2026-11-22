@@ -5,7 +5,8 @@ import { extractLogoUrl, folderFromLabels, header, parsePayload } from "./mime";
 const LEASE_MS = 90_000;
 
 export async function logActivity(admin: any, row: { actor_id?: string | null; action: string; account_id?: string | null; message_id?: string | null; meta?: any }) {
-  await admin.from("mail_activity").insert({ meta: {}, ...row });
+  const { error } = await admin.from("mail_activity").insert({ meta: {}, ...row });
+  if (error) throw new Error(error.message);
 }
 
 /** Fetches one Gmail message and stores it locally (idempotent). Returns new local id or null. */
@@ -57,15 +58,17 @@ export async function importMessage(admin: any, token: string, account: any, gma
   if (error) throw new Error(error.message);
   if (!ins) return null;
   if (body.attachments.length) {
-    await admin.from("mail_attachments").insert(body.attachments.map((a) => ({
+    const { error: attachmentError } = await admin.from("mail_attachments").insert(body.attachments.map((a) => ({
       message_id: ins.id, gmail_attachment_id: a.attachmentId, filename: a.filename.slice(0, 300), mime_type: a.mimeType, size_bytes: a.size,
     })));
+    if (attachmentError) throw new Error(attachmentError.message);
   }
   if (notify && (folder === "inbox" || folder === "spam" || folder === "other")) {
     const { data: staff } = await admin.from("user_roles").select("user_id, role");
     const ids = [...new Set((staff ?? []).filter((r: any) => r.role === "admin" || r.role === "employee").map((r: any) => r.user_id))];
     if (ids.length) {
-      await admin.from("mail_notifications").upsert(ids.map((u) => ({ user_id: u, message_id: ins.id })), { onConflict: "user_id,message_id", ignoreDuplicates: true });
+      const { error: notificationError } = await admin.from("mail_notifications").upsert(ids.map((u) => ({ user_id: u, message_id: ins.id })), { onConflict: "user_id,message_id", ignoreDuplicates: true });
+      if (notificationError) throw new Error(notificationError.message);
     }
   }
   return ins.id;
