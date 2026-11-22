@@ -34,6 +34,46 @@ export {
   isLateSettlementRecord,
   preferRecord,
 } from "./bybit-card-records";
+import { CARD_QUERY_TYPES, preferRecord, isLateSettlementRecord } from "./bybit-card-records";
+
+export async function callCardPage(params: Record<string, unknown>, creds: Creds) {
+  const clean = Object.fromEntries(
+    Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== ""),
+  );
+  const body = JSON.stringify(clean);
+  let lastErr = "";
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const ts = Date.now().toString();
+    const sign = createHmac("sha256", creds.secret)
+      .update(ts + creds.key + RECV + body)
+      .digest("hex");
+    const res = await fetch(`${BASE}${CARD_PATH}`, {
+      method: "POST",
+      signal: AbortSignal.timeout(12_000),
+      headers: {
+        "X-BAPI-API-KEY": creds.key,
+        "X-BAPI-TIMESTAMP": ts,
+        "X-BAPI-RECV-WINDOW": RECV,
+        "X-BAPI-SIGN": sign,
+        "X-BAPI-SIGN-TYPE": "2",
+        "Content-Type": "application/json",
+      },
+      body,
+    });
+    const text = await res.text();
+    if (!res.ok) throw new Error(`Bybit HTTP ${res.status}: ${text.slice(0, 400)}`);
+    const json = JSON.parse(text) as { retCode?: number; retMsg?: string; result?: any };
+    if (json.retCode === 0) return { ...(json.result ?? {}), data: (json.result?.data ?? []).map((row: any) => ({ ...row, __observedAt: new Date(Number(ts)).toISOString() })) };
+    // 10006 = rate limited: back off and retry
+    if (json.retCode === 10006) {
+      lastErr = json.retMsg ?? "rate limited";
+      await sleep(1200 * (attempt + 1));
+      continue;
+    }
+    throw new Error(`Bybit ${json.retCode ?? "UNKNOWN"}: ${json.retMsg ?? "Unknown error"}`);
+  }
+  throw new Error(`Bybit rate limited: ${lastErr}`);
+}
 
 /** Storage key of ONE raw Bybit record (not of a purchase).
  * Raw authorisation and settlement records are kept side by side for auditing;
