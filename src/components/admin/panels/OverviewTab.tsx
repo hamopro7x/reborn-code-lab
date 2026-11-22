@@ -13,7 +13,7 @@ export function OverviewTab({ readOnly = false }: { readOnly?: boolean }) {
       const [orders, products, users] = await Promise.all([
         supabase.from("orders").select("id,total,status,created_at"),
         supabase.from("products").select("id"),
-        supabase.from("profiles").select("id"),
+        readOnly ? Promise.resolve({ data: [] }) : supabase.from("profiles").select("id"),
       ]);
       const ords = (orders.data ?? []) as any[];
       const revenue = ords.filter((o) => o.status === "confirmed" || o.status === "completed").reduce((s, o) => s + Number(o.total), 0);
@@ -50,7 +50,7 @@ export function OverviewTab({ readOnly = false }: { readOnly?: boolean }) {
           { label: "الإيرادات (ج.م)", value: s?.revenue ?? "-", icon: DollarSign },
           { label: "المنتجات", value: s?.products ?? "-", icon: Package },
           { label: "العملاء", value: s?.users ?? "-", icon: Users },
-        ].map((c) => (
+        ].filter((c) => !readOnly || c.label !== "العملاء").map((c) => (
           <div key={c.label} className="card-surface rounded-2xl p-4">
             <c.icon className="size-5 text-primary mb-2" />
             <div className="text-[11px] text-muted-foreground">{c.label}</div>
