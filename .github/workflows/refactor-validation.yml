@@ -94,6 +94,7 @@ jobs:
           src/lib/mail/sync-import.server.ts
           src/lib/mail/sync-recovery.server.ts
           src/lib/mail/sync-orchestrator.server.ts
+          src/lib/mail/sync-orchestrator.test.ts
           src/lib/mail/sync-recovery.test.ts
           src/lib/mail/google-oauth.server.ts
           src/lib/mail/google-token.server.ts
