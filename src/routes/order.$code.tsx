@@ -75,7 +75,16 @@ function OrderPage() {
     <div className="min-h-screen flex flex-col">
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8 max-w-3xl">
-        {!o ? <div className="text-center py-16">جاري التحميل...</div> : (
+        {orderQ.isLoading ? (
+          <div className="text-center py-16">جاري تحميل الطلب...</div>
+        ) : orderQ.isError ? (
+          <div className="text-center py-16 space-y-3">
+            <p>تعذر تحميل الطلب حاليًا. حاول مرة أخرى.</p>
+            <Button onClick={() => void orderQ.refetch()}>إعادة المحاولة</Button>
+          </div>
+        ) : !o ? (
+          <div className="text-center py-16">لم يتم العثور على طلب بهذا الكود.</div>
+        ) : (
           <div className="animate-slide-up">
             <div className="text-center mb-8">
               <div className="size-16 rounded-full gradient-primary mx-auto flex items-center justify-center mb-4">
