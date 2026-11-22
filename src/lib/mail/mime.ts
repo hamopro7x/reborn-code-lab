@@ -88,15 +88,68 @@ export function buildRawMessage(m: OutgoingMail): string {
   return b64Utf8(lines.join("\r\n")).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
-/** Wraps untrusted email HTML for a sandboxed iframe: no scripts; https images are allowed. */
+/** Sanitize untrusted Gmail HTML before placing it in a sandboxed iframe. */
 export function safeEmailDocument(html: string): string {
-  const stripped = html
-    .replace(/<script[\s\S]*?<\/script>/gi, "")
-    .replace(/<(iframe|object|embed|form|meta|link|base)[^>]*>/gi, "")
-    .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "")
-    .replace(/(href|src)\s*=\s*(["']?)\s*javascript:/gi, "$1=$2#");
+  let safeBody = "";
+  if (typeof DOMParser !== "undefined") {
+    const parsed = new DOMParser().parseFromString(String(html ?? ""), "text/html");
+    const allowed = new Set([
+      "A", "ABBR", "B", "BLOCKQUOTE", "BR", "CAPTION", "CENTER", "CODE", "DD", "DEL", "DIV",
+      "DL", "DT", "EM", "FONT", "H1", "H2", "H3", "H4", "HR", "I", "IMG", "LI", "OL", "P",
+      "PRE", "S", "SMALL", "SPAN", "STRONG", "SUB", "SUP", "TABLE", "TBODY", "TD", "TFOOT",
+      "TH", "THEAD", "TR", "U", "UL",
+    ]);
+    const dropWithContent = new Set(["SCRIPT", "STYLE", "SVG", "MATH", "IFRAME", "OBJECT", "EMBED", "FORM", "TEMPLATE", "VIDEO", "AUDIO"]);
+    const safeAttrs = new Set(["alt", "title", "width", "height", "colspan", "rowspan", "align", "valign", "dir", "lang", "role", "cellpadding", "cellspacing", "border"]);
+    const safeStyle = new Set(["color", "background-color", "font-family", "font-size", "font-weight", "font-style", "text-decoration", "text-align", "vertical-align", "white-space", "border", "border-collapse", "padding", "padding-left", "padding-right", "padding-top", "padding-bottom", "margin", "margin-left", "margin-right", "width", "max-width", "height"]);
+    const visit = (root: ParentNode) => {
+      for (const el of Array.from(root.children)) {
+        if (dropWithContent.has(el.tagName)) { el.remove(); continue; }
+        if (!allowed.has(el.tagName)) {
+          visit(el);
+          el.replaceWith(...Array.from(el.childNodes));
+          continue;
+        }
+        for (const attr of Array.from(el.attributes)) {
+          const name = attr.name.toLowerCase();
+          const value = attr.value.trim();
+          if (name.startsWith("on") || name === "srcset" || name === "srcdoc" || name === "formaction" || name === "xmlns") {
+            el.removeAttribute(attr.name);
+          } else if (name === "href") {
+            if (!/^(https?:|mailto:)/i.test(value) || /[\u0000-\u0020]/.test(value.slice(0, 8))) el.removeAttribute(attr.name);
+            else { el.setAttribute("target", "_blank"); el.setAttribute("rel", "noopener noreferrer"); }
+          } else if (name === "src") {
+            if (el.tagName !== "IMG" || !/^(https:|data:image\/(?:png|gif|jpeg|webp);|cid:)/i.test(value)) el.removeAttribute(attr.name);
+          } else if (name === "style") {
+            const declarations = value.split(";").map((part) => part.trim()).filter(Boolean);
+            const kept = declarations.filter((part) => {
+              const colon = part.indexOf(":");
+              if (colon < 1) return false;
+              const prop = part.slice(0, colon).trim().toLowerCase();
+              const val = part.slice(colon + 1).trim();
+              return safeStyle.has(prop) && !/(url\s*\(|expression|@import|behavior|javascript:|\\)/i.test(val);
+            });
+            if (kept.length) el.setAttribute("style", kept.join("; "));
+            else el.removeAttribute("style");
+          } else if (!safeAttrs.has(name)) el.removeAttribute(attr.name);
+        }
+        visit(el);
+      }
+    };
+    visit(parsed.body);
+    safeBody = parsed.body.innerHTML;
+  } else {
+    // Regex is not a safe HTML parser. In runtimes without DOMParser (for example SSR),
+    // render the original message as text rather than risk passing active markup through.
+    safeBody = String(html ?? "").replace(/[&<>"]/g, (char) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+    })[char] ?? char);
+  }
   const csp = "default-src 'none'; img-src data: cid: https:; style-src 'unsafe-inline'; font-src data:";
-  return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${csp}"><base target="_blank"><style>body{font-family:system-ui,sans-serif;color:#111;background:#fff;margin:12px;word-wrap:break-word}img{max-width:100%;height:auto}</style></head><body>${stripped}</body></html>`;
+  return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${csp}"><style>body{font-family:system-ui,sans-serif;color:#111;background:#fff;margin:12px;word-wrap:break-word}img{max-width:100%;height:auto}</style></head><body>${safeBody}</body></html>`;
 }
 
 /** Best-effort sender logo URL from email HTML: prefers logo-looking urls, skips tracking pixels, https only. */

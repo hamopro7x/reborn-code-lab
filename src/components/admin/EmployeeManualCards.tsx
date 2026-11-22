@@ -42,7 +42,7 @@ function useEditWindow(savedAt: string | null | undefined, serverNow: string | n
 
 /** One manual cell: saved to the database immediately on blur/Enter, editable
  *  for 10 minutes after the server-side save time, then locked (🔒). */
-export function ManualCell({
+function ManualCell({
   id,
   field,
   initial,
@@ -222,7 +222,7 @@ export function ManualCell({
 }
 
 
-export function ManualCard({
+function ManualCard({
   card,
   title,
   rows,

@@ -24,7 +24,7 @@ function validateBybitCreds({ name, apiKey, apiSecret }: { name: string; apiKey:
   return e;
 }
 
-export function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
+function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1">
       <label className="text-[11px] text-muted-foreground block">{label}</label>

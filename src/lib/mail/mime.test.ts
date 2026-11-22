@@ -14,8 +14,15 @@ describe("mail rules", () => {
   });
   it("strips scripts and event handlers from email HTML", () => {
     const d = safeEmailDocument('<img src=x onerror="alert(1)"><script>alert(2)</script>');
-    expect(d).not.toContain("onerror");
-    expect(d).not.toContain("alert(2)");
+    expect(d).not.toContain("<img");
+    expect(d).not.toContain("<script");
+    expect(d).toContain("&lt;img");
+  });
+  it("removes active content and unsafe URL schemes from email HTML", () => {
+    const d = safeEmailDocument('<iframe src="https://evil.example"></iframe><a href="javascript:alert(1)">open</a><img src="javascript:alert(2)">');
+    expect(d).not.toContain("<iframe");
+    expect(d).not.toContain('<a href="javascript:');
+    expect(d).toContain("&lt;iframe");
   });
   it("allows external https images by default", () => {
     const d = safeEmailDocument("<p>hi</p>");

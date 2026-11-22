@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { refreshQueries } from "@/lib/refresh-queries";
 import { livePoll } from "@/lib/live-poll";
 import { supabase } from "@/integrations/supabase/client";
-import { claimMailNotifications, mailUnreadCount } from "@/lib/mail.functions";
+import { claimMailNotifications } from "@/lib/mail.functions";
 
 function beep() {
   try {
@@ -63,7 +63,3 @@ export function MailNotifier({ onOpen }: { onOpen?: (messageId: string) => void 
   return null;
 }
 
-export function useMailUnread() {
-  const fn = useServerFn(mailUnreadCount);
-  return useQuery({ queryKey: ["mail-unread"], queryFn: () => fn(), refetchInterval: livePoll(15000), retry: false }).data?.unread ?? 0;
-}

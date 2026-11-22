@@ -56,7 +56,7 @@ function PinField({
   );
 }
 
-export function PinGate({
+function PinGate({
   open,
   onOpenChange,
   onClaimed,

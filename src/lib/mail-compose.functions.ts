@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { adminDb, log, requireAdmin, roleOf } from "./mail/access.server";
+import { adminDb, log, requireAdmin } from "./mail/access.server";
 import { sendInput } from "./mail-read.functions";
 
 export const sendMail = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
@@ -34,9 +34,10 @@ export const sendMail = createServerFn({ method: "POST" }).middleware([requireSu
     return { ok: true };
   });
 
-// Local (site-only) drafts: every staff member can read them; only admins create/edit/send/delete.
+// Local (site-only) drafts may contain unsent sensitive content; admins only.
 export const listMailDrafts = createServerFn({ method: "GET" }).middleware([requireSupabaseAuth]).handler(async ({ context }) => {
-  await roleOf(context.supabase, context.userId);
+  // Drafts may contain unsent sensitive content; employees have read-only inbox access.
+  await requireAdmin(context);
   const { data } = await (await adminDb()).from("mail_drafts").select("*").order("updated_at", { ascending: false }).limit(100);
   return data ?? [];
 });

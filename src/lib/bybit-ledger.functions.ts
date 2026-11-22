@@ -65,7 +65,7 @@ export const resolveBybitReversalCase = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { accountId: string; eventId: string; targetId: string | null; candidates: string[] }) => {
     if (!/^[0-9a-f-]{36}$/i.test(input?.accountId ?? "") || !/^(legacy:)?[\w-]{1,200}$/.test(input?.eventId ?? "")) throw new Error("معرف غير صالح");
-    if (!Array.isArray(input.candidates) || input.candidates.length > 100 || input.candidates.some((id) => !/^[\w-]{1,200}$/.test(id))) throw new Error("مرشحون غير صالحون");
+    if (!Array.isArray(input.candidates) || input.candidates.length > 100 || input.candidates.some((id) => !/^[\w-]{1,200}$/.test(id))) throw new Error("مرشحون غير صالحين");
     if (input.targetId !== null && !input.candidates.includes(input.targetId)) throw new Error("اختيار غير صالح");
     return input;
   })

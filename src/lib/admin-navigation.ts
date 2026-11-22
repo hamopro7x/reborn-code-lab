@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import type { PanelKey } from "./admin-panel-access";
 
-export type AdminNavItem = { key: PanelKey; label: string; icon: LucideIcon; adminOnly?: boolean };
+type AdminNavItem = { key: PanelKey; label: string; icon: LucideIcon; adminOnly?: boolean };
 export type AdminNavGroup = { label: string; items: AdminNavItem[] };
 
 export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [

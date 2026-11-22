@@ -273,5 +273,3 @@ export function ChainLogo({ chain }: { chain: string }) {
   return <CryptoLogo name={chain} iconUrl={chainIconUrl(chain)} />;
 }
 
-
-export { USDT_LOGO };

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { prepareCategoryImageUpload, getCategoryImageUrl, saveCategory, deleteCategory } from "@/lib/categories.functions";
+import { prepareCategoryImageUpload, getCategoryImageUrl, saveCategory, deleteCategory } from "@/lib/categories-write.functions";
 import { ensureSlug } from "@/lib/slug";
 import { listAdminCategories, uploadCategoryImage } from "@/lib/categories.queries";
 import { Button } from "@/components/ui/button";
