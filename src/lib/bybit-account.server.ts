@@ -247,7 +247,8 @@ export async function saveCreds(key: string, secret: string, userId: string) {
 
 export async function clearCreds() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  await (supabaseAdmin as any).rpc("integration_clear_bybit");
+  const { error } = await (supabaseAdmin as any).rpc("integration_clear_bybit");
+  if (error) throw new Error(error.message);
 }
 
 /** Validates a key/secret pair on its own — never touches stored accounts. */
