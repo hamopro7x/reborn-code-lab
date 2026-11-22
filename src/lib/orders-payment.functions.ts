@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { enforcePublicOrderRateLimit } from "./public-order-rate-limit.server";
 
 const proofExtension = z.enum(["jpg", "jpeg", "png", "webp"]);
 
@@ -11,6 +12,7 @@ const attachSchema = z.object({
 export const attachOrderScreenshot = createServerFn({ method: "POST" })
   .inputValidator((data) => attachSchema.parse(data))
   .handler(async ({ data }) => {
+    await enforcePublicOrderRateLimit("attach-proof", 8, 600);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     // Only accept the exact random object path issued by signScreenshotUpload.
     const match = data.screenshot_path.match(/^([^/]+)\/([0-9a-f-]{36})\.(jpg|jpeg|png|webp)$/i);
@@ -65,6 +67,7 @@ const signSchema = z.object({
 export const signScreenshotUpload = createServerFn({ method: "POST" })
   .inputValidator((data) => signSchema.parse(data))
   .handler(async ({ data }) => {
+    await enforcePublicOrderRateLimit("sign-proof", 8, 600);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: order, error } = await supabaseAdmin
       .from("orders")
