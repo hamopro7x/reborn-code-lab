@@ -2,13 +2,12 @@ import { SETTLEMENT_COPY_FILTER } from "./bybit-settlement";
 
 import { admin, bybitConfigured, getCreds, listAccounts } from "./bybit-account.server";
 
-import type { AssetRow } from "./bybit-assets.server";
 import { mapCardTxn, mapStoredRow } from "./bybit-card-mapper";
 import { brandFromNumber } from "./bybit-cards.server";
 import type { BybitCard } from "./bybit-cards.server";
 import type { CardTxn } from "./bybit-card-mapper";
-import type { Creds, BybitAccount } from "./bybit-account.server";
-import { num, sleep } from "./bybit-runtime";
+import type { Creds } from "./bybit-account.server";
+import { num } from "./bybit-runtime";
 import { sumSpendByCard, isCardReversalEvent, type SpendRow, cardPurchaseGroup, cardFilterMatches } from "./bybit-spend";
 import { currentBybitCycle, currentBybitRows } from "./monthly-cycle.server";
 
@@ -313,55 +312,6 @@ export async function syncAllCardTxns(): Promise<{ added: number; accounts: numb
 
 
 /* ---------- resumable deep backfill (back to account creation) ---------- */
-
-type BackfillCursor = { version: number; typeIndex: number; page: number; done: boolean };
-// Version 5 restarts cursors that may have been marked complete while the UI
-// only executed one historical chunk. The new client keeps requesting chunks
-// until this cursor reaches the oldest page for every transaction type.
-
-const BACKFILL_VERSION = 6; // 6: query types changed to the documented *_ALL / *_REVERSAL set
-// No page cap: pagination continues until Bybit reports the last (oldest) page.
-// A wall-clock budget only decides when to pause and resume from the cursor.
-
-const BACKFILL_BUDGET_MS = 20_000;
-
-async function readCursor(key: string): Promise<BackfillCursor> {
-  try {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data } = await (supabaseAdmin as any)
-      .from("site_settings")
-      .select("value")
-      .eq("key", `bybit_backfill:${key}`)
-      .maybeSingle();
-    const v = data?.value ?? {};
-    // Version 1 used JSON-body filters that Bybit ignored, so its cursors
-    // cannot prove that financial/refund history was actually archived.
-    if (Number(v.version ?? 0) !== BACKFILL_VERSION) {
-      // Older cursors may have stopped early, so restart from the first page to
-      // guarantee everything back to account creation is archived.
-      return { version: BACKFILL_VERSION, typeIndex: 0, page: 1, done: false };
-    }
-    return {
-      version: BACKFILL_VERSION,
-      typeIndex: Number(v.typeIndex ?? 0),
-      page: Math.max(1, Number(v.page ?? 1)),
-      done: Boolean(v.done),
-    };
-  } catch {
-    return { version: BACKFILL_VERSION, typeIndex: 0, page: 1, done: false };
-  }
-}
-
-async function writeCursor(key: string, cursor: BackfillCursor) {
-  try {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    await (supabaseAdmin as any)
-      .from("site_settings")
-      .upsert({ key: `bybit_backfill:${key}`, value: cursor as any }, { onConflict: "key" });
-  } catch {
-    /* best effort */
-  }
-}
 
 /**
  * Walks a bounded slice of the historical card pages, persists it, and stores a
