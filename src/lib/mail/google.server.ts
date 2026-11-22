@@ -72,11 +72,12 @@ export async function accessTokenFor(admin: any, accountId: string): Promise<str
     if (j.error === "invalid_grant") throw new ReauthError("انتهت صلاحية الربط، أعد ربط الحساب");
     throw new Error(`token_refresh_failed: ${j.error ?? res.status}`);
   }
-  await admin.from("mail_account_secrets").update({
+  const { error: persistError } = await admin.from("mail_account_secrets").update({
     access_token_ciphertext: await encryptSecret(j.access_token),
     access_expires_at: new Date(Date.now() + (j.expires_in ?? 3600) * 1000).toISOString(),
     updated_at: new Date().toISOString(),
   }).eq("account_id", accountId);
+  if (persistError) throw new Error("تعذر حفظ رمز الوصول الجديد بأمان");
   return j.access_token;
 }
 
