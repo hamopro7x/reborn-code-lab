@@ -1,9 +1,12 @@
 name: Refactor validation
 
 on:
+  push:
+    branches:
+      - refactor/gmail-sync-modules
   pull_request:
     branches:
-      - main
+      - refactor/modular-architecture
   workflow_dispatch:
 
 permissions:
