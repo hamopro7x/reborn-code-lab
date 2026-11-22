@@ -311,7 +311,7 @@ function LiveScreen({
   );
 }
 
-export function PairDeviceBox({
+function PairDeviceBox({
   userId,
   employeeName,
   title,
