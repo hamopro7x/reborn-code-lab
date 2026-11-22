@@ -1,123 +1,23 @@
-import { SETTLEMENT_COPY_SIDES, SETTLEMENT_COPY_FILTER } from "./bybit-settlement";
 import { createHmac } from "crypto";
-import { admin, bybitConfigured, call, getCreds, listAccounts } from "./bybit-account.server";
-import { fetchP2P, fetchOnChain, fetchInternal } from "./bybit-assets.server";
-import type { AssetRow } from "./bybit-assets.server";
-import { cardRowKey, mapCardTxn, mapStoredRow, sanitize } from "./bybit-card-mapper";
-import { brandFromNumber } from "./bybit-cards.server";
-import type { BybitCard } from "./bybit-cards.server";
-import type { CardTxn } from "./bybit-card-mapper";
-import type { Creds, BybitAccount } from "./bybit-account.server";
-import { BYBIT_BASE_URL as BASE, BYBIT_RECV_WINDOW as RECV, num, sleep } from "./bybit-runtime";
-import {
-  sumSpend,
-  sumSpendByCard,
-  auditSpend,
-  cardRecordOutcome,
-  isCardReversalEvent,
-  type SpendRow,
-  cryptoSoldOf,
-  isExplicitReversal,
-  cardLinkIds,
-  findLinkedReversals,
-  REVERSAL_LINK_WINDOW_MS,
-  type LinkCandidate,
-  cardPurchaseGroup,
-  cardFilterMatches,
-  LEDGER_CARD_FILTERS,
-  legacyReversalUnproven,
-  durableCardReversal,
-} from "./bybit-spend";
-import { currentBybitCycle, currentBybitRows } from "./monthly-cycle.server";
-import { isPastLastPage } from "./pagination";
-import { cardConfirmed, archivedCardReadable, legacyCardReadable, CARD_READ_FILTER } from "./bybit-confirmation";
+import { getCreds } from "./bybit-account.server";
+import { cardRowKey } from "./bybit-card-mapper";
+import type { Creds } from "./bybit-account.server";
+import { BYBIT_BASE_URL as BASE, BYBIT_RECV_WINDOW as RECV, sleep } from "./bybit-runtime";
+
+import { currentBybitCycle } from "./monthly-cycle.server";
 import { cardCache, cardInflight } from "./bybit-cache.server";
 
 export const CARD_PATH = "/v5/card/transaction/query-asset-records";
 
-export const CARD_QUERY_TYPES = [
-  "SIDE_QUERY_AUTH",
-  "SIDE_QUERY_AUTH_ALL",
-  "SIDE_QUERY_FINANCIAL_ALL",
-  "SIDE_QUERY_FINANCIAL_REFUND",
-  "SIDE_QUERY_AUTH_REVERSAL",
-];
-
-/** How final a raw record's state is: a later sync never downgrades a reversal to pending/success. */
-
-export function cardRecordRank(t: any): number {
-  if (isExplicitReversal(t?.tradeStatus ?? t?.status, t?.side)) return 3;
-  const ts = String(t?.tradeStatus ?? t?.status ?? "");
-  if (ts === "2") return 2;
-  if (ts === "1") return 1;
-  return 0;
-}
-
-/**
- * True when Bybit rejected the request itself (e.g. a query type this key or
- * API version does not support) — not a network, auth or rate-limit problem.
- * Only SIDE_QUERY_AUTH/FINANCIAL/REFUND are publicly documented; the other
- * types are best-effort and are skipped when rejected.
- */
-
-const TRANSIENT_OR_AUTH_CODES = new Set(["10002", "10003", "10004", "10005", "10006", "10016", "10018"]);
-
-export function isUnsupportedCardTypeError(err: unknown): boolean {
-  const m = /^Bybit (\d+):/.exec(String((err as Error)?.message ?? err ?? ""));
-  return Boolean(m && !TRANSIENT_OR_AUTH_CODES.has(m[1]));
-}
-
-/**
- * Merge per-type results of one fetch. A rejected type never hides the rows of
- * the types that worked; it is reported (not silently dropped). Throws only
- * when every type failed.
- */
-
-export function mergeCardTypeResults(
-  results: PromiseSettledResult<any>[],
-  types: readonly string[] = CARD_QUERY_TYPES,
-  warn: (msg: string) => void = (m) => console.warn(m),
-): any[] {
-  const merged = new Map<string, { row: any; sourcePriority: number; updatedAt: number }>();
-  let ok = 0;
-  let lastError: unknown;
-  results.forEach((res, typeIndex) => {
-    if (res.status !== "fulfilled") {
-      lastError = res.reason;
-      warn(
-        `bybit card type ${types[typeIndex] ?? typeIndex} ${isUnsupportedCardTypeError(res.reason) ? "unsupported" : "failed"}: ${String((res.reason as Error)?.message ?? res.reason)}`,
-      );
-      return;
-    }
-    ok++;
-    const rows = Array.isArray(res.value?.data) ? res.value.data : [];
-    for (const r of rows) {
-      const k = cardRowKey(r);
-      const updatedAt = Number(r?.txnUpdate ?? r?.updateTime ?? r?.updatedTime ?? r?.settleTime ?? r?.txnCreate ?? 0);
-      const current = merged.get(k);
-      if (preferRecord(current, r, typeIndex, updatedAt)) merged.set(k, { row: r, sourcePriority: typeIndex, updatedAt });
-    }
-  });
-  if (!ok && lastError) throw lastError;
-  return [...merged.values()].map(({ row }) => row).filter((row) => !isLateSettlementRecord(row));
-}
-
-/**
- * Bybit's daily clearing re-sends every earlier purchase as a settlement
- * record (side 3) with new ids and a new time. It is the same purchase that
- * was already recorded at authorisation, so it is never ingested or shown.
- */
-
-export function isLateSettlementRecord(row: any): boolean {
-  return SETTLEMENT_COPY_SIDES.has(String(row?.side ?? ""));
-}
-
-/**
- * Storage key of ONE raw Bybit record (not of a purchase).
- * Raw authorisation and settlement records are kept side by side for auditing;
- * deciding that two records are the SAME purchase is the job of
- * `getCanonicalTransactionIdentity` in ./bybit-spend, which every total uses.
- */
+export {
+  CARD_QUERY_TYPES,
+  cardRecordRank,
+  isUnsupportedCardTypeError,
+  mergeCardTypeResults,
+  isLateSettlementRecord,
+  preferRecord,
+} from "./bybit-card-records";
+import { CARD_QUERY_TYPES, preferRecord, isLateSettlementRecord } from "./bybit-card-records";
 
 export async function callCardPage(params: Record<string, unknown>, creds: Creds) {
   const clean = Object.fromEntries(
@@ -158,20 +58,11 @@ export async function callCardPage(params: Record<string, unknown>, creds: Creds
   throw new Error(`Bybit rate limited: ${lastErr}`);
 }
 
-/** Same record from two query types: keep the more final state, then the higher type, then the newer. */
-
-export function preferRecord(
-  current: { row: any; sourcePriority: number; updatedAt: number } | undefined,
-  r: any,
-  typeIndex: number,
-  updatedAt: number,
-) {
-  if (!current) return true;
-  const a = cardRecordRank(r);
-  const b = cardRecordRank(current.row);
-  if (a !== b) return a > b;
-  return typeIndex > current.sourcePriority || (typeIndex === current.sourcePriority && updatedAt > current.updatedAt);
-}
+/** Storage key of ONE raw Bybit record (not of a purchase).
+ * Raw authorisation and settlement records are kept side by side for auditing;
+ * deciding that two records are the SAME purchase is the job of
+ * `getCanonicalTransactionIdentity` in ./bybit-spend, which every total uses.
+ */
 
 /** Fetch every card record ever recorded on the account, for every Bybit query type. */
 
