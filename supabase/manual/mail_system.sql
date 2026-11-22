@@ -110,6 +110,7 @@ create table if not exists public.mail_attachments (
   size_bytes integer
 );
 create index if not exists mail_attachments_msg_idx on public.mail_attachments (message_id);
+create unique index if not exists mail_attachments_message_gmail_id_uidx on public.mail_attachments (message_id, gmail_attachment_id);
 grant select on public.mail_attachments to authenticated;
 grant all on public.mail_attachments to service_role;
 alter table public.mail_attachments enable row level security;
