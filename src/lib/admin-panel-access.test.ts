@@ -21,6 +21,7 @@ describe("employee panel access", () => {
     expect(canEmployeeViewPanel("categories", ["categories" as any])).toBe(false);
     expect(canEmployeeViewPanel("employees", ["employees" as any])).toBe(false);
     expect(canEmployeeViewPanel("payments", ["payments" as any])).toBe(false);
+    expect(canEmployeeViewPanel("cardtx", ["cardtx" as any])).toBe(false);
     expect(canEmployeeViewPanel("settings", ["settings" as any])).toBe(false);
   });
 
