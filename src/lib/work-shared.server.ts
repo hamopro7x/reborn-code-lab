@@ -21,7 +21,8 @@ export function weekKey(ms: number): string {
 export async function namesFor(db: DB, ids: string[]): Promise<Map<string, string>> {
   const uniq = [...new Set(ids.filter(Boolean))];
   if (!uniq.length) return new Map();
-  const { data } = await db.from("profiles").select("id,full_name,email").in("id", uniq);
+  const { data, error } = await db.from("profiles").select("id,full_name,email").in("id", uniq);
+  if (error) throw new Error("تعذر تحميل أسماء الموظفين.");
   return new Map((data ?? []).map((p: any) => [p.id, p.full_name || p.email || "موظف"]));
 }
 
