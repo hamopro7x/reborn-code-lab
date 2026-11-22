@@ -71,7 +71,7 @@ export async function importMessage(admin: any, token: string, account: any, gma
   return ins.id;
 }
 
-async function removeLocal(admin: any, accountId: string, gmailIds: string[]) {
+export async function removeLocal(admin: any, accountId: string, gmailIds: string[]) {
   for (let i = 0; i < gmailIds.length; i += 100) {
     const { error } = await admin.from("mail_messages").delete().eq("account_id", accountId).in("gmail_message_id", gmailIds.slice(i, i + 100));
     if (error) throw new Error(error.message);
@@ -97,8 +97,6 @@ async function knownIds(admin: any, accountId: string, ids: string[]): Promise<S
 // only advances after the LAST page succeeds. If the budget runs out, the cursor stays put and the
 // next run replays the same pages — already-imported ids are skipped without Gmail calls, so
 // every run makes guaranteed forward progress and nothing is skipped.
-const RUN_BUDGET_MS = 55_000;
-
 export async function importIds(admin: any, token: string, account: any, ids: string[], deadline: number) {
   const known = await knownIds(admin, account.id, ids);
   let imported = 0;
