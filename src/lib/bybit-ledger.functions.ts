@@ -17,7 +17,7 @@ export const getBybitLedger = createServerFn({ method: "POST" })
     // sync; never block a visible page on destructive maintenance work.
     const mod = await import("./bybit.server");
     if (data.page === 1) await mod.pullFromBybit();
-    return mod.fetchLedgerPage({ ...data, hideReversed: false });
+    return mod.fetchLedgerPage({ ...data, hideReversed: role === "employee" });
   });
 
 export const syncBybitLedger = createServerFn({ method: "POST" })

@@ -24,7 +24,8 @@ export const getBybitCardTxns = createServerFn({ method: "POST" })
   }))
   .handler(async ({ data, context }) => {
     const role = await assertAccess(context.supabase, context.userId);
-    const hideReversed = false; void role;
+    // Employees must not see reversed authorisation attempts in card history.
+    const hideReversed = role === "employee";
     const mod = await import("./bybit.server");
     // The visible table is a database archive, so reading it must not depend on
     // the account's current API key. A missing/restricted Bybit key previously
