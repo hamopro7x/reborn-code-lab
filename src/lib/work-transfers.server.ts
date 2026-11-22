@@ -116,11 +116,21 @@ export async function saveTransferNote(userId: string, ledgerId: string, note: s
   if (!isAdmin) {
     const { data: shift } = await db
       .from("work_shifts")
-      .select("id,started_at")
+      .select("id")
       .eq("user_id", userId)
       .is("ended_at", null)
       .maybeSingle();
-    if (!shift || new Date((led as any).occurred_at).getTime() < new Date((shift as any).started_at).getTime()) {
+    if (!shift) {
+      return { ok: false as const, error: "ليس لديك شفت مفتوح حاليًا." };
+    }
+    const { data: assignment } = await db
+      .from("work_txn_assignments")
+      .select("id")
+      .eq("shift_id", (shift as any).id)
+      .eq("user_id", userId)
+      .eq("ledger_id", ledgerId)
+      .maybeSingle();
+    if (!assignment) {
       return { ok: false as const, error: "هذه المعاملة ليست ضمن شفتك الحالي." };
     }
   }
