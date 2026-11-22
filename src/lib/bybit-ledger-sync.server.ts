@@ -146,28 +146,7 @@ export async function pullFromBybit(maxWaitMs = 0): Promise<void> {
 
 export { fetchLedgerPage } from "./bybit-ledger-read.server";
 
-/**
- * Same spend/fee rules as a single visa account, aggregated over every account
- * currently present in the system. Each account is summed with the shared spend
- * engine (identical to its own card), then the results are added together, so a
- * newly added account is included automatically and a removed one drops out.
- */
-
-export async function listReversalCases() {
-  const db = await admin();
-  const { data, error } = await db.from("bybit_reversal_cases").select("account_id,event_id,candidate_ids,source")
-    .eq("state", "needs_review").limit(100);
-  if (error) throw new Error(error.message);
-  const cases = [];
-  for (const c of data ?? []) {
-    const { data: rows, error: readError } = await db.from("bybit_card_txns")
-      .select("txn_id,amount,txn_time,pan4,merchant,status,tradeStatus:detail->>tradeStatus,orderNo:detail->>orderNo")
-      .eq("account_id", c.account_id).in("txn_id", [...c.candidate_ids, c.event_id]);
-    if (readError) throw new Error(readError.message);
-    cases.push({ ...c, rows: rows ?? [] });
-  }
-  return { cases };
-}
+export { listReversalCases } from "./bybit-ledger-read.server";
 
 /** One history page per tick, durable cursor; full cycle is walked repeatedly.
  * No timeout sleeping for confirmation, no dependence on an open browser. */
