@@ -39,7 +39,7 @@ function brandTheme(brand: string) {
   return { bg: "linear-gradient(135deg,#0b1424 0%,#101a2e 55%,#05070a 100%)", border: "rgba(20,52,203,0.35)" };
 }
 
-export const CARD_BRANDS = ["Visa", "MasterCard", "Amex", "UnionPay", "JCB", "Discover", "Diners", "Maestro"] as const;
+const CARD_BRANDS = ["Visa", "MasterCard", "Amex", "UnionPay", "JCB", "Discover", "Diners", "Maestro"] as const;
 
 export function BrandBadge({ brand }: { brand: string }) {
   const b = (brand || "").toLowerCase();
