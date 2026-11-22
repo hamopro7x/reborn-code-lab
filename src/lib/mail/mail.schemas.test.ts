@@ -18,6 +18,10 @@ describe("Gmail request schemas", () => {
     });
   });
 
+  it("enforces the message search length limit", () => {
+    expect(() => listInput.parse({ search: "x".repeat(201) })).toThrow();
+  });
+
   it("rejects invalid account ids and excessive attachment counts", () => {
     expect(() => sendInput.parse({ accountId: "not-a-uuid", to: "staff@example.test" })).toThrow();
     expect(() => sendInput.parse({ accountId, to: "staff@example.test", attachments: Array.from({ length: 11 }, () => ({ filename: "a", mimeType: "text/plain", base64: "YQ==" })) })).toThrow();
