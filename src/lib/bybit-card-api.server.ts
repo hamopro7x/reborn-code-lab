@@ -1,6 +1,7 @@
 import { SETTLEMENT_COPY_SIDES } from "./bybit-settlement";
 import { createHmac } from "crypto";
 import { getCreds } from "./bybit-account.server";
+import type { Creds } from "./bybit-account.server";
 
 import { cardRowKey } from "./bybit-card-mapper";
 
