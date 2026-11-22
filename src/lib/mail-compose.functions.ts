@@ -23,7 +23,8 @@ export const sendMail = createServerFn({ method: "POST" }).middleware([requireSu
       if (!subject) subject = /^re:/i.test(orig.subject ?? "") ? orig.subject : `Re: ${orig.subject ?? ""}`;
     }
     const { buildRawMessage } = await import("@/lib/mail/mime-compose");
-    const { accessTokenFor, gmail } = await import("@/lib/mail/google.server");
+    const { accessTokenFor } = await import("@/lib/mail/google-token.server");
+    const { gmail } = await import("@/lib/mail/gmail-api.server");
     const { importMessage } = await import("@/lib/mail/sync.server");
     const raw = buildRawMessage({ from: acc.display_name ? `${acc.display_name} <${acc.email}>` : acc.email, to: data.to, cc: data.cc, subject, body: data.body, inReplyTo, references, attachments: data.attachments });
     const token = await accessTokenFor(db, acc.id);
