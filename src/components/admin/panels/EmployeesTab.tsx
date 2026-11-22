@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { supabase } from "@/integrations/supabase/client";
+import { uploadEmployeeAvatar } from "@/lib/employee-avatar";
 import { formatLocaleDateTime } from "@/lib/format";
 import { createEmployee, deleteEmployee, listEmployees, updateEmployeeAvatar, updateEmployee } from "@/lib/admin.functions";
 import { toast } from "sonner";
@@ -88,12 +88,7 @@ export function EmployeesTab() {
     if (file.size > 5 * 1024 * 1024) return toast.error("الحد الأقصى 5 ميجا");
     setUploadingId(userId);
     try {
-      const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
-      const path = `${userId}/${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, {
-        upsert: true, contentType: file.type,
-      });
-      if (upErr) throw upErr;
+      const path = await uploadEmployeeAvatar(userId, file);
       await updAvatar({ data: { user_id: userId, path } });
       toast.success("تم رفع الصورة");
       qc.invalidateQueries({ queryKey: ["admin-employees"] });

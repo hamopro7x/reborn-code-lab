@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - refactor/orders-customers-products
+      - refactor/employee-shifts-transfers
   pull_request:
     branches:
       - main
+      - refactor/orders-customers-products
   workflow_dispatch:
 
 permissions:
@@ -69,6 +71,18 @@ jobs:
           src/lib/work-shared.server.ts
           src/lib/work-analytics.server.ts
           src/lib/work-p2p.server.ts
+          src/lib/work-transfers.server.ts
+          src/components/admin/EmployeePickerMenu.tsx
+          src/components/admin/ShiftPickerMenu.tsx
+          src/components/admin/WorkSheetPickers.tsx
+          src/components/admin/WorkSheetPanel.tsx
+          src/components/admin/EmployeeTransactionCells.tsx
+          src/components/admin/EmployeeManualCards.tsx
+          src/components/admin/EmployeeManualTransactions.tsx
+          src/components/admin/EmployeeWorkTables.tsx
+          src/components/admin/EmployeeWorkView.tsx
+          src/components/admin/panels/EmployeesTab.tsx
+          src/lib/employee-avatar.ts
           src/lib/work-employee.server.ts
           src/lib/work-manual.server.ts
           src/lib/work-history.server.ts

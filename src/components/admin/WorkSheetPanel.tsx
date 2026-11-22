@@ -18,7 +18,8 @@ const CHIP_ON =
 const CHIP_OFF =
   "bg-[#0d0d0d] opacity-80 shadow-[0_6px_20px_-6px_rgba(0,0,0,0.9)] hover:opacity-95 hover:ring-1 hover:ring-blue-500/20";
 
-import { EmployeePickerMenu, ShiftPickerMenu, fmtShift, type Employee, type Shift } from "@/components/admin/WorkSheetPickers";
+import { EmployeePickerMenu, type Employee } from "@/components/admin/EmployeePickerMenu";
+import { ShiftPickerMenu, fmtShift, type Shift } from "@/components/admin/ShiftPickerMenu";
 
 export function WorkSheetPanel({ isAdmin }: { isAdmin: boolean }) {
   const [pickerOpen, setPickerOpen] = useState(false);
