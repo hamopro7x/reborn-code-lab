@@ -83,6 +83,7 @@ jobs:
           src/lib/mail/mime-compose.ts
           src/lib/mail/mime-sanitize.ts
           src/lib/mail/mime.test.ts
+          src/lib/mail/mime-modules.test.ts
           src/lib/mail-core.functions.ts
           src/lib/mail-read.functions.ts
           src/lib/mail-compose.functions.ts
