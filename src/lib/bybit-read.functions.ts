@@ -64,7 +64,7 @@ export const syncBybitCardTxns = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(accountInput)
   .handler(async ({ data, context }) => {
-    await assertAccess(context.supabase, context.userId);
+    await assertAdmin(context.supabase, context.userId);
     const mod = await import("./bybit.server");
     const res = await mod.readOp(data.accountId, () => mod.syncCardTxns(data.accountId), {
       added: 0,
