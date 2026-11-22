@@ -6,7 +6,8 @@ const LEASE_MS = 90_000;
 
 export async function logActivity(admin: any, row: { actor_id?: string | null; action: string; account_id?: string | null; message_id?: string | null; meta?: any }) {
   const { error } = await admin.from("mail_activity").insert({ meta: {}, ...row });
-  if (error) throw new Error(error.message);
+  // Audit logging must not turn a completed OAuth link or sent email into a false failure.
+  if (error) console.error("Mail activity log failed:", error.code ?? "database_error");
 }
 
 /** Fetches one Gmail message and stores it locally (idempotent). Returns new local id or null. */
