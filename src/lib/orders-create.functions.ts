@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { enforcePublicOrderRateLimit } from "./public-order-rate-limit.server";
 
 const orderItemSchema = z.object({
   product_id: z.string().uuid(),
@@ -26,6 +27,7 @@ function convertFromEgp(amountEgp: number, rateFromEgp: number, currencyCode: st
 export const createPublicOrder = createServerFn({ method: "POST" })
   .inputValidator((data) => createOrderSchema.parse(data))
   .handler(async ({ data }) => {
+    await enforcePublicOrderRateLimit("create", 8, 600);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     // Recompute all pricing server-side from trusted product & exchange-rate data.
