@@ -79,6 +79,7 @@ jobs:
           src/lib/mail/access.server.ts
           src/lib/mail/mail.schemas.ts
           src/lib/mail/mail.schemas.test.ts
+          src/routes/api/public/mail-oauth/callback.ts
           src/lib/mail/activity.server.ts
           src/lib/mail/mime-encoding.ts
           src/lib/mail/mime-parse.ts
