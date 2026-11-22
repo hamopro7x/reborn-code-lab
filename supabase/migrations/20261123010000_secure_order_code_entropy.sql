@@ -26,4 +26,12 @@ $$;
 REVOKE ALL ON FUNCTION public.gen_order_code() FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.gen_order_code() TO service_role;
 
+
+-- Payment proofs are private and limited to common raster image formats.
+-- This is intentionally an UPDATE: do not create or change bucket visibility here.
+UPDATE storage.buckets
+SET file_size_limit = 5242880,
+    allowed_mime_types = ARRAY['image/jpeg', 'image/png', 'image/webp']
+WHERE id = 'payment-screenshots';
+
 COMMIT;
