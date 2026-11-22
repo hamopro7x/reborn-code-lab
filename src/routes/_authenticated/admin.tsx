@@ -1,7 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -45,18 +44,7 @@ import { EmployeesTab } from "@/components/admin/panels/EmployeesTab";
 import { CoursesTab } from "@/components/admin/panels/CoursesTab";
 import { DeviceMonitorGrid } from "@/components/admin/DeviceMonitorGrid";
 import { livePoll } from "@/lib/live-poll";
-import { getViewerIdentity } from "@/lib/courses.functions";
-
-
-type PanelKey =
-  | "overview" | "orders" | "categories" | "products" | "customers" | "employees"
-  | "reviews" | "payments" | "currencies" | "timers" | "settings" | "courses" | "devices" | "reports" | "remote" | "cardtx" | "apikey" | "worksheet" | "sheet" | "mail" | "chat";
-
-const panelKeys: PanelKey[] = [
-  "overview", "orders", "categories", "customers", "employees",
-  "reviews", "payments", "currencies", "timers", "settings", "courses", "devices", "reports", "remote", "cardtx", "apikey", "worksheet", "sheet", "mail", "chat",
-];
-
+import { BASE_EMPLOYEE_PANELS, PANEL_KEYS, SHAREABLE_EMPLOYEE_PANELS, canEmployeeViewPanel, type PanelKey } from "@/lib/admin-panel-access";
 
 
 export const Route = createFileRoute("/_authenticated/admin")({
@@ -69,7 +57,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
     { name: "twitter:card", content: "summary" },
   ] }),
   validateSearch: (search: Record<string, unknown>): { panel?: PanelKey; message?: string } => ({
-    ...(panelKeys.includes(search.panel as PanelKey) ? { panel: search.panel as PanelKey } : {}),
+    ...(PANEL_KEYS.includes(search.panel as PanelKey) ? { panel: search.panel as PanelKey } : {}),
     ...(typeof search.message === "string" && /^[0-9a-f-]{36}$/i.test(search.message) ? { message: search.message } : {}),
   }),
   component: Admin,
@@ -99,7 +87,7 @@ function Admin() {
   const readLastPanel = (): PanelKey | null => {
     if (typeof window === "undefined") return null;
     const v = window.localStorage.getItem(LAST_PANEL_KEY) as PanelKey | null;
-    return v && panelKeys.includes(v) ? v : null;
+    return v && PANEL_KEYS.includes(v) ? v : null;
   };
   const [panel, setPanelState] = useState<PanelKey>(search.panel ?? readLastPanel() ?? "overview");
   const setPanel = (key: PanelKey) => {
@@ -124,7 +112,11 @@ function Admin() {
     queryFn: async () => {
       const { data } = await supabase.from("site_settings").select("value").eq("key", "employee_panels").maybeSingle();
       const v = (data?.value ?? {}) as any;
-      return Array.isArray(v.panels) ? (v.panels as PanelKey[]) : [];
+      return Array.isArray(v.panels)
+        ? v.panels.filter((key): key is PanelKey =>
+            PANEL_KEYS.includes(key as PanelKey) && SHAREABLE_EMPLOYEE_PANELS.includes(key as PanelKey),
+          )
+        : [];
     },
     // Panel sharing changes rarely; a 5s poll on every admin session was pure
     // overhead. Still automatic, just far cheaper and only while visible.
@@ -133,23 +125,18 @@ function Admin() {
     refetchIntervalInBackground: false,
   });
   const shared = sharedQ.data ?? [];
-  const basePanels: PanelKey[] = ["orders", "courses", "worksheet", "mail", "chat"];
-  const employeeAllowed = (key: PanelKey) => basePanels.includes(key) || shared.includes(key);
+  const employeeAllowed = (key: PanelKey) => canEmployeeViewPanel(key, shared);
   const canView = (key: PanelKey) => adminOnly || employeeAllowed(key);
-  const readOnly = isEmployee && !basePanels.includes(panel);
+  const readOnly = isEmployee && !BASE_EMPLOYEE_PANELS.includes(panel);
   async function toggleShare(key: PanelKey, on: boolean) {
-    const next = on ? Array.from(new Set([...shared, key])) : shared.filter((k) => k !== key);
+    if (!SHAREABLE_EMPLOYEE_PANELS.includes(key)) return;
+    const safeShared = shared.filter((k) => SHAREABLE_EMPLOYEE_PANELS.includes(k));
+    const next = on ? Array.from(new Set([...safeShared, key])) : safeShared.filter((k) => k !== key);
     const { error } = await supabase.from("site_settings").upsert({ key: "employee_panels", value: { panels: next } as any }, { onConflict: "key" });
     if (error) { toast.error("فشل الحفظ"); return; }
     toast.success(on ? "تم إظهار القسم للموظف" : "تم إخفاء القسم عن الموظف");
     qc.invalidateQueries({ queryKey: ["employee-panels"] });
   }
-  const identityFn = useServerFn(getViewerIdentity);
-  const [me, setMe] = useState<{ email: string; full_name: string; avatar_url: string } | null>(null);
-  useEffect(() => {
-    if (role !== "admin" && role !== "employee") return;
-    identityFn().then((v: any) => setMe(v)).catch(() => {});
-  }, [role, identityFn]);
   // Employees only see the sections the admin shared with them.
   // مهم: لا نحوّل القسم قبل تحميل قائمة الأقسام المشتركة، وإلا يرجع الموظف
   // للطلبات بعد كل Refresh بدل ما يفضل في نفس القسم.
@@ -277,7 +264,7 @@ function Admin() {
             <SidebarTrigger />
             <AdminBackButton />
             <h1 className="font-bold">{visibleNavGroups.flatMap((g) => g.items).find((i) => i.key === panel)?.label}</h1>
-            {adminOnly && !basePanels.includes(panel) && (
+            {adminOnly && SHAREABLE_EMPLOYEE_PANELS.includes(panel) && (
               <label className="ms-auto flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
                 <span>إظهار للموظف (قراءة فقط)</span>
                 <Switch checked={shared.includes(panel)} onCheckedChange={(v) => void toggleShare(panel, v)} />
