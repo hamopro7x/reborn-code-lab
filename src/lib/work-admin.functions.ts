@@ -178,16 +178,18 @@ export const getMyAvatarUrl = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: profile } = await supabaseAdmin
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from("profiles")
       .select("full_name, email, avatar_url")
       .eq("id", context.userId)
       .maybeSingle();
+    if (profileError) throw new Error("تعذر تحميل بيانات الملف الشخصي.");
     let url: string | null = null;
     if (profile?.avatar_url && profile.avatar_url.startsWith(`${context.userId}/`) && !profile.avatar_url.includes("..")) {
-      const { data: signed } = await supabaseAdmin.storage
+      const { data: signed, error: signedError } = await supabaseAdmin.storage
         .from("avatars")
         .createSignedUrl(profile.avatar_url, 60 * 60 * 24);
+      if (signedError) throw new Error("تعذر إنشاء رابط صورة الملف الشخصي.");
       url = signed?.signedUrl ?? null;
     }
     return {
