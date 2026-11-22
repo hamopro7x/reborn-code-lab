@@ -95,6 +95,19 @@ jobs:
           --rule 'prettier/prettier: off'
           --rule '@typescript-eslint/no-explicit-any: off'
 
+      - name: Check unused declarations in isolated modules
+        run: >-
+          bunx eslint
+          src/lib/bybit-account.server.ts
+          src/lib/bybit-db.server.ts
+          src/lib/bybit-credentials.server.ts
+          src/lib/bybit-client.server.ts
+          src/lib/bybit-accounts.server.ts
+          src/lib/bybit-assets.server.ts
+          --rule 'prettier/prettier: off'
+          --rule '@typescript-eslint/no-explicit-any: off'
+          --rule '@typescript-eslint/no-unused-vars: error'
+
       - name: Type-check TypeScript
         run: bunx tsc --noEmit
       - name: Build production bundle
