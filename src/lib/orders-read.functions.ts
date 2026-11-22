@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { enforcePublicOrderRateLimit } from "./public-order-rate-limit.server";
 
 const getSchema = z.object({ order_code: z.string().min(4).max(40) });
 
@@ -11,6 +12,7 @@ const getSchema = z.object({ order_code: z.string().min(4).max(40) });
 export const getOrderByCode = createServerFn({ method: "GET" })
   .inputValidator((data) => getSchema.parse(data))
   .handler(async ({ data }) => {
+    await enforcePublicOrderRateLimit("track", 60, 60);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: order, error } = await supabaseAdmin
       .from("orders")
