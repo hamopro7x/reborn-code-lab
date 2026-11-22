@@ -155,7 +155,14 @@ export async function createAccount(key: string, secret: string, userId: string,
     p_secret: secret,
     p_by: userId,
   });
-  if (kErr) throw new Error(kErr.message);
+  if (kErr) {
+    // Avoid leaving an account row visible without its own encrypted credentials.
+    const { error: cleanupError } = await db.from("bybit_accounts").delete().eq("id", data.id);
+    if (cleanupError) {
+      throw new Error(`تعذر حفظ مفاتيح الحساب وتنظيف السجل الناقص: ${kErr.message}; ${cleanupError.message}`);
+    }
+    throw new Error(kErr.message);
+  }
   return { id: data.id as string, name, uid };
 }
 
