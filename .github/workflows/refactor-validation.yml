@@ -81,7 +81,7 @@ jobs:
           src/components/admin/EmployeeWorkTables.tsx
           src/components/admin/EmployeeWorkView.tsx
           src/components/admin/panels/EmployeesTab.tsx
-          src/lib/employee-avatar.client.ts
+          src/lib/employee-avatar.ts
           src/lib/work-employee.server.ts
           src/lib/work-manual.server.ts
           src/lib/work-history.server.ts
