@@ -56,7 +56,8 @@ export class ReauthError extends Error {}
 
 /** Returns a valid access token, refreshing and persisting it encrypted when needed. */
 export async function accessTokenFor(admin: any, accountId: string): Promise<string> {
-  const { data: s } = await admin.from("mail_account_secrets").select("*").eq("account_id", accountId).maybeSingle();
+  const { data: s, error: secretError } = await admin.from("mail_account_secrets").select("*").eq("account_id", accountId).maybeSingle();
+  if (secretError) throw new Error("تعذر قراءة بيانات اعتماد Gmail بأمان");
   if (!s) throw new ReauthError("لا توجد بيانات اعتماد");
   if (s.access_token_ciphertext && s.access_expires_at && new Date(s.access_expires_at).getTime() > Date.now() + 60_000) {
     return decryptSecret(s.access_token_ciphertext);
