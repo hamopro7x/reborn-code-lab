@@ -5,6 +5,7 @@ on:
     branches:
       - refactor/orders-customers-products
       - refactor/employee-shifts-transfers
+      - refactor/role-specific-interfaces
   pull_request:
     branches:
       - main
@@ -71,6 +72,13 @@ jobs:
           src/lib/work-analytics.server.ts
           src/lib/work-p2p.server.ts
           src/lib/work-transfers.server.ts
+          src/lib/admin-panel-access.ts
+          src/lib/admin-panel-access.test.ts
+          src/lib/admin-navigation.ts
+          src/lib/use-admin-role.ts
+          src/components/admin/AdminSidebar.tsx
+          src/components/admin/AdminPanelContent.tsx
+          src/routes/_authenticated/admin.tsx
           src/components/admin/EmployeePickerMenu.tsx
           src/components/admin/ShiftPickerMenu.tsx
           src/components/admin/WorkSheetPickers.tsx
