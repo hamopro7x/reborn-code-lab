@@ -124,7 +124,7 @@ export const getBybitApiStatus = createServerFn({ method: "POST" })
     await assertAdmin(context.supabase, context.userId);
     const mod = await import("./bybit.server");
     if (!(await mod.bybitConfigured())) return { configured: false as const, maskedKey: "" };
-    const { getCreds } = await import("./bybit-account.server");
+    const { getCreds } = await import("./bybit-credentials.server");
     const { key } = await getCreds();
     return { configured: true as const, maskedKey: `${key.slice(0, 4)}••••${key.slice(-4)}` };
   });

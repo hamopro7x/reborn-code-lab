@@ -2,7 +2,8 @@
  * Read-only provider queries for Bybit P2P, on-chain, and internal transfers.
  * The caller supplies account-scoped credentials; no ledger writes happen here.
  */
-import { call, getCreds } from "./bybit-account.server";
+import { call } from "./bybit-client.server";
+import { getCreds } from "./bybit-credentials.server";
 import { currentBybitRows } from "./monthly-cycle.server";
 import { num } from "./bybit-runtime";
 
