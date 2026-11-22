@@ -26,12 +26,23 @@ $$;
 REVOKE ALL ON FUNCTION public.gen_order_code() FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.gen_order_code() TO service_role;
 
-
--- Payment proofs are private and limited to common raster image formats.
--- This is intentionally an UPDATE: do not create or change bucket visibility here.
+-- Payment proofs are private, admin-readable only, and limited to common raster formats.
 UPDATE storage.buckets
-SET file_size_limit = 5242880,
+SET public = false,
+    file_size_limit = 5242880,
     allowed_mime_types = ARRAY['image/jpeg', 'image/png', 'image/webp']
 WHERE id = 'payment-screenshots';
+
+-- The admin UI creates short-lived signed URLs from an authenticated session.
+-- Do not grant staff-wide access: only admins may read proof objects.
+DROP POLICY IF EXISTS "admins read payment screenshots" ON storage.objects;
+CREATE POLICY "admins read payment screenshots"
+ON storage.objects
+FOR SELECT
+TO authenticated
+USING (
+  bucket_id = 'payment-screenshots'
+  AND (SELECT private.is_admin((SELECT auth.uid() AS uid)))
+);
 
 COMMIT;
