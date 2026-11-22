@@ -60,17 +60,18 @@ async function syncAccount(admin: any, account: any) {
 
 /** Sync every active account with a per-account lease so runs never overlap. */
 export async function syncAllMail(admin: any, onlyAccountId?: string) {
-  const now = new Date();
   let q = admin.from("mail_accounts").select("*").in("status", ["active", "error"]);
   if (onlyAccountId) q = q.eq("id", onlyAccountId);
   const { data: accounts, error } = await q;
   if (error) throw new Error(error.message);
   const results: { id: string; imported?: number; error?: string; skipped?: boolean }[] = [];
   for (const acc of accounts ?? []) {
+    // Start each account's lease from its own lock attempt, not the batch start time.
+    const lockNow = new Date();
     const { data: locked } = await admin.from("mail_accounts")
-      .update({ sync_lease_until: new Date(now.getTime() + LEASE_MS).toISOString() })
+      .update({ sync_lease_until: new Date(lockNow.getTime() + LEASE_MS).toISOString() })
       .eq("id", acc.id)
-      .or(`sync_lease_until.is.null,sync_lease_until.lt.${now.toISOString()}`)
+      .or(`sync_lease_until.is.null,sync_lease_until.lt.${lockNow.toISOString()}`)
       .select("id").maybeSingle();
     if (!locked) { results.push({ id: acc.id, skipped: true }); continue; }
     try {
