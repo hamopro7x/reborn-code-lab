@@ -54,9 +54,10 @@ export const Route = createFileRoute("/api/public/mail-oauth/callback")({
 
           const { data: existing, error: exErr } = await admin.from("mail_accounts").select("id").eq("email", who.email).maybeSingle();
           if (exErr) throw new Error(exErr.message);
-          const { data: oldSecret } = existing
+          const { data: oldSecret, error: oldSecretError } = existing
             ? await admin.from("mail_account_secrets").select("account_id").eq("account_id", existing.id).maybeSingle()
-            : { data: null };
+            : { data: null, error: null };
+          if (oldSecretError) throw new Error("تعذر التحقق من بيانات اعتماد الحساب المرتبط");
           if (!tok.refresh_token && !oldSecret) return page(false, "Google لم يرسل صلاحية دائمة، أزل وصول التطبيق من حساب Google ثم أعد المحاولة");
 
           let accountId: string;
@@ -88,9 +89,11 @@ export const Route = createFileRoute("/api/public/mail-oauth/callback")({
           return page(true, `تم ربط ${who.email}`);
         } catch (e: any) {
           if (createdId) {
-            await admin.from("mail_accounts").delete().eq("id", createdId);
-            if (tok) await revokeToken(tok.refresh_token ?? tok.access_token);
+            const { error: cleanupError } = await admin.from("mail_accounts").delete().eq("id", createdId);
+            if (cleanupError) console.error("mail oauth account cleanup failed:", cleanupError.code ?? "database_error");
           }
+          // Revoke the newly issued token on every failed completion, including reconnects.
+          if (tok) await revokeToken(tok.refresh_token ?? tok.access_token);
           console.error("mail oauth callback failed:", String(e?.message ?? e).slice(0, 120));
           return page(false, "تعذر إكمال الربط");
         }
