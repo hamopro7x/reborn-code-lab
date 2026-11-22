@@ -41,7 +41,6 @@ import { MerchantLogo } from "./MerchantLogo";
 import { P2PShiftLinkMenu } from "./P2PShiftLinkMenu";
 import { formatTime } from "@/lib/format";
 import { PaginationBar } from "@/components/ui/pagination-bar";
-import { supabase } from "@/integrations/supabase/client";
 import {
   getMyShiftTxns,
   getMyManualCardTxns,
@@ -75,7 +74,9 @@ import { P2POrdersTable } from "@/components/admin/P2POrdersTable";
 import { FlowChip, TransfersTable } from "@/components/admin/EmployeeTransfersTable";
 import { num, txnTime } from "@/components/admin/EmployeeWorkFormatters";
 
-import { Last4Cell, EntryCell, TxnDetailsDialog, ManualSection, ManualTxnDialog, ManualTxnCell, isCardTxn, MANUAL_TXN_WINDOW_MS, type ManualKind } from "@/components/admin/EmployeeWorkTables";
+import { Last4Cell, EntryCell, TxnDetailsDialog, isCardTxn } from "@/components/admin/EmployeeTransactionCells";
+import { ManualSection, type ManualKind } from "@/components/admin/EmployeeManualCards";
+import { ManualTxnDialog, ManualTxnCell, MANUAL_TXN_WINDOW_MS } from "@/components/admin/EmployeeManualTransactions";
 
 /** DOM order = right-to-left order in the reference. */
 const TOP_TABS: { key: ShiftSection; label: string; icon: typeof ListOrdered }[] = [
