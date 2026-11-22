@@ -79,6 +79,7 @@ jobs:
           src/lib/use-admin-role.ts
           src/components/admin/AdminSidebar.tsx
           src/components/admin/AdminPanelContent.tsx
+          src/components/admin/EmployeePanelContent.tsx
           src/routes/_authenticated/admin.tsx
           src/components/admin/EmployeePickerMenu.tsx
           src/components/admin/ShiftPickerMenu.tsx
