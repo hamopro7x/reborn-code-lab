@@ -5,10 +5,13 @@ on:
     branches:
       - refactor/orders-customers-products
       - refactor/employee-shifts-transfers
+      - refactor/role-specific-interfaces
+      # Keep the role-specific admin shell and panel access policy under CI.
   pull_request:
     branches:
       - main
       - refactor/orders-customers-products
+      - refactor/employee-shifts-transfers
   workflow_dispatch:
 
 permissions:
@@ -72,6 +75,14 @@ jobs:
           src/lib/work-analytics.server.ts
           src/lib/work-p2p.server.ts
           src/lib/work-transfers.server.ts
+          src/lib/admin-panel-access.ts
+          src/lib/admin-panel-access.test.ts
+          src/lib/admin-navigation.ts
+          src/lib/use-admin-role.ts
+          src/components/admin/AdminSidebar.tsx
+          src/components/admin/AdminPanelContent.tsx
+          src/components/admin/EmployeePanelContent.tsx
+          src/routes/_authenticated/admin.tsx
           src/components/admin/EmployeePickerMenu.tsx
           src/components/admin/ShiftPickerMenu.tsx
           src/components/admin/WorkSheetPickers.tsx
@@ -126,6 +137,7 @@ jobs:
           src/components/admin/panels/OrdersTab.tsx
           --rule 'prettier/prettier: off'
           --rule '@typescript-eslint/no-explicit-any: off'
+          --rule '@typescript-eslint/no-unused-vars: error'
 
       - name: Type-check TypeScript
         run: bunx tsc --noEmit

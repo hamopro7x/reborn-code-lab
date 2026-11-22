@@ -1,43 +1,20 @@
-import { SETTLEMENT_COPY_SIDES, SETTLEMENT_COPY_FILTER } from "./bybit-settlement";
-import { createHmac } from "crypto";
-import { admin, bybitConfigured, call, getCreds, listAccounts } from "./bybit-account.server";
-import { fetchP2P, fetchOnChain, fetchInternal } from "./bybit-assets.server";
-import type { AssetRow } from "./bybit-assets.server";
-import { cardRowKey, mapCardTxn, mapStoredRow, sanitize } from "./bybit-card-mapper";
+import { SETTLEMENT_COPY_FILTER } from "./bybit-settlement";
+
+import { admin, bybitConfigured, getCreds, listAccounts } from "./bybit-account.server";
+
+import { mapCardTxn, mapStoredRow } from "./bybit-card-mapper";
 import { brandFromNumber } from "./bybit-cards.server";
 import type { BybitCard } from "./bybit-cards.server";
 import type { CardTxn } from "./bybit-card-mapper";
-import type { Creds, BybitAccount } from "./bybit-account.server";
-import { BYBIT_BASE_URL as BASE, BYBIT_RECV_WINDOW as RECV, num, sleep } from "./bybit-runtime";
-import {
-  sumSpend,
-  sumSpendByCard,
-  auditSpend,
-  cardRecordOutcome,
-  isCardReversalEvent,
-  type SpendRow,
-  cryptoSoldOf,
-  isExplicitReversal,
-  cardLinkIds,
-  findLinkedReversals,
-  REVERSAL_LINK_WINDOW_MS,
-  type LinkCandidate,
-  cardPurchaseGroup,
-  cardFilterMatches,
-  LEDGER_CARD_FILTERS,
-  legacyReversalUnproven,
-  durableCardReversal,
-} from "./bybit-spend";
+import type { Creds } from "./bybit-account.server";
+import { num } from "./bybit-runtime";
+import { sumSpendByCard, isCardReversalEvent, type SpendRow, cardPurchaseGroup, cardFilterMatches } from "./bybit-spend";
 import { currentBybitCycle, currentBybitRows } from "./monthly-cycle.server";
-import { isPastLastPage } from "./pagination";
-import { cardConfirmed, archivedCardReadable, legacyCardReadable, CARD_READ_FILTER } from "./bybit-confirmation";
+
+import { cardConfirmed, archivedCardReadable, legacyCardReadable } from "./bybit-confirmation";
 import { heavyOnce, cardCache, spendCache } from "./bybit-cache.server";
-import { callCard, callCardPage, fetchCardPages, mergeCardTypeResults, isUnsupportedCardTypeError, isLateSettlementRecord, CARD_QUERY_TYPES } from "./bybit-card-api.server";
+import { callCard, callCardPage, mergeCardTypeResults, isUnsupportedCardTypeError, isLateSettlementRecord, CARD_QUERY_TYPES } from "./bybit-card-api.server";
 import { upsertLedger, mirrorStoredCardRows, markHangVoided } from "./bybit-ledger-write.server";
-
-const MAX_TXNS = 10_000_000;
-
-const PRUNE_TO_DELETE = 3_000_000;
 
 export function sameStoredValue(a: unknown, b: unknown): boolean {
   if (a == null && b == null) return true;
@@ -336,55 +313,6 @@ export async function syncAllCardTxns(): Promise<{ added: number; accounts: numb
 
 /* ---------- resumable deep backfill (back to account creation) ---------- */
 
-type BackfillCursor = { version: number; typeIndex: number; page: number; done: boolean };
-// Version 5 restarts cursors that may have been marked complete while the UI
-// only executed one historical chunk. The new client keeps requesting chunks
-// until this cursor reaches the oldest page for every transaction type.
-
-const BACKFILL_VERSION = 6; // 6: query types changed to the documented *_ALL / *_REVERSAL set
-// No page cap: pagination continues until Bybit reports the last (oldest) page.
-// A wall-clock budget only decides when to pause and resume from the cursor.
-
-const BACKFILL_BUDGET_MS = 20_000;
-
-async function readCursor(key: string): Promise<BackfillCursor> {
-  try {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data } = await (supabaseAdmin as any)
-      .from("site_settings")
-      .select("value")
-      .eq("key", `bybit_backfill:${key}`)
-      .maybeSingle();
-    const v = data?.value ?? {};
-    // Version 1 used JSON-body filters that Bybit ignored, so its cursors
-    // cannot prove that financial/refund history was actually archived.
-    if (Number(v.version ?? 0) !== BACKFILL_VERSION) {
-      // Older cursors may have stopped early, so restart from the first page to
-      // guarantee everything back to account creation is archived.
-      return { version: BACKFILL_VERSION, typeIndex: 0, page: 1, done: false };
-    }
-    return {
-      version: BACKFILL_VERSION,
-      typeIndex: Number(v.typeIndex ?? 0),
-      page: Math.max(1, Number(v.page ?? 1)),
-      done: Boolean(v.done),
-    };
-  } catch {
-    return { version: BACKFILL_VERSION, typeIndex: 0, page: 1, done: false };
-  }
-}
-
-async function writeCursor(key: string, cursor: BackfillCursor) {
-  try {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    await (supabaseAdmin as any)
-      .from("site_settings")
-      .upsert({ key: `bybit_backfill:${key}`, value: cursor as any }, { onConflict: "key" });
-  } catch {
-    /* best effort */
-  }
-}
-
 /**
  * Walks a bounded slice of the historical card pages, persists it, and stores a
  * cursor so the next request resumes where this one stopped — until every page
@@ -401,63 +329,6 @@ async function backfillChunk(
   void accountId;
   void creds;
   return { rows: [], done: true };
-}
-
-/** Kept for reference only; no longer part of any sync path. */
-
-async function backfillChunkLegacy(
-  accountId: string | undefined,
-  creds: Creds,
-): Promise<{ rows: CardTxn[]; done: boolean }> {
-  const key = accountId ?? "default";
-  const cursor = await readCursor(key);
-  if (cursor.done) return { rows: [], done: true };
-
-
-
-  const collected: any[] = [];
-  let { typeIndex, page } = cursor;
-  const deadline = Date.now() + BACKFILL_BUDGET_MS;
-
-  try {
-    while (typeIndex < CARD_QUERY_TYPES.length && Date.now() < deadline) {
-      let result: any;
-      try {
-        result = await callCardPage({ limit: 100, page, type: CARD_QUERY_TYPES[typeIndex] }, creds);
-      } catch (e) {
-        if (!isUnsupportedCardTypeError(e)) throw e;
-        // Rejected type: move on so the cursor never sticks on it forever.
-        console.warn(`bybit backfill type ${CARD_QUERY_TYPES[typeIndex]} skipped:`, (e as Error)?.message);
-        typeIndex++;
-        page = 1;
-        continue;
-      }
-      const rows = Array.isArray(result?.data) ? result.data : [];
-      collected.push(...rows);
-
-
-      const totalCount = Number(result?.totalCount ?? 0);
-      const pageSize = Number(result?.pageSize ?? 100);
-      const exhausted = !rows.length || (totalCount > 0 && page * pageSize >= totalCount);
-      if (exhausted) {
-        typeIndex++;
-        page = 1;
-      } else {
-        page++;
-      }
-      await sleep(120);
-    }
-  } catch {
-    /* keep whatever this chunk managed to read; retry from the cursor later */
-  }
-
-  const mapped = collected.map(mapCardTxn);
-  for (let i = 0; i < mapped.length; i += 500) {
-    await persistCardTxns(mapped.slice(i, i + 500), accountId);
-  }
-  const done = typeIndex >= CARD_QUERY_TYPES.length;
-  await writeCursor(key, { version: BACKFILL_VERSION, typeIndex, page, done });
-  return { rows: mapped, done };
 }
 
 /** Cards linked to the account. Stored cards are merged with spend derived from

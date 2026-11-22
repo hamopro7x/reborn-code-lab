@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useUiState, useScrollRestore } from "@/lib/ui-state";
 
-import { getCategoryBySlug } from "@/lib/categories.queries";
 import { listActiveProductsByCategorySlug } from "@/lib/products.queries";
 import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
@@ -32,15 +31,8 @@ export const Route = createFileRoute("/category/$slug")({
 
 function CategoryPage() {
   const { slug } = Route.useParams();
-  const [q, setQ] = useUiState<string>(`category-${slug}`, "q", "");
+  const [q] = useUiState<string>(`category-${slug}`, "q", "");
   useScrollRestore(`category-${slug}`);
-
-  const categoryQ = useQuery({
-    queryKey: ["category", slug],
-    queryFn: async () =>
-      getCategoryBySlug(slug),
-    staleTime: 5 * 60 * 1000,
-  });
 
   const productsQ = useQuery({
     queryKey: ["products-category", slug],

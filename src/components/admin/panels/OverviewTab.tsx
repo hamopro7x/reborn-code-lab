@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Bell, Check, DollarSign, Loader2, Package, Repeat, ShoppingCart, TrendingUp, Users } from "lucide-react";
 
-export function OverviewTab() {
+export function OverviewTab({ readOnly = false }: { readOnly?: boolean }) {
   const qc = useQueryClient();
   const stats = useQuery({
     queryKey: ["admin-stats"],
@@ -13,7 +13,7 @@ export function OverviewTab() {
       const [orders, products, users] = await Promise.all([
         supabase.from("orders").select("id,total,status,created_at"),
         supabase.from("products").select("id"),
-        supabase.from("profiles").select("id"),
+        readOnly ? Promise.resolve({ data: [] }) : supabase.from("profiles").select("id"),
       ]);
       const ords = (orders.data ?? []) as any[];
       const revenue = ords.filter((o) => o.status === "confirmed" || o.status === "completed").reduce((s, o) => s + Number(o.total), 0);
@@ -50,7 +50,7 @@ export function OverviewTab() {
           { label: "الإيرادات (ج.م)", value: s?.revenue ?? "-", icon: DollarSign },
           { label: "المنتجات", value: s?.products ?? "-", icon: Package },
           { label: "العملاء", value: s?.users ?? "-", icon: Users },
-        ].map((c) => (
+        ].filter((c) => !readOnly || c.label !== "العملاء").map((c) => (
           <div key={c.label} className="card-surface rounded-2xl p-4">
             <c.icon className="size-5 text-primary mb-2" />
             <div className="text-[11px] text-muted-foreground">{c.label}</div>
@@ -81,7 +81,7 @@ export function OverviewTab() {
                 {n.body && <div className="text-xs text-muted-foreground mt-0.5">{n.body}</div>}
                 <div className="text-[10px] text-muted-foreground mt-1">{formatLocaleDateTime(n.created_at, "ar-EG")}</div>
               </div>
-              {!n.read_at && (
+              {!readOnly && !n.read_at && (
                 <Button size="sm" variant="ghost" onClick={() => markRead(n.id)}><Check className="size-4" /></Button>
               )}
             </div>

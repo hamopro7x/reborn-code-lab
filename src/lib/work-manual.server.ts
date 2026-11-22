@@ -1,15 +1,15 @@
-import { isPastLastPage, pageRange } from "./pagination";
+import { pageRange } from "./pagination";
 import { enforceRetentionSafe } from "./retention.server";
-import { CARD_READ_FILTER } from "./bybit-confirmation";
-import { readP2PLinks, P2P_SCHEMA_MESSAGE } from "./p2p-links.server";
+
+
 import { readPages } from "./read-pages.server";
-import { addWorkSummary, emptyWorkSummary } from "./work-summary";
-import { cairoCalendarRange } from "./cairo-calendar";
-import { admin, type DB } from "./work-db.server";
-import { EDIT_WINDOW_MS, MANUAL_EMPTY_ROW_TTL_MS, MANUAL_NO_SHIFT_VISIBLE_MS, MANUAL_CARD_EDIT_MS, type ManualCard } from "./work-shared.server";
+
+
+import { admin } from "./work-db.server";
+import { EDIT_WINDOW_MS, MANUAL_NO_SHIFT_VISIBLE_MS, MANUAL_CARD_EDIT_MS, type ManualCard } from "./work-shared.server";
 
 export async function purgeEmptyManualTxns(userId?: string | null) {
-  // Draft/empty rows are historical too; reads must never delete employee data.
+  void userId; // Compatibility shim: historical draft rows are never deleted.
 }
 
 export async function listManualTxns(

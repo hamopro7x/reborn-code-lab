@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { accountInput, assertAccess, assertAdmin, requiredId, validateApiCreds } from "./bybit-access";
+import { assertAccess, assertAdmin, requiredId, validateApiCreds } from "./bybit-access";
 
 export const listBybitAccounts = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

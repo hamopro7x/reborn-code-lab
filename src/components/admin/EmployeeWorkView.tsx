@@ -14,52 +14,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import {
-  Loader2,
-  User,
-  KeyRound,
-  Clock,
-  ListOrdered,
-  AlertTriangle,
-  ArrowLeftRight,
-  ArrowDownUp,
-
-  Users,
-  Settings,
-  CreditCard,
-  CalendarClock,
-  Package,
-  DollarSign,
-  Wallet,
-  Plus,
-
-  
-
-} from "lucide-react";
+import { Loader2, User, KeyRound, Clock, ListOrdered, AlertTriangle, ArrowLeftRight, ArrowDownUp, Users, Settings, CreditCard, CalendarClock, Package, DollarSign, Wallet, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { MerchantLogo } from "./MerchantLogo";
-import { P2PShiftLinkMenu } from "./P2PShiftLinkMenu";
+
 import { formatTime } from "@/lib/format";
 import { PaginationBar } from "@/components/ui/pagination-bar";
-import {
-  getMyShiftTxns,
-  getMyManualCardTxns,
-  getShiftManualCardTxns,
-  getEmployeeManualCardTxns,
-    getWorkP2PCompleted,
-  getWorkTransferPage,
-
-  getEmployeeShiftTxns,
-    getEmployeeShiftP2P,
-  getShiftTxns,
-  getShiftManualTxns,
-  getShiftTransfers,
-  getShiftP2P,
-  getMyShiftP2P,
-
-  getMyAvatarUrl,
-  getWorkSheetSummary,
-} from "@/lib/work.functions";
+import { getMyShiftTxns, getMyManualCardTxns, getShiftManualCardTxns, getEmployeeManualCardTxns, getWorkP2PCompleted, getWorkTransferPage, getEmployeeShiftTxns, getEmployeeShiftP2P, getShiftTxns, getShiftManualTxns, getShiftP2P, getMyShiftP2P, getMyAvatarUrl, getWorkSheetSummary } from "@/lib/work.functions";
 import { getBybitCardBrands } from "@/lib/bybit.functions";
 import { usePinClaim } from "@/components/admin/PinGate";
 import { useWorkRealtime } from "@/lib/use-work-realtime";
@@ -75,7 +36,7 @@ import { FlowChip, TransfersTable } from "@/components/admin/EmployeeTransfersTa
 import { num, txnTime } from "@/components/admin/EmployeeWorkFormatters";
 
 import { Last4Cell, EntryCell, TxnDetailsDialog, isCardTxn } from "@/components/admin/EmployeeTransactionCells";
-import { ManualSection, type ManualKind } from "@/components/admin/EmployeeManualCards";
+import { ManualSection } from "@/components/admin/EmployeeManualCards";
 import { ManualTxnDialog, ManualTxnCell, MANUAL_TXN_WINDOW_MS } from "@/components/admin/EmployeeManualTransactions";
 
 /** DOM order = right-to-left order in the reference. */
@@ -113,10 +74,6 @@ const GLOW_IDLE =
 /* ------------------------- P2P orders table (طلبات P2P) -------------------------
  * Same look as the approved reference: blue pill header row, buy/sell toggle,
  * dark rows with green side + gold owner link. Presentation only. */
-const AR_MONTHS = [
-  "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
-  "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر",
-];
 const AR_DAYS = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
 
 /** توقيت موحّد (القاهرة) بأرقام لاتينية حتى تتطابق شاشة الموظف مع الأدمن. */
@@ -182,7 +139,6 @@ export function EmployeeWorkView({
   const txnsFn = useServerFn(getMyShiftTxns);
   const empTxnsFn = useServerFn(getEmployeeShiftTxns);
   const shiftTxnsFn = useServerFn(getShiftTxns);
-  const shiftTransfersFn = useServerFn(getShiftTransfers);
   const shiftP2PFn = useServerFn(getShiftP2P);
   const brandsFn = useServerFn(getBybitCardBrands);
   const myP2PFn = useServerFn(getMyShiftP2P);

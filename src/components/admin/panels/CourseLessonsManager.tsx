@@ -28,11 +28,6 @@ function probeVideoDurationFromUrl(url: string): Promise<number | null> {
   });
 }
 
-function probeVideoDurationFromFile(file: File): Promise<number | null> {
-  const url = URL.createObjectURL(file);
-  return probeVideoDurationFromUrl(url).finally(() => URL.revokeObjectURL(url)) as Promise<number | null>;
-}
-
 function LessonsManagerInner({ courseId, courseTitle }: { courseId: string; courseTitle: string }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);

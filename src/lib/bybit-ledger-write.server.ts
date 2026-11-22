@@ -1,37 +1,17 @@
-import { SETTLEMENT_COPY_SIDES, SETTLEMENT_COPY_FILTER } from "./bybit-settlement";
-import { createHmac } from "crypto";
-import { admin, bybitConfigured, call, getCreds, listAccounts } from "./bybit-account.server";
+import { SETTLEMENT_COPY_SIDES } from "./bybit-settlement";
+
+import { admin } from "./bybit-account.server";
 import { fetchP2P, fetchOnChain, fetchInternal } from "./bybit-assets.server";
 import type { AssetRow } from "./bybit-assets.server";
-import { cardRowKey, mapCardTxn, mapStoredRow, sanitize } from "./bybit-card-mapper";
-import { brandFromNumber } from "./bybit-cards.server";
-import type { BybitCard } from "./bybit-cards.server";
+import { mapStoredRow, sanitize } from "./bybit-card-mapper";
+
 import type { CardTxn } from "./bybit-card-mapper";
 import { sameStoredValue, detailText } from "./bybit-card-sync.server";
-import type { Creds, BybitAccount } from "./bybit-account.server";
-import { BYBIT_BASE_URL as BASE, BYBIT_RECV_WINDOW as RECV, num, sleep } from "./bybit-runtime";
-import {
-  sumSpend,
-  sumSpendByCard,
-  auditSpend,
-  cardRecordOutcome,
-  isCardReversalEvent,
-  type SpendRow,
-  cryptoSoldOf,
-  isExplicitReversal,
-  cardLinkIds,
-  findLinkedReversals,
-  REVERSAL_LINK_WINDOW_MS,
-  type LinkCandidate,
-  cardPurchaseGroup,
-  cardFilterMatches,
-  LEDGER_CARD_FILTERS,
-  legacyReversalUnproven,
-  durableCardReversal,
-} from "./bybit-spend";
-import { currentBybitCycle, currentBybitRows } from "./monthly-cycle.server";
-import { isPastLastPage } from "./pagination";
-import { cardConfirmed, archivedCardReadable, legacyCardReadable, CARD_READ_FILTER } from "./bybit-confirmation";
+import { num } from "./bybit-runtime";
+import { cardRecordOutcome, isCardReversalEvent, cryptoSoldOf, cardLinkIds, findLinkedReversals } from "./bybit-spend";
+import { currentBybitCycle } from "./monthly-cycle.server";
+
+import { cardConfirmed } from "./bybit-confirmation";
 
 export type LedgerRow = {
   id: string;
@@ -110,7 +90,6 @@ async function changedLedgerRows(db: any, rows: LedgerInsert[]): Promise<LedgerI
     const existing = new Map((data ?? []).map((r: any) => [key(r), r]));
     for (const row of slice) {
       const prev = existing.get(key(row)) as any;
-      const d = ((row as any).detail ?? {}) as Record<string, unknown>;
       // Archive projections already incorporate immutable admin/provider evidence.
       // Never reintroduce a legacy ledger-only sticky guess here.
       if (
@@ -211,7 +190,8 @@ export function cardLedgerRow(accountId: string, c: any): LedgerInsert {
   const status: string = t.status === "review" ? "review" : reversed ? "reversed" : t.status;
   const isRefund = status === "refund";
   const src = (t.detail ?? {}) as Record<string, any>;
-  const { raw: _raw, ...original } = src;
+  const original = { ...src };
+  delete original.raw;
   // Fee comes straight from the source account's own fee field (totalFees).
   const rawSrc = (src["raw"] ?? {}) as Record<string, any>;
   const feeRaw =
