@@ -8,7 +8,7 @@ import { ImagePlus, Download, Trash2, Loader2, FileImage } from "lucide-react";
 
 const BUCKET = "bybit-docs";
 
-export function useBybitDocsUpload(accountId?: string) {
+function useBybitDocsUpload(accountId?: string) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [busy, setBusy] = useState(false);
   const qc = useQueryClient();
@@ -61,7 +61,7 @@ export function useBybitDocsUpload(accountId?: string) {
   return { trigger, input, busy };
 }
 
-export function BybitDocsButton({ onClick, busy }: { onClick: () => void; busy: boolean }) {
+function BybitDocsButton({ onClick, busy }: { onClick: () => void; busy: boolean }) {
   return (
     <Button variant="outline" size="sm" className="rounded-xl" onClick={onClick} disabled={busy}>
       {busy ? <Loader2 className="size-4 ml-1 animate-spin" /> : <ImagePlus className="size-4 ml-1" />}
@@ -70,7 +70,7 @@ export function BybitDocsButton({ onClick, busy }: { onClick: () => void; busy: 
   );
 }
 
-export function BybitDocsList({ isAdmin, accountId }: { isAdmin: boolean; accountId?: string }) {
+function BybitDocsList({ isAdmin, accountId }: { isAdmin: boolean; accountId?: string }) {
   const qc = useQueryClient();
   const [preview, setPreview] = useState<string | null>(null);
   const folder = accountId ?? "";
