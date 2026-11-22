@@ -10,7 +10,8 @@ import { SUCCESS_STATUSES, MANUAL_CARD_EDIT_MS, type ManualCard } from "./work-s
 import { workTable } from "./work-analytics.server";
 import { myEntries } from "./work-employee.server";
 import { listManualTxns, listManualCardTxns, mapManualCard, type ManualCardRow } from "./work-manual.server";
-import { transfersByAssignment, p2pByAssignment } from "./work-p2p.server";
+import { p2pByAssignment } from "./work-p2p.server";
+import { transfersByAssignment } from "./work-transfers.server";
 
 const P2P_KINDS = ["p2p_buy", "p2p_sell"];
 
