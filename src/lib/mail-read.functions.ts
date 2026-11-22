@@ -134,7 +134,8 @@ export const downloadMailAttachment = createServerFn({ method: "POST" }).middlew
     const db = await adminDb();
     const { data: a } = await db.from("mail_attachments").select("filename, mime_type, gmail_attachment_id, mail_messages!inner(account_id, gmail_message_id)").eq("id", data.id).maybeSingle();
     if (!a) throw new Error("المرفق غير موجود");
-    const { accessTokenFor, gmail } = await import("@/lib/mail/google.server");
+    const { accessTokenFor } = await import("@/lib/mail/google-token.server");
+    const { gmail } = await import("@/lib/mail/gmail-api.server");
     const m: any = (a as any).mail_messages;
     const r = await gmail(await accessTokenFor(db, m.account_id), `/messages/${m.gmail_message_id}/attachments/${a.gmail_attachment_id}`);
     return { filename: a.filename, mimeType: a.mime_type || "application/octet-stream", base64: String(r.data).replace(/-/g, "+").replace(/_/g, "/") };
