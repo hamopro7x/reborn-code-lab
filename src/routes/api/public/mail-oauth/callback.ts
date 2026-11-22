@@ -32,11 +32,19 @@ export const Route = createFileRoute("/api/public/mail-oauth/callback")({
 
         // Consume state atomically (single use + not expired + bound to this browser's nonce).
         const nowIso = new Date().toISOString();
-        const { data: st } = await admin.from("mail_oauth_states").update({ used_at: nowIso })
+        const { data: st, error: stateError } = await admin.from("mail_oauth_states").update({ used_at: nowIso })
           .eq("state_hash", await oauthStateKey(state, nonce)).is("used_at", null).gt("expires_at", nowIso)
           .select("user_id").maybeSingle();
+        if (stateError) {
+          console.error("mail oauth state consume failed:", stateError.code ?? "database_error");
+          return page(false, "تعذر التحقق من طلب الربط، حاول مرة أخرى");
+        }
         if (!st) return page(false, "انتهت صلاحية طلب الربط، ابدأ من جديد");
-        const { data: roles } = await admin.from("user_roles").select("role").eq("user_id", st.user_id);
+        const { data: roles, error: rolesError } = await admin.from("user_roles").select("role").eq("user_id", st.user_id);
+        if (rolesError) {
+          console.error("mail oauth role check failed:", rolesError.code ?? "database_error");
+          return page(false, "تعذر التحقق من الصلاحيات، حاول مرة أخرى");
+        }
         if (!(roles ?? []).some((r: any) => r.role === "admin")) return page(false, "غير مصرح");
 
         let createdId: string | null = null;
@@ -45,7 +53,8 @@ export const Route = createFileRoute("/api/public/mail-oauth/callback")({
           tok = await exchangeCode(code, (await pkcePair(state, nonce)).verifier);
           const granted = (tok.scope ?? "").split(" ");
           if (!GMAIL_SCOPES.filter((x) => x.includes("gmail")).every((x) => granted.includes(x))) {
-            await revokeToken(tok.refresh_token ?? tok.access_token);
+            try { await revokeToken(tok.refresh_token ?? tok.access_token); }
+            catch (revokeError) { console.error("mail oauth scope-failure revoke failed:", (revokeError as Error)?.message?.slice(0, 100)); }
             return page(false, "لم يتم منح كل الصلاحيات المطلوبة");
           }
           const who = await verifiedIdentity(tok.access_token);
@@ -59,7 +68,8 @@ export const Route = createFileRoute("/api/public/mail-oauth/callback")({
             : { data: null, error: null };
           if (oldSecretError) throw new Error("تعذر التحقق من بيانات اعتماد الحساب المرتبط");
           if (!tok.refresh_token && !oldSecret) {
-            await revokeToken(tok.access_token);
+            try { await revokeToken(tok.access_token); }
+            catch (revokeError) { console.error("mail oauth temporary-token revoke failed:", (revokeError as Error)?.message?.slice(0, 100)); }
             return page(false, "Google لم يرسل صلاحية دائمة، أزل وصول التطبيق من حساب Google ثم أعد المحاولة");
           }
 
@@ -96,7 +106,10 @@ export const Route = createFileRoute("/api/public/mail-oauth/callback")({
             if (cleanupError) console.error("mail oauth account cleanup failed:", cleanupError.code ?? "database_error");
           }
           // Revoke the newly issued token on every failed completion, including reconnects.
-          if (tok) await revokeToken(tok.refresh_token ?? tok.access_token);
+          if (tok) {
+            try { await revokeToken(tok.refresh_token ?? tok.access_token); }
+            catch (revokeError) { console.error("mail oauth failure revoke failed:", (revokeError as Error)?.message?.slice(0, 100)); }
+          }
           console.error("mail oauth callback failed:", String(e?.message ?? e).slice(0, 120));
           return page(false, "تعذر إكمال الربط");
         }
