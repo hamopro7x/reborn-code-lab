@@ -5,10 +5,12 @@ on:
     branches:
       - refactor/orders-customers-products
       - refactor/employee-shifts-transfers
+      - fix/employee-transfer-note-scope
   pull_request:
     branches:
       - main
       - refactor/orders-customers-products
+      - refactor/employee-shifts-transfers
   workflow_dispatch:
 
 permissions:

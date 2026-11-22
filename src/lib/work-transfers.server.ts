@@ -109,17 +109,40 @@ export async function saveTransferNote(userId: string, ledgerId: string, note: s
     return { ok: false as const, error: "هذه المعاملة غير ناجحة." };
   }
 
+  // Employees may annotate only withdrawals visible in their own current shift.
+  // The UI filter is not an authorization boundary: validate the same scope here.
+  const { data: roles } = await db.from("user_roles").select("role").eq("user_id", userId);
+  const isAdmin = (roles ?? []).some((r: any) => r.role === "admin");
+  if (!isAdmin) {
+    const { data: shift } = await db
+      .from("work_shifts")
+      .select("id")
+      .eq("user_id", userId)
+      .is("ended_at", null)
+      .maybeSingle();
+    if (!shift) {
+      return { ok: false as const, error: "ليس لديك شفت مفتوح حاليًا." };
+    }
+    const { data: assignment } = await db
+      .from("work_txn_assignments")
+      .select("id")
+      .eq("shift_id", (shift as any).id)
+      .eq("user_id", userId)
+      .eq("ledger_id", ledgerId)
+      .maybeSingle();
+    if (!assignment) {
+      return { ok: false as const, error: "هذه المعاملة ليست ضمن شفتك الحالي." };
+    }
+  }
+
   const { data: existing } = await db
     .from("work_transfer_notes")
     .select("ledger_id,saved_at,user_id")
     .eq("ledger_id", ledgerId)
     .maybeSingle();
 
-  if (existing && (existing as any).user_id && (existing as any).user_id !== userId) {
-    const { data: roles } = await db.from("user_roles").select("role").eq("user_id", userId);
-    if (!(roles ?? []).some((r: any) => r.role === "admin")) {
-      return { ok: false as const, error: "هذه الملاحظة خاصة بموظف آخر." };
-    }
+  if (existing && (existing as any).user_id && (existing as any).user_id !== userId && !isAdmin) {
+    return { ok: false as const, error: "هذه الملاحظة خاصة بموظف آخر." };
   }
 
   const now = new Date();
