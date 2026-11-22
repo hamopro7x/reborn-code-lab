@@ -135,7 +135,7 @@ export const saveMailLabel = createServerFn({ method: "POST" }).middleware([requ
   .handler(async ({ data, context }) => {
     await requireAdmin(context);
     const db = await adminDb();
-    if (data.remove) await db.from("mail_labels").delete().eq("id", data.remove);
+    if (data.remove) { const { error } = await db.from("mail_labels").delete().eq("id", data.remove); if (error) throw new Error(error.message); }
     else { const { error } = await db.from("mail_labels").insert({ name: data.name, color: data.color }); if (error) throw new Error(error.message); }
     await log(db, { actor_id: context.userId, action: data.remove ? "label_deleted" : "label_created", meta: { name: data.name } });
     return { ok: true };
