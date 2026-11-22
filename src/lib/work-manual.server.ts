@@ -9,7 +9,7 @@ import { admin } from "./work-db.server";
 import { EDIT_WINDOW_MS, MANUAL_NO_SHIFT_VISIBLE_MS, MANUAL_CARD_EDIT_MS, type ManualCard } from "./work-shared.server";
 
 export async function purgeEmptyManualTxns(userId?: string | null) {
-  // Draft/empty rows are historical too; reads must never delete employee data.
+  void userId; // Compatibility shim: historical draft rows are never deleted.
 }
 
 export async function listManualTxns(
