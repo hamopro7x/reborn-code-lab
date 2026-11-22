@@ -16,7 +16,7 @@ export const listMailAccounts = createServerFn({ method: "GET" }).middleware([re
 export const startMailLink = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).handler(async ({ context }) => {
   await requireAdmin(context);
   const { randomToken, oauthStateKey, pkcePair, MAIL_OAUTH_COOKIE } = await import("@/lib/mail/crypto.server");
-  const { authUrl } = await import("@/lib/mail/google.server");
+  const { authUrl } = await import("@/lib/mail/google-oauth.server");
   const { setCookie } = await import("@tanstack/react-start/server");
   const db = await adminDb();
   const state = randomToken(32);
