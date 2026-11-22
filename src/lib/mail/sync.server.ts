@@ -60,7 +60,12 @@ export async function importMessage(admin: any, token: string, account: any, gma
   if (error) throw new Error(error.message);
   // ignoreDuplicates may return no row when another worker inserted the same message.
   // Resolve the canonical id so attachment/notification side effects can be repaired.
-  const messageId = ins?.id ?? existing?.id ?? (await admin.from("mail_messages").select("id").eq("account_id", account.id).eq("gmail_message_id", gmailId).maybeSingle()).data?.id;
+  let messageId = ins?.id ?? existing?.id;
+  if (!messageId) {
+    const { data: resolved, error: resolveError } = await admin.from("mail_messages").select("id").eq("account_id", account.id).eq("gmail_message_id", gmailId).maybeSingle();
+    if (resolveError) throw new Error(resolveError.message);
+    messageId = resolved?.id;
+  }
   if (!messageId) throw new Error("Unable to resolve imported Gmail message");
   if (body.attachments.length) {
     const attachmentRows = body.attachments.map((a) => ({
@@ -104,8 +109,8 @@ async function knownIds(admin: any, accountId: string, ids: string[]): Promise<S
 
 // Each run has a time budget below the lease. Every page is processed fully; the history cursor
 // only advances after the LAST page succeeds. If the budget runs out, the cursor stays put and the
-// next run replays the same pages — already-imported ids are skipped without Gmail calls, so
-// every run makes guaranteed forward progress and nothing is skipped.
+// next run replays the same pages — existing messages are rechecked to repair missing attachments
+// and notifications, while tombstoned ids are skipped. Nothing is skipped.
 const RUN_BUDGET_MS = 55_000;
 
 async function importIds(admin: any, token: string, account: any, ids: string[], deadline: number) {
@@ -253,9 +258,10 @@ export async function syncAllMail(admin: any, onlyAccountId?: string) {
       results.push({ id: acc.id, imported: await syncAccount(admin, acc) });
     } catch (e: any) {
       const reauth = e instanceof ReauthError;
-      await admin.from("mail_accounts").update({
+      const { error: stateError } = await admin.from("mail_accounts").update({
         status: reauth ? "reauth_required" : "error", last_error: String(e?.message ?? e).slice(0, 300), sync_lease_until: null,
       }).eq("id", acc.id);
+      if (stateError) console.error("Mail sync failure state update failed:", stateError.code ?? "database_error");
       results.push({ id: acc.id, error: reauth ? "reauth_required" : "sync_failed" });
     }
   }
