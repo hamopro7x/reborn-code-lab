@@ -1,5 +1,6 @@
 // Per-account Gmail sync orchestration and lease management.
-import { accessTokenFor, gmail, GmailHttpError, ReauthError } from "./google.server";
+import { accessTokenFor, ReauthError } from "./google-token.server";
+import { gmail, GmailHttpError } from "./gmail-api.server";
 import { importIds, removeLocal, RUN_BUDGET_MS } from "./sync-import.server";
 import { recoverExpiredCursor, reconcileDue, reconcileSample } from "./sync-recovery.server";
 
