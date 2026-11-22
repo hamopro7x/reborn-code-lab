@@ -15,6 +15,7 @@ import { livePoll } from "@/lib/live-poll";
 import { ADMIN_NAV_GROUPS } from "@/lib/admin-navigation";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { AdminPanelContent } from "@/components/admin/AdminPanelContent";
+import { EmployeePanelContent } from "@/components/admin/EmployeePanelContent";
 import { BASE_EMPLOYEE_PANELS, PANEL_KEYS, SHAREABLE_EMPLOYEE_PANELS, canEmployeeViewPanel, type PanelKey } from "@/lib/admin-panel-access";
 
 
@@ -157,14 +158,22 @@ function Admin() {
             <AdminTranslator lang={adminLang} />
           </header>
           <main className={`flex-1 overflow-x-hidden ${panel === "chat" ? "p-0" : "p-4 md:p-6"}`}>
-            <AdminPanelContent
-              panel={panel}
-              isEmployee={isEmployee}
-              isAdmin={adminOnly}
-              canView={canView}
-              setPanel={setPanel}
-              messageId={search.message}
-            />
+            {isEmployee ? (
+              <EmployeePanelContent
+                panel={panel}
+                canView={canView}
+                setPanel={setPanel}
+                messageId={search.message}
+              />
+            ) : (
+              <AdminPanelContent
+                panel={panel}
+                isAdmin={adminOnly}
+                canView={canView}
+                setPanel={setPanel}
+                messageId={search.message}
+              />
+            )}
           </main>
 
         </div>
