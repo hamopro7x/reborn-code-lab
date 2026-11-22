@@ -28,3 +28,10 @@ export async function getCategoryBySlug(slug: string) {
     .maybeSingle();
   return data;
 }
+
+/** Uploads a category banner with a server-issued Storage upload token. */
+export async function uploadCategoryImage(path: string, token: string, file: File, contentType: string) {
+  return supabase.storage
+    .from("product-images")
+    .uploadToSignedUrl(path, token, file, { contentType });
+}
