@@ -12,13 +12,18 @@ export const attachOrderScreenshot = createServerFn({ method: "POST" })
   .inputValidator((data) => attachSchema.parse(data))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const prefix = `${data.order_code}/`;
-    if (!data.screenshot_path.startsWith(prefix) || data.screenshot_path.includes("..")) {
-      throw new Error("Invalid screenshot path");
-    }
-    const ext = data.screenshot_path.split(".").pop()?.toLowerCase();
-    if (!ext || !["jpg", "jpeg", "png", "webp"].includes(ext)) {
-      throw new Error("Invalid screenshot type");
+    // Only accept the exact random object path issued by signScreenshotUpload.
+    const match = data.screenshot_path.match(/^([^/]+)\/([0-9a-f-]{36})\.(jpg|jpeg|png|webp)$/i);
+    if (!match || match[1] !== data.order_code) throw new Error("Invalid screenshot path");
+
+    // A caller cannot advance an order by inventing a storage path: confirm the
+    // uploaded object exists before changing the payment state.
+    const { data: files, error: listError } = await supabaseAdmin.storage
+      .from("payment-screenshots")
+      .list(data.order_code, { search: match[2] + "." + match[3], limit: 2 });
+    if (listError) throw new Error("Failed to verify payment proof upload");
+    if (!(files ?? []).some((file: any) => file.name === match[2] + "." + match[3])) {
+      throw new Error("Payment proof file was not uploaded");
     }
 
     // The status predicate makes attaching the proof a single-use transition.
