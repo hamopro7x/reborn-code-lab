@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { useAdminRole } from "@/lib/use-admin-role";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -33,24 +34,11 @@ export const Route = createFileRoute("/_authenticated/admin")({
   component: Admin,
 });
 
-function useRole() {
-  const [role, setRole] = useState<string | null>(null);
-  useEffect(() => {
-    supabase.auth.getUser().then(async ({ data }) => {
-      if (!data.user) return;
-      const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", data.user.id);
-      if (roles?.some((r: any) => r.role === "admin")) setRole("admin");
-      else if (roles?.some((r: any) => r.role === "employee")) setRole("employee");
-      else setRole("customer");
-    });
-  }, []);
-  return role;
-}
 
 function Admin() {
   const [adminLang, setAdminLang] = useAdminLang();
   const search = Route.useSearch();
-  const role = useRole();
+  const role = useAdminRole();
   const navigate = useNavigate();
   // آخر قسم فتحه المستخدم — يُستعاد بعد Refresh حتى لو لم يكن في الرابط.
   const LAST_PANEL_KEY = "mp:admin.last-panel";
