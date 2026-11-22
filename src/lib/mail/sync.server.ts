@@ -241,6 +241,7 @@ export async function syncAllMail(admin: any, onlyAccountId?: string) {
       .eq("id", acc.id)
       .or(`sync_lease_until.is.null,sync_lease_until.lt.${now.toISOString()}`)
       .select("id").maybeSingle();
+    if (leaseError) throw new Error(leaseError.message);
     if (!locked) { results.push({ id: acc.id, skipped: true }); continue; }
     try {
       results.push({ id: acc.id, imported: await syncAccount(admin, acc) });
