@@ -10,6 +10,8 @@ on:
   pull_request:
     branches:
       - main
+      - refactor/orders-customers-products
+      - refactor/employee-shifts-transfers
       - refactor/employee-shifts-transfers
   workflow_dispatch:
 
