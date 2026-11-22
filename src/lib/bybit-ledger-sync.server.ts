@@ -1,7 +1,7 @@
 import { SETTLEMENT_COPY_FILTER } from "./bybit-settlement";
 import { mapLimit } from "./bybit-concurrency.server";
 
-import { admin, bybitConfigured, call, listAccounts } from "./bybit-account.server";
+import { admin, bybitConfigured, listAccounts } from "./bybit-account.server";
 
 import type { AssetRow } from "./bybit-assets.server";
 
