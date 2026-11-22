@@ -14,7 +14,7 @@ export async function gmail(token: string, path: string, init?: RequestInit): Pr
       continue;
     }
     // Log status only — never bodies (may contain mail content).
-    console.error(`Gmail API ${res.status} on ${path.split("?")[0].replace(/\\/[A-Za-z0-9_-]{10,}/g, "/:id")}`);
+    console.error(`Gmail API ${res.status} on ${path.split("?")[0].replace(/\/[A-Za-z0-9_-]{10,}/g, "/:id")}`);
     throw new GmailHttpError(res.status, `Gmail error [${res.status}]`);
   }
   throw new GmailHttpError(500, "Gmail error");
