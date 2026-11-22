@@ -100,12 +100,13 @@ export const organizeMail = createServerFn({ method: "POST" }).middleware([requi
       case "unarchive": await set({ archived: false }); break;
       case "trash": await set({ trashed_at: new Date().toISOString() }); break;
       case "restore": await set({ trashed_at: null }); break;
-      case "delete":
+      case "delete": {
         const { error: tombstoneError } = await db.from("mail_local_tombstones").upsert((msgs ?? []).map((m: any) => ({ account_id: m.account_id, gmail_message_id: m.gmail_message_id, deleted_by: context.userId })), { onConflict: "account_id,gmail_message_id" });
         if (tombstoneError) throw new Error(tombstoneError.message);
         const { error: deleteError } = await db.from("mail_messages").delete().in("id", data.ids);
         if (deleteError) throw new Error(deleteError.message);
         break;
+      }
       case "add_label":
       case "remove_label":
         if (!data.labelId) throw new Error("اختر تصنيفًا");
