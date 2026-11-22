@@ -47,5 +47,5 @@ export async function verifiedIdentity(accessToken: string) {
 export async function revokeToken(token: string) {
   try {
     await fetch(`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(token)}`, { method: "POST" });
-  } catch {}
+  } catch { /* Revocation is best-effort; callers handle local cleanup. */ }
 }
