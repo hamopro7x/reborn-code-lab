@@ -81,6 +81,10 @@ jobs:
           src/lib/mail-read.functions.ts
           src/lib/mail-compose.functions.ts
           src/lib/mail-notifications.functions.ts
+          src/lib/mail/sync-import.server.ts
+          src/lib/mail/sync-recovery.server.ts
+          src/lib/mail/sync-orchestrator.server.ts
+          src/lib/mail/sync-recovery.test.ts
           src/components/admin/panels/OverviewTab.tsx
           src/components/admin/panels/CustomersTab.tsx
           src/components/admin/panels/ReviewsTab.tsx
