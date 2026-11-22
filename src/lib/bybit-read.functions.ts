@@ -1,12 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { accountInput, assertAccess, assertAdmin } from "./bybit-access";
+import { accountInput, assertAdmin } from "./bybit-access";
 
 export const getBybitOverview = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(accountInput)
   .handler(async ({ data, context }) => {
-    await assertAccess(context.supabase, context.userId);
+    await assertAdmin(context.supabase, context.userId);
     const mod = await import("./bybit.server");
     return mod.readOp(data.accountId, () => mod.fetchOverview(data.accountId), {} as any);
   });
@@ -23,8 +23,8 @@ export const getBybitCardTxns = createServerFn({ method: "POST" })
     pageSize: Math.min(Math.max(Number(input?.pageSize ?? 150) || 150, 10), 500),
   }))
   .handler(async ({ data, context }) => {
-    const role = await assertAccess(context.supabase, context.userId);
-    const hideReversed = role === "employee";
+    await assertAdmin(context.supabase, context.userId);
+    const hideReversed = false;
     const mod = await import("./bybit.server");
     // The visible table is a database archive, so reading it must not depend on
     // the account's current API key. A missing/restricted Bybit key previously
