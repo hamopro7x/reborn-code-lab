@@ -22,8 +22,23 @@ export const attachOrderScreenshot = createServerFn({ method: "POST" })
       .from("payment-screenshots")
       .list(data.order_code, { search: match[2] + "." + match[3], limit: 2 });
     if (listError) throw new Error("Failed to verify payment proof upload");
-    if (!(files ?? []).some((file: any) => file.name === match[2] + "." + match[3])) {
-      throw new Error("Payment proof file was not uploaded");
+    const uploadedFile = (files ?? []).find((file: any) => file.name === match[2] + "." + match[3]) as any;
+    if (!uploadedFile) throw new Error("Payment proof file was not uploaded");
+
+    // Do not trust the client-provided extension: verify Storage's persisted metadata.
+    const expectedMime: Record<string, string> = {
+      jpg: "image/jpeg",
+      jpeg: "image/jpeg",
+      png: "image/png",
+      webp: "image/webp",
+    };
+    const actualMime = String(uploadedFile.metadata?.mimetype ?? "").toLowerCase();
+    const actualSize = Number(uploadedFile.metadata?.size ?? uploadedFile.metadata?.contentLength);
+    if (actualMime !== expectedMime[match[3].toLowerCase()]) {
+      throw new Error("Payment proof must be a valid JPG, PNG, or WebP image");
+    }
+    if (!Number.isFinite(actualSize) || actualSize <= 0 || actualSize > 5 * 1024 * 1024) {
+      throw new Error("Payment proof must be smaller than 5 MB");
     }
 
     // The status predicate makes attaching the proof a single-use transition.
