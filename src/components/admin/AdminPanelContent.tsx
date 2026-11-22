@@ -56,7 +56,7 @@ export function AdminPanelContent({
         </div>
       )}
       {canView("mail") && <MailNotifier onOpen={() => setPanel("mail")} />}
-      {panel === "overview" && canView("overview") && <OverviewTab />}
+      {panel === "overview" && canView("overview") && <OverviewTab readOnly={isEmployee} />}
       {panel === "orders" && <OrdersTab isAdmin={isAdmin} />}
       {panel === "customers" && canView("customers") && <CustomersTab />}
       {panel === "reviews" && canView("reviews") && <ReviewsTab />}
