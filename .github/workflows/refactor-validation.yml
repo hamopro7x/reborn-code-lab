@@ -8,6 +8,7 @@ on:
   pull_request:
     branches:
       - main
+      - refactor/orders-customers-products
   workflow_dispatch:
 
 permissions:
