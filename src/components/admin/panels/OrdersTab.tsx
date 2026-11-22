@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { supabase } from "@/integrations/supabase/client";
+import { listAdminOrders, updateAdminOrderStatus, getOrderScreenshotUrl } from "@/lib/orders-admin.queries";
 import { deleteAllOrders } from "@/lib/admin.functions";
 import { formatLocaleDateTime } from "@/lib/format";
 import { toast } from "sonner";
@@ -19,17 +19,12 @@ export function OrdersTab({ isAdmin }: { isAdmin: boolean }) {
   const ordersQ = useQuery({
     queryKey: ["admin-orders", filter, search],
     queryFn: async () => {
-      let q = supabase.from("orders").select("*, items:order_items(*), payment_method:payment_methods(name)").order("created_at", { ascending: false });
-      // when searching, ignore the status filter so results come from any tab
-      if (!search.trim() && filter !== "all") q = q.eq("status", filter as any);
-      return (await q).data ?? [];
+      return listAdminOrders(filter, search);
     },
   });
 
   async function updateStatus(id: string, status: string) {
-    const patch: any = { status };
-    if (status === "confirmed") patch.confirmed_at = new Date().toISOString();
-    const { error } = await supabase.from("orders").update(patch).eq("id", id);
+    const { error } = await updateAdminOrderStatus(id, status);
     if (error) toast.error(error.message);
     else { toast.success("تم التحديث"); qc.invalidateQueries({ queryKey: ["admin-orders"] }); qc.invalidateQueries({ queryKey: ["admin-stats"] }); }
   }
@@ -128,15 +123,12 @@ export function OrdersTab({ isAdmin }: { isAdmin: boolean }) {
                   <button
                     type="button"
                     onClick={async () => {
-                      const raw = o.payment_screenshot as string;
-                      const path = raw.includes("payment-screenshots/")
-                        ? raw.split("payment-screenshots/")[1]
-                        : raw;
-                      const { data, error } = await supabase.storage
-                        .from("payment-screenshots")
-                        .createSignedUrl(path, 300);
-                      if (error || !data?.signedUrl) { toast.error("تعذر فتح الإثبات"); return; }
-                      window.open(data.signedUrl, "_blank", "noopener");
+                      try {
+                        const signedUrl = await getOrderScreenshotUrl(o.payment_screenshot as string);
+                        window.open(signedUrl, "_blank", "noopener");
+                      } catch {
+                        toast.error("تعذر فتح الإثبات");
+                      }
                     }}
                     className="text-xs text-primary hover:underline mt-1 inline-flex items-center gap-1"
                   ><ExternalLink className="size-3" />الإثبات</button>

@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { getActiveProductBySlug, listApprovedProductReviews, listActiveUpsellProducts } from "@/lib/products.queries";
 import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
 import { Button } from "@/components/ui/button";
@@ -15,13 +15,8 @@ import { SafeImage } from "@/components/site/SafeImage";
 export const Route = createFileRoute("/product/$slug")({
   component: ProductPage,
   loader: async ({ params }) => {
-    const { data } = await supabase
-      .from("products")
-      .select("*, category:categories(id,slug,name,icon)")
-      .eq("slug", params.slug)
-      .eq("active", true)
-      .maybeSingle();
-    return { product: data };
+    const product = await getActiveProductBySlug(params.slug);
+    return { product };
   },
   head: ({ params, loaderData }) => {
     const p = loaderData?.product as any;
@@ -76,7 +71,7 @@ function ProductPage() {
 
   const productQ = useQuery({
     queryKey: ["product", slug],
-    queryFn: async () => (await supabase.from("products").select("*, category:categories(id,slug,name,icon)").eq("slug", slug).eq("active", true).maybeSingle()).data,
+    queryFn: async () => getActiveProductBySlug(slug),
     initialData: initialProduct,
     staleTime: 60_000,
   });
@@ -84,8 +79,7 @@ function ProductPage() {
     queryKey: ["reviews", productQ.data?.id],
     queryFn: async () => {
       if (!productQ.data?.id) return [];
-      const { data } = await supabase.from("reviews").select("*").eq("product_id", productQ.data.id).eq("approved", true).order("created_at", { ascending: false });
-      return data ?? [];
+      return listApprovedProductReviews(productQ.data.id);
     },
     enabled: !!productQ.data?.id,
   });
@@ -93,9 +87,7 @@ function ProductPage() {
     queryKey: ["upsell", productQ.data?.id],
     queryFn: async () => {
       const ids = (productQ.data?.upsell_ids ?? []) as string[];
-      if (!ids.length) return [];
-      const { data } = await supabase.from("products").select("*, category:categories(icon,name)").in("id", ids).eq("active", true);
-      return data ?? [];
+      return listActiveUpsellProducts(ids);
     },
     enabled: !!productQ.data?.id,
   });

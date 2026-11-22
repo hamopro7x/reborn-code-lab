@@ -1,6 +1,9 @@
 name: Refactor validation
 
 on:
+  push:
+    branches:
+      - refactor/orders-customers-products
   pull_request:
     branches:
       - main
@@ -72,7 +75,29 @@ jobs:
           src/lib/work.server.ts
           src/lib/admin-access.server.ts
           src/lib/admin-employees.functions.ts
+          src/lib/admin.functions.ts
           src/lib/admin-operations.functions.ts
+          src/lib/admin-customers.functions.ts
+          src/lib/admin-orders.functions.ts
+          src/lib/categories.functions.ts
+          src/lib/categories-write.functions.ts
+          src/lib/products.functions.ts
+          src/lib/orders.functions.ts
+          src/lib/orders-create.functions.ts
+          src/lib/orders-payment.functions.ts
+          src/lib/orders-read.functions.ts
+          src/lib/orders-admin.queries.ts
+          src/lib/customer-summary.server.ts
+          src/lib/customer-summary.server.test.ts
+          src/lib/read-pages.server.ts
+          src/lib/products.queries.ts
+          src/lib/categories.queries.ts
+          src/components/admin/panels/CategoriesTab.tsx
+          src/routes/index.tsx
+          src/routes/shop.tsx
+          'src/routes/category.$slug.tsx'
+          'src/routes/product.$slug.tsx'
+          src/components/admin/ProductsTab.tsx
           src/lib/courses-access.server.ts
           src/lib/courses-device.functions.ts
           src/lib/courses-access.functions.ts

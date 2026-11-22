@@ -2,6 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { listActiveCategories } from "@/lib/categories.queries";
+import { listLatestActiveProducts } from "@/lib/products.queries";
 import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
 import { Countdown } from "@/components/site/Countdown";
@@ -20,16 +22,16 @@ export const Route = createFileRoute("/")({
   loader: async () => {
     const now = new Date().toISOString();
     const [categories, products, timer, rates, currencies, banners] = await Promise.all([
-      supabase.from("categories").select("*").eq("active", true).order("sort_order"),
-      supabase.from("products").select("*, category:categories(icon,name)").eq("active", true).order("created_at", { ascending: false }).limit(10),
+      listActiveCategories(),
+      listLatestActiveProducts(10),
       supabase.from("countdown_timers").select("*").eq("active", true).gt("ends_at", now).order("ends_at").limit(1).maybeSingle(),
       supabase.from("exchange_rates").select("*"),
       supabase.from("currencies").select("*").eq("active", true).order("sort_order"),
       supabase.from("hero_banners").select("*").eq("active", true).order("sort_order"),
     ]);
     return {
-      categories: categories.data ?? [],
-      products: products.data ?? [],
+      categories,
+      products,
       timer: timer.data ?? null,
       rates: rates.data ?? [],
       currencies: currencies.data ?? [],
@@ -119,13 +121,13 @@ function Home() {
 
   const categoriesQ = useQuery({
     queryKey: ["categories"],
-    queryFn: async () => (await supabase.from("categories").select("*").eq("active", true).order("sort_order")).data ?? [],
+    queryFn: async () => listActiveCategories(),
     staleTime: 5 * 60_000,
     initialData: initial.categories,
   });
   const latestQ = useQuery({
     queryKey: ["latest-products"],
-    queryFn: async () => (await supabase.from("products").select("*, category:categories(icon,name)").eq("active", true).order("created_at", { ascending: false }).limit(10)).data ?? [],
+    queryFn: async () => listLatestActiveProducts(10),
     staleTime: 2 * 60_000,
     initialData: initial.products,
   });
@@ -153,10 +155,10 @@ function Home() {
       ratesQ.data.forEach((r: any) => { map[r.currency_code] = Number(r.rate_from_egp); });
       setRates(map);
     }
-  }, [ratesQ.data]);
+  }, [ratesQ.data, setRates]);
   useEffect(() => {
     if (currenciesQ.data && currenciesQ.data.length) setCurrencies(currenciesQ.data as any);
-  }, [currenciesQ.data]);
+  }, [currenciesQ.data, setCurrencies]);
 
   const categories = categoriesQ.data ?? [];
 

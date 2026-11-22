@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useUiState, useScrollRestore } from "@/lib/ui-state";
 
-import { supabase } from "@/integrations/supabase/client";
+import { listActiveProducts } from "@/lib/products.queries";
 import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
 import { ProductCard } from "@/components/site/ProductCard";
@@ -43,7 +43,7 @@ function Shop() {
 
   const productsQ = useQuery({
     queryKey: ["products-all"],
-    queryFn: async () => (await supabase.from("products").select("*, category:categories(id,slug,name,icon)").eq("active", true).order("sort_order")).data ?? [],
+    queryFn: async () => listActiveProducts(),
   });
 
   const filtered = useMemo(() => {

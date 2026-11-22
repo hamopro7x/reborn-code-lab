@@ -3,7 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useUiState, useScrollRestore } from "@/lib/ui-state";
 
-import { supabase } from "@/integrations/supabase/client";
+import { getCategoryBySlug } from "@/lib/categories.queries";
+import { listActiveProductsByCategorySlug } from "@/lib/products.queries";
 import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
 import { ProductCard } from "@/components/site/ProductCard";
@@ -37,21 +38,14 @@ function CategoryPage() {
   const categoryQ = useQuery({
     queryKey: ["category", slug],
     queryFn: async () =>
-      (await supabase.from("categories").select("*").eq("slug", slug).maybeSingle()).data,
+      getCategoryBySlug(slug),
     staleTime: 5 * 60 * 1000,
   });
 
   const productsQ = useQuery({
     queryKey: ["products-category", slug],
     queryFn: async () =>
-      (
-        await supabase
-          .from("products")
-          .select("*, category:categories!inner(id,slug,name,icon)")
-          .eq("active", true)
-          .eq("categories.slug", slug)
-          .order("sort_order")
-      ).data ?? [],
+      listActiveProductsByCategorySlug(slug),
     staleTime: 60 * 1000,
   });
 

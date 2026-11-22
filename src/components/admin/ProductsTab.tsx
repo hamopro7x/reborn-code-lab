@@ -18,14 +18,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { supabase } from "@/integrations/supabase/client";
+
 import {
   deleteProduct,
   getProductImageUrl,
   prepareProductImageUpload,
   saveProduct,
-} from "@/lib/categories.functions";
+} from "@/lib/products.functions";
 import { ensureSlug } from "@/lib/slug";
+import { listAdminProducts, uploadProductImage } from "@/lib/products.queries";
+import { listAdminCategories } from "@/lib/categories.queries";
 
 type ProductDraft = {
   id?: string;
@@ -58,11 +60,11 @@ export function ProductsTab() {
   const productsQuery = useQuery({
     queryKey: ["admin-products"],
     queryFn: async () =>
-      (await supabase.from("products").select("*, category:categories(name,icon)").order("sort_order")).data ?? [],
+      listAdminProducts(),
   });
   const categoriesQuery = useQuery({
     queryKey: ["admin-cats"],
-    queryFn: async () => (await supabase.from("categories").select("*").order("sort_order")).data ?? [],
+    queryFn: async () => listAdminCategories(),
   });
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<ProductDraft | null>(null);
@@ -138,9 +140,7 @@ export function ProductsTab() {
     try {
       const contentType = file.type || "image/png";
       const { path, token } = await prepareUpload({ data: { contentType, size: file.size } });
-      const { error } = await supabase.storage
-        .from("product-images")
-        .uploadToSignedUrl(path, token, file, { contentType });
+      const { error } = await uploadProductImage(path, token, file, contentType);
       if (error) throw new Error(`[product-images.upload] ${error.message}`);
       const { url } = await getImageUrl({ data: { path } });
       setEditing((previous) => (previous ? { ...previous, main_image: url } : previous));
