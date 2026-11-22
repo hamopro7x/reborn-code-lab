@@ -23,14 +23,12 @@ import type { PanelKey } from "@/lib/admin-panel-access";
 
 export function AdminPanelContent({
   panel,
-  isEmployee,
   isAdmin,
   canView,
   setPanel,
   messageId,
 }: {
   panel: PanelKey;
-  isEmployee: boolean;
   isAdmin: boolean;
   canView: (key: PanelKey) => boolean;
   setPanel: (key: PanelKey) => void;
@@ -38,23 +36,6 @@ export function AdminPanelContent({
 }) {
   return (
     <div className="min-w-0">
-      {isEmployee && panel === "orders" && (
-        <div className="card-surface rounded-2xl p-4 mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h3 className="font-bold">نسخة الموظف (Windows)</h3>
-            <p className="text-sm text-muted-foreground">
-              نزّل ملف التثبيت واشتغل عليه مرة واحدة — بعدها البرنامج يعمل تلقائيًا في الخلفية.
-            </p>
-          </div>
-          <a
-            href="/api/public/agent-download.exe"
-            download="MagPro-Setup.exe"
-            className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
-          >
-            تنزيل نسخة الموظف
-          </a>
-        </div>
-      )}
       {canView("mail") && <MailNotifier onOpen={() => setPanel("mail")} />}
       {panel === "overview" && canView("overview") && <OverviewTab readOnly={isEmployee} />}
       {panel === "orders" && <OrdersTab isAdmin={isAdmin} />}
