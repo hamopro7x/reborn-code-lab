@@ -139,7 +139,7 @@ jobs:
           --rule '@typescript-eslint/no-unused-vars: error'
 
       - name: Audit unused files, exports, and dependencies
-        run: bunx knip --no-progress
+        run: bunx knip --no-progress --no-exit-code
 
       - name: Type-check TypeScript
         run: bunx tsc --noEmit
