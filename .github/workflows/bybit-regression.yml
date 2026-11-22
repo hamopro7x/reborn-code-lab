@@ -38,6 +38,8 @@ jobs:
           src/lib/bybit-convert.functions.ts
           src/lib/bybit-ledger-sync.server.ts
           src/lib/bybit-ledger-write.server.ts
+          src/lib/bybit-ledger-compare.ts
+          src/lib/bybit-ledger-compare.test.ts
           src/lib/bybit-ledger.functions.ts
           src/lib/bybit-overview.server.ts
           src/lib/bybit-read.functions.ts
