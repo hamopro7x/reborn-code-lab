@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { supabase } from "@/integrations/supabase/client";
+
 import {
   deleteProduct,
   getProductImageUrl,
@@ -26,7 +26,7 @@ import {
   saveProduct,
 } from "@/lib/products.functions";
 import { ensureSlug } from "@/lib/slug";
-import { listAdminProducts } from "@/lib/products.queries";
+import { listAdminProducts, uploadProductImage } from "@/lib/products.queries";
 import { listAdminCategories } from "@/lib/categories.queries";
 
 type ProductDraft = {
@@ -140,9 +140,7 @@ export function ProductsTab() {
     try {
       const contentType = file.type || "image/png";
       const { path, token } = await prepareUpload({ data: { contentType, size: file.size } });
-      const { error } = await supabase.storage
-        .from("product-images")
-        .uploadToSignedUrl(path, token, file, { contentType });
+      const { error } = await uploadProductImage(path, token, file, contentType);
       if (error) throw new Error(`[product-images.upload] ${error.message}`);
       const { url } = await getImageUrl({ data: { path } });
       setEditing((previous) => (previous ? { ...previous, main_image: url } : previous));
