@@ -5,6 +5,7 @@ on:
     branches:
       - refactor/orders-customers-products
       - refactor/employee-shifts-transfers
+      - fix/employee-transfer-note-scope
   pull_request:
     branches:
       - main
