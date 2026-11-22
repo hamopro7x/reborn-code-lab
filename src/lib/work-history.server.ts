@@ -15,7 +15,8 @@ import { transfersByAssignment } from "./work-transfers.server";
 
 const P2P_KINDS = ["p2p_buy", "p2p_sell"];
 
-export async function shiftHistory(userId: string, limit = 100, archivedOnly = false) {\n  void limit; // retained for compatibility with older callers.
+export async function shiftHistory(userId: string, limit = 100, archivedOnly = false) {
+  void limit; // retained for compatibility with older callers.
   const db = await admin();
   const readShifts = (columns: string, filterArchived: boolean) => {
     let q = db.from("work_shifts").select(columns)
