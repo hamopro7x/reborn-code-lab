@@ -3,8 +3,8 @@ import { bytesToB64 } from "./mime-encoding";
 
 const utf8 = (s: string) => new TextEncoder().encode(s);
 const b64Utf8 = (s: string) => bytesToB64(utf8(s));
-const encHeader = (v: string) => (/^[\\x20-\\x7E]*$/.test(v) ? v : `=?UTF-8?B?${b64Utf8(v)}?=`);
-const clean = (v: string) => v.replace(/[\\r\\n]+/g, " ").trim();
+const encHeader = (v: string) => (/^[\x20-\x7E]*$/.test(v) ? v : `=?UTF-8?B?${b64Utf8(v)}?=`);
+const clean = (v: string) => v.replace(/[\r\n]+/g, " ").trim();
 
 export interface OutgoingMail {
   from: string;
@@ -24,7 +24,7 @@ export function buildRawMessage(m: OutgoingMail): string {
   lines.push(`Subject: ${encHeader(clean(m.subject))}`, "MIME-Version: 1.0");
   if (m.inReplyTo) lines.push(`In-Reply-To: ${clean(m.inReplyTo)}`);
   if (m.references || m.inReplyTo) lines.push(`References: ${clean([m.references, m.inReplyTo].filter(Boolean).join(" "))}`);
-  const bodyB64 = (b64Utf8(m.body).match(/.{1,76}/g) ?? [""]).join("\\r\\n");
+  const bodyB64 = (b64Utf8(m.body).match(/.{1,76}/g) ?? [""]).join("\r\n");
   if (!m.attachments?.length) {
     lines.push('Content-Type: text/plain; charset="UTF-8"', "Content-Transfer-Encoding: base64", "", bodyB64);
   } else {
@@ -35,9 +35,9 @@ export function buildRawMessage(m: OutgoingMail): string {
       const name = encHeader(clean(a.filename));
       lines.push(`--${boundary}`, `Content-Type: ${clean(a.mimeType || "application/octet-stream")}; name="${name}"`,
         `Content-Disposition: attachment; filename="${name}"`, "Content-Transfer-Encoding: base64", "",
-        (a.base64.match(/.{1,76}/g) ?? []).join("\\r\\n"));
+        (a.base64.match(/.{1,76}/g) ?? []).join("\r\n"));
     }
     lines.push(`--${boundary}--`);
   }
-  return b64Utf8(lines.join("\\r\\n")).replace(/\\+/g, "-").replace(/\\//g, "_").replace(/=+$/, "");
+  return b64Utf8(lines.join("\r\n")).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
