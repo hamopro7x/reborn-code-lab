@@ -92,7 +92,6 @@ async function changedLedgerRows(db: any, rows: LedgerInsert[]): Promise<LedgerI
     const existing = new Map((data ?? []).map((r: any) => [key(r), r]));
     for (const row of slice) {
       const prev = existing.get(key(row)) as any;
-      const d = ((row as any).detail ?? {}) as Record<string, unknown>;
       // Archive projections already incorporate immutable admin/provider evidence.
       // Never reintroduce a legacy ledger-only sticky guess here.
       if (
@@ -193,7 +192,8 @@ export function cardLedgerRow(accountId: string, c: any): LedgerInsert {
   const status: string = t.status === "review" ? "review" : reversed ? "reversed" : t.status;
   const isRefund = status === "refund";
   const src = (t.detail ?? {}) as Record<string, any>;
-  const { raw: _raw, ...original } = src;
+  const original = { ...src };
+  delete original.raw;
   // Fee comes straight from the source account's own fee field (totalFees).
   const rawSrc = (src["raw"] ?? {}) as Record<string, any>;
   const feeRaw =
