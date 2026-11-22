@@ -19,6 +19,6 @@ export async function requireAdmin(ctx: any) {
   if ((await roleOf(ctx.supabase, ctx.userId)) !== "admin") throw new Error("هذا الإجراء للأدمن فقط");
 }
 export async function log(db: any, row: any) {
-  const { logActivity } = await import("@/lib/mail/sync.server");
+  const { logActivity } = await import("@/lib/mail/activity.server");
   await logActivity(db, row);
 }
