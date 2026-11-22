@@ -84,8 +84,9 @@ async function changedLedgerRows(db: any, rows: LedgerInsert[]): Promise<LedgerI
         slice.map((r) => r.ref_id),
       );
     if (error) {
-      out.push(...slice);
-      continue;
+      // A failed comparison read is not evidence that every row changed.
+      // Fail this account's sync instead of risking a blind overwrite.
+      throw new Error(`تعذر مقارنة سجل Bybit قبل التحديث: ${error.message}`);
     }
     const existing = new Map((data ?? []).map((r: any) => [key(r), r]));
     for (const row of slice) {
