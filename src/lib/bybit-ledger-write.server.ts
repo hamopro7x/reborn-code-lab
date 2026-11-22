@@ -7,7 +7,7 @@ import { cardRowKey, mapCardTxn, mapStoredRow, sanitize } from "./bybit-card-map
 import { brandFromNumber } from "./bybit-cards.server";
 import type { BybitCard } from "./bybit-cards.server";
 import type { CardTxn } from "./bybit-card-mapper";
-import { sameStoredValue, detailText } from "./bybit-card-sync.server";
+import { sameStoredValue, detailText } from "./bybit-value-helpers";
 import type { Creds, BybitAccount } from "./bybit-account.server";
 import { BYBIT_BASE_URL as BASE, BYBIT_RECV_WINDOW as RECV, num, sleep } from "./bybit-runtime";
 import {
