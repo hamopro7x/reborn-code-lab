@@ -99,7 +99,7 @@ export async function saveTransferNote(userId: string, ledgerId: string, note: s
   if (!text) return { ok: false as const, error: "اكتب قيمة أولًا" };
   const { data: led } = await db
     .from("bybit_ledger")
-    .select("kind,status,occurred_at")
+    .select("kind,status")
     .eq("id", ledgerId)
     .maybeSingle();
   if (!led || String((led as any).kind) !== "withdraw") {
