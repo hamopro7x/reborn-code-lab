@@ -18,6 +18,10 @@ describe("Gmail request schemas", () => {
     });
   });
 
+  it("rejects unsupported mailbox views", () => {
+    expect(() => listInput.parse({ view: "unknown" })).toThrow();
+  });
+
   it("enforces the message search length limit", () => {
     expect(() => listInput.parse({ search: "x".repeat(201) })).toThrow();
   });
