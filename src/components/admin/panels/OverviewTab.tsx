@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Bell, Check, DollarSign, Loader2, Package, Repeat, ShoppingCart, TrendingUp, Users } from "lucide-react";
 
-export function OverviewTab() {
+export function OverviewTab({ readOnly = false }: { readOnly?: boolean }) {
   const qc = useQueryClient();
   const stats = useQuery({
     queryKey: ["admin-stats"],
@@ -81,7 +81,7 @@ export function OverviewTab() {
                 {n.body && <div className="text-xs text-muted-foreground mt-0.5">{n.body}</div>}
                 <div className="text-[10px] text-muted-foreground mt-1">{formatLocaleDateTime(n.created_at, "ar-EG")}</div>
               </div>
-              {!n.read_at && (
+              {!readOnly && !n.read_at && (
                 <Button size="sm" variant="ghost" onClick={() => markRead(n.id)}><Check className="size-4" /></Button>
               )}
             </div>
