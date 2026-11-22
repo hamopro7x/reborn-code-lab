@@ -88,6 +88,7 @@ jobs:
           src/lib/mail/google-oauth.server.ts
           src/lib/mail/google-token.server.ts
           src/lib/mail/gmail-api.server.ts
+          src/lib/mail/google-oauth.test.ts
           src/components/admin/panels/OverviewTab.tsx
           src/components/admin/panels/CustomersTab.tsx
           src/components/admin/panels/ReviewsTab.tsx
