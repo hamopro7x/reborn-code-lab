@@ -9,12 +9,12 @@ const decodeRaw = (raw: string) => new TextDecoder().decode(b64urlToBytes(raw));
 describe("isolated MIME modules", () => {
   it("round-trips UTF-8 bytes through the encoding module", () => {
     const bytes = new TextEncoder().encode("MG Pro مرحباً");
-    const encoded = bytesToB64(bytes).replace(/\\+/g, "-").replace(/\\//g, "_").replace(/=+$/, "");
+    const encoded = bytesToB64(bytes).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
     expect(new TextDecoder().decode(b64urlToBytes(encoded))).toBe("MG Pro مرحباً");
   });
 
   it("parses plain-text payloads and classifies Gmail labels", () => {
-    const data = bytesToB64(new TextEncoder().encode("hello")).replace(/\\+/g, "-").replace(/\\//g, "_").replace(/=+$/, "");
+    const data = bytesToB64(new TextEncoder().encode("hello")).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
     expect(parsePayload({ mimeType: "text/plain", body: { data } }).text).toBe("hello");
     expect(folderFromLabels(["INBOX", "SPAM"])).toBe("spam");
   });
