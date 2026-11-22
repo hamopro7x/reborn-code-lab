@@ -16,7 +16,7 @@ export const listMailAccounts = createServerFn({ method: "GET" }).middleware([re
 export const startMailLink = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).handler(async ({ context }) => {
   await requireAdmin(context);
   const { randomToken, oauthStateKey, pkcePair, MAIL_OAUTH_COOKIE } = await import("@/lib/mail/crypto.server");
-  const { authUrl } = await import("@/lib/mail/google.server");
+  const { authUrl } = await import("@/lib/mail/google-oauth.server");
   const { setCookie } = await import("@tanstack/react-start/server");
   const db = await adminDb();
   const state = randomToken(32);
@@ -50,7 +50,7 @@ export const deleteMailAccount = createServerFn({ method: "POST" }).middleware([
     await db.from("mail_accounts").update({ status: "paused" }).eq("id", data.id);
     try {
       const { decryptSecret } = await import("@/lib/mail/crypto.server");
-      const { revokeToken } = await import("@/lib/mail/google.server");
+      const { revokeToken } = await import("@/lib/mail/google-oauth.server");
       const { data: s } = await db.from("mail_account_secrets").select("refresh_token_ciphertext").eq("account_id", data.id).maybeSingle();
       if (s) await revokeToken(await decryptSecret(s.refresh_token_ciphertext));
     } catch { /* token revocation is best-effort; account cleanup continues. */ }
@@ -69,10 +69,3 @@ export const syncMailNow = createServerFn({ method: "POST" }).middleware([requir
     return syncAllMail(await adminDb(), data.accountId);
   });
 
-export const listInput = z.object({
-  view: z.enum(["inbox", "sent", "drafts", "archive", "starred", "spam", "trash", "label", "all"]).default("inbox"),
-  accountId: z.string().uuid().optional(),
-  labelId: z.string().uuid().optional(),
-  search: z.string().max(200).optional(),
-  before: z.string().max(40).optional(),
-});

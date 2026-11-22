@@ -1,9 +1,12 @@
 name: Refactor validation
 
 on:
+  push:
+    branches:
+      - refactor/gmail-sync-modules
   pull_request:
     branches:
-      - main
+      - refactor/modular-architecture
   workflow_dispatch:
 
 permissions:
@@ -77,16 +80,62 @@ jobs:
           src/lib/courses-device.functions.ts
           src/lib/courses-access.functions.ts
           src/lib/mail/access.server.ts
+          src/lib/mail/mail.schemas.ts
+          src/lib/mail/mail.schemas.test.ts
+          src/routes/api/public/mail-oauth/callback.ts
+          src/lib/mail/activity.server.ts
+          src/lib/mail/mime-encoding.ts
+          src/lib/mail/mime-parse.ts
+          src/lib/mail/mime-compose.ts
+          src/lib/mail/mime-sanitize.ts
+          src/lib/mail/mime.test.ts
+          src/lib/mail/mime-modules.test.ts
           src/lib/mail-core.functions.ts
           src/lib/mail-read.functions.ts
           src/lib/mail-compose.functions.ts
           src/lib/mail-notifications.functions.ts
+          src/lib/mail/sync-import.server.ts
+          src/lib/mail/sync-recovery.server.ts
+          src/lib/mail/sync-orchestrator.server.ts
+          src/lib/mail/sync-orchestrator.test.ts
+          src/lib/mail/sync-recovery.test.ts
+          src/lib/mail/google-oauth.server.ts
+          src/lib/mail/google-token.server.ts
+          src/lib/mail/gmail-api.server.ts
+          src/lib/mail/google-oauth.test.ts
           src/components/admin/panels/OverviewTab.tsx
           src/components/admin/panels/CustomersTab.tsx
           src/components/admin/panels/ReviewsTab.tsx
           src/components/admin/panels/OrdersTab.tsx
           --rule 'prettier/prettier: off'
           --rule '@typescript-eslint/no-explicit-any: off'
+
+      - name: Check unused declarations in isolated modules
+        run: >-
+          bunx eslint
+          src/lib/mail/access.server.ts
+          src/lib/mail/activity.server.ts
+          src/lib/mail/gmail-api.server.ts
+          src/lib/mail/google-oauth.server.ts
+          src/lib/mail/google-token.server.ts
+          src/lib/mail/google.server.ts
+          src/lib/mail/mail.schemas.ts
+          src/lib/mail/mime-compose.ts
+          src/lib/mail/mime-encoding.ts
+          src/lib/mail/mime-parse.ts
+          src/lib/mail/mime-sanitize.ts
+          src/lib/mail/mime.ts
+          src/lib/mail/sync-import.server.ts
+          src/lib/mail/sync-orchestrator.server.ts
+          src/lib/mail/sync-recovery.server.ts
+          src/lib/mail/sync.server.ts
+          src/lib/mail-core.functions.ts
+          src/lib/mail-read.functions.ts
+          src/lib/mail-compose.functions.ts
+          src/lib/mail-notifications.functions.ts
+          --rule 'prettier/prettier: off'
+          --rule '@typescript-eslint/no-explicit-any: off'
+          --rule '@typescript-eslint/no-unused-vars: error'
 
       - name: Type-check TypeScript
         run: bunx tsc --noEmit

@@ -1,6 +1,3 @@
-import { createServerFn } from "@tanstack/react-start";
-import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export type Role = "admin" | "employee";
 
@@ -19,6 +16,6 @@ export async function requireAdmin(ctx: any) {
   if ((await roleOf(ctx.supabase, ctx.userId)) !== "admin") throw new Error("هذا الإجراء للأدمن فقط");
 }
 export async function log(db: any, row: any) {
-  const { logActivity } = await import("@/lib/mail/sync.server");
+  const { logActivity } = await import("@/lib/mail/activity.server");
   await logActivity(db, row);
 }

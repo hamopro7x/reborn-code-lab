@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { adminDb, log, requireAdmin, roleOf } from "./mail/access.server";
-import { listInput } from "./mail-core.functions";
+import { listInput } from "./mail/mail.schemas";
 
 const LIST_COLS = "id, account_id, gmail_thread_id, folder, from_addr, to_addr, subject, snippet, internal_date, has_attachments, is_read, starred, archived, trashed_at, label_ids, sender_logo_url";
 
@@ -134,19 +134,10 @@ export const downloadMailAttachment = createServerFn({ method: "POST" }).middlew
     const db = await adminDb();
     const { data: a } = await db.from("mail_attachments").select("filename, mime_type, gmail_attachment_id, mail_messages!inner(account_id, gmail_message_id)").eq("id", data.id).maybeSingle();
     if (!a) throw new Error("المرفق غير موجود");
-    const { accessTokenFor, gmail } = await import("@/lib/mail/google.server");
+    const { accessTokenFor } = await import("@/lib/mail/google-token.server");
+    const { gmail } = await import("@/lib/mail/gmail-api.server");
     const m: any = (a as any).mail_messages;
     const r = await gmail(await accessTokenFor(db, m.account_id), `/messages/${m.gmail_message_id}/attachments/${a.gmail_attachment_id}`);
     return { filename: a.filename, mimeType: a.mime_type || "application/octet-stream", base64: String(r.data).replace(/-/g, "+").replace(/_/g, "/") };
   });
 
-export const sendInput = z.object({
-  accountId: z.string().uuid(),
-  to: z.string().trim().min(3).max(2000),
-  cc: z.string().max(2000).optional().default(""),
-  subject: z.string().max(500).default(""),
-  body: z.string().max(200_000).default(""),
-  replyToId: z.string().uuid().optional(),
-  draftId: z.string().uuid().optional(),
-  attachments: z.array(z.object({ filename: z.string().max(200), mimeType: z.string().max(120), base64: z.string() })).max(10).optional(),
-});
