@@ -12,7 +12,7 @@ export const getBybitLedger = createServerFn({ method: "POST" })
     pageSize: Math.min(Math.max(Number(input?.pageSize ?? 50) || 50, 10), 200),
   }))
   .handler(async ({ data, context }) => {
-    const role = await assertAccess(context.supabase, context.userId);
+    await assertAccess(context.supabase, context.userId);
     // Reads enforce the effective cycle themselves. Cleanup runs in the deep
     // sync; never block a visible page on destructive maintenance work.
     const mod = await import("./bybit.server");
