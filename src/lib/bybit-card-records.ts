@@ -2,6 +2,14 @@ import { SETTLEMENT_COPY_SIDES } from "./bybit-settlement";
 import { cardRowKey } from "./bybit-card-mapper";
 import { isExplicitReversal } from "./bybit-spend";
 
+export const CARD_QUERY_TYPES = [
+  "SIDE_QUERY_AUTH",
+  "SIDE_QUERY_AUTH_ALL",
+  "SIDE_QUERY_FINANCIAL_ALL",
+  "SIDE_QUERY_FINANCIAL_REFUND",
+  "SIDE_QUERY_AUTH_REVERSAL",
+];
+
 /** How final a raw record's state is: a later sync never downgrades a reversal. */
 export function cardRecordRank(t: any): number {
   if (isExplicitReversal(t?.tradeStatus ?? t?.status, t?.side)) return 3;
@@ -40,7 +48,7 @@ export function preferRecord(
 /** Merge successful query types without losing rows from a partially rejected query. */
 export function mergeCardTypeResults(
   results: PromiseSettledResult<any>[],
-  types: readonly string[],
+  types: readonly string[] = CARD_QUERY_TYPES,
   warn: (msg: string) => void = (m) => console.warn(m),
 ): any[] {
   const merged = new Map<string, { row: any; sourcePriority: number; updatedAt: number }>();
