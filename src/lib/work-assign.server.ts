@@ -22,23 +22,25 @@ export function isCardSettlement(r: { kind?: string; detail?: any }): boolean {
 export async function autoAssignLedger(db: any): Promise<number> {
   // More than one open shift used to make this query error out (maybeSingle),
   // which silently stopped every transaction from reaching the shift sheet.
-  const { data: shifts } = await db
+  const { data: shifts, error: shiftsError } = await db
     .from("work_shifts")
     .select("id,user_id,started_at")
     .is("ended_at", null)
     .order("started_at", { ascending: false })
     .limit(1);
+  if (shiftsError) throw new Error(shiftsError.message);
   const shift = shifts?.[0];
   if (!shift) return 0;
 
 
-  const { data: fetched } = await db
+  const { data: fetched, error: fetchedError } = await db
     .from("bybit_ledger")
     .select("id,kind,occurred_at,detail")
     .not("kind", "in", `(${P2P_KINDS.join(",")})`)
     .gte("occurred_at", shift.started_at)
     .order("occurred_at", { ascending: false })
     .limit(5000);
+  if (fetchedError) throw new Error(fetchedError.message);
   // Bybit's daily clearing posts settlements (side 3) for purchases that were
   // authorised earlier, often in a previous shift. They are not new purchases,
   // so they must never land in the currently open shift.
@@ -63,9 +65,10 @@ export async function autoAssignLedger(db: any): Promise<number> {
   for (let i = 0; i < payload.length; i += 500) {
     const { error } = await db
       .from("work_txn_assignments")
-      .upsert(payload.slice(i, i + 500), { onConflict: "ledger_id", ignoreDuplicates: true });
-    if (error) console.error("work auto-assign failed:", error.message);
-    else saved += Math.min(500, payload.length - i);
+      .upsert(payload.slice(i, i + 500), { onConflict: "ledger_id", ignoreDuplicates: true })
+      .select("ledger_id");
+    if (error) throw new Error(error.message);
+    saved += (data ?? []).length;
   }
   if (saved > 0) {
     const { enforceRetentionSafe } = await import("./retention.server");
