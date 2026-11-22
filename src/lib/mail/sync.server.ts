@@ -211,7 +211,8 @@ async function reconcileSample(admin: any, token: string, accountId: string, dea
   if (!count) return;
   const SIZE = 15;
   const offset = (Math.floor(Date.now() / 60_000) * SIZE) % count;
-  const { data } = await admin.from("mail_messages").select("gmail_message_id").eq("account_id", accountId).order("id").range(offset, offset + SIZE - 1);
+  const { data, error: sampleError } = await admin.from("mail_messages").select("gmail_message_id").eq("account_id", accountId).order("id").range(offset, offset + SIZE - 1);
+  if (sampleError) throw new Error(sampleError.message);
   const gone: string[] = [];
   for (const m of data ?? []) {
     if (Date.now() > deadline) break;
