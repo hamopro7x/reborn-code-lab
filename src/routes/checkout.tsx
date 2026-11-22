@@ -146,9 +146,22 @@ function CheckoutPage() {
 
   async function uploadScreenshot() {
     if (!screenshotFile || !orderCode) return;
+    const allowedTypes: Record<string, string> = {
+      "image/jpeg": "jpg",
+      "image/png": "png",
+      "image/webp": "webp",
+    };
+    const ext = allowedTypes[screenshotFile.type];
+    if (!ext) {
+      toast.error("صيغة الإثبات يجب أن تكون JPG أو PNG أو WebP");
+      return;
+    }
+    if (screenshotFile.size > 5 * 1024 * 1024) {
+      toast.error("حجم صورة الإثبات يجب ألا يتجاوز 5 ميجابايت");
+      return;
+    }
     setUploading(true);
     try {
-      const ext = (screenshotFile.name.split(".").pop() || "png").toLowerCase().replace(/[^a-z0-9]/g, "") || "png";
       const { path, token } = await signUploadFn({ data: { order_code: orderCode, ext } });
       const { error: upErr } = await supabase.storage
         .from("payment-screenshots")
@@ -374,7 +387,7 @@ function CheckoutPage() {
             <h2>ارفع صورة إثبات التحويل</h2>
             <p>تم إنشاء طلبك بكود: <b>{orderCode}</b></p>
             <label className="checkout-upload-zone">
-              <input type="file" accept="image/*" onChange={(e) => setScreenshotFile(e.target.files?.[0] ?? null)} className="hidden" />
+              <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => setScreenshotFile(e.target.files?.[0] ?? null)} className="hidden" />
                 {screenshotFile ? (
                   <>
                     <CheckCircle2 />
