@@ -117,7 +117,12 @@ export const createPublicOrder = createServerFn({ method: "POST" })
     }));
     const { error: itemsErr } = await supabaseAdmin.from("order_items").insert(rows);
     if (itemsErr) {
-      await supabaseAdmin.from("orders").delete().eq("id", order.id);
+      const { error: rollbackError } = await supabaseAdmin.from("orders").delete().eq("id", order.id);
+      if (rollbackError) {
+        // Preserve evidence of a partially-created order; never hide failed cleanup.
+        console.error("Public order rollback failed:", order.id, rollbackError.code ?? "database_error");
+        throw new Error("تعذر حفظ عناصر الطلب وفشل تنظيف الطلب الجزئي. يرجى التواصل مع الدعم.");
+      }
       throw new Error("Failed to create order items");
     }
 
