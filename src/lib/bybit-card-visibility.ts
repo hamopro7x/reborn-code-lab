@@ -10,5 +10,10 @@ export function cardsVisibleTo(
 ): BybitCard[] {
   if (role === "admin") return [...cards];
 
-  return cards.map(({ fullNumber: _fullNumber, cvv: _cvv, expiry: _expiry, ...safe }) => safe);
+  return cards.map(({ fullNumber: _fullNumber, cvv: _cvv, expiry: _expiry, ...safe }) => {
+    void _fullNumber;
+    void _cvv;
+    void _expiry;
+    return safe;
+  });
 }
