@@ -5,10 +5,8 @@ import { fetchP2P, fetchOnChain, fetchInternal } from "./bybit-assets.server";
 import type { AssetRow } from "./bybit-assets.server";
 import { mapStoredRow, sanitize } from "./bybit-card-mapper";
 
-import type { BybitCard } from "./bybit-cards.server";
 import type { CardTxn } from "./bybit-card-mapper";
 import { sameStoredValue, detailText } from "./bybit-card-sync.server";
-import type { Creds, BybitAccount } from "./bybit-account.server";
 import { num } from "./bybit-runtime";
 import { cardRecordOutcome, isCardReversalEvent, cryptoSoldOf, cardLinkIds, findLinkedReversals } from "./bybit-spend";
 import { currentBybitCycle } from "./monthly-cycle.server";
