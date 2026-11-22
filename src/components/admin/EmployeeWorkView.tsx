@@ -74,10 +74,6 @@ const GLOW_IDLE =
 /* ------------------------- P2P orders table (طلبات P2P) -------------------------
  * Same look as the approved reference: blue pill header row, buy/sell toggle,
  * dark rows with green side + gold owner link. Presentation only. */
-const AR_MONTHS = [
-  "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
-  "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر",
-];
 const AR_DAYS = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
 
 /** توقيت موحّد (القاهرة) بأرقام لاتينية حتى تتطابق شاشة الموظف مع الأدمن. */
@@ -143,7 +139,6 @@ export function EmployeeWorkView({
   const txnsFn = useServerFn(getMyShiftTxns);
   const empTxnsFn = useServerFn(getEmployeeShiftTxns);
   const shiftTxnsFn = useServerFn(getShiftTxns);
-  const shiftTransfersFn = useServerFn(getShiftTransfers);
   const shiftP2PFn = useServerFn(getShiftP2P);
   const brandsFn = useServerFn(getBybitCardBrands);
   const myP2PFn = useServerFn(getMyShiftP2P);
