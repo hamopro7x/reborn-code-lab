@@ -49,19 +49,22 @@ export async function syncAccountLedger(accountId: string): Promise<number> {
 
 /** Runs the ledger sync for every linked account. */
 
-export async function syncAllLedger(): Promise<{ saved: number; accounts: number }> {
+export async function syncAllLedger(): Promise<{ saved: number; accounts: number; failedAccounts: string[] }> {
   // Shared, sequential and rate-limited for the same reason as syncAllCardTxns.
   return heavyOnce("ledger:all", 8_000, async () => {
     const accounts = await listAccounts();
     let saved = 0;
+    const failedAccounts: string[] = [];
     for (const a of accounts) {
       try {
         saved += await syncAccountLedger(a.id);
-      } catch {
-        /* حساب واحد يفشل لا يوقف الباقي */
+      } catch (error) {
+        // Continue other accounts, but never hide a partial synchronization failure.
+        failedAccounts.push(a.id);
+        console.error("Bybit ledger sync failed for account:", a.id, (error as Error)?.message ?? "unknown_error");
       }
     }
-    return { saved, accounts: accounts.length };
+    return { saved, accounts: accounts.length, failedAccounts };
   });
 }
 
