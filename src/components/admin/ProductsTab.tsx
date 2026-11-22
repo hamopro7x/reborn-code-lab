@@ -26,6 +26,8 @@ import {
   saveProduct,
 } from "@/lib/products.functions";
 import { ensureSlug } from "@/lib/slug";
+import { listAdminProducts } from "@/lib/products.queries";
+import { listAdminCategories } from "@/lib/categories.queries";
 
 type ProductDraft = {
   id?: string;
@@ -58,11 +60,11 @@ export function ProductsTab() {
   const productsQuery = useQuery({
     queryKey: ["admin-products"],
     queryFn: async () =>
-      (await supabase.from("products").select("*, category:categories(name,icon)").order("sort_order")).data ?? [],
+      listAdminProducts(),
   });
   const categoriesQuery = useQuery({
     queryKey: ["admin-cats"],
-    queryFn: async () => (await supabase.from("categories").select("*").order("sort_order")).data ?? [],
+    queryFn: async () => listAdminCategories(),
   });
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<ProductDraft | null>(null);
