@@ -146,9 +146,10 @@ export const downloadMailAttachment = createServerFn({ method: "POST" }).middlew
   .handler(async ({ data, context }) => {
     await roleOf(context.supabase, context.userId);
     const db = await adminDb();
-    const { data: a, error } = await db.from("mail_attachments").select("filename, mime_type, gmail_attachment_id, mail_messages!inner(account_id, gmail_message_id)").eq("id", data.id).maybeSingle();
+    const { data: a, error } = await db.from("mail_attachments").select("filename, mime_type, size_bytes, gmail_attachment_id, mail_messages!inner(account_id, gmail_message_id)").eq("id", data.id).maybeSingle();
     if (error) throw new Error(error.message);
     if (!a) throw new Error("المرفق غير موجود");
+    if (Number(a.size_bytes ?? 0) > 20 * 1024 * 1024) throw new Error("حجم المرفق يتجاوز الحد المسموح للتنزيل");
     const { accessTokenFor, gmail } = await import("@/lib/mail/google.server");
     const m: any = (a as any).mail_messages;
     const r = await gmail(await accessTokenFor(db, m.account_id), `/messages/${m.gmail_message_id}/attachments/${a.gmail_attachment_id}`);
