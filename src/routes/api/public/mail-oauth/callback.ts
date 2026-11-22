@@ -22,7 +22,8 @@ export const Route = createFileRoute("/api/public/mail-oauth/callback")({
         if (!state || !code || state.length > 200 || code.length > 2000) return page(false, "طلب غير صالح");
 
         const { encryptSecret, oauthStateKey, pkcePair, MAIL_OAUTH_COOKIE } = await import("@/lib/mail/crypto.server");
-        const { exchangeCode, verifiedIdentity, GMAIL_SCOPES, gmail, revokeToken } = await import("@/lib/mail/google.server");
+        const { exchangeCode, verifiedIdentity, GMAIL_SCOPES, revokeToken } = await import("@/lib/mail/google-oauth.server");
+        const { gmail } = await import("@/lib/mail/gmail-api.server");
         const { logActivity } = await import("@/lib/mail/sync.server");
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const admin: any = supabaseAdmin;
