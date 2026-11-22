@@ -50,7 +50,7 @@ export const deleteMailAccount = createServerFn({ method: "POST" }).middleware([
     await db.from("mail_accounts").update({ status: "paused" }).eq("id", data.id);
     try {
       const { decryptSecret } = await import("@/lib/mail/crypto.server");
-      const { revokeToken } = await import("@/lib/mail/google.server");
+      const { revokeToken } = await import("@/lib/mail/google-oauth.server");
       const { data: s } = await db.from("mail_account_secrets").select("refresh_token_ciphertext").eq("account_id", data.id).maybeSingle();
       if (s) await revokeToken(await decryptSecret(s.refresh_token_ciphertext));
     } catch { /* token revocation is best-effort; account cleanup continues. */ }
