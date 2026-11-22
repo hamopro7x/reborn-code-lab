@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { uploadEmployeeAvatar } from "@/lib/employee-avatar.client";
+import { uploadEmployeeAvatar } from "@/lib/employee-avatar";
 import { formatLocaleDateTime } from "@/lib/format";
 import { createEmployee, deleteEmployee, listEmployees, updateEmployeeAvatar, updateEmployee } from "@/lib/admin.functions";
 import { toast } from "sonner";
