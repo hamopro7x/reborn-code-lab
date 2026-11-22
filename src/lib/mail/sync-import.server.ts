@@ -4,10 +4,6 @@ import { extractLogoUrl, folderFromLabels, header, parsePayload } from "./mime";
 
 export const RUN_BUDGET_MS = 55_000;
 
-export async function logActivity(admin: any, row: { actor_id?: string | null; action: string; account_id?: string | null; message_id?: string | null; meta?: any }) {
-  await admin.from("mail_activity").insert({ meta: {}, ...row });
-}
-
 /** Fetches one Gmail message and stores it locally (idempotent). Returns new local id or null. */
 export async function importMessage(admin: any, token: string, account: any, gmailId: string, notify = true): Promise<string | null> {
   const { data: tomb } = await admin.from("mail_local_tombstones").select("gmail_message_id").eq("account_id", account.id).eq("gmail_message_id", gmailId).maybeSingle();
