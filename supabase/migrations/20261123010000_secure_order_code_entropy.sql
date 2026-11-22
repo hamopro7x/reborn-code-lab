@@ -2,6 +2,9 @@
 -- newly created codes use 128 bits from the cryptographic random generator.
 BEGIN;
 
+CREATE SCHEMA IF NOT EXISTS extensions;
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
+
 CREATE OR REPLACE FUNCTION public.gen_order_code()
 RETURNS TEXT
 LANGUAGE plpgsql
