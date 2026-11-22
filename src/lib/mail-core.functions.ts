@@ -35,7 +35,8 @@ export const setMailAccountPaused = createServerFn({ method: "POST" }).middlewar
   .handler(async ({ data, context }) => {
     await requireAdmin(context);
     const db = await adminDb();
-    await db.from("mail_accounts").update({ status: data.paused ? "paused" : "active", updated_at: new Date().toISOString() }).eq("id", data.id);
+    const { error: updateError } = await db.from("mail_accounts").update({ status: data.paused ? "paused" : "active", updated_at: new Date().toISOString() }).eq("id", data.id);
+    if (updateError) throw new Error(updateError.message);
     await log(db, { actor_id: context.userId, action: data.paused ? "account_paused" : "account_resumed", account_id: data.id });
     return { ok: true };
   });
@@ -45,9 +46,11 @@ export const deleteMailAccount = createServerFn({ method: "POST" }).middleware([
   .handler(async ({ data, context }) => {
     await requireAdmin(context);
     const db = await adminDb();
-    const { data: acc } = await db.from("mail_accounts").select("email").eq("id", data.id).maybeSingle();
+    const { data: acc, error: accountError } = await db.from("mail_accounts").select("email").eq("id", data.id).maybeSingle();
+    if (accountError) throw new Error(accountError.message);
     if (!acc) return { ok: true };
-    await db.from("mail_accounts").update({ status: "paused" }).eq("id", data.id);
+    const { error: pauseError } = await db.from("mail_accounts").update({ status: "paused" }).eq("id", data.id);
+    if (pauseError) throw new Error(pauseError.message);
     try {
       const { decryptSecret } = await import("@/lib/mail/crypto.server");
       const { revokeToken } = await import("@/lib/mail/google.server");
