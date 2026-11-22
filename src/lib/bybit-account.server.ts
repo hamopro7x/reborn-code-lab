@@ -107,14 +107,11 @@ export async function reorderAccounts(ids: string[]) {
 
 
 async function accountCreds(accountId: string): Promise<Creds | null> {
-  try {
-    const db = await admin();
-    const { data } = await db.rpc("bybit_account_get_keys", { p_account_id: accountId });
-    const row = Array.isArray(data) ? data[0] : data;
-    if (row?.api_key && row?.api_secret) return { key: row.api_key, secret: row.api_secret };
-  } catch {
-    /* ignore */
-  }
+  const db = await admin();
+  const { data, error } = await db.rpc("bybit_account_get_keys", { p_account_id: accountId });
+  if (error) throw new Error(`تعذر قراءة مفاتيح حساب Bybit: ${error.message}`);
+  const row = Array.isArray(data) ? data[0] : data;
+  if (row?.api_key && row?.api_secret) return { key: row.api_key, secret: row.api_secret };
   return null;
 }
 
@@ -184,14 +181,11 @@ export async function deleteAccount(accountId: string) {
 }
 
 async function dbCreds(): Promise<Creds | null> {
-  try {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data } = await (supabaseAdmin as any).rpc("integration_get_bybit");
-    const row = Array.isArray(data) ? data[0] : data;
-    if (row?.api_key && row?.api_secret) return { key: row.api_key, secret: row.api_secret };
-  } catch {
-    /* fall back to env */
-  }
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data, error } = await (supabaseAdmin as any).rpc("integration_get_bybit");
+  if (error) throw new Error(`تعذر قراءة مفاتيح Bybit المحفوظة: ${error.message}`);
+  const row = Array.isArray(data) ? data[0] : data;
+  if (row?.api_key && row?.api_secret) return { key: row.api_key, secret: row.api_secret };
   return null;
 }
 
