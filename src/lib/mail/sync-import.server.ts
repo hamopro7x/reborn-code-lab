@@ -1,6 +1,7 @@
 // Idempotent Gmail message import and local persistence helpers.
 import { gmail, GmailHttpError } from "./google.server";
-import { extractLogoUrl, folderFromLabels, header, parsePayload } from "./mime";
+import { folderFromLabels, header, parsePayload } from "./mime-parse";
+import { extractLogoUrl } from "./mime-sanitize";
 
 export const RUN_BUDGET_MS = 55_000;
 
