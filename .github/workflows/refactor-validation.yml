@@ -92,8 +92,8 @@ jobs:
           src/components/admin/panels/CategoriesTab.tsx
           src/routes/index.tsx
           src/routes/shop.tsx
-          src/routes/category.$slug.tsx
-          src/routes/product.$slug.tsx
+          'src/routes/category.$slug.tsx'
+          'src/routes/product.$slug.tsx'
           src/components/admin/ProductsTab.tsx
           src/lib/courses-access.server.ts
           src/lib/courses-device.functions.ts
