@@ -133,6 +133,7 @@ jobs:
           src/components/admin/panels/OrdersTab.tsx
           --rule 'prettier/prettier: off'
           --rule '@typescript-eslint/no-explicit-any: off'
+          --rule '@typescript-eslint/no-unused-vars: error'
 
       - name: Type-check TypeScript
         run: bunx tsc --noEmit
