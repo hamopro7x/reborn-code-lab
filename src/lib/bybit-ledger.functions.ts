@@ -39,7 +39,7 @@ export const syncBybitLedger = createServerFn({ method: "POST" })
 export const getBybitSpendTotals = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await assertAccess(context.supabase, context.userId);
+    await assertAdmin(context.supabase, context.userId);
     const mod = await import("./bybit.server");
     return mod.computeSpendAllAccounts();
   });
