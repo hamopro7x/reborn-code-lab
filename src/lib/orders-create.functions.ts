@@ -14,7 +14,6 @@ const createOrderSchema = z.object({
   dial_code: z.string().min(1).max(10),
   currency_code: z.string().min(2).max(6),
   payment_method_id: z.string().uuid(),
-  device_id: z.string().trim().min(4).max(128).optional(),
   items: z.array(orderItemSchema).min(1).max(50),
 });
 
@@ -103,7 +102,6 @@ export const createPublicOrder = createServerFn({ method: "POST" })
         total,
         payment_method_id: data.payment_method_id,
         status: "pending_payment",
-        device_id: data.device_id ?? null,
       })
       .select("id, order_code")
       .single();
