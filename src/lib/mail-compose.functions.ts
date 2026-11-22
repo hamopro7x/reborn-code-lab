@@ -22,7 +22,7 @@ export const sendMail = createServerFn({ method: "POST" }).middleware([requireSu
       references = orig.rfc_references || undefined;
       if (!subject) subject = /^re:/i.test(orig.subject ?? "") ? orig.subject : `Re: ${orig.subject ?? ""}`;
     }
-    const { buildRawMessage } = await import("@/lib/mail/mime");
+    const { buildRawMessage } = await import("@/lib/mail/mime-compose");
     const { accessTokenFor, gmail } = await import("@/lib/mail/google.server");
     const { importMessage } = await import("@/lib/mail/sync.server");
     const raw = buildRawMessage({ from: acc.display_name ? `${acc.display_name} <${acc.email}>` : acc.email, to: data.to, cc: data.cc, subject, body: data.body, inReplyTo, references, attachments: data.attachments });
