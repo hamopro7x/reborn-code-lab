@@ -154,7 +154,12 @@ export const downloadMailAttachment = createServerFn({ method: "POST" }).middlew
     const { accessTokenFor, gmail } = await import("@/lib/mail/google.server");
     const m: any = (a as any).mail_messages;
     const r = await gmail(await accessTokenFor(db, m.account_id), `/messages/${m.gmail_message_id}/attachments/${a.gmail_attachment_id}`);
-    return { filename: a.filename, mimeType: a.mime_type || "application/octet-stream", base64: String(r.data).replace(/-/g, "+").replace(/_/g, "/") };
+    const encoded = String(r?.data ?? "");
+    const normalized = encoded.replace(/-/g, "+").replace(/_/g, "/");
+    const padding = normalized.endsWith("==") ? 2 : normalized.endsWith("=") ? 1 : 0;
+    const decodedSize = Math.max(0, Math.floor(normalized.length * 3 / 4) - padding);
+    if (decodedSize > 20 * 1024 * 1024) throw new Error("حجم المرفق الفعلي يتجاوز الحد المسموح للتنزيل");
+    return { filename: a.filename, mimeType: a.mime_type || "application/octet-stream", base64: normalized };
   });
 
 export const sendInput = z.object({
