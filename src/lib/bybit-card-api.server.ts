@@ -26,15 +26,8 @@ import { cardCache, cardInflight } from "./bybit-cache.server";
 
 export const CARD_PATH = "/v5/card/transaction/query-asset-records";
 
-export const CARD_QUERY_TYPES = [
-  "SIDE_QUERY_AUTH",
-  "SIDE_QUERY_AUTH_ALL",
-  "SIDE_QUERY_FINANCIAL_ALL",
-  "SIDE_QUERY_FINANCIAL_REFUND",
-  "SIDE_QUERY_AUTH_REVERSAL",
-];
-
 export {
+  CARD_QUERY_TYPES,
   cardRecordRank,
   isUnsupportedCardTypeError,
   mergeCardTypeResults,
