@@ -1,5 +1,5 @@
 // Cursor recovery and bounded source-to-local reconciliation.
-import { gmail, GmailHttpError } from "./google.server";
+import { gmail, GmailHttpError } from "./gmail-api.server";
 import { importIds, removeLocal, RUN_BUDGET_MS } from "./sync-import.server";
 
 /**
