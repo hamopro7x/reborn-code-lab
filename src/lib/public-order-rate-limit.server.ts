@@ -9,7 +9,7 @@ export async function enforcePublicOrderRateLimit(action: string, limit: number,
     throw new Error("تعذر التحقق من مصدر الطلب. حاول مرة أخرى لاحقًا.");
   }
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data, error } = await supabaseAdmin.rpc("consume_public_rate_limit", {
+  const { data, error } = await (supabaseAdmin as any).rpc("consume_public_rate_limit", {
     p_bucket: `public-order:${action}:${clientIp}`,
     p_limit: limit,
     p_window_seconds: windowSeconds,
