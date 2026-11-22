@@ -206,7 +206,8 @@ export function reconcileDue(lastSyncAt: string | null | undefined, now = Date.n
 
 /** Bounded safety net for source deletions history might miss: checks a rotating slice each minute. */
 async function reconcileSample(admin: any, token: string, accountId: string, deadline: number) {
-  const { count } = await admin.from("mail_messages").select("id", { count: "exact", head: true }).eq("account_id", accountId);
+  const { count, error: countError } = await admin.from("mail_messages").select("id", { count: "exact", head: true }).eq("account_id", accountId);
+  if (countError) throw new Error(countError.message);
   if (!count) return;
   const SIZE = 15;
   const offset = (Math.floor(Date.now() / 60_000) * SIZE) % count;
