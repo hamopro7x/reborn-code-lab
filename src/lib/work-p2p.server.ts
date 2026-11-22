@@ -12,15 +12,17 @@ const P2P_KINDS = ["p2p_buy", "p2p_sell"];
 
 export async function pendingP2P(limit = 100) {
   const db = await admin();
-  const { data: assigned } = await db.from("work_txn_assignments").select("ledger_id").in("kind", P2P_KINDS);
+  const { data: assigned, error: assignedError } = await db.from("work_txn_assignments").select("ledger_id").in("kind", P2P_KINDS);
+  if (assignedError) throw new Error("تعذر التحقق من طلبات P2P المرتبطة.");
   const taken = new Set((assigned ?? []).map((a: any) => a.ledger_id));
 
-  const { data } = await db
+  const { data, error: ledgerError } = await db
     .from("bybit_ledger")
     .select("*")
     .in("kind", P2P_KINDS)
     .order("occurred_at", { ascending: false })
     .limit(Math.min(Math.max(limit, 1), 300));
+  if (ledgerError) throw new Error("تعذر تحميل طلبات P2P المعلقة.");
 
   const accounts = await accountNames(db);
   return (data ?? [])
@@ -49,11 +51,12 @@ export async function completedP2P(limit = 200, viewerId?: string, isAdmin = fal
   const db = await admin();
 
   // Only orders that happened after the admin reset point are shown to employees.
-  const { data: setting } = await db
+  const { data: setting, error: settingError } = await db
     .from("site_settings")
     .select("value")
     .eq("key", "p2p_orders_cutoff")
     .maybeSingle();
+  if (settingError) throw new Error("تعذر قراءة إعدادات طلبات P2P.");
   const cutoff = typeof (setting as any)?.value === "string" ? String((setting as any).value) : null;
 
   const max = Math.min(Math.max(limit, 1), 500);
@@ -118,7 +121,8 @@ export async function completedP2P(limit = 200, viewerId?: string, isAdmin = fal
 
 export async function staffList() {
   const db = await admin();
-  const { data: roles } = await db.from("user_roles").select("user_id,role").in("role", ["admin", "employee"]);
+  const { data: roles, error } = await db.from("user_roles").select("user_id,role").in("role", ["admin", "employee"]);
+  if (error) throw new Error("تعذر تحميل قائمة الموظفين.");
   const ids = [...new Set((roles ?? []).map((r: any) => r.user_id))];
   const names = await namesFor(db, ids);
   return ids
@@ -310,12 +314,13 @@ export async function p2pOrderLinks(ledgerId: string, viewerId?: string) {
 
 export async function myShiftP2P(userId: string) {
   const db = await admin();
-  const { data } = await db
+  const { data, error } = await db
     .from("work_shifts")
     .select("id")
     .eq("user_id", userId)
     .is("ended_at", null)
     .maybeSingle();
+  if (error) throw new Error("تعذر التحقق من الشفت الحالي.");
   if (!data) return [];
   return shiftP2P(data.id as string, userId);
 }
