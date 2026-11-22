@@ -1,7 +1,7 @@
 // Bybit account metadata and read-access helpers.
 import { normalizeBybitError } from "./bybit-errors";
 import { admin } from "./bybit-db.server";
-import { bybitConfigured, saveCreds } from "./bybit-credentials.server";
+import { bybitConfigured } from "./bybit-credentials.server";
 import { call, testCreds } from "./bybit-client.server";
 
 export type BybitAccount = {
