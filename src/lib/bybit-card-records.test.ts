@@ -16,6 +16,7 @@ describe("Bybit card record helpers", () => {
 
   it("distinguishes unsupported query types from transient/auth errors", () => {
     expect(isUnsupportedCardTypeError(new Error("Bybit 10017: unsupported"))).toBe(true);
+    expect(isUnsupportedCardTypeError(new Error("Bybit 10001: params error"))).toBe(true);
     expect(isUnsupportedCardTypeError(new Error("Bybit 10006: rate limited"))).toBe(false);
     expect(isUnsupportedCardTypeError(new Error("network timeout"))).toBe(false);
   });
