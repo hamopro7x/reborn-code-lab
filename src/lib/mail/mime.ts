@@ -146,7 +146,7 @@ export function safeEmailDocument(html: string): string {
       .replace(/(href|src)\s*=\s*(["']?)\s*javascript:[^\s>]*/gi, "$1=$2#");
   }
   const csp = "default-src 'none'; img-src data: cid: https:; style-src 'unsafe-inline'; font-src data:";
-  return \`<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="\${csp}"><style>body{font-family:system-ui,sans-serif;color:#111;background:#fff;margin:12px;word-wrap:break-word}img{max-width:100%;height:auto}</style></head><body>\${safeBody}</body></html>\`;
+  return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${csp}"><style>body{font-family:system-ui,sans-serif;color:#111;background:#fff;margin:12px;word-wrap:break-word}img{max-width:100%;height:auto}</style></head><body>${safeBody}</body></html>`;
 }
 
 /** Best-effort sender logo URL from email HTML: prefers logo-looking urls, skips tracking pixels, https only. */
