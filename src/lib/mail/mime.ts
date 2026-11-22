@@ -139,11 +139,14 @@ export function safeEmailDocument(html: string): string {
     visit(parsed.body);
     safeBody = parsed.body.innerHTML;
   } else {
-    safeBody = String(html ?? "")
-      .replace(/<(script|style|svg|math|iframe|object|embed|form|template)[\s\S]*?<\/\1\s*>/gi, "")
-      .replace(/<(iframe|object|embed|form|meta|link|base|svg|math)\b[^>]*\/?\s*>/gi, "")
-      .replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "")
-      .replace(/(href|src)\s*=\s*(["']?)\s*javascript:[^\s>]*/gi, "$1=$2#");
+    // Regex is not a safe HTML parser. In runtimes without DOMParser (for example SSR),
+    // render the original message as text rather than risk passing active markup through.
+    safeBody = String(html ?? "").replace(/[&<>"]/g, (char) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+    })[char] ?? char);
   }
   const csp = "default-src 'none'; img-src data: cid: https:; style-src 'unsafe-inline'; font-src data:";
   return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${csp}"><style>body{font-family:system-ui,sans-serif;color:#111;background:#fff;margin:12px;word-wrap:break-word}img{max-width:100%;height:auto}</style></head><body>${safeBody}</body></html>`;
