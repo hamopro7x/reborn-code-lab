@@ -19,7 +19,7 @@ function databaseOperationError(operation: string, error: { message: string; cod
 }
 
 function assertProductPath(path: string) {
-  if (!/^products\/[\w.\-]+$/.test(path)) throw new Error("Invalid product image path");
+  if (!/^products\/[\w.-]+$/.test(path)) throw new Error("Invalid product image path");
 }
 
 const productUploadSchema = z.object({
