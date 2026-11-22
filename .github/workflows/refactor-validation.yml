@@ -86,6 +86,13 @@ jobs:
           src/lib/customer-summary.server.ts
           src/lib/customer-summary.server.test.ts
           src/lib/read-pages.server.ts
+          src/lib/products.queries.ts
+          src/lib/categories.queries.ts
+          src/components/admin/panels/CategoriesTab.tsx
+          src/routes/index.tsx
+          src/routes/shop.tsx
+          src/routes/category.$slug.tsx
+          src/routes/product.$slug.tsx
           src/components/admin/ProductsTab.tsx
           src/lib/courses-access.server.ts
           src/lib/courses-device.functions.ts
