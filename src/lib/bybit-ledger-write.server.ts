@@ -4,7 +4,6 @@ import { fetchP2P, fetchOnChain, fetchInternal } from "./bybit-assets.server";
 import type { AssetRow } from "./bybit-assets.server";
 import { mapStoredRow, sanitize } from "./bybit-card-mapper";
 import type { CardTxn } from "./bybit-card-mapper";
-import { sameStoredValue, detailText } from "./bybit-value-helpers";
 import { num } from "./bybit-runtime";
 import {
   sumSpend,
@@ -27,6 +26,7 @@ import {
 } from "./bybit-spend";
 import { currentBybitCycle } from "./monthly-cycle.server";
 import { cardConfirmed } from "./bybit-confirmation";
+import { isLedgerRowChanged } from "./bybit-ledger-compare";
 
 export type LedgerRow = {
   id: string;
@@ -68,20 +68,6 @@ export type LedgerInsert = {
 
 const iso = (ms: number) => new Date(ms > 0 ? ms : Date.now()).toISOString();
 
-/** الأعمدة التي تحدّد «هل تغيّر صف السجل فعلًا؟». */
-
-const LEDGER_COMPARE = [
-  "direction",
-  "title",
-  "amount",
-  "currency",
-  "fee",
-  "status",
-  "occurred_at",
-] as const;
-
-/** يرجّع صفوف السجل الجديدة أو المتغيّرة فقط (نفس منطق معاملات الكروت). */
-
 async function changedLedgerRows(db: any, rows: LedgerInsert[]): Promise<LedgerInsert[]> {
   const out: LedgerInsert[] = [];
   const key = (r: { account_id: string | null; kind: string; ref_id: string }) =>
@@ -105,18 +91,9 @@ async function changedLedgerRows(db: any, rows: LedgerInsert[]): Promise<LedgerI
     const existing = new Map((data ?? []).map((r: any) => [key(r), r]));
     for (const row of slice) {
       const prev = existing.get(key(row)) as any;
-      const d = ((row as any).detail ?? {}) as Record<string, unknown>;
       // Archive projections already incorporate immutable admin/provider evidence.
       // Never reintroduce a legacy ledger-only sticky guess here.
-      if (
-        !prev ||
-        LEDGER_COMPARE.some((k) => !sameStoredValue(prev[k], (row as any)[k])) ||
-        (["tradeStatus", "side", "linkedReversal"] as const).some(
-          (k) => !sameStoredValue(prev[k], detailText(((row as any).detail ?? {})[k])),
-        )
-      ) {
-        out.push(row);
-      }
+      if (isLedgerRowChanged(prev, row as any)) out.push(row);
     }
   }
   return out;
