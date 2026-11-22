@@ -106,6 +106,7 @@ export function safeEmailDocument(html: string): string {
       for (const el of Array.from(root.children)) {
         if (dropWithContent.has(el.tagName)) { el.remove(); continue; }
         if (!allowed.has(el.tagName)) {
+          visit(el);
           el.replaceWith(...Array.from(el.childNodes));
           continue;
         }
