@@ -38,7 +38,7 @@ describe("Bybit card record helpers", () => {
     ] as PromiseSettledResult<any>[], ["AUTH", "REFUND", "FINANCIAL"], warn);
     expect(rows).toHaveLength(1);
     expect(rows[0].tradeStatus).toBe("2");
-    expect(warn).toHaveBeenCalledOnce();
+    expect(warn).toHaveBeenCalledTimes(1);
   });
 
   it("throws only when all query types fail", () => {
