@@ -15,13 +15,8 @@ import { SafeImage } from "@/components/site/SafeImage";
 export const Route = createFileRoute("/product/$slug")({
   component: ProductPage,
   loader: async ({ params }) => {
-    const { data } = await supabase
-      .from("products")
-      .select("*, category:categories(id,slug,name,icon)")
-      .eq("slug", params.slug)
-      .eq("active", true)
-      .maybeSingle();
-    return { product: data };
+    const product = await getActiveProductBySlug(params.slug);
+    return { product };
   },
   head: ({ params, loaderData }) => {
     const p = loaderData?.product as any;
