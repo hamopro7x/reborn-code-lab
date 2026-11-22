@@ -1,6 +1,9 @@
 name: Refactor validation
 
 on:
+  push:
+    branches:
+      - refactor/orders-customers-products
   pull_request:
     branches:
       - main
