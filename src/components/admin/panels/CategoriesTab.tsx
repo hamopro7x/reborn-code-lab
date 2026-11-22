@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { prepareCategoryImageUpload, getCategoryImageUrl, saveCategory, deleteCategory } from "@/lib/categories.functions";
 import { ensureSlug } from "@/lib/slug";
+import { listAdminCategories } from "@/lib/categories.queries";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -13,7 +14,7 @@ import { Edit, Plus, Trash2 } from "lucide-react";
 
 export function CategoriesTab() {
   const qc = useQueryClient();
-  const catsQ = useQuery({ queryKey: ["admin-categories"], queryFn: async () => (await supabase.from("categories").select("*").order("sort_order")).data ?? [] });
+  const catsQ = useQuery({ queryKey: ["admin-categories"], queryFn: async () => listAdminCategories() });
   const [editing, setEditing] = useState<any>(null);
   const [open, setOpen] = useState(false);
 
