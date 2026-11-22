@@ -1,11 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { assertAccess, assertAdmin, requiredId, validateApiCreds } from "./bybit-access";
+import { assertAdmin, requiredId, validateApiCreds } from "./bybit-access";
 
 export const listBybitAccounts = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await assertAccess(context.supabase, context.userId);
+    await assertAdmin(context.supabase, context.userId);
     const mod = await import("./bybit.server");
     return { accounts: await mod.listAccounts() };
   });
