@@ -72,6 +72,7 @@ jobs:
           src/lib/work.server.ts
           src/lib/admin-access.server.ts
           src/lib/admin-employees.functions.ts
+          src/lib/admin.functions.ts
           src/lib/admin-operations.functions.ts
           src/lib/admin-customers.functions.ts
           src/lib/admin-orders.functions.ts
