@@ -63,7 +63,7 @@ export async function autoAssignLedger(db: any): Promise<number> {
 
   let saved = 0;
   for (let i = 0; i < payload.length; i += 500) {
-    const { error } = await db
+    const { data, error } = await db
       .from("work_txn_assignments")
       .upsert(payload.slice(i, i + 500), { onConflict: "ledger_id", ignoreDuplicates: true })
       .select("ledger_id");
