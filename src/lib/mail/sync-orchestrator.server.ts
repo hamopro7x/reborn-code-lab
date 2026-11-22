@@ -6,6 +6,10 @@ import { recoverExpiredCursor, reconcileDue, reconcileSample } from "./sync-reco
 
 const LEASE_MS = 90_000;
 
+export function syncLeaseUntil(lockTime: Date): string {
+  return new Date(lockTime.getTime() + LEASE_MS).toISOString();
+}
+
 async function syncAccount(admin: any, account: any) {
   const deadline = Date.now() + RUN_BUDGET_MS;
   const token = await accessTokenFor(admin, account.id);
@@ -69,7 +73,7 @@ export async function syncAllMail(admin: any, onlyAccountId?: string) {
     // Start each account's lease from its own lock attempt, not the batch start time.
     const lockNow = new Date();
     const { data: locked } = await admin.from("mail_accounts")
-      .update({ sync_lease_until: new Date(lockNow.getTime() + LEASE_MS).toISOString() })
+      .update({ sync_lease_until: syncLeaseUntil(lockNow) })
       .eq("id", acc.id)
       .or(`sync_lease_until.is.null,sync_lease_until.lt.${lockNow.toISOString()}`)
       .select("id").maybeSingle();
