@@ -11,6 +11,8 @@ on:
   pull_request:
     branches:
       - main
+      - refactor/orders-customers-products
+      - refactor/employee-shifts-transfers
       - refactor/role-specific-interfaces
   workflow_dispatch:
 
