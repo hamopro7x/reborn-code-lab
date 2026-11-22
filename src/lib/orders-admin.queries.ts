@@ -7,7 +7,8 @@ export async function listAdminOrders(filter: string, search: string) {
     .select("*, items:order_items(*), payment_method:payment_methods(name)")
     .order("created_at", { ascending: false });
   if (!search.trim() && filter !== "all") query = query.eq("status", filter as any);
-  const { data } = await query;
+  const { data, error } = await query;
+  if (error) throw new Error("تعذر تحميل الطلبات. حاول مرة أخرى.");
   return data ?? [];
 }
 
