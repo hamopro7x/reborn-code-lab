@@ -9,6 +9,7 @@ on:
   pull_request:
     branches:
       - main
+      - refactor/employee-shifts-transfers
   workflow_dispatch:
 
 permissions:
