@@ -73,3 +73,10 @@ export async function listActiveProductsByCategorySlug(slug: string) {
     .order("sort_order");
   return data ?? [];
 }
+
+/** Uploads a product image with a server-issued Storage upload token. */
+export async function uploadProductImage(path: string, token: string, file: File, contentType: string) {
+  return supabase.storage
+    .from("product-images")
+    .uploadToSignedUrl(path, token, file, { contentType });
+}
