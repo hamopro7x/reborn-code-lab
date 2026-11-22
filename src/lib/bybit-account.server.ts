@@ -35,26 +35,37 @@ export async function listAccounts(): Promise<BybitAccount[]> {
   let data = first.data;
   const listError = first.error;
   if (listError && (String(listError.code) === "42703" || /provider/i.test(String(listError.message ?? "")))) {
-    ({ data } = await db
+    const fallback = await db
       .from("bybit_accounts")
       .select(cols)
       .order("sort_order", { ascending: true })
-      .order("created_at", { ascending: true }));
+      .order("created_at", { ascending: true });
+    if (fallback.error) throw new Error(fallback.error.message);
+    data = fallback.data;
+  } else if (listError) {
+    throw new Error(listError.message);
   }
   // `frozen` is read separately so the list still works before the column exists.
   const frozenIds = new Map<string, string | null>();
   try {
     const { data: fz, error } = await db.from("bybit_accounts").select("id, frozen, frozen_until").eq("frozen", true);
+    if (error && !(/frozen|frozen_until/i.test(String(error.message ?? "")) || String(error.code) === "42703")) {
+      throw new Error(error.message);
+    }
     if (!error) {
       const expired: string[] = [];
       for (const r of (fz ?? []) as any[]) {
         if (r.frozen_until && new Date(r.frozen_until).getTime() <= Date.now()) expired.push(r.id);
         else frozenIds.set(r.id, r.frozen_until ?? null);
       }
-      if (expired.length) await db.from("bybit_accounts").update({ frozen: false, frozen_until: null } as any).in("id", expired);
+      if (expired.length) {
+        const { error: expireError } = await db.from("bybit_accounts").update({ frozen: false, frozen_until: null } as any).in("id", expired);
+        if (expireError) throw new Error(expireError.message);
+      }
     }
-  } catch {
-    /* column not applied yet */
+  } catch (error) {
+    if (!(error instanceof Error) || !/frozen|frozen_until|42703/i.test(error.message)) throw error;
+    /* frozen columns not applied yet */
   }
   return (data ?? []).map((r: any) => ({
     frozen: frozenIds.has(r.id),
