@@ -170,5 +170,10 @@ export const sendInput = z.object({
   body: z.string().max(200_000).default(""),
   replyToId: z.string().uuid().optional(),
   draftId: z.string().uuid().optional(),
-  attachments: z.array(z.object({ filename: z.string().max(200), mimeType: z.string().max(120), base64: z.string() })).max(10).optional(),
+  attachments: z.array(z.object({
+    filename: z.string().max(200),
+    mimeType: z.string().max(120),
+    // Raw MIME body data must be canonical base64; CR/LF or boundary injection is rejected.
+    base64: z.string().min(4).max(28_000_000).regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/),
+  })).max(10).optional(),
 });
