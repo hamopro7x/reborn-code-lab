@@ -65,10 +65,16 @@ export async function persistCardTxns(rows: CardTxn[], accountId?: string, assig
     // The database owns first_seen, ordering, confirmation and reconciliation.
     // No legacy upsert fallback: missing migration must fail closed.
     const observed = payload.map((r) => ({ ...r, observed_at: r.detail?.observedAt }));
-    const { error } = await (supabaseAdmin as any).rpc("bybit_ingest_confirmed", {
-      p_account: accountId ?? null, p_rows: observed,
-    });
-    if (error) throw new Error(`confirmation ingest failed: ${error.message}`);
+    // The database RPC deliberately caps each atomic ingest at 500 rows.
+    // Keep the provider snapshot timestamp intact across chunks: the account
+    // fence allows equal timestamps, while each transaction's own observation
+    // timestamp prevents duplicate/stale rows from overwriting newer evidence.
+    for (let offset = 0; offset < observed.length; offset += 500) {
+      const { error } = await (supabaseAdmin as any).rpc("bybit_ingest_confirmed", {
+        p_account: accountId ?? null, p_rows: observed.slice(offset, offset + 500),
+      });
+      if (error) throw new Error(`confirmation ingest failed: ${error.message}`);
+    }
     if (accountId) {
       await mirrorStoredCardRows(supabaseAdmin, accountId, payload.map((r) => r.txn_id),
         (ledger) => upsertLedger(ledger, assign));
