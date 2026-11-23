@@ -1856,6 +1856,27 @@ export type Database = {
         }
         Relationships: []
       }
+      public_rate_limits: {
+        Row: {
+          bucket_hash: string
+          hits: number
+          updated_at: string
+          window_started_at: string
+        }
+        Insert: {
+          bucket_hash: string
+          hits: number
+          updated_at?: string
+          window_started_at: string
+        }
+        Update: {
+          bucket_hash?: string
+          hits?: number
+          updated_at?: string
+          window_started_at?: string
+        }
+        Relationships: []
+      }
       remote_access: {
         Row: {
           access_code: string | null
@@ -2961,6 +2982,10 @@ export type Database = {
       }
       bybit_trusted_manual: {
         Args: { a: Database["public"]["Tables"]["bybit_card_txns"]["Row"] }
+        Returns: boolean
+      }
+      consume_public_rate_limit: {
+        Args: { p_bucket: string; p_limit: number; p_window_seconds: number }
         Returns: boolean
       }
       gen_order_code: { Args: never; Returns: string }
