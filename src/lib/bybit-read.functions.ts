@@ -98,7 +98,7 @@ export const syncAllBybitCardTxns = createServerFn({ method: "POST" })
       // seconds; the full month walk is scheduled in the background.
       const recent = await mod.syncAllRecent();
       mod.runDeepSyncIfDue();
-      return { ok: true as const, added: recent.saved, accounts: recent.accounts, saved: recent.saved };
+      return { ok: true as const, added: recent.saved, accounts: recent.accounts, saved: recent.saved, failedAccounts: recent.failedAccounts };
     } catch (e) {
       const { code, message } = errs.normalizeBybitError(e);
       return { ok: false as const, added: 0, accounts: 0, saved: 0, error: message, errorCode: code };
