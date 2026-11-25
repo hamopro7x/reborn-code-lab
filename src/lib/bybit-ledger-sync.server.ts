@@ -91,18 +91,24 @@ function runRecentAssetSync(accounts: BybitAccount[]): void {
 
 /** Fast card sync; each account links its shift as soon as its own rows land. */
 
-export async function syncAllRecent(): Promise<{ saved: number; accounts: number }> {
+export async function syncAllRecent(): Promise<{ saved: number; accounts: number; failedAccounts: string[] }> {
   // Screens and the server loop all ask for this; one pass per 5 s per server
   // is as fresh as the 5 s loop and stops open screens from multiplying load.
   return heavyOnce("recent:all", 5_000, async () => {
     const accounts = await listAccounts();
     let saved = 0;
+    const failedAccounts: string[] = [];
     await mapLimit(accounts, 1, async (a) => {
-      if (!(await bybitConfigured(a.id))) return;
-      saved += await syncAccountRecent(a.id);
+      try {
+        if (!(await bybitConfigured(a.id))) return;
+        saved += await syncAccountRecent(a.id);
+      } catch (error) {
+        failedAccounts.push(a.id);
+        console.error("Bybit recent card sync failed for account:", a.id, (error as Error)?.message ?? "unknown_error");
+      }
     });
     runRecentAssetSync(accounts);
-    return { saved, accounts: accounts.length };
+    return { saved, accounts: accounts.length, failedAccounts };
   });
 }
 
@@ -197,8 +203,7 @@ export async function fetchLedgerPage(opts: {
       .or(CARD_READ_FILTER)
       .neq("status", "holding")
       .not("detail", "cs", '{"side":"2"}')
-      .not("detail", "cs", '{"side":2}');
-    if (opts.hideReversed) out = out.or("status.is.null,status.neq.reversed");
+      .not("detail", "cs", '{"side":2}');    if (opts.hideReversed) out = out.or("status.is.null,status.neq.reversed");
     if (g === "txns" && st === "review") out = out.eq("kind", "card").or(LEDGER_CARD_FILTERS.review.slice(3, -1));
     else if (g === "txns" && st === "refund") out = out.in("kind", ["card", "refund"]).or(LEDGER_CARD_FILTERS.refund.slice(3, -1));
     // Same groups as cardPurchasePresenter: ناجحة = everything not failed/reversed
