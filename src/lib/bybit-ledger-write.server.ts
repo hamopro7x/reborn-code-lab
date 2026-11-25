@@ -254,7 +254,8 @@ export async function mirrorStoredCardRows(
 
 export async function assetLedgerRows(accountId: string): Promise<LedgerInsert[]> {
   const rows: LedgerInsert[] = [];
-  const [onchain, internal, p2p] = await Promise.allSettled([
+  // A partial provider response must never be mirrored as a complete account sync.
+  const [onchain, internal, p2p] = await Promise.all([
     fetchOnChain(accountId),
     fetchInternal(accountId),
     fetchP2P(accountId),
@@ -277,16 +278,11 @@ export async function assetLedgerRows(accountId: string): Promise<LedgerInsert[]
       });
     }
   };
-  if (onchain.status === "fulfilled") {
-    pushAssets(onchain.value.deposits, "deposit");
-    pushAssets(onchain.value.withdrawals, "withdraw");
-  }
-  if (internal.status === "fulfilled") {
-    pushAssets(internal.value.deposits, "internal_in");
-    pushAssets(internal.value.withdrawals, "internal_out");
-  }
-  if (p2p.status === "fulfilled") {
-    for (const o of p2p.value) {
+  pushAssets(onchain.deposits, "deposit");
+  pushAssets(onchain.withdrawals, "withdraw");
+  pushAssets(internal.deposits, "internal_in");
+  pushAssets(internal.withdrawals, "internal_out");
+  for (const o of p2p) {
       if (!o.id) continue;
       rows.push({
         account_id: accountId,
@@ -301,7 +297,6 @@ export async function assetLedgerRows(accountId: string): Promise<LedgerInsert[]
         occurred_at: iso(o.time),
         detail: { fiatAmount: o.amount, fiat: o.fiat, price: o.price, counterparty: o.counterparty ?? null },
       });
-    }
   }
   return rows;
 }
