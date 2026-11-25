@@ -94,6 +94,43 @@ export const updateAdminOrderStatus = createServerFn({ method: "POST" })
   });
 
 
+
+const screenshotPathSchema = z.object({ path: z.string().min(1).max(500) });
+
+export const getOrderScreenshotUrl = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => screenshotPathSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    const role = await assertAccess(context.supabase, context.userId);
+    if (role !== "admin") {
+      const { data: setting, error } = await context.supabase
+        .from("site_settings")
+        .select("value")
+        .eq("key", "employee_panels")
+        .maybeSingle();
+      if (error) throw new Error("Forbidden");
+      const panels = (setting?.value as { panels?: unknown } | null)?.panels;
+      if (!Array.isArray(panels) || !panels.includes("orders")) throw new Error("Forbidden");
+    }
+
+    const path = data.path.includes("payment-screenshots/")
+      ? data.path.split("payment-screenshots/")[1]
+      : data.path;
+    if (!path || path.includes("..")) throw new Error("Invalid payment proof path");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: order, error: orderError } = await supabaseAdmin
+      .from("orders")
+      .select("id")
+      .eq("payment_screenshot", path)
+      .maybeSingle();
+    if (orderError || !order) throw new Error("Payment proof not found");
+    const { data: signed, error } = await supabaseAdmin.storage
+      .from("payment-screenshots")
+      .createSignedUrl(path, 300);
+    if (error || !signed?.signedUrl) throw new Error("تعذر فتح إثبات الدفع");
+    return signed.signedUrl;
+  });
+
 export const deleteAllOrders = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
