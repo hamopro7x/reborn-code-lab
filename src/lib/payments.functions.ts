@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { enforcePublicOrderRateLimit } from "./public-order-rate-limit.server";
 
 const listSchema = z.object({
   country_code: z.string().trim().min(2).max(4).optional(),
@@ -47,8 +48,9 @@ const detailSchema = z.object({ id: z.string().uuid() });
 export const getPublicPaymentDetails = createServerFn({ method: "POST" })
   .inputValidator((d) => detailSchema.parse(d))
   .handler(async ({ data }) => {
-    const supabase = await publicClient();
-    const { data: rows, error } = await supabase.rpc("payment_method_details", { p_id: data.id });
+    await enforcePublicOrderRateLimit("payment-details", 12, 60);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows, error } = await supabaseAdmin.rpc("payment_method_details", { p_id: data.id });
     if (error) throw new Error("Failed to load payment method");
     const row = Array.isArray(rows) ? rows[0] : rows;
     if (!row) throw new Error("Invalid payment method");
