@@ -11,7 +11,6 @@
  * - A transaction can only ever have one assignment (unique ledger_id).
  */
 const P2P_KINDS = ["p2p_buy", "p2p_sell"];
-import { SETTLEMENT_COPY_SIDES } from "./bybit-settlement";
 import { cardProjectionVisible } from "./bybit-confirmation";
 
 /** Compatibility predicate; documented side 3 and side 13 are real movements. */
