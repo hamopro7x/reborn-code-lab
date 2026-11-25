@@ -13,7 +13,7 @@ import { currentBybitCycle, currentBybitRows } from "./monthly-cycle.server";
 
 import { cardConfirmed, archivedCardReadable, legacyCardReadable } from "./bybit-confirmation";
 import { heavyOnce, cardCache, spendCache } from "./bybit-cache.server";
-import { callCard, callCardPage, mergeCardTypeResults, isUnsupportedCardTypeError, isLateSettlementRecord, CARD_QUERY_TYPES } from "./bybit-card-api.server";
+import { callCard, callCardPage, mergeCardTypeResults, isLateSettlementRecord, CARD_QUERY_TYPES } from "./bybit-card-api.server";
 import { upsertLedger, mirrorStoredCardRows, markHangVoided } from "./bybit-ledger-write.server";
 
 export function sameStoredValue(a: unknown, b: unknown): boolean {
@@ -448,8 +448,9 @@ export async function resumeCardFollowup() {
         (Number(result.totalCount) > 0 && page*100 >= Number(result.totalCount));
       if (exhausted) { type++; page=1; } else page++;
     } catch (e) {
-      if (!isUnsupportedCardTypeError(e)) throw e;
-      type++; page=1;
+      // Never advance past a failed card query: doing so would mark a partial
+      // confirmation scan as complete and could leave stale transaction states.
+      throw e;
     }
     if (type >= CARD_QUERY_TYPES.length) { index++; type=0; }
   }
