@@ -81,8 +81,9 @@ export const deleteEmployee = createServerFn({ method: "POST" })
       ["work_txn_entries", "user_id"],
       ["work_pins", "user_id"],
     ] as const;
+    const historyClient = supabaseAdmin as any;
     for (const [table, column] of retainedHistoryChecks) {
-      const { count, error: historyError } = await supabaseAdmin
+      const { count, error: historyError } = await historyClient
         .from(table)
         .select("id", { count: "exact", head: true })
         .eq(column, data.user_id);
