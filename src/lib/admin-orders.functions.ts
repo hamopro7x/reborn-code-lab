@@ -9,6 +9,39 @@ const updateOrderStatusSchema = z.object({
   status: z.enum(["confirmed", "completed", "cancelled", "rejected"]),
 });
 
+
+const listOrdersSchema = z.object({
+  filter: z.string().max(40),
+  search: z.string().max(200),
+});
+
+export const listAdminOrders = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => listOrdersSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    const role = await assertAccess(context.supabase, context.userId);
+    if (role !== "admin") {
+      const { data: setting, error } = await context.supabase
+        .from("site_settings")
+        .select("value")
+        .eq("key", "employee_panels")
+        .maybeSingle();
+      if (error) throw new Error("Forbidden");
+      const panels = (setting?.value as { panels?: unknown } | null)?.panels;
+      if (!Array.isArray(panels) || !panels.includes("orders")) throw new Error("Forbidden");
+    }
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    let query = supabaseAdmin
+      .from("orders")
+      .select("*, items:order_items(*), payment_method:payment_methods(name)")
+      .order("created_at", { ascending: false });
+    if (!data.search.trim() && data.filter !== "all") query = query.eq("status", data.filter);
+    const { data: rows, error } = await query;
+    if (error) throw new Error("تعذر تحميل الطلبات. حاول مرة أخرى.");
+    return rows ?? [];
+  });
+
 export const updateAdminOrderStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => updateOrderStatusSchema.parse(input))
