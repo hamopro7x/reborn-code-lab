@@ -12,14 +12,6 @@ export async function listAdminOrders(filter: string, search: string) {
   return data ?? [];
 }
 
-/** Update an order's status; confirmation time is recorded only on confirmation. */
-export async function updateAdminOrderStatus(id: string, status: string) {
-  const patch: any = { status };
-  if (status === "confirmed") patch.confirmed_at = new Date().toISOString();
-  const { error } = await supabase.from("orders").update(patch).eq("id", id);
-  return { error };
-}
-
 /** Resolve the private payment proof to a short-lived URL for the admin panel. */
 export async function getOrderScreenshotUrl(rawPath: string): Promise<string> {
   const path = rawPath.includes("payment-screenshots/")
