@@ -24,9 +24,9 @@ export const Route = createFileRoute("/api/public/hooks/mail-sync")({
         if (Date.now() - state.lastStart < MIN_GAP_MS) return json({ ok: true, skipped: "recent" });
         state.running = true;
         state.lastStart = Date.now();
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        const { syncAllMail } = await import("@/lib/mail/sync.server");
         try {
+          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+          const { syncAllMail } = await import("@/lib/mail/sync.server");
           const results = await syncAllMail(supabaseAdmin);
           return json({ ok: true, results });
         } catch (e: any) {
