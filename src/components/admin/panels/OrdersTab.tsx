@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { getOrderScreenshotUrl } from "@/lib/orders-admin.queries";
-import { listAdminOrders, updateAdminOrderStatus } from "@/lib/admin-orders.functions";
+
+import { getOrderScreenshotUrl, listAdminOrders, updateAdminOrderStatus } from "@/lib/admin-orders.functions";
 import { deleteAllOrders } from "@/lib/admin.functions";
 import { formatLocaleDateTime } from "@/lib/format";
 import { toast } from "sonner";
@@ -16,6 +16,7 @@ export function OrdersTab({ isAdmin }: { isAdmin: boolean }) {
   const deleteAllFn = useServerFn(deleteAllOrders);
   const updateOrderFn = useServerFn(updateAdminOrderStatus);
   const listOrdersFn = useServerFn(listAdminOrders);
+  const screenshotUrlFn = useServerFn(getOrderScreenshotUrl);
   const [deleting, setDeleting] = useState(false);
   const [filter, setFilter] = useState<string>("awaiting_confirmation");
   const [search, setSearch] = useState("");
@@ -132,7 +133,7 @@ export function OrdersTab({ isAdmin }: { isAdmin: boolean }) {
                     type="button"
                     onClick={async () => {
                       try {
-                        const signedUrl = await getOrderScreenshotUrl(o.payment_screenshot as string);
+                        const signedUrl = await screenshotUrlFn({ data: { path: o.payment_screenshot as string } });
                         window.open(signedUrl, "_blank", "noopener");
                       } catch {
                         toast.error("تعذر فتح الإثبات");
