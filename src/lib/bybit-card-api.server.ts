@@ -104,6 +104,10 @@ export function mergeCardTypeResults(
  * can be discarded as a presumed duplicate; canonical purchase identity is
  * responsible for collapsing genuine authorization/clearing copies.
  */
+/**
+ * Compatibility predicate: the provider's side values 3 (transaction) and
+ * 13 (ATM withdrawal) are real movements, not safe-to-drop duplicates.
+ */
 export function isLateSettlementRecord(_row: any): boolean {
   return false;
 }
