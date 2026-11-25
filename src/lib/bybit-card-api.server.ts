@@ -77,7 +77,8 @@ export function mergeCardTypeResults(
       if (preferRecord(current, r, typeIndex, updatedAt)) merged.set(k, { row: r, sourcePriority: typeIndex, updatedAt });
     }
   });
-  if (!ok && lastError) throw lastError;
+  if (lastError) throw lastError;
+  if (!ok) throw new Error("Bybit card history returned no successful query types");
   return [...merged.values()].map(({ row }) => row).filter((row) => !isLateSettlementRecord(row));
 }
 
@@ -202,10 +203,6 @@ export async function fetchCardPages(maxRows: number, creds: Creds, sinceMs?: nu
       successfulTypes++;
     } catch (error) {
       lastError = error;
-      if (isUnsupportedCardTypeError(error) && !typeSucceeded) {
-        console.warn(`bybit card type ${type} unsupported:`, (error as Error)?.message ?? error);
-        continue;
-      }
       throw error;
     }
     await sleep(400);
