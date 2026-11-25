@@ -46,16 +46,14 @@ const p2pStatus = (s: unknown) => {
 export async function fetchP2P(accountId?: string): Promise<P2PRow[]> {
   const creds = await getCreds(accountId);
   const out: P2PRow[] = [];
-  for (let page = 1; page <= 5; page++) {
-    let result: any;
-    try {
-      result = await call("POST", "/v5/p2p/order/simplifyList", { page, size: 30 }, creds);
-    } catch (e) {
-      if (page === 1) throw e;
-      break;
-    }
+  let expectedCount: number | null = null;
+  const maxPages = 100; // fail closed rather than silently truncating an unexpectedly large history
+  for (let page = 1; page <= maxPages; page++) {
+    const result: any = await call("POST", "/v5/p2p/order/simplifyList", { page, size: 30 }, creds);
     const items: any[] = result?.items ?? result?.result ?? [];
-    if (!Array.isArray(items) || items.length === 0) break;
+    if (!Array.isArray(items)) throw new Error("Bybit P2P returned an invalid page");
+    if (expectedCount === null && Number.isFinite(Number(result?.count))) expectedCount = Number(result.count);
+    if (items.length === 0) break;
     for (const it of items) {
       out.push({
         id: String(it.id ?? it.orderId ?? ""),
@@ -70,7 +68,11 @@ export async function fetchP2P(accountId?: string): Promise<P2PRow[]> {
         time: Number(it.createDate ?? it.createTime ?? 0),
       });
     }
-    if (items.length < 30) break;
+    if (items.length < 30 || (expectedCount !== null && page * 30 >= expectedCount)) break;
+    if (page === maxPages) throw new Error("Bybit P2P history exceeded the safe pagination limit; retry with a narrower date range");
+  }
+  if (expectedCount !== null && out.length < expectedCount) {
+    throw new Error(`Bybit P2P history incomplete: received ${out.length} of ${expectedCount} records`);
   }
   return currentBybitRows(out).sort((a, b) => b.time - a.time);
 }
@@ -83,14 +85,12 @@ const wdStatus = (s: unknown) => {
 
 export async function fetchOnChain(accountId?: string): Promise<{ deposits: AssetRow[]; withdrawals: AssetRow[] }> {
   const creds = await getCreds(accountId);
-  const [dep, wd] = await Promise.allSettled([
+  const [dep, wd] = await Promise.all([
     call("GET", "/v5/asset/deposit/query-record", { limit: 50 }, creds),
     call("GET", "/v5/asset/withdraw/query-record", { limit: 50, withdrawType: 0 }, creds),
   ]);
 
-  const deposits: AssetRow[] =
-    dep.status === "fulfilled"
-      ? (dep.value?.rows ?? []).map((d: any) => ({
+  const deposits: AssetRow[] = (dep?.rows ?? []).map((d: any) => ({
           id: String(d.txID ?? d.txId ?? d.successAt),
           coin: String(d.coin ?? ""),
           chain: String(d.chain ?? ""),
@@ -100,12 +100,9 @@ export async function fetchOnChain(accountId?: string): Promise<{ deposits: Asse
           time: Number(d.successAt ?? 0),
           address: String(d.toAddress ?? ""),
           direction: "in" as const,
-        }))
-      : [];
+        }));
 
-  const withdrawals: AssetRow[] =
-    wd.status === "fulfilled"
-      ? (wd.value?.rows ?? []).map((w: any) => ({
+  const withdrawals: AssetRow[] = (wd?.rows ?? []).map((w: any) => ({
           id: String(w.withdrawId ?? w.txID),
           coin: String(w.coin ?? ""),
           chain: String(w.chain ?? ""),
@@ -115,22 +112,19 @@ export async function fetchOnChain(accountId?: string): Promise<{ deposits: Asse
           time: Number(w.createTime ?? 0),
           address: String(w.toAddress ?? ""),
           direction: "out" as const,
-        }))
-      : [];
+        }));
 
   return { deposits: currentBybitRows(deposits), withdrawals: currentBybitRows(withdrawals) };
 }
 
 export async function fetchInternal(accountId?: string): Promise<{ deposits: AssetRow[]; withdrawals: AssetRow[] }> {
   const creds = await getCreds(accountId);
-  const [dep, wd] = await Promise.allSettled([
+  const [dep, wd] = await Promise.all([
     call("GET", "/v5/asset/deposit/query-internal-record", { limit: 50 }, creds),
     call("GET", "/v5/asset/withdraw/query-record", { limit: 50, withdrawType: 1 }, creds),
   ]);
 
-  const deposits: AssetRow[] =
-    dep.status === "fulfilled"
-      ? (dep.value?.rows ?? []).map((d: any) => ({
+  const deposits: AssetRow[] = (dep?.rows ?? []).map((d: any) => ({
           id: String(d.id ?? d.txID),
           coin: String(d.coin ?? ""),
           chain: "التحويل الداخلي",
@@ -140,12 +134,9 @@ export async function fetchInternal(accountId?: string): Promise<{ deposits: Ass
           time: Number(d.createdTime ?? 0),
           address: String(d.address ?? d.fromAddress ?? ""),
           direction: "in" as const,
-        }))
-      : [];
+        }));
 
-  const withdrawals: AssetRow[] =
-    wd.status === "fulfilled"
-      ? (wd.value?.rows ?? []).map((w: any) => ({
+  const withdrawals: AssetRow[] = (wd?.rows ?? []).map((w: any) => ({
           id: String(w.withdrawId ?? w.txID),
           coin: String(w.coin ?? ""),
           chain: "التحويل الداخلي",
@@ -155,8 +146,7 @@ export async function fetchInternal(accountId?: string): Promise<{ deposits: Ass
           time: Number(w.createTime ?? 0),
           address: String(w.toAddress ?? ""),
           direction: "out" as const,
-        }))
-      : [];
+        }));
 
   return { deposits: currentBybitRows(deposits), withdrawals: currentBybitRows(withdrawals) };
 }
