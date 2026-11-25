@@ -42,8 +42,15 @@ export function cardRecordRank(t: any): number {
 const TRANSIENT_OR_AUTH_CODES = new Set(["10002", "10003", "10004", "10005", "10006", "10016", "10018"]);
 
 export function isUnsupportedCardTypeError(err: unknown): boolean {
-  const m = /^Bybit (\d+):/.exec(String((err as Error)?.message ?? err ?? ""));
-  return Boolean(m && !TRANSIENT_OR_AUTH_CODES.has(m[1]));
+  const message = String((err as Error)?.message ?? err ?? "");
+  const m = /^Bybit (\d+):/.exec(message);
+  // A generic parameter error (10001) is not enough: only the provider's
+  // explicit unsupported/not-supported wording permits skipping an optional type.
+  return Boolean(
+    m &&
+    !TRANSIENT_OR_AUTH_CODES.has(m[1]) &&
+    /unsupported|not supported|not support|invalid query type/i.test(message),
+  );
 }
 
 /**
