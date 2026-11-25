@@ -1,4 +1,3 @@
-import { SETTLEMENT_COPY_FILTER } from "./bybit-settlement";
 import { mapLimit } from "./bybit-concurrency.server";
 
 import { admin, bybitConfigured, listAccounts } from "./bybit-account.server";
@@ -29,7 +28,7 @@ export async function syncAccountLedger(accountId: string): Promise<number> {
   const cursor = state?.value?.cycle === periodStart ? String(state.value.after ?? "") : "";
   let q = db.from("bybit_card_txns")
     .select("txn_id, created_at, confirmed_at, merchant, amount, currency, status, txn_time, pan4, txn_type, detail")
-    .eq("account_id", accountId).gte("txn_time", periodStart).lt("txn_time", periodEnd).or(SETTLEMENT_COPY_FILTER);
+    .eq("account_id", accountId).gte("txn_time", periodStart).lt("txn_time", periodEnd);
   if (cursor) q = q.gt("txn_id", cursor);
   const { data: cards, error: cardError } = await q.order("txn_id", { ascending: true }).limit(200);
   if (cardError) throw new Error(cardError.message);
