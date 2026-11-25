@@ -14,7 +14,7 @@ vi.mock("./bybit-spend", () => ({ isExplicitReversal: () => false }));
 vi.mock("./monthly-cycle.server", () => ({ currentBybitCycle: () => ({ periodStart: 0, periodEnd: Number.MAX_SAFE_INTEGER }) }));
 vi.mock("./bybit-cache.server", () => ({ cardCache: new Map(), cardInflight: new Map() }));
 
-import { fetchCardPages } from "./bybit-card-api.server";
+import { fetchCardPages, isLateSettlementRecord } from "./bybit-card-api.server";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -57,5 +57,13 @@ describe("Bybit card pagination completeness", () => {
     }));
     await expect(fetchCardPages(500, { key: "k", secret: "s" }, undefined, 100)).rejects.toThrow("time budget expired");
     expect(calls).toBe(1);
+  });
+});
+
+
+describe("Bybit documented movement types", () => {
+  it("does not classify side 3 transactions or side 13 ATM withdrawals as discardable duplicates", () => {
+    expect(isLateSettlementRecord({ side: "3" })).toBe(false);
+    expect(isLateSettlementRecord({ side: "13" })).toBe(false);
   });
 });
