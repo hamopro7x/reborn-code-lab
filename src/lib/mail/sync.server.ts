@@ -240,17 +240,19 @@ async function reconcileSample(admin: any, token: string, accountId: string, dea
 
 /** Sync every active account with a per-account lease so runs never overlap. */
 export async function syncAllMail(admin: any, onlyAccountId?: string) {
-  const now = new Date();
   let q = admin.from("mail_accounts").select("*").in("status", ["active", "error"]);
   if (onlyAccountId) q = q.eq("id", onlyAccountId);
   const { data: accounts, error } = await q;
   if (error) throw new Error(error.message);
   const results: { id: string; imported?: number; error?: string; skipped?: boolean }[] = [];
   for (const acc of accounts ?? []) {
+    // Compute the lease window immediately before claiming each account. A timestamp
+    // captured before the whole sequential loop can already be expired for later accounts.
+    const leaseNow = new Date();
     const { data: locked, error: leaseError } = await admin.from("mail_accounts")
-      .update({ sync_lease_until: new Date(now.getTime() + LEASE_MS).toISOString() })
+      .update({ sync_lease_until: new Date(leaseNow.getTime() + LEASE_MS).toISOString() })
       .eq("id", acc.id)
-      .or(`sync_lease_until.is.null,sync_lease_until.lt.${now.toISOString()}`)
+      .or(`sync_lease_until.is.null,sync_lease_until.lt.${leaseNow.toISOString()}`)
       .select("id").maybeSingle();
     if (leaseError) throw new Error(leaseError.message);
     if (!locked) { results.push({ id: acc.id, skipped: true }); continue; }
