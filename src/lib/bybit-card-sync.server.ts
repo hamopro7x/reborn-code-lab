@@ -448,9 +448,11 @@ export async function resumeCardFollowup() {
         (Number(result.totalCount) > 0 && page*100 >= Number(result.totalCount));
       if (exhausted) { type++; page=1; } else page++;
     } catch (e) {
-      // Never advance past a failed card query: doing so would mark a partial
-      // confirmation scan as complete and could leave stale transaction states.
-      throw e;
+      // Skip only a provider-confirmed unsupported optional query type.
+      // Transient/auth/network errors must not advance the resumable cursor.
+      if (!isUnsupportedCardTypeError(e)) throw e;
+      type++;
+      page = 1;
     }
     if (type >= CARD_QUERY_TYPES.length) { index++; type=0; }
   }
