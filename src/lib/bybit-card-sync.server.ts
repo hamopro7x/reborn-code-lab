@@ -13,7 +13,7 @@ import { currentBybitCycle, currentBybitRows } from "./monthly-cycle.server";
 
 import { cardConfirmed, archivedCardReadable, legacyCardReadable } from "./bybit-confirmation";
 import { heavyOnce, cardCache, spendCache } from "./bybit-cache.server";
-import { callCard, callCardPage, mergeCardTypeResults, isLateSettlementRecord, CARD_QUERY_TYPES } from "./bybit-card-api.server";
+import { callCard, callCardPage, mergeCardTypeResults, isUnsupportedCardTypeError, isLateSettlementRecord, CARD_QUERY_TYPES } from "./bybit-card-api.server";
 import { upsertLedger, mirrorStoredCardRows, markHangVoided } from "./bybit-ledger-write.server";
 
 export function sameStoredValue(a: unknown, b: unknown): boolean {
