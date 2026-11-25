@@ -10,6 +10,8 @@ const updateOrderStatusSchema = z.object({
 });
 
 
+type OrderStatus = "pending_payment" | "awaiting_confirmation" | "confirmed" | "rejected" | "completed" | "cancelled";
+
 const listOrdersSchema = z.object({
   filter: z.string().max(40),
   search: z.string().max(200),
@@ -36,7 +38,7 @@ export const listAdminOrders = createServerFn({ method: "GET" })
       .from("orders")
       .select("*, items:order_items(*), payment_method:payment_methods(name)")
       .order("created_at", { ascending: false });
-    if (!data.search.trim() && data.filter !== "all") query = query.eq("status", data.filter);
+    if (!data.search.trim() && data.filter !== "all") query = query.eq("status", data.filter as OrderStatus);
     const { data: rows, error } = await query;
     if (error) throw new Error("تعذر تحميل الطلبات. حاول مرة أخرى.");
     return rows ?? [];
@@ -68,7 +70,7 @@ export const updateAdminOrderStatus = createServerFn({ method: "POST" })
       .maybeSingle();
     if (readError || !current) throw new Error("الطلب غير موجود.");
 
-    const allowed: Record<string, string[]> = {
+    const allowed: Partial<Record<OrderStatus, OrderStatus[]>> = {
       pending_payment: ["confirmed", "completed", "cancelled"],
       awaiting_confirmation: ["confirmed", "completed", "cancelled", "rejected"],
       confirmed: ["completed", "cancelled"],
@@ -77,7 +79,7 @@ export const updateAdminOrderStatus = createServerFn({ method: "POST" })
       throw new Error("انتقال حالة الطلب غير مسموح.");
     }
 
-    const patch: { status: string; confirmed_at?: string } = { status: data.status };
+    const patch: { status: OrderStatus; confirmed_at?: string } = { status: data.status };
     if (data.status === "confirmed") patch.confirmed_at = new Date().toISOString();
     const { data: updated, error } = await supabaseAdmin
       .from("orders")
