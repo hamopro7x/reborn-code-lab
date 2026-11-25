@@ -55,7 +55,7 @@ describe("Bybit card pagination completeness", () => {
         pageNo: body.page, pageSize: 100, totalCount: 500, data: Array.from({ length: 100 }, (_, i) => ({ txnId: body.type + "-" + body.page + "-" + i, txnCreate: i + 1 })),
       }}), { status: 200 });
     }));
-    await expect(fetchCardPages(100, { key: "k", secret: "s" }, undefined, 100)).rejects.toThrow("time budget expired");
+    await expect(fetchCardPages(500, { key: "k", secret: "s" }, undefined, 100)).rejects.toThrow("time budget expired");
     expect(calls).toBe(1);
   });
 });
