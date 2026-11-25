@@ -290,7 +290,7 @@ export async function syncCardTxns(accountId?: string): Promise<{ added: number;
 
 /** Runs the same sync for every linked Bybit account. */
 
-export async function syncAllCardTxns(): Promise<{ added: number; accounts: number }> {
+export async function syncAllCardTxns(): Promise<{ added: number; accounts: number; failedAccounts: string[] }> {
   // One full sync at a time, at most once every 30s: several admin screens used
   // to launch a full multi-account sync each, which overloaded the server.
   return heavyOnce("sync:all", 8_000, async () => {
@@ -302,16 +302,18 @@ export async function syncAllCardTxns(): Promise<{ added: number; accounts: numb
     // Sequential: parallel account syncs multiplied both provider rate limits
     // and worker load.
     let added = 0;
+    const failedAccounts: string[] = [];
     for (const a of accounts) {
       try {
         if (!(await bybitConfigured(a.id))) continue;
         const res = await syncCardTxns(a.id);
         added += res.added;
-      } catch {
-        /* حساب واحد يفشل لا يوقف الباقي */
+      } catch (error) {
+        failedAccounts.push(a.id);
+        console.error("Bybit full card sync failed for account:", a.id, (error as Error)?.message ?? "unknown_error");
       }
     }
-    return { added, accounts: accounts.length };
+    return { added, accounts: accounts.length, failedAccounts };
   });
 }
 
