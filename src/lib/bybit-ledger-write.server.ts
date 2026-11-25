@@ -1,4 +1,3 @@
-import { SETTLEMENT_COPY_SIDES } from "./bybit-settlement";
 
 import { admin } from "./bybit-account.server";
 import { fetchP2P, fetchOnChain, fetchInternal } from "./bybit-assets.server";
@@ -243,7 +242,7 @@ export async function mirrorStoredCardRows(
       .in("txn_id", unique.slice(i, i + 200));
     if (error) throw new Error(`card ledger mirror read failed: ${error.message}`);
     const rows = (data ?? [])
-      .filter((row: any) => cardConfirmed(row) && !isCardReversalEvent(row.detail?.side || row.txn_type) && !SETTLEMENT_COPY_SIDES.has(String(row.detail?.side ?? "")))
+      .filter((row: any) => cardConfirmed(row) && !isCardReversalEvent(row.detail?.side || row.txn_type))
       .map((row: any) => cardLedgerRow(accountId, row));
     if (rows.length) saved += await save(rows);
   }
