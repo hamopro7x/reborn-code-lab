@@ -28,16 +28,33 @@ export const updateAdminOrderStatus = createServerFn({ method: "POST" })
     }
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: current, error: readError } = await supabaseAdmin
+      .from("orders")
+      .select("id, status")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (readError || !current) throw new Error("الطلب غير موجود.");
+
+    const allowed: Record<string, string[]> = {
+      pending_payment: ["confirmed", "completed", "cancelled"],
+      awaiting_confirmation: ["confirmed", "completed", "cancelled", "rejected"],
+      confirmed: ["completed", "cancelled"],
+    };
+    if (!allowed[current.status]?.includes(data.status)) {
+      throw new Error("انتقال حالة الطلب غير مسموح.");
+    }
+
     const patch: { status: string; confirmed_at?: string } = { status: data.status };
     if (data.status === "confirmed") patch.confirmed_at = new Date().toISOString();
     const { data: updated, error } = await supabaseAdmin
       .from("orders")
       .update(patch)
       .eq("id", data.id)
+      .eq("status", current.status)
       .select("id")
       .maybeSingle();
     if (error) throw new Error("تعذر تحديث حالة الطلب.");
-    if (!updated) throw new Error("الطلب غير موجود أو لا يمكن تحديث حالته.");
+    if (!updated) throw new Error("تم تغيير الطلب بواسطة مستخدم آخر. حدّث القائمة وحاول مجددًا.");
     return { ok: true };
   });
 
