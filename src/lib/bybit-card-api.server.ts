@@ -62,6 +62,10 @@ export function mergeCardTypeResults(
   let lastError: unknown;
   results.forEach((res, typeIndex) => {
     if (res.status !== "fulfilled") {
+      if (isUnsupportedCardTypeError(res.reason)) {
+        warn(`bybit card type ${types[typeIndex] ?? typeIndex} unsupported: ${String((res.reason as Error)?.message ?? res.reason)}`);
+        return;
+      }
       lastError = res.reason;
       warn(
         `bybit card type ${types[typeIndex] ?? typeIndex} ${isUnsupportedCardTypeError(res.reason) ? "unsupported" : "failed"}: ${String((res.reason as Error)?.message ?? res.reason)}`,
@@ -170,12 +174,14 @@ export async function fetchCardPages(maxRows: number, creds: Creds, sinceMs?: nu
       throw new Error(`Bybit card history incomplete: time budget expired before query type ${type}`);
     }
     let typeComplete = false;
+    let typeSucceeded = false;
     try {
       for (let page = 1; page <= maxPages; page++) {
         if (Date.now() >= deadline) {
           throw new Error(`Bybit card history incomplete: time budget expired during ${type} page ${page}`);
         }
         const result = await callCardPage({ limit: pageSize, page, type }, creds);
+        typeSucceeded = true;
         const rows = Array.isArray(result?.data) ? result.data : [];
         for (const r of rows) {
           const k = cardRowKey(r);
@@ -201,6 +207,10 @@ export async function fetchCardPages(maxRows: number, creds: Creds, sinceMs?: nu
       successfulTypes++;
     } catch (error) {
       lastError = error;
+      if (isUnsupportedCardTypeError(error) && !typeSucceeded) {
+        console.warn(`bybit card type ${type} unsupported:`, (error as Error)?.message ?? error);
+        continue;
+      }
       throw error;
     }
     await sleep(400);
