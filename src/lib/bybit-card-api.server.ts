@@ -169,7 +169,6 @@ export async function fetchCardPages(maxRows: number, creds: Creds, sinceMs?: nu
     if (Date.now() >= deadline) {
       throw new Error(`Bybit card history incomplete: time budget expired before query type ${type}`);
     }
-    let typeSucceeded = false;
     let typeComplete = false;
     try {
       for (let page = 1; page <= maxPages; page++) {
@@ -177,7 +176,6 @@ export async function fetchCardPages(maxRows: number, creds: Creds, sinceMs?: nu
           throw new Error(`Bybit card history incomplete: time budget expired during ${type} page ${page}`);
         }
         const result = await callCardPage({ limit: pageSize, page, type }, creds);
-        typeSucceeded = true;
         const rows = Array.isArray(result?.data) ? result.data : [];
         for (const r of rows) {
           const k = cardRowKey(r);
