@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { listAdminOrders, getOrderScreenshotUrl } from "@/lib/orders-admin.queries";
-import { updateAdminOrderStatus } from "@/lib/admin-orders.functions";
+import { getOrderScreenshotUrl } from "@/lib/orders-admin.queries";
+import { listAdminOrders, updateAdminOrderStatus } from "@/lib/admin-orders.functions";
 import { deleteAllOrders } from "@/lib/admin.functions";
 import { formatLocaleDateTime } from "@/lib/format";
 import { toast } from "sonner";
@@ -15,13 +15,14 @@ export function OrdersTab({ isAdmin }: { isAdmin: boolean }) {
   const qc = useQueryClient();
   const deleteAllFn = useServerFn(deleteAllOrders);
   const updateOrderFn = useServerFn(updateAdminOrderStatus);
+  const listOrdersFn = useServerFn(listAdminOrders);
   const [deleting, setDeleting] = useState(false);
   const [filter, setFilter] = useState<string>("awaiting_confirmation");
   const [search, setSearch] = useState("");
   const ordersQ = useQuery({
     queryKey: ["admin-orders", filter, search],
     queryFn: async () => {
-      return listAdminOrders(filter, search);
+      return listOrdersFn({ data: { filter, search } });
     },
   });
 
