@@ -117,6 +117,17 @@ export const updateEmployeeAvatar = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    if (!data.path.startsWith(`${data.user_id}/`) || data.path.includes("..")) {
+      throw new Error("Invalid employee avatar path");
+    }
+    const { data: targetRoles, error: roleError } = await supabaseAdmin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", data.user_id);
+    if (roleError || !(targetRoles ?? []).some((r: any) => r.role === "employee") ||
+        (targetRoles ?? []).some((r: any) => r.role === "admin")) {
+      throw new Error("Employee not found");
+    }
     // Remove any older avatar file for this user (keep bucket tidy)
     const { data: existing } = await supabaseAdmin
       .from("profiles")
@@ -151,6 +162,14 @@ export const updateEmployee = createServerFn({ method: "POST" })
     await assertAdmin(context.supabase, context.userId);
     if (data.password) await assertPasswordNotBreached(data.password);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: targetRoles, error: roleError } = await supabaseAdmin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", data.user_id);
+    if (roleError || !(targetRoles ?? []).some((r: any) => r.role === "employee") ||
+        (targetRoles ?? []).some((r: any) => r.role === "admin")) {
+      throw new Error("Employee not found");
+    }
 
     const authUpdate: { email?: string; password?: string; user_metadata?: Record<string, unknown> } = {};
     if (data.email) authUpdate.email = data.email;
