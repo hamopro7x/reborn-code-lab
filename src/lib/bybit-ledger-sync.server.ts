@@ -203,7 +203,8 @@ export async function fetchLedgerPage(opts: {
       .or(CARD_READ_FILTER)
       .neq("status", "holding")
       .not("detail", "cs", '{"side":"2"}')
-      .not("detail", "cs", '{"side":2}');    if (opts.hideReversed) out = out.or("status.is.null,status.neq.reversed");
+      .not("detail", "cs", '{"side":2}');
+    if (opts.hideReversed) out = out.or("status.is.null,status.neq.reversed");
     if (g === "txns" && st === "review") out = out.eq("kind", "card").or(LEDGER_CARD_FILTERS.review.slice(3, -1));
     else if (g === "txns" && st === "refund") out = out.in("kind", ["card", "refund"]).or(LEDGER_CARD_FILTERS.refund.slice(3, -1));
     // Same groups as cardPurchasePresenter: ناجحة = everything not failed/reversed
