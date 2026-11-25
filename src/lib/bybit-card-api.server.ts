@@ -98,8 +98,14 @@ export function mergeCardTypeResults(
  * was already recorded at authorisation, so it is never ingested or shown.
  */
 
-export function isLateSettlementRecord(row: any): boolean {
-  return SETTLEMENT_COPY_SIDES.has(String(row?.side ?? ""));
+/**
+ * Compatibility predicate retained for older callers. Bybit defines side 3
+ * as a transaction/clearing record and side 13 as an ATM withdrawal. Neither
+ * can be discarded as a presumed duplicate; canonical purchase identity is
+ * responsible for collapsing genuine authorization/clearing copies.
+ */
+export function isLateSettlementRecord(_row: any): boolean {
+  return false;
 }
 
 /**
