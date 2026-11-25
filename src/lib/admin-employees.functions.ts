@@ -33,7 +33,11 @@ export const createEmployee = createServerFn({ method: "POST" })
 
     const uid = created.user.id;
     // Upsert profile (handle_new_user trigger blocks non-allowed emails; do it manually)
-    await supabaseAdmin.from("profiles").upsert({ id: uid, email: data.email, full_name: data.full_name });
+    const { error: profileError } = await supabaseAdmin.from("profiles").upsert({ id: uid, email: data.email, full_name: data.full_name });
+    if (profileError) {
+      await supabaseAdmin.auth.admin.deleteUser(uid);
+      throw new Error("Failed to create employee profile");
+    }
     const { error: rErr } = await supabaseAdmin
       .from("user_roles")
       .insert({ user_id: uid, role: "employee" });
@@ -55,12 +59,16 @@ export const deleteEmployee = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     // Prevent deleting admins
-    const { data: roles } = await supabaseAdmin
+    const { data: roles, error: roleError } = await supabaseAdmin
       .from("user_roles")
       .select("role")
       .eq("user_id", data.user_id);
+    if (roleError) throw new Error("Unable to verify target account role");
     if ((roles ?? []).some((r: any) => r.role === "admin")) {
       throw new Error("Cannot delete another admin");
+    }
+    if (!(roles ?? []).some((r: any) => r.role === "employee")) {
+      throw new Error("Employee not found");
     }
     const { error } = await supabaseAdmin.auth.admin.deleteUser(data.user_id);
     if (error) throw new Error(error.message);
@@ -72,9 +80,11 @@ export const listEmployees = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     await assertAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: roles } = await supabaseAdmin
+    const { data: roles, error: rolesError } = await supabaseAdmin
       .from("user_roles")
-      .select("user_id, role, created_at");
+      .select("user_id, role, created_at")
+      .eq("role", "employee");
+    if (rolesError) throw new Error("Failed to load employees");
     const ids = (roles ?? []).map((r: any) => r.user_id);
     if (!ids.length) return [];
     const { data: profiles } = await supabaseAdmin
