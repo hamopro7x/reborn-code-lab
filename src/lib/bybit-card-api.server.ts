@@ -216,7 +216,10 @@ export async function fetchCardPages(maxRows: number, creds: Creds, sinceMs?: nu
     await sleep(400);
   }
 
-  if (!successfulTypes && lastError) throw lastError;
+  if (!successfulTypes) {
+    if (lastError) throw lastError;
+    throw new Error("Bybit card history returned no supported query types");
+  }
   return [...merged.values()]
     .map(({ row }) => row)
     .filter((row) => !isLateSettlementRecord(row))
