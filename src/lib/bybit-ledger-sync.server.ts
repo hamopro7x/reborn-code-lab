@@ -122,9 +122,12 @@ export function runDeepSyncIfDue(force = false): void {
   lastDeepAt = Date.now();
   void heavyOnce("deep:all", 0, async () => {
     try {
-      await syncAllCardTxns();
-    } catch {
-      /* keep going to the ledger */
+      const cardResult = await syncAllCardTxns();
+      if (cardResult.failedAccounts.length) {
+        console.error("Bybit deep card sync partially failed for accounts:", cardResult.failedAccounts);
+      }
+    } catch (error) {
+      console.error("Bybit deep card sync failed:", (error as Error)?.message ?? "unknown_error");
     }
     const ledgerResult = await syncAllLedger();
     if (ledgerResult.failedAccounts.length) {
