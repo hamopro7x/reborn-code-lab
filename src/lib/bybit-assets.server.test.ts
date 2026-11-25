@@ -67,10 +67,10 @@ describe("Bybit asset sync completeness", () => {
     state.failPath = "";
     (call as any).mockReset();
     (call as any)
-      .mockResolvedValueOnce({ rows: [{ txID: "dep-1", status: 3, successAt: "1764000000000" }], nextPageCursor: "dep-next" })
-      .mockResolvedValueOnce({ rows: [{ txID: "dep-2", status: 1, successAt: "1764000001000" }] })
-      .mockResolvedValueOnce({ rows: [{ withdrawId: "wd-1", status: "Pending", createTime: "1764000000000" }], nextPageCursor: "wd-next" })
-      .mockResolvedValueOnce({ rows: [{ withdrawId: "wd-2", status: "success", createTime: "1764000001000" }] });
+      .mockImplementationOnce(async (_method: string, path: string, params: Record<string, unknown>) => { state.calls.push({ path, params }); return { rows: [{ txID: "dep-1", status: 3, successAt: "1764000000000" }], nextPageCursor: "dep-next" }; })
+      .mockImplementationOnce(async (_method: string, path: string, params: Record<string, unknown>) => { state.calls.push({ path, params }); return { rows: [{ txID: "dep-2", status: 1, successAt: "1764000001000" }] }; })
+      .mockImplementationOnce(async (_method: string, path: string, params: Record<string, unknown>) => { state.calls.push({ path, params }); return { rows: [{ withdrawId: "wd-1", status: "Pending", createTime: "1764000000000" }], nextPageCursor: "wd-next" }; })
+      .mockImplementationOnce(async (_method: string, path: string, params: Record<string, unknown>) => { state.calls.push({ path, params }); return { rows: [{ withdrawId: "wd-2", status: "success", createTime: "1764000001000" }] }; });
     const result = await fetchOnChain("account-a");
     expect(result.deposits).toHaveLength(2);
     expect(result.withdrawals).toHaveLength(2);
@@ -83,8 +83,8 @@ describe("Bybit asset sync completeness", () => {
     const { call } = await import("./bybit-account.server");
     (call as any).mockReset();
     (call as any)
-      .mockResolvedValueOnce({ rows: [{ id: "int-1", status: 1, createdTime: "1764000000" }] })
-      .mockResolvedValueOnce({ rows: [] });
+      .mockImplementationOnce(async (_method: string, path: string, params: Record<string, unknown>) => { state.calls.push({ path, params }); return { rows: [{ id: "int-1", status: 1, createdTime: "1764000000" }] }; })
+      .mockImplementationOnce(async (_method: string, path: string, params: Record<string, unknown>) => { state.calls.push({ path, params }); return { rows: [] }; });
     const result = await fetchInternal("account-a");
     expect(result.deposits[0].status).toBe("قيد التنفيذ");
     expect(result.deposits[0].time).toBe(1764000000000);
