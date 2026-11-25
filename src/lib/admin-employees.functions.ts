@@ -85,7 +85,7 @@ export const deleteEmployee = createServerFn({ method: "POST" })
     for (const [table, column] of retainedHistoryChecks) {
       const { count, error: historyError } = await historyClient
         .from(table)
-        .select("id", { count: "exact", head: true })
+        .select(column, { count: "exact", head: true })
         .eq(column, data.user_id);
       if (historyError) throw new Error("تعذر التحقق من السجلات المرتبطة بالموظف");
       if ((count ?? 0) > 0) {
