@@ -1,7 +1,8 @@
 /**
- * Bybit clearing copies of an earlier record, never a new charge:
- * side 3 = purchase settlement; side 13 = next-day ATM clearing of a side-21
- * ATM withdrawal (new ids, cryptoSold false, absent from Bybit's own history).
+ * Legacy settlement-copy exclusions were unsafe: Bybit's official API defines
+ * side 3 as a transaction/clearing record and side 13 as an ATM withdrawal.
+ * Keep this module as an empty compatibility export while readers migrate to
+ * canonical purchase identity for deduplication.
  */
-export const SETTLEMENT_COPY_SIDES = new Set(["3", "13"]);
-export const SETTLEMENT_COPY_FILTER = "detail->>side.is.null,detail->>side.not.in.(3,13)";
+export const SETTLEMENT_COPY_SIDES = new Set<string>();
+export const SETTLEMENT_COPY_FILTER = "";
