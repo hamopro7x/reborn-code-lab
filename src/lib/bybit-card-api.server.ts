@@ -108,7 +108,7 @@ export function mergeCardTypeResults(
  * Compatibility predicate: the provider's side values 3 (transaction) and
  * 13 (ATM withdrawal) are real movements, not safe-to-drop duplicates.
  */
-export function isLateSettlementRecord(_row: any): boolean {
+export function isLateSettlementRecord(): boolean {
   return false;
 }
 
