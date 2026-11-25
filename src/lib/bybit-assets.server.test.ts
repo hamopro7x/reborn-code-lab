@@ -66,17 +66,29 @@ describe("Bybit asset sync completeness", () => {
     state.calls.length = 0;
     state.failPath = "";
     (call as any).mockReset();
-    (call as any)
-      .mockImplementationOnce(async (_method: string, path: string, params: Record<string, unknown>) => { state.calls.push({ path, params }); return { rows: [{ txID: "dep-1", status: 3, successAt: "1764000000000" }], nextPageCursor: "dep-next" }; })
-      .mockImplementationOnce(async (_method: string, path: string, params: Record<string, unknown>) => { state.calls.push({ path, params }); return { rows: [{ txID: "dep-2", status: 1, successAt: "1764000001000" }] }; })
-      .mockImplementationOnce(async (_method: string, path: string, params: Record<string, unknown>) => { state.calls.push({ path, params }); return { rows: [{ withdrawId: "wd-1", status: "Pending", createTime: "1764000000000" }], nextPageCursor: "wd-next" }; })
-      .mockImplementationOnce(async (_method: string, path: string, params: Record<string, unknown>) => { state.calls.push({ path, params }); return { rows: [{ withdrawId: "wd-2", status: "success", createTime: "1764000001000" }] }; });
+    (call as any).mockImplementation(async (_method: string, path: string, params: Record<string, unknown>) => {
+      state.calls.push({ path, params });
+      const cursor = params.cursor;
+      if (path.includes("deposit/query-record")) {
+        return cursor
+          ? { rows: [{ txID: "dep-2", status: 1, successAt: "1764000001000" }] }
+          : { rows: [{ txID: "dep-1", status: 3, successAt: "1764000000000" }], nextPageCursor: "dep-next" };
+      }
+      if (path.includes("withdraw/query-record")) {
+        return cursor
+          ? { rows: [{ withdrawId: "wd-2", status: "success", createTime: "1764000001000" }] }
+          : { rows: [{ withdrawId: "wd-1", status: "Pending", createTime: "1764000000000" }], nextPageCursor: "wd-next" };
+      }
+      throw new Error("unexpected endpoint");
+    });
     const result = await fetchOnChain("account-a");
     expect(result.deposits).toHaveLength(2);
     expect(result.withdrawals).toHaveLength(2);
     expect(result.deposits.map(x => x.status)).toEqual(["ناجحة", "قيد التنفيذ"]);
     expect(result.withdrawals.map(x => x.status)).toEqual(["قيد التنفيذ", "ناجحة"]);
-    expect(state.calls.map(x => x.params.cursor ?? null)).toEqual([null, "dep-next", null, "wd-next"]);
+    expect(state.calls).toHaveLength(4);
+    expect(state.calls.filter(x => x.path.includes("deposit/query-record")).map(x => x.params.cursor ?? null)).toEqual([null, "dep-next"]);
+    expect(state.calls.filter(x => x.path.includes("withdraw/query-record")).map(x => x.params.cursor ?? null)).toEqual([null, "wd-next"]);
   });
 
   it("maps internal deposit processing and seconds timestamps correctly", async () => {
