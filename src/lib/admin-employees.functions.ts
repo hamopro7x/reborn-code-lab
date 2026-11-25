@@ -70,6 +70,28 @@ export const deleteEmployee = createServerFn({ method: "POST" })
     if (!(roles ?? []).some((r: any) => r.role === "employee")) {
       throw new Error("Employee not found");
     }
+    // Preserve financial and operational history. Auth deletion cascades into
+    // these tables, so refuse destructive deletion while any records remain.
+    const retainedHistoryChecks = [
+      ["bybit_cards", "created_by"],
+      ["work_shifts", "user_id"],
+      ["work_manual_txns", "user_id"],
+      ["work_manual_card_txns", "user_id"],
+      ["work_txn_assignments", "user_id"],
+      ["work_txn_entries", "user_id"],
+      ["work_pins", "user_id"],
+    ] as const;
+    for (const [table, column] of retainedHistoryChecks) {
+      const { count, error: historyError } = await supabaseAdmin
+        .from(table)
+        .select("id", { count: "exact", head: true })
+        .eq(column, data.user_id);
+      if (historyError) throw new Error("تعذر التحقق من السجلات المرتبطة بالموظف");
+      if ((count ?? 0) > 0) {
+        throw new Error("لا يمكن حذف الموظف لوجود سجلات تشغيلية أو مالية مرتبطة به. احتفظ بالحساب أو انقل السجلات أولًا.");
+      }
+    }
+
     const { error } = await supabaseAdmin.auth.admin.deleteUser(data.user_id);
     if (error) throw new Error(error.message);
     return { ok: true };
