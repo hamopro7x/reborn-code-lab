@@ -61,4 +61,33 @@ describe("Bybit asset sync completeness", () => {
     await expect(fetchInternal("account-a")).rejects.toThrow("provider unavailable");
     state.failPath = "";
   });
+  it("follows cursor pagination for deposits and withdrawals", async () => {
+    const { call } = await import("./bybit-account.server");
+    state.calls.length = 0;
+    state.failPath = "";
+    (call as any).mockReset();
+    (call as any)
+      .mockResolvedValueOnce({ rows: [{ txID: "dep-1", status: 3, successAt: "1764000000000" }], nextPageCursor: "dep-next" })
+      .mockResolvedValueOnce({ rows: [{ txID: "dep-2", status: 1, successAt: "1764000001000" }] })
+      .mockResolvedValueOnce({ rows: [{ withdrawId: "wd-1", status: "Pending", createTime: "1764000000000" }], nextPageCursor: "wd-next" })
+      .mockResolvedValueOnce({ rows: [{ withdrawId: "wd-2", status: "success", createTime: "1764000001000" }] });
+    const result = await fetchOnChain("account-a");
+    expect(result.deposits).toHaveLength(2);
+    expect(result.withdrawals).toHaveLength(2);
+    expect(result.deposits.map(x => x.status)).toEqual(["ناجحة", "قيد التنفيذ"]);
+    expect(result.withdrawals.map(x => x.status)).toEqual(["قيد التنفيذ", "ناجحة"]);
+    expect(state.calls.map(x => x.params.cursor ?? null)).toEqual([null, "dep-next", null, "wd-next"]);
+  });
+
+  it("maps internal deposit processing and seconds timestamps correctly", async () => {
+    const { call } = await import("./bybit-account.server");
+    (call as any).mockReset();
+    (call as any)
+      .mockResolvedValueOnce({ rows: [{ id: "int-1", status: 1, createdTime: "1764000000" }] })
+      .mockResolvedValueOnce({ rows: [] });
+    const result = await fetchInternal("account-a");
+    expect(result.deposits[0].status).toBe("قيد التنفيذ");
+    expect(result.deposits[0].time).toBe(1764000000000);
+  });
+
 });
