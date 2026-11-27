@@ -255,7 +255,22 @@ export async function p2pByAssignment(where: { shiftId?: string; userId?: string
   const db = await admin();
   const links = await readP2PLinks(db, { ...where, ...(viewerId ? { userId: viewerId } : {}) });
   const ledgerIds = [...new Set(links.map((l) => l.ledger_id))];
-  if (!ledgerIds.length) return [];  const allLinks = await readP2PLinks(db, { ledgerIds, ...(viewerId ? { userId: viewerId } : {}) });
+  if (!ledgerIds.length) return [];
+  const allLinks = await readP2PLinks(db, { ledgerIds, ...(viewerId ? { userId: viewerId } : {}) });
+  // Keep every historical link for group colouring, but show an order only in its newest linked shift.
+  const latestShiftByOrder = new Map<string, { shift_id: string | null; started_at: string | null }>();
+  for (const link of allLinks) {
+    if (!link.shift_id) continue;
+    const previous = latestShiftByOrder.get(link.ledger_id);
+    const currentTime = link.started_at ? new Date(link.started_at).getTime() : 0;
+    const previousTime = previous?.started_at ? new Date(previous.started_at).getTime() : -1;
+    if (!previous || currentTime > previousTime || (currentTime === previousTime && link.shift_id > String(previous.shift_id))) {
+      latestShiftByOrder.set(link.ledger_id, link);
+    }
+  }
+  const visibleOrderIds = where.shiftId
+    ? new Set(links.filter((link) => latestShiftByOrder.get(link.ledger_id)?.shift_id === where.shiftId).map((link) => link.ledger_id))
+    : null;
   const names = await namesFor(db, allLinks.map((l) => l.user_id));
   const data: any[] = [];
   for (let from = 0; from < ledgerIds.length; from += 100) {
@@ -269,6 +284,7 @@ export async function p2pByAssignment(where: { shiftId?: string; userId?: string
   const seen = new Set<string>();  const out: any[] = [];
   for (const r of data) {
     const id = String(r.id);
+    if (visibleOrderIds && !visibleOrderIds.has(id)) continue;
     if (seen.has(id)) continue;
     seen.add(id);
     out.push({
