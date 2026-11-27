@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { accountInput, assertAccess, assertAdmin, requiredId, validateApiCreds } from "./bybit-access";
+import { accountInput, assertAdmin, requiredId, validateApiCreds } from "./bybit-access";
 import { cardsVisibleTo } from "./bybit-card-visibility";
 
 export const saveBybitApiKeys = createServerFn({ method: "POST" })
@@ -33,7 +33,7 @@ export const getBybitCards = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(accountInput)
   .handler(async ({ data, context }) => {
-    const role = await assertAccess(context.supabase, context.userId);
+    const role = await assertAdmin(context.supabase, context.userId);
     const mod = await import("./bybit.server");
     const result = await mod.readOp(
       data.accountId,

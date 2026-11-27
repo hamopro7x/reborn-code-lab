@@ -94,7 +94,7 @@ describe("reversal linking", () => {
 
 describe("unsupported Bybit query types", () => {
   it("classifies a request rejection as unsupported, but not rate limit / auth", () => {
-    expect(isUnsupportedCardTypeError(new Error("Bybit 10001: params error"))).toBe(true);
+    expect(isUnsupportedCardTypeError(new Error("Bybit 10001: params error"))).toBe(false);
     expect(isUnsupportedCardTypeError(new Error("Bybit 10006: too many"))).toBe(false);
     expect(isUnsupportedCardTypeError(new Error("Bybit 10003: invalid key"))).toBe(false);
     expect(isUnsupportedCardTypeError(new Error("Bybit HTTP 503: x"))).toBe(false);
@@ -104,7 +104,7 @@ describe("unsupported Bybit query types", () => {
     const rows = mergeCardTypeResults(
       [
         { status: "fulfilled", value: { data: [{ txnId: "1", tradeStatus: "1", side: "1" }] } },
-        { status: "rejected", reason: new Error("Bybit 10001: unsupported type") },
+        { status: "rejected", reason: new Error("Bybit 10001: unsupported query type") },
       ],
       ["SIDE_QUERY_AUTH", "SIDE_QUERY_AUTH_REVERSAL"],
       warn,

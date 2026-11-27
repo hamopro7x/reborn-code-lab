@@ -11,11 +11,13 @@ export const sendMail = createServerFn({ method: "POST" }).middleware([requireSu
     const total = (data.attachments ?? []).reduce((s, a) => s + a.base64.length * 0.75, 0);
     if (total > 20 * 1024 * 1024) throw new Error("حجم المرفقات أكبر من 20MB");
     const db = await adminDb();
-    const { data: acc } = await db.from("mail_accounts").select("*").eq("id", data.accountId).maybeSingle();
+    const { data: acc, error: accountError } = await db.from("mail_accounts").select("*").eq("id", data.accountId).maybeSingle();
+    if (accountError) throw new Error(accountError.message);
     if (!acc) throw new Error("الحساب غير موجود");
     let threadId: string | undefined, inReplyTo: string | undefined, references: string | undefined, subject = data.subject;
     if (data.replyToId) {
-      const { data: orig } = await db.from("mail_messages").select("account_id, gmail_thread_id, rfc_message_id, rfc_references, subject").eq("id", data.replyToId).maybeSingle();
+      const { data: orig, error: originalError } = await db.from("mail_messages").select("account_id, gmail_thread_id, rfc_message_id, rfc_references, subject").eq("id", data.replyToId).maybeSingle();
+      if (originalError) throw new Error(originalError.message);
       if (!orig || orig.account_id !== acc.id) throw new Error("الرسالة الأصلية غير صالحة");
       threadId = orig.gmail_thread_id ?? undefined;
       inReplyTo = orig.rfc_message_id || undefined;
@@ -29,7 +31,7 @@ export const sendMail = createServerFn({ method: "POST" }).middleware([requireSu
     const token = await accessTokenFor(db, acc.id);
     const sent = await gmail(token, "/messages/send", { method: "POST", body: JSON.stringify({ raw, ...(threadId ? { threadId } : {}) }) });
     const localId = await importMessage(db, token, acc, sent.id, false);
-    if (data.draftId) await db.from("mail_drafts").delete().eq("id", data.draftId);
+    if (data.draftId) { const { error: draftError } = await db.from("mail_drafts").delete().eq("id", data.draftId); if (draftError) throw new Error(draftError.message); }
     await log(db, { actor_id: context.userId, action: data.replyToId ? "replied" : "sent", account_id: acc.id, message_id: localId ?? data.replyToId ?? null, meta: { to: data.to.slice(0, 300) } });
     return { ok: true };
   });
@@ -38,7 +40,8 @@ export const sendMail = createServerFn({ method: "POST" }).middleware([requireSu
 export const listMailDrafts = createServerFn({ method: "GET" }).middleware([requireSupabaseAuth]).handler(async ({ context }) => {
   // Drafts may contain unsent sensitive content; employees have read-only inbox access.
   await requireAdmin(context);
-  const { data } = await (await adminDb()).from("mail_drafts").select("*").order("updated_at", { ascending: false }).limit(100);
+  const { data, error } = await (await adminDb()).from("mail_drafts").select("*").order("updated_at", { ascending: false }).limit(100);
+  if (error) throw new Error(error.message);
   return data ?? [];
 });
 
@@ -50,7 +53,7 @@ export const saveMailDraft = createServerFn({ method: "POST" }).middleware([requ
   .handler(async ({ data, context }) => {
     await requireAdmin(context);
     const db = await adminDb();
-    if (data.remove && data.id) { await db.from("mail_drafts").delete().eq("id", data.id); return { id: null }; }
+    if (data.remove && data.id) { const { error } = await db.from("mail_drafts").delete().eq("id", data.id); if (error) throw new Error(error.message); return { id: null }; }
     const row = { account_id: data.accountId, to_addr: data.to, cc_addr: data.cc, subject: data.subject, body: data.body, reply_to_message_id: data.replyToId ?? null, created_by: context.userId, updated_at: new Date().toISOString() };
     const { data: r, error } = data.id ? await db.from("mail_drafts").update(row).eq("id", data.id).select("id").single() : await db.from("mail_drafts").insert(row).select("id").single();
     if (error) throw new Error(error.message);

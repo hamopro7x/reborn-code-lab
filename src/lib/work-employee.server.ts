@@ -11,10 +11,11 @@ import { workTable } from "./work-analytics.server";
 
 export async function myWorkState(userId: string) {
   const db = await admin();
-  const { data } = await db.from("work_shifts").select("id,user_id,started_at").is("ended_at", null).maybeSingle();
+  const { data, error: shiftError } = await db.from("work_shifts").select("id,user_id,started_at").is("ended_at", null).maybeSingle();
+  if (shiftError) throw new Error(shiftError.message);
   if (!data || data.user_id !== userId) return { holding: false as const };
   // Successful transactions only — same rule as the rows shown below.
-  const { count } = await db
+  const { count, error: countError } = await db
     .from("work_txn_assignments")
     .select("id, bybit_ledger!inner(status)", { count: "exact", head: true })
     .not("bybit_ledger.detail", "cs", '{"side":"2"}')
@@ -22,6 +23,7 @@ export async function myWorkState(userId: string) {
     .or(`kind.not.in.(card,refund),${CARD_READ_FILTER}`, { referencedTable: "bybit_ledger" })
     .eq("shift_id", data.id)
     .in("bybit_ledger.status", SUCCESS_STATUSES as unknown as string[]);
+  if (countError) throw new Error(countError.message);
   return {
     holding: true as const,
     shiftId: data.id as string,
@@ -67,6 +69,8 @@ export async function adminEmployeeWorkState(userId: string) {
       .order("started_at", { ascending: false })
       .limit(20),
   ]);
+  if (openRes.error) throw new Error(openRes.error.message);
+  if (recentRes.error) throw new Error(recentRes.error.message);
   const live = !!openRes.data;
 
   const list = (recentRes.data ?? []) as any[];
@@ -75,7 +79,7 @@ export async function adminEmployeeWorkState(userId: string) {
   /**
    * عدّ المعاملات الناجحة لكل الشفتات في استعلام واحد بدل استعلام لكل شفت،
    * وهو ما كان يجعل فتح جدول بيانات الشغل بطيئًا جدًا (حتى 20 رحلة للسيرفر).
-   */  const { data: assigns } = await db
+   */  const { data: assigns, error: assignsError } = await db
     .from("work_txn_assignments")
     .select("shift_id, bybit_ledger!inner(status)")
     .not("bybit_ledger.detail", "cs", '{"side":"2"}')
@@ -85,6 +89,7 @@ export async function adminEmployeeWorkState(userId: string) {
       "shift_id",
       list.map((s) => s.id),    )
     .in("bybit_ledger.status", SUCCESS_STATUSES as unknown as string[]);
+  if (assignsError) throw new Error(assignsError.message);
 
   const counts = new Map<string, number>();
   for (const a of (assigns ?? []) as any[]) {
@@ -160,10 +165,11 @@ export async function myEntries(ledgerIds: string[]) {
       { egp: number | null; quantity: number | null; egpAt: string | null; quantityAt: string | null }
     >();
   const db = await admin();
-  const { data } = await db
+  const { data, error } = await db
     .from("work_txn_entries")
     .select("ledger_id,egp,quantity,egp_at,quantity_at")
     .in("ledger_id", ledgerIds);
+  if (error) throw new Error(error.message);
   const map = new Map<
     string,
     { egp: number | null; quantity: number | null; egpAt: string | null; quantityAt: string | null }
@@ -188,11 +194,12 @@ export async function saveEntryField(
   const db = await admin();
 
   // Successful transactions only: no «جنية»/«الكمية» on a failed transaction.
-  const { data: led } = await db
+  const { data: led, error: ledgerError } = await db
     .from("bybit_ledger")
     .select("status")
     .eq("id", ledgerId)
     .maybeSingle();
+  if (ledgerError) throw new Error(ledgerError.message);
   if (!led || !(SUCCESS_STATUSES as unknown as string[]).includes(String((led as any).status))) {
     return { ok: false as const, error: "هذه المعاملة غير ناجحة." };
   }
@@ -202,20 +209,22 @@ export async function saveEntryField(
   // The transaction must belong to an assignment of the caller's OWN open shift.
   const state = await myWorkState(userId);
   if (!state.holding) return { ok: false as const, error: "لست مستلمًا للشغل حاليًا" };
-  const { data: asg } = await db
+  const { data: asg, error: assignmentError } = await db
     .from("work_txn_assignments")
     .select("ledger_id")
     .eq("ledger_id", ledgerId)
     .eq("shift_id", state.shiftId)
     .eq("user_id", userId)
     .maybeSingle();
+  if (assignmentError) throw new Error(assignmentError.message);
   if (!asg) return { ok: false as const, error: "المعاملة ليست ضمن شفتك" };
 
-  const { data: existing } = await db
+  const { data: existing, error: existingError } = await db
     .from("work_txn_entries")
     .select("ledger_id,egp,quantity,egp_at,quantity_at")
     .eq("ledger_id", ledgerId)
     .maybeSingle();
+  if (existingError) throw new Error(existingError.message);
 
   const stampCol = field === "egp" ? "egp_at" : "quantity_at";
   const now = new Date();

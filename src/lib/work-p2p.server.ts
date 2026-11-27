@@ -12,15 +12,17 @@ const P2P_KINDS = ["p2p_buy", "p2p_sell"];
 
 export async function pendingP2P(limit = 100) {
   const db = await admin();
-  const { data: assigned } = await db.from("work_txn_assignments").select("ledger_id").in("kind", P2P_KINDS);
+  const { data: assigned, error: assignedError } = await db.from("work_txn_assignments").select("ledger_id").in("kind", P2P_KINDS);
+  if (assignedError) throw new Error("تعذر التحقق من طلبات P2P المرتبطة.");
   const taken = new Set((assigned ?? []).map((a: any) => a.ledger_id));
 
-  const { data } = await db
+  const { data, error: ledgerError } = await db
     .from("bybit_ledger")
     .select("*")
     .in("kind", P2P_KINDS)
     .order("occurred_at", { ascending: false })
     .limit(Math.min(Math.max(limit, 1), 300));
+  if (ledgerError) throw new Error("تعذر تحميل طلبات P2P المعلقة.");
 
   const accounts = await accountNames(db);
   return (data ?? [])
@@ -49,11 +51,12 @@ export async function completedP2P(limit = 200, viewerId?: string, isAdmin = fal
   const db = await admin();
 
   // Only orders that happened after the admin reset point are shown to employees.
-  const { data: setting } = await db
+  const { data: setting, error: settingError } = await db
     .from("site_settings")
     .select("value")
     .eq("key", "p2p_orders_cutoff")
     .maybeSingle();
+  if (settingError) throw new Error("تعذر قراءة إعدادات طلبات P2P.");
   const cutoff = typeof (setting as any)?.value === "string" ? String((setting as any).value) : null;
 
   const max = Math.min(Math.max(limit, 1), 500);
@@ -118,7 +121,8 @@ export async function completedP2P(limit = 200, viewerId?: string, isAdmin = fal
 
 export async function staffList() {
   const db = await admin();
-  const { data: roles } = await db.from("user_roles").select("user_id,role").in("role", ["admin", "employee"]);
+  const { data: roles, error } = await db.from("user_roles").select("user_id,role").in("role", ["admin", "employee"]);
+  if (error) throw new Error("تعذر تحميل قائمة الموظفين.");
   const ids = [...new Set((roles ?? []).map((r: any) => r.user_id))];
   const names = await namesFor(db, ids);
   return ids
@@ -251,7 +255,22 @@ export async function p2pByAssignment(where: { shiftId?: string; userId?: string
   const db = await admin();
   const links = await readP2PLinks(db, { ...where, ...(viewerId ? { userId: viewerId } : {}) });
   const ledgerIds = [...new Set(links.map((l) => l.ledger_id))];
-  if (!ledgerIds.length) return [];  const allLinks = await readP2PLinks(db, { ledgerIds, ...(viewerId ? { userId: viewerId } : {}) });
+  if (!ledgerIds.length) return [];
+  const allLinks = await readP2PLinks(db, { ledgerIds, ...(viewerId ? { userId: viewerId } : {}) });
+  // Keep every historical link for group colouring, but show an order only in its newest linked shift.
+  const latestShiftByOrder = new Map<string, { shift_id: string | null; started_at: string | null }>();
+  for (const link of allLinks) {
+    if (!link.shift_id) continue;
+    const previous = latestShiftByOrder.get(link.ledger_id);
+    const currentTime = link.started_at ? new Date(link.started_at).getTime() : 0;
+    const previousTime = previous?.started_at ? new Date(previous.started_at).getTime() : -1;
+    if (!previous || currentTime > previousTime || (currentTime === previousTime && link.shift_id > String(previous.shift_id))) {
+      latestShiftByOrder.set(link.ledger_id, link);
+    }
+  }
+  const visibleOrderIds = where.shiftId
+    ? new Set(links.filter((link) => latestShiftByOrder.get(link.ledger_id)?.shift_id === where.shiftId).map((link) => link.ledger_id))
+    : null;
   const names = await namesFor(db, allLinks.map((l) => l.user_id));
   const data: any[] = [];
   for (let from = 0; from < ledgerIds.length; from += 100) {
@@ -265,6 +284,7 @@ export async function p2pByAssignment(where: { shiftId?: string; userId?: string
   const seen = new Set<string>();  const out: any[] = [];
   for (const r of data) {
     const id = String(r.id);
+    if (visibleOrderIds && !visibleOrderIds.has(id)) continue;
     if (seen.has(id)) continue;
     seen.add(id);
     out.push({
@@ -310,12 +330,13 @@ export async function p2pOrderLinks(ledgerId: string, viewerId?: string) {
 
 export async function myShiftP2P(userId: string) {
   const db = await admin();
-  const { data } = await db
+  const { data, error } = await db
     .from("work_shifts")
     .select("id")
     .eq("user_id", userId)
     .is("ended_at", null)
     .maybeSingle();
+  if (error) throw new Error("تعذر التحقق من الشفت الحالي.");
   if (!data) return [];
   return shiftP2P(data.id as string, userId);
 }

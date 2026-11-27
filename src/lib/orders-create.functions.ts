@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { enforcePublicOrderRateLimit } from "./public-order-rate-limit.server";
 
 const orderItemSchema = z.object({
   product_id: z.string().uuid(),
@@ -14,7 +15,6 @@ const createOrderSchema = z.object({
   dial_code: z.string().min(1).max(10),
   currency_code: z.string().min(2).max(6),
   payment_method_id: z.string().uuid(),
-  device_id: z.string().trim().min(4).max(128).optional(),
   items: z.array(orderItemSchema).min(1).max(50),
 });
 
@@ -27,6 +27,7 @@ function convertFromEgp(amountEgp: number, rateFromEgp: number, currencyCode: st
 export const createPublicOrder = createServerFn({ method: "POST" })
   .inputValidator((data) => createOrderSchema.parse(data))
   .handler(async ({ data }) => {
+    await enforcePublicOrderRateLimit("create", 8, 600);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     // Recompute all pricing server-side from trusted product & exchange-rate data.
@@ -103,7 +104,6 @@ export const createPublicOrder = createServerFn({ method: "POST" })
         total,
         payment_method_id: data.payment_method_id,
         status: "pending_payment",
-        device_id: data.device_id ?? null,
       })
       .select("id, order_code")
       .single();
@@ -119,7 +119,12 @@ export const createPublicOrder = createServerFn({ method: "POST" })
     }));
     const { error: itemsErr } = await supabaseAdmin.from("order_items").insert(rows);
     if (itemsErr) {
-      await supabaseAdmin.from("orders").delete().eq("id", order.id);
+      const { error: rollbackError } = await supabaseAdmin.from("orders").delete().eq("id", order.id);
+      if (rollbackError) {
+        // Preserve evidence of a partially-created order; never hide failed cleanup.
+        console.error("Public order rollback failed:", order.id, rollbackError.code ?? "database_error");
+        throw new Error("تعذر حفظ عناصر الطلب وفشل تنظيف الطلب الجزئي. يرجى التواصل مع الدعم.");
+      }
       throw new Error("Failed to create order items");
     }
 

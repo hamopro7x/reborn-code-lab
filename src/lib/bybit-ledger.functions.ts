@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { assertAccess, assertAdmin } from "./bybit-access";
+import { assertAdmin } from "./bybit-access";
 
 export const getBybitLedger = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -12,18 +12,18 @@ export const getBybitLedger = createServerFn({ method: "POST" })
     pageSize: Math.min(Math.max(Number(input?.pageSize ?? 50) || 50, 10), 200),
   }))
   .handler(async ({ data, context }) => {
-    const role = await assertAccess(context.supabase, context.userId);
+    await assertAdmin(context.supabase, context.userId);
     // Reads enforce the effective cycle themselves. Cleanup runs in the deep
     // sync; never block a visible page on destructive maintenance work.
     const mod = await import("./bybit.server");
     if (data.page === 1) await mod.pullFromBybit();
-    return mod.fetchLedgerPage({ ...data, hideReversed: role === "employee" });
+    return mod.fetchLedgerPage({ ...data, hideReversed: false });
   });
 
 export const syncBybitLedger = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await assertAccess(context.supabase, context.userId);
+    await assertAdmin(context.supabase, context.userId);
     const mod = await import("./bybit.server");
     try {
       const recent = await mod.syncAllRecent();
@@ -39,7 +39,7 @@ export const syncBybitLedger = createServerFn({ method: "POST" })
 export const getBybitSpendTotals = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await assertAccess(context.supabase, context.userId);
+    await assertAdmin(context.supabase, context.userId);
     const mod = await import("./bybit.server");
     return mod.computeSpendAllAccounts();
   });
@@ -48,7 +48,7 @@ export const getBybitSpendTotals = createServerFn({ method: "POST" })
 export const getBybitCardBrands = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await assertAccess(context.supabase, context.userId);
+    await assertAdmin(context.supabase, context.userId);
     const mod = await import("./bybit.server");
     return { brands: await mod.cardBrandsByPan() };
   });

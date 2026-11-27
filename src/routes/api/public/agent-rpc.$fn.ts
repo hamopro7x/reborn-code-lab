@@ -21,6 +21,20 @@ export const Route = createFileRoute("/api/public/agent-rpc/$fn")({
         if (!ALLOWED.has(fn)) {
           return new Response(JSON.stringify({ message: "not allowed" }), { status: 404 });
         }
+        // Enrollment is the only unauthenticated operation that accepts a
+        // reusable human-entered code. Throttle the HTTP fallback by trusted
+        // proxy IP; heartbeat and signal polling remain unthrottled.
+        if (fn === "agent_register") {
+          try {
+            const { enforcePublicOrderRateLimit } = await import("@/lib/public-order-rate-limit.server");
+            await enforcePublicOrderRateLimit("agent-register-fallback", 10, 600);
+          } catch (error) {
+            return Response.json(
+              { message: error instanceof Error ? error.message : "registration temporarily unavailable" },
+              { status: 429 },
+              );
+          }
+        }
         const { BodyLimitError, readLimitedBody } = await import("@/lib/limited-body.server");
         let body: string;
         try {

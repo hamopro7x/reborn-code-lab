@@ -21,7 +21,8 @@ export const startMailLink = createServerFn({ method: "POST" }).middleware([requ
   const db = await adminDb();
   const state = randomToken(32);
   const nonce = randomToken(32);
-  await db.from("mail_oauth_states").delete().lt("expires_at", new Date().toISOString());
+  const { error: cleanupError } = await db.from("mail_oauth_states").delete().lt("expires_at", new Date().toISOString());
+  if (cleanupError) throw new Error(cleanupError.message);
   const { error } = await db.from("mail_oauth_states").insert({ state_hash: await oauthStateKey(state, nonce), user_id: context.userId, expires_at: new Date(Date.now() + 10 * 60_000).toISOString() });
   if (error) throw new Error(error.message);
   // HttpOnly nonce ties the flow to THIS browser; a leaked/forwarded consent link cannot complete elsewhere.
@@ -35,7 +36,8 @@ export const setMailAccountPaused = createServerFn({ method: "POST" }).middlewar
   .handler(async ({ data, context }) => {
     await requireAdmin(context);
     const db = await adminDb();
-    await db.from("mail_accounts").update({ status: data.paused ? "paused" : "active", updated_at: new Date().toISOString() }).eq("id", data.id);
+    const { error: updateError } = await db.from("mail_accounts").update({ status: data.paused ? "paused" : "active", updated_at: new Date().toISOString() }).eq("id", data.id);
+    if (updateError) throw new Error(updateError.message);
     await log(db, { actor_id: context.userId, action: data.paused ? "account_paused" : "account_resumed", account_id: data.id });
     return { ok: true };
   });
@@ -45,9 +47,11 @@ export const deleteMailAccount = createServerFn({ method: "POST" }).middleware([
   .handler(async ({ data, context }) => {
     await requireAdmin(context);
     const db = await adminDb();
-    const { data: acc } = await db.from("mail_accounts").select("email").eq("id", data.id).maybeSingle();
+    const { data: acc, error: accountError } = await db.from("mail_accounts").select("email").eq("id", data.id).maybeSingle();
+    if (accountError) throw new Error(accountError.message);
     if (!acc) return { ok: true };
-    await db.from("mail_accounts").update({ status: "paused" }).eq("id", data.id);
+    const { error: pauseError } = await db.from("mail_accounts").update({ status: "paused" }).eq("id", data.id);
+    if (pauseError) throw new Error(pauseError.message);
     try {
       const { decryptSecret } = await import("@/lib/mail/crypto.server");
       const { revokeToken } = await import("@/lib/mail/google.server");

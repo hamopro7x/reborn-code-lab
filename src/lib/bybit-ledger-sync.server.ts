@@ -1,4 +1,3 @@
-import { SETTLEMENT_COPY_FILTER } from "./bybit-settlement";
 import { mapLimit } from "./bybit-concurrency.server";
 
 import { admin, bybitConfigured, listAccounts } from "./bybit-account.server";
@@ -29,7 +28,7 @@ export async function syncAccountLedger(accountId: string): Promise<number> {
   const cursor = state?.value?.cycle === periodStart ? String(state.value.after ?? "") : "";
   let q = db.from("bybit_card_txns")
     .select("txn_id, created_at, confirmed_at, merchant, amount, currency, status, txn_time, pan4, txn_type, detail")
-    .eq("account_id", accountId).gte("txn_time", periodStart).lt("txn_time", periodEnd).or(SETTLEMENT_COPY_FILTER);
+    .eq("account_id", accountId).gte("txn_time", periodStart).lt("txn_time", periodEnd);
   if (cursor) q = q.gt("txn_id", cursor);
   const { data: cards, error: cardError } = await q.order("txn_id", { ascending: true }).limit(200);
   if (cardError) throw new Error(cardError.message);
@@ -49,19 +48,22 @@ export async function syncAccountLedger(accountId: string): Promise<number> {
 
 /** Runs the ledger sync for every linked account. */
 
-export async function syncAllLedger(): Promise<{ saved: number; accounts: number }> {
+export async function syncAllLedger(): Promise<{ saved: number; accounts: number; failedAccounts: string[] }> {
   // Shared, sequential and rate-limited for the same reason as syncAllCardTxns.
   return heavyOnce("ledger:all", 8_000, async () => {
     const accounts = await listAccounts();
     let saved = 0;
+    const failedAccounts: string[] = [];
     for (const a of accounts) {
       try {
         saved += await syncAccountLedger(a.id);
-      } catch {
-        /* حساب واحد يفشل لا يوقف الباقي */
+      } catch (error) {
+        // Continue other accounts, but never hide a partial synchronization failure.
+        failedAccounts.push(a.id);
+        console.error("Bybit ledger sync failed for account:", a.id, (error as Error)?.message ?? "unknown_error");
       }
     }
-    return { saved, accounts: accounts.length };
+    return { saved, accounts: accounts.length, failedAccounts };
   });
 }
 
@@ -88,18 +90,24 @@ function runRecentAssetSync(accounts: BybitAccount[]): void {
 
 /** Fast card sync; each account links its shift as soon as its own rows land. */
 
-export async function syncAllRecent(): Promise<{ saved: number; accounts: number }> {
+export async function syncAllRecent(): Promise<{ saved: number; accounts: number; failedAccounts: string[] }> {
   // Screens and the server loop all ask for this; one pass per 5 s per server
   // is as fresh as the 5 s loop and stops open screens from multiplying load.
   return heavyOnce("recent:all", 5_000, async () => {
     const accounts = await listAccounts();
     let saved = 0;
+    const failedAccounts: string[] = [];
     await mapLimit(accounts, 1, async (a) => {
-      if (!(await bybitConfigured(a.id))) return;
-      saved += await syncAccountRecent(a.id);
+      try {
+        if (!(await bybitConfigured(a.id))) return;
+        saved += await syncAccountRecent(a.id);
+      } catch (error) {
+        failedAccounts.push(a.id);
+        console.error("Bybit recent card sync failed for account:", a.id, (error as Error)?.message ?? "unknown_error");
+      }
     });
     runRecentAssetSync(accounts);
-    return { saved, accounts: accounts.length };
+    return { saved, accounts: accounts.length, failedAccounts };
   });
 }
 
@@ -113,11 +121,17 @@ export function runDeepSyncIfDue(force = false): void {
   lastDeepAt = Date.now();
   void heavyOnce("deep:all", 0, async () => {
     try {
-      await syncAllCardTxns();
-    } catch {
-      /* keep going to the ledger */
+      const cardResult = await syncAllCardTxns();
+      if (cardResult.failedAccounts.length) {
+        console.error("Bybit deep card sync partially failed for accounts:", cardResult.failedAccounts);
+      }
+    } catch (error) {
+      console.error("Bybit deep card sync failed:", (error as Error)?.message ?? "unknown_error");
     }
-    await syncAllLedger();
+    const ledgerResult = await syncAllLedger();
+    if (ledgerResult.failedAccounts.length) {
+      console.error("Bybit deep ledger sync partially failed for accounts:", ledgerResult.failedAccounts);
+    }
   }).catch((e) => console.error("deep bybit sync failed:", (e as Error)?.message));
 }
 

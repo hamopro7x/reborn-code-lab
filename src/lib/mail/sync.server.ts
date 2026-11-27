@@ -5,15 +5,18 @@ import { extractLogoUrl, folderFromLabels, header, parsePayload } from "./mime";
 const LEASE_MS = 90_000;
 
 export async function logActivity(admin: any, row: { actor_id?: string | null; action: string; account_id?: string | null; message_id?: string | null; meta?: any }) {
-  await admin.from("mail_activity").insert({ meta: {}, ...row });
+  const { error } = await admin.from("mail_activity").insert({ meta: {}, ...row });
+  // Audit logging must not turn a completed OAuth link or sent email into a false failure.
+  if (error) console.error("Mail activity log failed:", error.code ?? "database_error");
 }
 
 /** Fetches one Gmail message and stores it locally (idempotent). Returns new local id or null. */
 export async function importMessage(admin: any, token: string, account: any, gmailId: string, notify = true): Promise<string | null> {
-  const { data: tomb } = await admin.from("mail_local_tombstones").select("gmail_message_id").eq("account_id", account.id).eq("gmail_message_id", gmailId).maybeSingle();
+  const { data: tomb, error: tombError } = await admin.from("mail_local_tombstones").select("gmail_message_id").eq("account_id", account.id).eq("gmail_message_id", gmailId).maybeSingle();
+  if (tombError) throw new Error(tombError.message);
   if (tomb) return null;
-  const { data: existing } = await admin.from("mail_messages").select("id").eq("account_id", account.id).eq("gmail_message_id", gmailId).maybeSingle();
-  if (existing) return null;
+  const { data: existing, error: existingError } = await admin.from("mail_messages").select("id").eq("account_id", account.id).eq("gmail_message_id", gmailId).maybeSingle();
+  if (existingError) throw new Error(existingError.message);
   let m: any;
   try {
     m = await gmail(token, `/messages/${gmailId}?format=full`);
@@ -55,20 +58,34 @@ export async function importMessage(admin: any, token: string, account: any, gma
     ({ data: ins, error } = await admin.from("mail_messages").upsert(rest as typeof row, { onConflict: "account_id,gmail_message_id", ignoreDuplicates: true }).select("id").maybeSingle());
   }
   if (error) throw new Error(error.message);
-  if (!ins) return null;
+  // ignoreDuplicates may return no row when another worker inserted the same message.
+  // Resolve the canonical id so attachment/notification side effects can be repaired.
+  let messageId = ins?.id ?? existing?.id;
+  if (!messageId) {
+    const { data: resolved, error: resolveError } = await admin.from("mail_messages").select("id").eq("account_id", account.id).eq("gmail_message_id", gmailId).maybeSingle();
+    if (resolveError) throw new Error(resolveError.message);
+    messageId = resolved?.id;
+  }
+  if (!messageId) throw new Error("Unable to resolve imported Gmail message");
   if (body.attachments.length) {
-    await admin.from("mail_attachments").insert(body.attachments.map((a) => ({
-      message_id: ins.id, gmail_attachment_id: a.attachmentId, filename: a.filename.slice(0, 300), mime_type: a.mimeType, size_bytes: a.size,
-    })));
+    const attachmentRows = body.attachments.map((a) => ({
+      message_id: messageId, gmail_attachment_id: a.attachmentId, filename: a.filename.slice(0, 300), mime_type: a.mimeType, size_bytes: a.size,
+    }));
+    const { error: attachmentError } = await admin.from("mail_attachments").upsert(attachmentRows, {
+      onConflict: "message_id,gmail_attachment_id", ignoreDuplicates: true,
+    });
+    if (attachmentError) throw new Error(attachmentError.message);
   }
   if (notify && (folder === "inbox" || folder === "spam" || folder === "other")) {
-    const { data: staff } = await admin.from("user_roles").select("user_id, role");
+    const { data: staff, error: staffError } = await admin.from("user_roles").select("user_id, role");
+    if (staffError) throw new Error(staffError.message);
     const ids = [...new Set((staff ?? []).filter((r: any) => r.role === "admin" || r.role === "employee").map((r: any) => r.user_id))];
     if (ids.length) {
-      await admin.from("mail_notifications").upsert(ids.map((u) => ({ user_id: u, message_id: ins.id })), { onConflict: "user_id,message_id", ignoreDuplicates: true });
+      const { error: notificationError } = await admin.from("mail_notifications").upsert(ids.map((u) => ({ user_id: u, message_id: messageId })), { onConflict: "user_id,message_id", ignoreDuplicates: true });
+      if (notificationError) throw new Error(notificationError.message);
     }
   }
-  return ins.id;
+  return ins?.id ?? null;
 }
 
 async function removeLocal(admin: any, accountId: string, gmailIds: string[]) {
@@ -78,25 +95,22 @@ async function removeLocal(admin: any, accountId: string, gmailIds: string[]) {
   }
 }
 
-/** Ids already stored or tombstoned, so replays never re-fetch them from Gmail. */
+/** Tombstoned ids are skipped; existing messages are replayed to repair partial side effects. */
 async function knownIds(admin: any, accountId: string, ids: string[]): Promise<Set<string>> {
   const known = new Set<string>();
   for (let i = 0; i < ids.length; i += 200) {
     const chunk = ids.slice(i, i + 200);
-    const [a, b] = await Promise.all([
-      admin.from("mail_messages").select("gmail_message_id").eq("account_id", accountId).in("gmail_message_id", chunk),
-      admin.from("mail_local_tombstones").select("gmail_message_id").eq("account_id", accountId).in("gmail_message_id", chunk),
-    ]);
-    if (a.error || b.error) throw new Error((a.error ?? b.error).message);
-    for (const r of [...(a.data ?? []), ...(b.data ?? [])]) known.add(r.gmail_message_id);
+    const { data, error } = await admin.from("mail_local_tombstones").select("gmail_message_id").eq("account_id", accountId).in("gmail_message_id", chunk);
+    if (error) throw new Error(error.message);
+    for (const r of data ?? []) known.add(r.gmail_message_id);
   }
   return known;
 }
 
 // Each run has a time budget below the lease. Every page is processed fully; the history cursor
 // only advances after the LAST page succeeds. If the budget runs out, the cursor stays put and the
-// next run replays the same pages — already-imported ids are skipped without Gmail calls, so
-// every run makes guaranteed forward progress and nothing is skipped.
+// next run replays the same pages — existing messages are rechecked to repair missing attachments
+// and notifications, while tombstoned ids are skipped. Nothing is skipped.
 const RUN_BUDGET_MS = 55_000;
 
 async function importIds(admin: any, token: string, account: any, ids: string[], deadline: number) {
@@ -203,11 +217,13 @@ export function reconcileDue(lastSyncAt: string | null | undefined, now = Date.n
 
 /** Bounded safety net for source deletions history might miss: checks a rotating slice each minute. */
 async function reconcileSample(admin: any, token: string, accountId: string, deadline: number) {
-  const { count } = await admin.from("mail_messages").select("id", { count: "exact", head: true }).eq("account_id", accountId);
+  const { count, error: countError } = await admin.from("mail_messages").select("id", { count: "exact", head: true }).eq("account_id", accountId);
+  if (countError) throw new Error(countError.message);
   if (!count) return;
   const SIZE = 15;
   const offset = (Math.floor(Date.now() / 60_000) * SIZE) % count;
-  const { data } = await admin.from("mail_messages").select("gmail_message_id").eq("account_id", accountId).order("id").range(offset, offset + SIZE - 1);
+  const { data, error: sampleError } = await admin.from("mail_messages").select("gmail_message_id").eq("account_id", accountId).order("id").range(offset, offset + SIZE - 1);
+  if (sampleError) throw new Error(sampleError.message);
   const gone: string[] = [];
   for (const m of data ?? []) {
     if (Date.now() > deadline) break;
@@ -224,26 +240,30 @@ async function reconcileSample(admin: any, token: string, accountId: string, dea
 
 /** Sync every active account with a per-account lease so runs never overlap. */
 export async function syncAllMail(admin: any, onlyAccountId?: string) {
-  const now = new Date();
   let q = admin.from("mail_accounts").select("*").in("status", ["active", "error"]);
   if (onlyAccountId) q = q.eq("id", onlyAccountId);
   const { data: accounts, error } = await q;
   if (error) throw new Error(error.message);
   const results: { id: string; imported?: number; error?: string; skipped?: boolean }[] = [];
   for (const acc of accounts ?? []) {
-    const { data: locked } = await admin.from("mail_accounts")
-      .update({ sync_lease_until: new Date(now.getTime() + LEASE_MS).toISOString() })
+    // Compute the lease window immediately before claiming each account. A timestamp
+    // captured before the whole sequential loop can already be expired for later accounts.
+    const leaseNow = new Date();
+    const { data: locked, error: leaseError } = await admin.from("mail_accounts")
+      .update({ sync_lease_until: new Date(leaseNow.getTime() + LEASE_MS).toISOString() })
       .eq("id", acc.id)
-      .or(`sync_lease_until.is.null,sync_lease_until.lt.${now.toISOString()}`)
+      .or(`sync_lease_until.is.null,sync_lease_until.lt.${leaseNow.toISOString()}`)
       .select("id").maybeSingle();
+    if (leaseError) throw new Error(leaseError.message);
     if (!locked) { results.push({ id: acc.id, skipped: true }); continue; }
     try {
       results.push({ id: acc.id, imported: await syncAccount(admin, acc) });
     } catch (e: any) {
       const reauth = e instanceof ReauthError;
-      await admin.from("mail_accounts").update({
+      const { error: stateError } = await admin.from("mail_accounts").update({
         status: reauth ? "reauth_required" : "error", last_error: String(e?.message ?? e).slice(0, 300), sync_lease_until: null,
       }).eq("id", acc.id);
+      if (stateError) console.error("Mail sync failure state update failed:", stateError.code ?? "database_error");
       results.push({ id: acc.id, error: reauth ? "reauth_required" : "sync_failed" });
     }
   }

@@ -2963,6 +2963,10 @@ export type Database = {
         Args: { a: Database["public"]["Tables"]["bybit_card_txns"]["Row"] }
         Returns: boolean
       }
+      consume_public_rate_limit: {
+        Args: { p_bucket: string; p_limit: number; p_window_seconds: number }
+        Returns: boolean
+      }
       gen_order_code: { Args: never; Returns: string }
       integration_clear_bybit: { Args: never; Returns: boolean }
       integration_get_bybit: {

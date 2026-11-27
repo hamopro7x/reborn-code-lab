@@ -50,7 +50,7 @@ describe("Bybit shared-table account isolation", () => {
   });
 
   it("recent sync never asks for credentials belonging to a retired account", async () => {
-    expect(await syncAllRecent()).toEqual({ saved: 0, accounts: 2 });
+    expect(await syncAllRecent()).toEqual({ saved: 0, accounts: 2, failedAccounts: [] });
     expect(state.accountIds.length).toBeGreaterThanOrEqual(2);
     expect([...new Set(state.accountIds)].sort()).toEqual(["bybit-a", "legacy-b"]);
     expect(state.requests.every((url) => url.hostname === "account-test.supabase.co")).toBe(true);

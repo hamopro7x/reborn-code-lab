@@ -6,7 +6,8 @@
 export type BybitRole = "admin" | "employee";
 
 export async function assertAccess(supabase: any, userId: string): Promise<BybitRole> {
-  const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId);
+  const { data, error } = await supabase.from("user_roles").select("role").eq("user_id", userId);
+  if (error) throw new Error("تعذر التحقق من صلاحيات المستخدم");
   const roles = (data ?? []).map((r: any) => r.role);
   if (roles.includes("admin")) return "admin";
   if (roles.includes("employee")) return "employee";

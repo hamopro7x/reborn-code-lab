@@ -7,9 +7,11 @@ on:
       - refactor/employee-shifts-transfers
       - refactor/role-specific-interfaces
       - refactor/final-audit-cleanup
+      - audit/phase-3-security-fixes
       # Keep the role-specific admin shell and panel access policy under CI.
   pull_request:
     branches:
+      - refactor/final-audit-cleanup
       - main
       - refactor/orders-customers-products
       - refactor/employee-shifts-transfers
@@ -110,7 +112,6 @@ jobs:
           src/lib/orders-create.functions.ts
           src/lib/orders-payment.functions.ts
           src/lib/orders-read.functions.ts
-          src/lib/orders-admin.queries.ts
           src/lib/customer-summary.server.ts
           src/lib/customer-summary.server.test.ts
           src/lib/read-pages.server.ts

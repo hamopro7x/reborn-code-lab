@@ -11,10 +11,10 @@
  * - A transaction can only ever have one assignment (unique ledger_id).
  */
 const P2P_KINDS = ["p2p_buy", "p2p_sell"];
-import { SETTLEMENT_COPY_SIDES } from "./bybit-settlement";
 import { cardProjectionVisible } from "./bybit-confirmation";
+import { SETTLEMENT_COPY_SIDES } from "./bybit-settlement";
 
-/** Settlement of an earlier card authorisation (Bybit side 3). */
+/** Compatibility predicate; documented side 3 and side 13 are real movements. */
 export function isCardSettlement(r: { kind?: string; detail?: any }): boolean {
   return r.kind === "card" && SETTLEMENT_COPY_SIDES.has(String(r.detail?.side ?? ""));
 }
@@ -22,23 +22,25 @@ export function isCardSettlement(r: { kind?: string; detail?: any }): boolean {
 export async function autoAssignLedger(db: any): Promise<number> {
   // More than one open shift used to make this query error out (maybeSingle),
   // which silently stopped every transaction from reaching the shift sheet.
-  const { data: shifts } = await db
+  const { data: shifts, error: shiftsError } = await db
     .from("work_shifts")
     .select("id,user_id,started_at")
     .is("ended_at", null)
     .order("started_at", { ascending: false })
     .limit(1);
+  if (shiftsError) throw new Error(shiftsError.message);
   const shift = shifts?.[0];
   if (!shift) return 0;
 
 
-  const { data: fetched } = await db
+  const { data: fetched, error: fetchedError } = await db
     .from("bybit_ledger")
     .select("id,kind,occurred_at,detail")
     .not("kind", "in", `(${P2P_KINDS.join(",")})`)
     .gte("occurred_at", shift.started_at)
     .order("occurred_at", { ascending: false })
     .limit(5000);
+  if (fetchedError) throw new Error(fetchedError.message);
   // Bybit's daily clearing posts settlements (side 3) for purchases that were
   // authorised earlier, often in a previous shift. They are not new purchases,
   // so they must never land in the currently open shift.
@@ -61,11 +63,12 @@ export async function autoAssignLedger(db: any): Promise<number> {
 
   let saved = 0;
   for (let i = 0; i < payload.length; i += 500) {
-    const { error } = await db
+    const { data, error } = await db
       .from("work_txn_assignments")
-      .upsert(payload.slice(i, i + 500), { onConflict: "ledger_id", ignoreDuplicates: true });
-    if (error) console.error("work auto-assign failed:", error.message);
-    else saved += Math.min(500, payload.length - i);
+      .upsert(payload.slice(i, i + 500), { onConflict: "ledger_id", ignoreDuplicates: true })
+      .select("ledger_id");
+    if (error) throw new Error(error.message);
+    saved += (data ?? []).length;
   }
   if (saved > 0) {
     const { enforceRetentionSafe } = await import("./retention.server");

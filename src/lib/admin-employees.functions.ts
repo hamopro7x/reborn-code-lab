@@ -33,7 +33,11 @@ export const createEmployee = createServerFn({ method: "POST" })
 
     const uid = created.user.id;
     // Upsert profile (handle_new_user trigger blocks non-allowed emails; do it manually)
-    await supabaseAdmin.from("profiles").upsert({ id: uid, email: data.email, full_name: data.full_name });
+    const { error: profileError } = await supabaseAdmin.from("profiles").upsert({ id: uid, email: data.email, full_name: data.full_name });
+    if (profileError) {
+      await supabaseAdmin.auth.admin.deleteUser(uid);
+      throw new Error("Failed to create employee profile");
+    }
     const { error: rErr } = await supabaseAdmin
       .from("user_roles")
       .insert({ user_id: uid, role: "employee" });
@@ -55,13 +59,40 @@ export const deleteEmployee = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     // Prevent deleting admins
-    const { data: roles } = await supabaseAdmin
+    const { data: roles, error: roleError } = await supabaseAdmin
       .from("user_roles")
       .select("role")
       .eq("user_id", data.user_id);
+    if (roleError) throw new Error("Unable to verify target account role");
     if ((roles ?? []).some((r: any) => r.role === "admin")) {
       throw new Error("Cannot delete another admin");
     }
+    if (!(roles ?? []).some((r: any) => r.role === "employee")) {
+      throw new Error("Employee not found");
+    }
+    // Preserve financial and operational history. Auth deletion cascades into
+    // these tables, so refuse destructive deletion while any records remain.
+    const retainedHistoryChecks = [
+      ["bybit_cards", "created_by"],
+      ["work_shifts", "user_id"],
+      ["work_manual_txns", "user_id"],
+      ["work_manual_card_txns", "user_id"],
+      ["work_txn_assignments", "user_id"],
+      ["work_txn_entries", "user_id"],
+      ["work_pins", "user_id"],
+    ] as const;
+    const historyClient = supabaseAdmin as any;
+    for (const [table, column] of retainedHistoryChecks) {
+      const { count, error: historyError } = await historyClient
+        .from(table)
+        .select(column, { count: "exact", head: true })
+        .eq(column, data.user_id);
+      if (historyError) throw new Error("تعذر التحقق من السجلات المرتبطة بالموظف");
+      if ((count ?? 0) > 0) {
+        throw new Error("لا يمكن حذف الموظف لوجود سجلات تشغيلية أو مالية مرتبطة به. احتفظ بالحساب أو انقل السجلات أولًا.");
+      }
+    }
+
     const { error } = await supabaseAdmin.auth.admin.deleteUser(data.user_id);
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -72,9 +103,11 @@ export const listEmployees = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     await assertAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: roles } = await supabaseAdmin
+    const { data: roles, error: rolesError } = await supabaseAdmin
       .from("user_roles")
-      .select("user_id, role, created_at");
+      .select("user_id, role, created_at")
+      .eq("role", "employee");
+    if (rolesError) throw new Error("Failed to load employees");
     const ids = (roles ?? []).map((r: any) => r.user_id);
     if (!ids.length) return [];
     const { data: profiles } = await supabaseAdmin
@@ -117,6 +150,17 @@ export const updateEmployeeAvatar = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    if (!data.path.startsWith(`${data.user_id}/`) || data.path.includes("..")) {
+      throw new Error("Invalid employee avatar path");
+    }
+    const { data: targetRoles, error: roleError } = await supabaseAdmin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", data.user_id);
+    if (roleError || !(targetRoles ?? []).some((r: any) => r.role === "employee") ||
+        (targetRoles ?? []).some((r: any) => r.role === "admin")) {
+      throw new Error("Employee not found");
+    }
     // Remove any older avatar file for this user (keep bucket tidy)
     const { data: existing } = await supabaseAdmin
       .from("profiles")
@@ -151,6 +195,14 @@ export const updateEmployee = createServerFn({ method: "POST" })
     await assertAdmin(context.supabase, context.userId);
     if (data.password) await assertPasswordNotBreached(data.password);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: targetRoles, error: roleError } = await supabaseAdmin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", data.user_id);
+    if (roleError || !(targetRoles ?? []).some((r: any) => r.role === "employee") ||
+        (targetRoles ?? []).some((r: any) => r.role === "admin")) {
+      throw new Error("Employee not found");
+    }
 
     const authUpdate: { email?: string; password?: string; user_metadata?: Record<string, unknown> } = {};
     if (data.email) authUpdate.email = data.email;

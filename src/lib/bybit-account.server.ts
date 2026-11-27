@@ -35,26 +35,37 @@ export async function listAccounts(): Promise<BybitAccount[]> {
   let data = first.data;
   const listError = first.error;
   if (listError && (String(listError.code) === "42703" || /provider/i.test(String(listError.message ?? "")))) {
-    ({ data } = await db
+    const fallback = await db
       .from("bybit_accounts")
       .select(cols)
       .order("sort_order", { ascending: true })
-      .order("created_at", { ascending: true }));
+      .order("created_at", { ascending: true });
+    if (fallback.error) throw new Error(fallback.error.message);
+    data = fallback.data;
+  } else if (listError) {
+    throw new Error(listError.message);
   }
   // `frozen` is read separately so the list still works before the column exists.
   const frozenIds = new Map<string, string | null>();
   try {
     const { data: fz, error } = await db.from("bybit_accounts").select("id, frozen, frozen_until").eq("frozen", true);
+    if (error && !(/frozen|frozen_until/i.test(String(error.message ?? "")) || String(error.code) === "42703")) {
+      throw new Error(error.message);
+    }
     if (!error) {
       const expired: string[] = [];
       for (const r of (fz ?? []) as any[]) {
         if (r.frozen_until && new Date(r.frozen_until).getTime() <= Date.now()) expired.push(r.id);
         else frozenIds.set(r.id, r.frozen_until ?? null);
       }
-      if (expired.length) await db.from("bybit_accounts").update({ frozen: false, frozen_until: null } as any).in("id", expired);
+      if (expired.length) {
+        const { error: expireError } = await db.from("bybit_accounts").update({ frozen: false, frozen_until: null } as any).in("id", expired);
+        if (expireError) throw new Error(expireError.message);
+      }
     }
-  } catch {
-    /* column not applied yet */
+  } catch (error) {
+    if (!(error instanceof Error) || !/frozen|frozen_until|42703/i.test(error.message)) throw error;
+    /* frozen columns not applied yet */
   }
   return (data ?? []).map((r: any) => ({
     frozen: frozenIds.has(r.id),
@@ -96,14 +107,11 @@ export async function reorderAccounts(ids: string[]) {
 
 
 async function accountCreds(accountId: string): Promise<Creds | null> {
-  try {
-    const db = await admin();
-    const { data } = await db.rpc("bybit_account_get_keys", { p_account_id: accountId });
-    const row = Array.isArray(data) ? data[0] : data;
-    if (row?.api_key && row?.api_secret) return { key: row.api_key, secret: row.api_secret };
-  } catch {
-    /* ignore */
-  }
+  const db = await admin();
+  const { data, error } = await db.rpc("bybit_account_get_keys", { p_account_id: accountId });
+  if (error) throw new Error(`تعذر قراءة مفاتيح حساب Bybit: ${error.message}`);
+  const row = Array.isArray(data) ? data[0] : data;
+  if (row?.api_key && row?.api_secret) return { key: row.api_key, secret: row.api_secret };
   return null;
 }
 
@@ -155,7 +163,14 @@ export async function createAccount(key: string, secret: string, userId: string,
     p_secret: secret,
     p_by: userId,
   });
-  if (kErr) throw new Error(kErr.message);
+  if (kErr) {
+    // Avoid leaving an account row visible without its own encrypted credentials.
+    const { error: cleanupError } = await db.from("bybit_accounts").delete().eq("id", data.id);
+    if (cleanupError) {
+      throw new Error(`تعذر حفظ مفاتيح الحساب وتنظيف السجل الناقص: ${kErr.message}; ${cleanupError.message}`);
+    }
+    throw new Error(kErr.message);
+  }
   return { id: data.id as string, name, uid };
 }
 
@@ -166,14 +181,11 @@ export async function deleteAccount(accountId: string) {
 }
 
 async function dbCreds(): Promise<Creds | null> {
-  try {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data } = await (supabaseAdmin as any).rpc("integration_get_bybit");
-    const row = Array.isArray(data) ? data[0] : data;
-    if (row?.api_key && row?.api_secret) return { key: row.api_key, secret: row.api_secret };
-  } catch {
-    /* fall back to env */
-  }
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data, error } = await (supabaseAdmin as any).rpc("integration_get_bybit");
+  if (error) throw new Error(`تعذر قراءة مفاتيح Bybit المحفوظة: ${error.message}`);
+  const row = Array.isArray(data) ? data[0] : data;
+  if (row?.api_key && row?.api_secret) return { key: row.api_key, secret: row.api_secret };
   return null;
 }
 
@@ -240,7 +252,8 @@ export async function saveCreds(key: string, secret: string, userId: string) {
 
 export async function clearCreds() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  await (supabaseAdmin as any).rpc("integration_clear_bybit");
+  const { error } = await (supabaseAdmin as any).rpc("integration_clear_bybit");
+  if (error) throw new Error(error.message);
 }
 
 /** Validates a key/secret pair on its own — never touches stored accounts. */

@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { listAdminOrders, updateAdminOrderStatus, getOrderScreenshotUrl } from "@/lib/orders-admin.queries";
+
+import { getOrderScreenshotUrl, listAdminOrders, updateAdminOrderStatus } from "@/lib/admin-orders.functions";
 import { deleteAllOrders } from "@/lib/admin.functions";
 import { formatLocaleDateTime } from "@/lib/format";
 import { toast } from "sonner";
@@ -13,20 +14,28 @@ import { Check, ExternalLink, Loader2, Trash2, X } from "lucide-react";
 export function OrdersTab({ isAdmin }: { isAdmin: boolean }) {
   const qc = useQueryClient();
   const deleteAllFn = useServerFn(deleteAllOrders);
+  const updateOrderFn = useServerFn(updateAdminOrderStatus);
+  const listOrdersFn = useServerFn(listAdminOrders);
+  const screenshotUrlFn = useServerFn(getOrderScreenshotUrl);
   const [deleting, setDeleting] = useState(false);
   const [filter, setFilter] = useState<string>("awaiting_confirmation");
   const [search, setSearch] = useState("");
   const ordersQ = useQuery({
     queryKey: ["admin-orders", filter, search],
     queryFn: async () => {
-      return listAdminOrders(filter, search);
+      return listOrdersFn({ data: { filter, search } });
     },
   });
 
   async function updateStatus(id: string, status: string) {
-    const { error } = await updateAdminOrderStatus(id, status);
-    if (error) toast.error(error.message);
-    else { toast.success("تم التحديث"); qc.invalidateQueries({ queryKey: ["admin-orders"] }); qc.invalidateQueries({ queryKey: ["admin-stats"] }); }
+    try {
+      await updateOrderFn({ data: { id, status } });
+      toast.success("تم التحديث");
+      qc.invalidateQueries({ queryKey: ["admin-orders"] });
+      qc.invalidateQueries({ queryKey: ["admin-stats"] });
+    } catch (error: any) {
+      toast.error(error?.message || "تعذر تحديث حالة الطلب");
+    }
   }
 
   const statusLabel: Record<string, string> = {
@@ -124,7 +133,7 @@ export function OrdersTab({ isAdmin }: { isAdmin: boolean }) {
                     type="button"
                     onClick={async () => {
                       try {
-                        const signedUrl = await getOrderScreenshotUrl(o.payment_screenshot as string);
+                        const signedUrl = await screenshotUrlFn({ data: { path: o.payment_screenshot as string } });
                         window.open(signedUrl, "_blank", "noopener");
                       } catch {
                         toast.error("تعذر فتح الإثبات");

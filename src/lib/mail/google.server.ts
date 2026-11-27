@@ -56,7 +56,8 @@ export class ReauthError extends Error {}
 
 /** Returns a valid access token, refreshing and persisting it encrypted when needed. */
 export async function accessTokenFor(admin: any, accountId: string): Promise<string> {
-  const { data: s } = await admin.from("mail_account_secrets").select("*").eq("account_id", accountId).maybeSingle();
+  const { data: s, error: secretError } = await admin.from("mail_account_secrets").select("*").eq("account_id", accountId).maybeSingle();
+  if (secretError) throw new Error("تعذر قراءة بيانات اعتماد Gmail بأمان");
   if (!s) throw new ReauthError("لا توجد بيانات اعتماد");
   if (s.access_token_ciphertext && s.access_expires_at && new Date(s.access_expires_at).getTime() > Date.now() + 60_000) {
     return decryptSecret(s.access_token_ciphertext);
@@ -72,11 +73,12 @@ export async function accessTokenFor(admin: any, accountId: string): Promise<str
     if (j.error === "invalid_grant") throw new ReauthError("انتهت صلاحية الربط، أعد ربط الحساب");
     throw new Error(`token_refresh_failed: ${j.error ?? res.status}`);
   }
-  await admin.from("mail_account_secrets").update({
+  const { error: persistError } = await admin.from("mail_account_secrets").update({
     access_token_ciphertext: await encryptSecret(j.access_token),
     access_expires_at: new Date(Date.now() + (j.expires_in ?? 3600) * 1000).toISOString(),
     updated_at: new Date().toISOString(),
   }).eq("account_id", accountId);
+  if (persistError) throw new Error("تعذر حفظ رمز الوصول الجديد بأمان");
   return j.access_token;
 }
 

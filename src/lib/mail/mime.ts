@@ -51,6 +51,9 @@ export function folderFromLabels(labels: string[]): "inbox" | "sent" | "drafts" 
 
 const encHeader = (v: string) => (/^[\x20-\x7E]*$/.test(v) ? v : `=?UTF-8?B?${b64Utf8(v)}?=`);
 const clean = (v: string) => v.replace(/[\r\n]+/g, " ").trim();
+const safeMimeType = (v: string) =>
+  /^[a-z0-9!#$&^_.+-]+\/[a-z0-9!#$&^_.+-]+$/i.test(v) ? v.toLowerCase() : "application/octet-stream";
+const safeMimeParameter = (v: string) => clean(v).replace(/[\\"]/g, "_").slice(0, 180);
 
 export interface OutgoingMail {
   from: string;
@@ -78,8 +81,9 @@ export function buildRawMessage(m: OutgoingMail): string {
     lines.push(`Content-Type: multipart/mixed; boundary="${boundary}"`, "", `--${boundary}`,
       'Content-Type: text/plain; charset="UTF-8"', "Content-Transfer-Encoding: base64", "", bodyB64);
     for (const a of m.attachments) {
-      const name = encHeader(clean(a.filename));
-      lines.push(`--${boundary}`, `Content-Type: ${clean(a.mimeType || "application/octet-stream")}; name="${name}"`,
+      const name = encHeader(safeMimeParameter(a.filename));
+      const mimeType = safeMimeType(a.mimeType || "application/octet-stream");
+      lines.push(`--${boundary}`, `Content-Type: ${mimeType}; name="${name}"`,
         `Content-Disposition: attachment; filename="${name}"`, "Content-Transfer-Encoding: base64", "",
         (a.base64.match(/.{1,76}/g) ?? []).join("\r\n"));
     }

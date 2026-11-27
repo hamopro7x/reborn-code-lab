@@ -1,4 +1,3 @@
-import { SETTLEMENT_COPY_SIDES } from "./bybit-settlement";
 import { createHmac } from "crypto";
 import { getCreds } from "./bybit-account.server";
 import type { Creds } from "./bybit-account.server";
@@ -42,8 +41,15 @@ export function cardRecordRank(t: any): number {
 const TRANSIENT_OR_AUTH_CODES = new Set(["10002", "10003", "10004", "10005", "10006", "10016", "10018"]);
 
 export function isUnsupportedCardTypeError(err: unknown): boolean {
-  const m = /^Bybit (\d+):/.exec(String((err as Error)?.message ?? err ?? ""));
-  return Boolean(m && !TRANSIENT_OR_AUTH_CODES.has(m[1]));
+  const message = String((err as Error)?.message ?? err ?? "");
+  const m = /^Bybit (\d+):/.exec(message);
+  // A generic parameter error (10001) is not enough: only the provider's
+  // explicit unsupported/not-supported wording permits skipping an optional type.
+  return Boolean(
+    m &&
+    !TRANSIENT_OR_AUTH_CODES.has(m[1]) &&
+    /unsupported|not supported|not support|invalid query type/i.test(message),
+  );
 }
 
 /**
@@ -62,6 +68,10 @@ export function mergeCardTypeResults(
   let lastError: unknown;
   results.forEach((res, typeIndex) => {
     if (res.status !== "fulfilled") {
+      if (isUnsupportedCardTypeError(res.reason)) {
+        warn(`bybit card type ${types[typeIndex] ?? typeIndex} unsupported: ${String((res.reason as Error)?.message ?? res.reason)}`);
+        return;
+      }
       lastError = res.reason;
       warn(
         `bybit card type ${types[typeIndex] ?? typeIndex} ${isUnsupportedCardTypeError(res.reason) ? "unsupported" : "failed"}: ${String((res.reason as Error)?.message ?? res.reason)}`,
@@ -77,7 +87,8 @@ export function mergeCardTypeResults(
       if (preferRecord(current, r, typeIndex, updatedAt)) merged.set(k, { row: r, sourcePriority: typeIndex, updatedAt });
     }
   });
-  if (!ok && lastError) throw lastError;
+  if (lastError) throw lastError;
+  if (!ok) throw new Error("Bybit card history returned no successful query types");
   return [...merged.values()].map(({ row }) => row).filter((row) => !isLateSettlementRecord(row));
 }
 
@@ -87,8 +98,19 @@ export function mergeCardTypeResults(
  * was already recorded at authorisation, so it is never ingested or shown.
  */
 
+/**
+ * Compatibility predicate retained for older callers. Bybit defines side 3
+ * as a transaction/clearing record and side 13 as an ATM withdrawal. Neither
+ * can be discarded as a presumed duplicate; canonical purchase identity is
+ * responsible for collapsing genuine authorization/clearing copies.
+ */
+/**
+ * Compatibility predicate: the provider's side values 3 (transaction) and
+ * 13 (ATM withdrawal) are real movements, not safe-to-drop duplicates.
+ */
 export function isLateSettlementRecord(row: any): boolean {
-  return SETTLEMENT_COPY_SIDES.has(String(row?.side ?? ""));
+  void row;
+  return false;
 }
 
 /**
@@ -156,64 +178,65 @@ export function preferRecord(
 
 export async function fetchCardPages(maxRows: number, creds: Creds, sinceMs?: number, budgetMs = 20_000): Promise<any[]> {
   const merged = new Map<string, { row: any; sourcePriority: number; updatedAt: number }>();
-  const pageSize = 100; // Bybit caps this endpoint at 100 per page (larger values silently return 10)
+  const pageSize = 100;
   const maxPages = Math.max(1, Math.ceil(maxRows / pageSize));
-  // Wall-clock budget: an unbounded page walk could keep one request busy for
-  // minutes and starve every other visitor of the same worker.
   const deadline = Date.now() + budgetMs;
   let successfulTypes = 0;
   let lastError: unknown;
-
-  // Walk REFUND first, then FINANCIAL, then AUTH. The time budget used to run
-  // out inside the long AUTH walk, so reversals («معكوسة») were never read and
-  // the stale authorisation snapshot stayed "success". Priority stays by type.
   const order = [...CARD_QUERY_TYPES.entries()].reverse();
-  for (const [typeIndex, type] of order) {
-    if (Date.now() > deadline) break;
-    try {
-      successfulTypes++;
-      for (let page = 1; page <= maxPages && Date.now() < deadline; page++) {
 
-        const result = await callCardPage({
-          limit: pageSize,
-          page,
-          type,
-        }, creds);
+  for (let orderIndex = 0; orderIndex < order.length; orderIndex++) {
+    const [typeIndex, type] = order[orderIndex];
+    if (Date.now() >= deadline) {
+      throw new Error(`Bybit card history incomplete: time budget expired before query type ${type}`);
+    }
+    let typeComplete = false;
+    let typeSucceeded = false;
+    try {
+      for (let page = 1; page <= maxPages; page++) {
+        if (Date.now() >= deadline) {
+          throw new Error(`Bybit card history incomplete: time budget expired during ${type} page ${page}`);
+        }
+        const result = await callCardPage({ limit: pageSize, page, type }, creds);
+        typeSucceeded = true;
         const rows = Array.isArray(result?.data) ? result.data : [];
         for (const r of rows) {
           const k = cardRowKey(r);
           const updatedAt = Number(r?.txnUpdate ?? r?.updateTime ?? r?.updatedTime ?? r?.settleTime ?? r?.txnCreate ?? 0);
           const current = merged.get(k);
-          // The same transaction can be returned by AUTH first and FINANCIAL
-          // later. Keep the provider's later/more final record instead of
-          // freezing the initial authorisation (usually pending).
-          if (preferRecord(current, r, typeIndex, updatedAt)) {
-            merged.set(k, { row: r, sourcePriority: typeIndex, updatedAt });
-          }
+          if (preferRecord(current, r, typeIndex, updatedAt)) merged.set(k, { row: r, sourcePriority: typeIndex, updatedAt });
         }
         const totalCount = Number(result?.totalCount ?? 0);
         const pageNo = Number(result?.pageNo ?? page);
         const returnedPageSize = Number(result?.pageSize ?? pageSize);
-        const reachedCycleStart =
-          sinceMs !== undefined && rows.some((row: any) => Number(row?.txnCreate ?? 0) < sinceMs);
-        if (reachedCycleStart) break;
-        if (!rows.length || (totalCount > 0 && pageNo * returnedPageSize >= totalCount)) break;
+        const hasMore = rows.length >= returnedPageSize && (totalCount <= 0 || pageNo * returnedPageSize < totalCount);
+        const reachedCycleStart = sinceMs !== undefined && rows.some((row: any) => Number(row?.txnCreate ?? 0) < sinceMs);
+        if (reachedCycleStart || !rows.length || !hasMore) {
+          typeComplete = true;
+          break;
+        }
+        if (page === maxPages) {
+          throw new Error(`Bybit card history incomplete: ${type} exceeded the configured ${maxPages}-page limit`);
+        }
         await sleep(250);
       }
+      if (!typeComplete) throw new Error(`Bybit card history incomplete: ${type} pagination did not finish`);
+      successfulTypes++;
     } catch (error) {
-      successfulTypes--;
       lastError = error;
-      // A type may be unsupported for this key; keep the successful types, but say so.
-      console.warn(`bybit card type ${type} skipped:`, (error as Error)?.message ?? error);
+      if (isUnsupportedCardTypeError(error) && !typeSucceeded) {
+        console.warn(`bybit card type ${type} unsupported:`, (error as Error)?.message ?? error);
+        continue;
+      }
+      throw error;
     }
     await sleep(400);
   }
 
-  // Returning [] when every provider request failed made a linked account look
-  // as if it genuinely had no transactions and prevented the caller from
-  // reporting/retrying the real problem.
-  if (!successfulTypes && lastError) throw lastError;
-
+  if (!successfulTypes) {
+    if (lastError) throw lastError;
+    throw new Error("Bybit card history returned no supported query types");
+  }
   return [...merged.values()]
     .map(({ row }) => row)
     .filter((row) => !isLateSettlementRecord(row))

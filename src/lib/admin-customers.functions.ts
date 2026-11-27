@@ -4,7 +4,8 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 export const listCustomers = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data: roles } = await context.supabase.from("user_roles").select("role").eq("user_id", context.userId);
+    const { data: roles, error: rolesError } = await context.supabase.from("user_roles").select("role").eq("user_id", context.userId);
+    if (rolesError) throw new Error("تعذر التحقق من صلاحيات المستخدم");
     const isAdmin = (roles ?? []).some((r: any) => r.role === "admin");
     const isEmployee = (roles ?? []).some((r: any) => r.role === "employee");
     if (!isAdmin && !isEmployee) throw new Error("Forbidden");

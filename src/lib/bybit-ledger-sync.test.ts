@@ -72,6 +72,17 @@ describe("immediate individual-to-central card mirror", () => {
     expect(save.mock.calls[0][0][0]).toMatchObject({ kind: "refund", status: "refund", amount: 12 });
   });
 
+  it("mirrors documented side-3 transactions and side-13 ATM withdrawals", async () => {
+    const save = vi.fn(async (rows: any[]) => rows.length);
+    const records = [
+      row("clearing", "a", { side: "3", tradeStatus: "1" }),
+      row("atm", "a", { side: "13", tradeStatus: "1" }),
+    ];
+    expect(await mirrorStoredCardRows(archive(records), "a", ["clearing", "atm"], save)).toBe(2);
+    expect(save.mock.calls[0][0].map((r: any) => r.ref_id)).toEqual(["clearing", "atm"]);
+    expect(save.mock.calls[0][0].map((r: any) => r.kind)).toEqual(["card", "card"]);
+  });
+
   it("reports a failed archive read instead of claiming the mirror succeeded", async () => {
     const save = vi.fn(async () => 1);
     await expect(mirrorStoredCardRows(archive([], { message: "unavailable" }), "a", ["t"], save)).rejects.toThrow("mirror read failed");

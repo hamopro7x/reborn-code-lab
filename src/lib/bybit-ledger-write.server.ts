@@ -1,4 +1,3 @@
-import { SETTLEMENT_COPY_SIDES } from "./bybit-settlement";
 
 import { admin } from "./bybit-account.server";
 import { fetchP2P, fetchOnChain, fetchInternal } from "./bybit-assets.server";
@@ -84,8 +83,9 @@ async function changedLedgerRows(db: any, rows: LedgerInsert[]): Promise<LedgerI
         slice.map((r) => r.ref_id),
       );
     if (error) {
-      out.push(...slice);
-      continue;
+      // A failed comparison read is not evidence that every row changed.
+      // Fail this account's sync instead of risking a blind overwrite.
+      throw new Error(`تعذر مقارنة سجل Bybit قبل التحديث: ${error.message}`);
     }
     const existing = new Map((data ?? []).map((r: any) => [key(r), r]));
     for (const row of slice) {
@@ -242,7 +242,7 @@ export async function mirrorStoredCardRows(
       .in("txn_id", unique.slice(i, i + 200));
     if (error) throw new Error(`card ledger mirror read failed: ${error.message}`);
     const rows = (data ?? [])
-      .filter((row: any) => cardConfirmed(row) && !isCardReversalEvent(row.detail?.side || row.txn_type) && !SETTLEMENT_COPY_SIDES.has(String(row.detail?.side ?? "")))
+      .filter((row: any) => cardConfirmed(row) && !isCardReversalEvent(row.detail?.side || row.txn_type))
       .map((row: any) => cardLedgerRow(accountId, row));
     if (rows.length) saved += await save(rows);
   }
@@ -253,7 +253,8 @@ export async function mirrorStoredCardRows(
 
 export async function assetLedgerRows(accountId: string): Promise<LedgerInsert[]> {
   const rows: LedgerInsert[] = [];
-  const [onchain, internal, p2p] = await Promise.allSettled([
+  // A partial provider response must never be mirrored as a complete account sync.
+  const [onchain, internal, p2p] = await Promise.all([
     fetchOnChain(accountId),
     fetchInternal(accountId),
     fetchP2P(accountId),
@@ -276,16 +277,11 @@ export async function assetLedgerRows(accountId: string): Promise<LedgerInsert[]
       });
     }
   };
-  if (onchain.status === "fulfilled") {
-    pushAssets(onchain.value.deposits, "deposit");
-    pushAssets(onchain.value.withdrawals, "withdraw");
-  }
-  if (internal.status === "fulfilled") {
-    pushAssets(internal.value.deposits, "internal_in");
-    pushAssets(internal.value.withdrawals, "internal_out");
-  }
-  if (p2p.status === "fulfilled") {
-    for (const o of p2p.value) {
+  pushAssets(onchain.deposits, "deposit");
+  pushAssets(onchain.withdrawals, "withdraw");
+  pushAssets(internal.deposits, "internal_in");
+  pushAssets(internal.withdrawals, "internal_out");
+  for (const o of p2p) {
       if (!o.id) continue;
       rows.push({
         account_id: accountId,
@@ -300,7 +296,6 @@ export async function assetLedgerRows(accountId: string): Promise<LedgerInsert[]
         occurred_at: iso(o.time),
         detail: { fiatAmount: o.amount, fiat: o.fiat, price: o.price, counterparty: o.counterparty ?? null },
       });
-    }
   }
   return rows;
 }

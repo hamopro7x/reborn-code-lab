@@ -65,10 +65,16 @@ export async function persistCardTxns(rows: CardTxn[], accountId?: string, assig
     // The database owns first_seen, ordering, confirmation and reconciliation.
     // No legacy upsert fallback: missing migration must fail closed.
     const observed = payload.map((r) => ({ ...r, observed_at: r.detail?.observedAt }));
-    const { error } = await (supabaseAdmin as any).rpc("bybit_ingest_confirmed", {
-      p_account: accountId ?? null, p_rows: observed,
-    });
-    if (error) throw new Error(`confirmation ingest failed: ${error.message}`);
+    // The database RPC deliberately caps each atomic ingest at 500 rows.
+    // Keep the provider snapshot timestamp intact across chunks: the account
+    // fence allows equal timestamps, while each transaction's own observation
+    // timestamp prevents duplicate/stale rows from overwriting newer evidence.
+    for (let offset = 0; offset < observed.length; offset += 500) {
+      const { error } = await (supabaseAdmin as any).rpc("bybit_ingest_confirmed", {
+        p_account: accountId ?? null, p_rows: observed.slice(offset, offset + 500),
+      });
+      if (error) throw new Error(`confirmation ingest failed: ${error.message}`);
+    }
     if (accountId) {
       await mirrorStoredCardRows(supabaseAdmin, accountId, payload.map((r) => r.txn_id),
         (ledger) => upsertLedger(ledger, assign));
@@ -284,7 +290,7 @@ export async function syncCardTxns(accountId?: string): Promise<{ added: number;
 
 /** Runs the same sync for every linked Bybit account. */
 
-export async function syncAllCardTxns(): Promise<{ added: number; accounts: number }> {
+export async function syncAllCardTxns(): Promise<{ added: number; accounts: number; failedAccounts: string[] }> {
   // One full sync at a time, at most once every 30s: several admin screens used
   // to launch a full multi-account sync each, which overloaded the server.
   return heavyOnce("sync:all", 8_000, async () => {
@@ -296,16 +302,18 @@ export async function syncAllCardTxns(): Promise<{ added: number; accounts: numb
     // Sequential: parallel account syncs multiplied both provider rate limits
     // and worker load.
     let added = 0;
+    const failedAccounts: string[] = [];
     for (const a of accounts) {
       try {
         if (!(await bybitConfigured(a.id))) continue;
         const res = await syncCardTxns(a.id);
         added += res.added;
-      } catch {
-        /* حساب واحد يفشل لا يوقف الباقي */
+      } catch (error) {
+        failedAccounts.push(a.id);
+        console.error("Bybit full card sync failed for account:", a.id, (error as Error)?.message ?? "unknown_error");
       }
     }
-    return { added, accounts: accounts.length };
+    return { added, accounts: accounts.length, failedAccounts };
   });
 }
 
@@ -440,8 +448,11 @@ export async function resumeCardFollowup() {
         (Number(result.totalCount) > 0 && page*100 >= Number(result.totalCount));
       if (exhausted) { type++; page=1; } else page++;
     } catch (e) {
+      // Skip only a provider-confirmed unsupported optional query type.
+      // Transient/auth/network errors must not advance the resumable cursor.
       if (!isUnsupportedCardTypeError(e)) throw e;
-      type++; page=1;
+      type++;
+      page = 1;
     }
     if (type >= CARD_QUERY_TYPES.length) { index++; type=0; }
   }
