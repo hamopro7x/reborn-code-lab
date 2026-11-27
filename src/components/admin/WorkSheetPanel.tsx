@@ -17,7 +17,7 @@ function p2pOrderColor(orderId: string) {
   let hash = 0;
   for (let i = 0; i < orderId.length; i++) hash = (hash * 31 + orderId.charCodeAt(i)) | 0;
   const hue = ((hash % 360) + 360) % 360;
-  return { border: `hsl(${hue} 78% 62%)`, background: `hsl(${hue} 78% 52% / 0.12)` };
+  return { border: `hsl(${hue} 62% 58%)`, background: `hsl(${hue} 88% 93%)` };
 }
 
 
