@@ -13,14 +13,6 @@ import employeesBg from "@/assets/employees-bg.png.asset.json";
 import { livePoll } from "@/lib/live-poll";
 
 /** Stable per-order colour; all shifts linked to the same order share the same hue. */
-function p2pOrderColor(orderId: string) {
-  let hash = 0;
-  for (let i = 0; i < orderId.length; i++) hash = (hash * 31 + orderId.charCodeAt(i)) | 0;
-  const hue = ((hash % 360) + 360) % 360;
-  return { border: `hsl(${hue} 62% 58%)`, background: `hsl(${hue} 88% 93%)` };
-}
-
-
 
 const CHIP_BASE =
   "inline-flex flex-row-reverse items-center gap-2 rounded-full px-4 py-2 text-sm font-extrabold text-white transition";
@@ -454,28 +446,14 @@ function ShiftPickerMenu({
                     selectMode ? togglePick(sh.id) : onSelect({ ...sh, label: `شفت رقم ${number}` })
                   }
                   aria-pressed={selectMode ? picked.has(sh.id) : undefined}
-                  className={`relative flex flex-1 items-stretch gap-2 rounded-xl border px-2 py-2 text-right transition ${
+                  className={`flex flex-1 items-stretch gap-2 rounded-xl border px-2 py-2 text-right transition ${
                     selectMode && picked.has(sh.id)
                       ? "border-rose-500/70 bg-rose-500/10"
                       : active
                       ? "border-blue-500/40 bg-[oklch(0.13_0_0)] shadow-[0_0_20px_-6px_oklch(0.78_0.24_120/0.5)]"
-                      : (sh.p2pOrderIds?.length ?? 0) > 0
-                      ? ""
                       : "border-white/5 bg-[oklch(0.095_0_0)] hover:bg-[oklch(0.11_0_0)]"
                   }`}
-                  style={!selectMode && !active && sh.p2pOrderIds?.length ? {
-                    borderColor: p2pOrderColor(sh.p2pOrderIds[0]).border,
-                    backgroundColor: p2pOrderColor(sh.p2pOrderIds[0]).background,
-                  } : undefined}
                 >
-
-                  {!selectMode && (sh.p2pOrderIds?.length ?? 0) > 0 && (
-                    <div className="absolute bottom-1 left-2 flex max-w-[72px] gap-1" aria-label={sh.p2pOrderIds!.length + " طلبات P2P مرتبطة"}>
-                      {sh.p2pOrderIds!.map((orderId) => (
-                        <span key={orderId} title={"طلب P2P: " + orderId} className="size-1.5 rounded-full" style={{ backgroundColor: p2pOrderColor(orderId).border }} />
-                      ))}
-                    </div>
-                  )}
                   {/* رقم الشفت */}
                   <div className="flex w-10 shrink-0 items-center justify-center">
                     <span title={sh.linkGroup ? `مجموعة تاريخية: ${sh.linkGroup}` : undefined} className="grid h-8 w-8 place-items-center rounded-lg bg-[linear-gradient(180deg,#1636e6,#0a24c4)] text-sm font-black text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">

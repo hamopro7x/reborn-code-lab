@@ -1,0 +1,25 @@
+name: Shift picker visual cleanup
+
+on:
+  push:
+    branches:
+      - revert/p2p-shift-group-color-clutter
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/components/admin/WorkSheetPanel.tsx"
+      - ".github/workflows/shift-picker-cleanup.yml"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - name: TypeScript
+        run: bunx tsc --noEmit
+      - name: Production build
+        run: bun run build
