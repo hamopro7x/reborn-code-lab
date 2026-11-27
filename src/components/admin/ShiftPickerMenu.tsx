@@ -382,7 +382,7 @@ export function ShiftPickerMenu({
                   )}
                   {/* رقم الشفت */}
                   <div className="flex w-10 shrink-0 items-center justify-center">
-                    <span title={sh.linkGroup ? `مجموعة تاريخية: ${sh.linkGroup}` : undefined} className="grid h-8 w-8 place-items-center rounded-lg bg-[linear-gradient(180deg,#1636e6,#0a24c4)] text-sm font-black text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
+                    <span className="grid h-8 w-8 place-items-center rounded-lg bg-[linear-gradient(180deg,#1636e6,#0a24c4)] text-sm font-black text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
                       {number}
                     </span>
                   </div>
