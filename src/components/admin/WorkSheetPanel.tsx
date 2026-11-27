@@ -12,7 +12,21 @@ import { getEmployeeShiftList, deleteEmployeeShift, getSharedShiftId, setSharedS
 import employeesBg from "@/assets/employees-bg.png.asset.json";
 import { livePoll } from "@/lib/live-poll";
 
-/** Stable per-order colour; all shifts linked to the same order share the same hue. */
+/** Light highlight colours; shifts linked to the same multi-shift order share one. */
+const ORDER_LINK_COLORS = ["#fde68a", "#a7f3d0", "#bae6fd", "#fbcfe8", "#ddd6fe", "#fed7aa", "#d9f99d", "#99f6e4", "#fecaca", "#c7d2fe"];
+
+export function orderLinkColors(list: { id: string; p2pOrderIds?: string[] }[]): Map<string, string> {
+  const byOrder = new Map<string, string[]>();
+  for (const s of list) for (const o of s.p2pOrderIds ?? []) byOrder.set(o, [...(byOrder.get(o) ?? []), s.id]);
+  const out = new Map<string, string>();
+  let n = 0;
+  for (const ids of byOrder.values()) {
+    if (ids.length < 2 || ids.every((id) => out.has(id))) continue;
+    const c = ORDER_LINK_COLORS[n++ % ORDER_LINK_COLORS.length]!;
+    for (const id of ids) if (!out.has(id)) out.set(id, c);
+  }
+  return out;
+}
 
 const CHIP_BASE =
   "inline-flex flex-row-reverse items-center gap-2 rounded-full px-4 py-2 text-sm font-extrabold text-white transition";
@@ -186,6 +200,7 @@ function ShiftPickerMenu({
   });
 
   const shifts = q.data ?? [];
+  const linkColors = orderLinkColors(shifts);
   const sharedFn = useServerFn(getSharedShiftId);
   const setSharedFn = useServerFn(setSharedShift);
   const sharedQ = useQuery({
@@ -372,6 +387,7 @@ function ShiftPickerMenu({
 
           {shifts.map((sh, i) => {
             const active = sh.id === selectedId;
+            const linkColor = linkColors.get(sh.id);
             const start = fmtShift(sh.startedAt);
             const end = sh.endedAt ? fmtShift(sh.endedAt) : null;
             const number = shifts.length - i;
@@ -446,6 +462,7 @@ function ShiftPickerMenu({
                     selectMode ? togglePick(sh.id) : onSelect({ ...sh, label: `شفت رقم ${number}` })
                   }
                   aria-pressed={selectMode ? picked.has(sh.id) : undefined}
+                  style={linkColor && !(selectMode && picked.has(sh.id)) ? { borderColor: linkColor, boxShadow: `0 0 0 1px ${linkColor}, 0 0 14px -4px ${linkColor}`, backgroundColor: `color-mix(in oklab, ${linkColor} 12%, oklch(0.095 0 0))` } : undefined}
                   className={`flex flex-1 items-stretch gap-2 rounded-xl border px-2 py-2 text-right transition ${
                     selectMode && picked.has(sh.id)
                       ? "border-rose-500/70 bg-rose-500/10"
