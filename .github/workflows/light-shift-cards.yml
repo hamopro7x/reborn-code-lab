@@ -1,0 +1,25 @@
+name: Light shift cards validation
+
+on:
+  push:
+    branches:
+      - ui/light-shift-cards
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/components/admin/WorkSheetPanel.tsx"
+      - ".github/workflows/light-shift-cards.yml"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - name: TypeScript
+        run: bunx tsc --noEmit
+      - name: Production build
+        run: bun run build
