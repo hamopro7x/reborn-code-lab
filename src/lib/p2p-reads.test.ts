@@ -87,11 +87,13 @@ describe("P2P application reads",()=>{
     expect(history.map(s=>[s.id,s.txns])).toEqual([["old",1],["open",1],["new-linked",1]]);
     expect(state.calls.some(c=>c.endsWith("work_p2p_hidden_shifts"))).toBe(false);
   });
-  it("admin sees every order link but employee sees only owned links",async()=>{
-    const admin=await shiftP2P("old");
+  it("shows each linked order only in its newest shift while preserving all related links",async()=>{
+    expect(await shiftP2P("old")).toHaveLength(0);
+    const admin=await shiftP2P("open");
     expect(admin).toHaveLength(1);
     expect(admin[0].relatedShifts).toHaveLength(3);
-    const employee=await shiftP2P("old","employee");
+    const employee=await shiftP2P("open","employee");
+    expect(employee).toHaveLength(1);
     expect(employee[0].relatedShifts).toHaveLength(2);
     expect(employee[0].relatedShifts.every((l:any)=>l.userId==="employee")).toBe(true);
   });
