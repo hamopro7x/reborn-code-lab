@@ -12,19 +12,13 @@ import { getEmployeeShiftList, deleteEmployeeShift, getSharedShiftId, setSharedS
 import employeesBg from "@/assets/employees-bg.png.asset.json";
 import { livePoll } from "@/lib/live-poll";
 
-/** ألوان مجموعات ربط P2P — الشفتات اللي اتربطو بنفس الطلب تاخد لون واحد، وكل مجموعة لون مختلف. */
-const GROUP_COLOR_CLASSES = [
-  "border-rose-400/70 bg-rose-500/10",
-  "border-amber-400/70 bg-amber-500/10",
-  "border-emerald-400/70 bg-emerald-500/10",
-  "border-cyan-400/70 bg-cyan-500/10",
-  "border-violet-400/70 bg-violet-500/10",
-  "border-fuchsia-400/70 bg-fuchsia-500/10",
-  "border-lime-400/70 bg-lime-500/10",
-  "border-orange-400/70 bg-orange-500/10",
-  "border-sky-400/70 bg-sky-500/10",
-  "border-pink-400/70 bg-pink-500/10",
-];
+/** Stable per-order colour; all shifts linked to the same order share the same hue. */
+function p2pOrderColor(orderId: string) {
+  let hash = 0;
+  for (let i = 0; i < orderId.length; i++) hash = (hash * 31 + orderId.charCodeAt(i)) | 0;
+  const hue = ((hash % 360) + 360) % 360;
+  return { border: `hsl(${hue} 78% 62%)`, background: `hsl(${hue} 78% 52% / 0.12)` };
+}
 
 
 
@@ -200,12 +194,6 @@ function ShiftPickerMenu({
   });
 
   const shifts = q.data ?? [];
-  // كل مجموعة شفتات مرتبطة بطلب P2P واحد تاخد لون ثابت من الألوان بالترتيب.
-  const groupColors = new Map<string, string>();
-  for (const s of shifts) {
-    if (!s.linkGroup || groupColors.has(s.linkGroup)) continue;
-    groupColors.set(s.linkGroup, GROUP_COLOR_CLASSES[groupColors.size % GROUP_COLOR_CLASSES.length]);
-  }
   const sharedFn = useServerFn(getSharedShiftId);
   const setSharedFn = useServerFn(setSharedShift);
   const sharedQ = useQuery({
@@ -466,17 +454,28 @@ function ShiftPickerMenu({
                     selectMode ? togglePick(sh.id) : onSelect({ ...sh, label: `شفت رقم ${number}` })
                   }
                   aria-pressed={selectMode ? picked.has(sh.id) : undefined}
-                  className={`flex flex-1 items-stretch gap-2 rounded-xl border px-2 py-2 text-right transition ${
+                  className={`relative flex flex-1 items-stretch gap-2 rounded-xl border px-2 py-2 text-right transition ${
                     selectMode && picked.has(sh.id)
                       ? "border-rose-500/70 bg-rose-500/10"
                       : active
                       ? "border-blue-500/40 bg-[oklch(0.13_0_0)] shadow-[0_0_20px_-6px_oklch(0.78_0.24_120/0.5)]"
-                      : sh.linkGroup && groupColors.has(sh.linkGroup)
-                      ? groupColors.get(sh.linkGroup)
+                      : (sh.p2pOrderIds?.length ?? 0) > 0
+                      ? ""
                       : "border-white/5 bg-[oklch(0.095_0_0)] hover:bg-[oklch(0.11_0_0)]"
                   }`}
+                  style={!selectMode && !active && sh.p2pOrderIds?.length ? {
+                    borderColor: p2pOrderColor(sh.p2pOrderIds[0]).border,
+                    backgroundColor: p2pOrderColor(sh.p2pOrderIds[0]).background,
+                  } : undefined}
                 >
 
+                  {!selectMode && (sh.p2pOrderIds?.length ?? 0) > 0 && (
+                    <div className="absolute bottom-1 left-2 flex max-w-[72px] gap-1" aria-label={sh.p2pOrderIds!.length + " طلبات P2P مرتبطة"}>
+                      {sh.p2pOrderIds!.map((orderId) => (
+                        <span key={orderId} title={"طلب P2P: " + orderId} className="size-1.5 rounded-full" style={{ backgroundColor: p2pOrderColor(orderId).border }} />
+                      ))}
+                    </div>
+                  )}
                   {/* رقم الشفت */}
                   <div className="flex w-10 shrink-0 items-center justify-center">
                     <span title={sh.linkGroup ? `مجموعة تاريخية: ${sh.linkGroup}` : undefined} className="grid h-8 w-8 place-items-center rounded-lg bg-[linear-gradient(180deg,#1636e6,#0a24c4)] text-sm font-black text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
