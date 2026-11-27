@@ -6,18 +6,23 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Button } from "@/components/ui/button";
 import { getEmployeeShiftList, deleteEmployeeShift, getSharedShiftId, setSharedShift, markShiftReviewed, archiveEmployeeShifts } from "@/lib/work.functions";
 
-const GROUP_COLOR_CLASSES = [
-  "border-rose-400/70 bg-rose-500/10",
-  "border-amber-400/70 bg-amber-500/10",
-  "border-emerald-400/70 bg-emerald-500/10",
-  "border-cyan-400/70 bg-cyan-500/10",
-  "border-violet-400/70 bg-violet-500/10",
-  "border-fuchsia-400/70 bg-fuchsia-500/10",
-  "border-lime-400/70 bg-lime-500/10",
-  "border-orange-400/70 bg-orange-500/10",
-  "border-sky-400/70 bg-sky-500/10",
-  "border-pink-400/70 bg-pink-500/10",
+const ORDER_GROUP_COLORS = [
+  { border: "#fb7185", bg: "rgba(244,63,94,.10)" },
+  { border: "#fbbf24", bg: "rgba(245,158,11,.10)" },
+  { border: "#34d399", bg: "rgba(16,185,129,.10)" },
+  { border: "#22d3ee", bg: "rgba(6,182,212,.10)" },
+  { border: "#a78bfa", bg: "rgba(139,92,246,.10)" },
+  { border: "#e879f9", bg: "rgba(217,70,239,.10)" },
+  { border: "#a3e635", bg: "rgba(132,204,22,.10)" },
+  { border: "#fb923c", bg: "rgba(249,115,22,.10)" },
+  { border: "#38bdf8", bg: "rgba(14,165,233,.10)" },
+  { border: "#f472b6", bg: "rgba(236,72,153,.10)" },
 ];
+function orderGroupColor(orderId: string) {
+  let hash = 0;
+  for (let i = 0; i < orderId.length; i++) hash = (hash * 31 + orderId.charCodeAt(i)) | 0;
+  return ORDER_GROUP_COLORS[Math.abs(hash) % ORDER_GROUP_COLORS.length];
+}
 
 export type Shift = {
   id: string;
@@ -27,8 +32,7 @@ export type Shift = {
   txns: number;
   reviewed?: boolean;
   label?: string;
-  /** Legacy colour group; not evidence of a specific order-to-shift link. */
-  linkGroup?: string | null;
+  /** P2P order IDs linked to this shift; each order defines one visual group. */
   p2pOrderIds?: string[];
 };
 
@@ -94,12 +98,7 @@ export function ShiftPickerMenu({
   });
 
   const shifts = q.data ?? [];
-  // كل مجموعة شفتات مرتبطة بطلب P2P واحد تاخد لون ثابت من الألوان بالترتيب.
-  const groupColors = new Map<string, string>();
-  for (const s of shifts) {
-    if (!s.linkGroup || groupColors.has(s.linkGroup)) continue;
-    groupColors.set(s.linkGroup, GROUP_COLOR_CLASSES[groupColors.size % GROUP_COLOR_CLASSES.length]);
-  }
+  // لون ثابت لكل طلب من معرّفه، فيظهر بنفس اللون على جميع الشفتات المرتبطة به.
   const sharedFn = useServerFn(getSharedShiftId);
   const setSharedFn = useServerFn(setSharedShift);
   const sharedQ = useQuery({
@@ -359,17 +358,28 @@ export function ShiftPickerMenu({
                     selectMode ? togglePick(sh.id) : onSelect({ ...sh, label: `شفت رقم ${number}` })
                   }
                   aria-pressed={selectMode ? picked.has(sh.id) : undefined}
-                  className={`flex flex-1 items-stretch gap-2 rounded-xl border px-2 py-2 text-right transition ${
+                  className={`relative flex flex-1 items-stretch gap-2 rounded-xl border px-2 py-2 text-right transition ${
                     selectMode && picked.has(sh.id)
                       ? "border-rose-500/70 bg-rose-500/10"
                       : active
                       ? "border-blue-500/40 bg-[oklch(0.13_0_0)] shadow-[0_0_20px_-6px_oklch(0.78_0.24_120/0.5)]"
-                      : sh.linkGroup && groupColors.has(sh.linkGroup)
-                      ? groupColors.get(sh.linkGroup)
+                      : (sh.p2pOrderIds?.length ?? 0) > 0
+                      ? ""
                       : "border-white/5 bg-[oklch(0.095_0_0)] hover:bg-[oklch(0.11_0_0)]"
                   }`}
+                  style={!selectMode && !active && sh.p2pOrderIds?.length ? {
+                    borderColor: orderGroupColor(sh.p2pOrderIds[0]).border,
+                    backgroundColor: orderGroupColor(sh.p2pOrderIds[0]).bg,
+                  } : undefined}
                 >
 
+                  {!selectMode && (sh.p2pOrderIds?.length ?? 0) > 0 && (
+                    <div className="absolute bottom-1 left-2 flex max-w-[72px] gap-1" aria-label={sh.p2pOrderIds!.length + " طلبات P2P مرتبطة"}>
+                      {sh.p2pOrderIds!.map((orderId) => (
+                        <span key={orderId} title={"طلب مرتبط: " + orderId} className="size-1.5 rounded-full" style={{ backgroundColor: orderGroupColor(orderId).border }} />
+                      ))}
+                    </div>
+                  )}
                   {/* رقم الشفت */}
                   <div className="flex w-10 shrink-0 items-center justify-center">
                     <span title={sh.linkGroup ? `مجموعة تاريخية: ${sh.linkGroup}` : undefined} className="grid h-8 w-8 place-items-center rounded-lg bg-[linear-gradient(180deg,#1636e6,#0a24c4)] text-sm font-black text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
