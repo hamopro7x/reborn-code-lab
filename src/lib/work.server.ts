@@ -1496,9 +1496,27 @@ export async function workTransferPage(userId: string, scope: "external" | "inte
 async function p2pByAssignment(where: { shiftId?: string; userId?: string }, viewerId?: string) {
   const db = await admin();
   const links = await readP2PLinks(db, { ...where, ...(viewerId ? { userId: viewerId } : {}) });
-  const ledgerIds = [...new Set(links.map((l) => l.ledger_id))];
+  const initialLedgerIds = [...new Set(links.map((l) => l.ledger_id))];
+  if (!initialLedgerIds.length) return [];
+  const allLinks = await readP2PLinks(db, { ledgerIds: initialLedgerIds, ...(viewerId ? { userId: viewerId } : {}) });
+
+  // A linked order is rendered once, in the shift with the latest start timestamp.
+  const latestShiftByOrder = new Map<string, (typeof allLinks)[number]>();
+  for (const link of allLinks) {
+    if (!link.shift_id) continue;
+    const previous = latestShiftByOrder.get(link.ledger_id);
+    const currentTime = link.started_at ? new Date(link.started_at).getTime() : 0;
+    const previousTime = previous?.started_at ? new Date(previous.started_at).getTime() : -1;
+    if (!previous || currentTime > previousTime ||
+      (currentTime === previousTime && String(link.shift_id) > String(previous.shift_id))) {
+      latestShiftByOrder.set(link.ledger_id, link);
+    }
+  }
+  const visibleLinks = where.shiftId
+    ? links.filter((link) => latestShiftByOrder.get(link.ledger_id)?.shift_id === where.shiftId)
+    : links;
+  const ledgerIds = [...new Set(visibleLinks.map((l) => l.ledger_id))];
   if (!ledgerIds.length) return [];
-  const allLinks = await readP2PLinks(db, { ledgerIds, ...(viewerId ? { userId: viewerId } : {}) });
   const names = await namesFor(db, allLinks.map((l) => l.user_id));
   const data: any[] = [];
   for (let from = 0; from < ledgerIds.length; from += 100) {
