@@ -1,0 +1,29 @@
+name: P2P shift order groups validation
+
+on:
+  push:
+    branches:
+      - feature/p2p-shift-order-groups
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/components/admin/WorkSheetPanel.tsx"
+      - "src/lib/work.server.ts"
+      - "src/lib/p2p-reads.test.ts"
+      - ".github/workflows/p2p-shift-order-groups.yml"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - name: TypeScript
+        run: bunx tsc --noEmit
+      - name: P2P and shift regressions
+        run: bunx vitest run src/lib/p2p-reads.test.ts src/lib/shift-history.test.ts
+      - name: Production build
+        run: bun run build
