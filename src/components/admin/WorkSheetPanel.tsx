@@ -17,7 +17,7 @@ function p2pOrderColor(orderId: string) {
   let hash = 0;
   for (let i = 0; i < orderId.length; i++) hash = (hash * 31 + orderId.charCodeAt(i)) | 0;
   const hue = ((hash % 360) + 360) % 360;
-  return { border: `hsl(${hue} 78% 62%)`, background: `hsl(${hue} 78% 52% / 0.12)` };
+  return { border: `hsl(${hue} 62% 48%)`, background: `hsl(${hue} 72% 94%)` };
 }
 
 
@@ -300,7 +300,7 @@ function ShiftPickerMenu({
         align="center"
         className="w-auto max-w-[92vw] border-0 bg-transparent p-0 shadow-none"
       >
-        <div className="w-[420px] max-w-[92vw] overflow-hidden rounded-2xl border border-border/40 bg-[oklch(0.115_0_0)] p-3 shadow-2xl">
+        <div className="w-[420px] max-w-[92vw] overflow-hidden rounded-2xl border border-slate-200 bg-[#f4f6fb] p-3 shadow-2xl">
 
       {/* Header */}
       <div className="relative mb-3 overflow-hidden rounded-xl bg-[linear-gradient(180deg,#1636e6,#0a24c4)] px-3 py-2.5 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_2px_6px_rgba(0,0,0,0.55)]">
@@ -456,12 +456,12 @@ function ShiftPickerMenu({
                   aria-pressed={selectMode ? picked.has(sh.id) : undefined}
                   className={`relative flex flex-1 items-stretch gap-2 rounded-xl border px-2 py-2 text-right transition ${
                     selectMode && picked.has(sh.id)
-                      ? "border-rose-500/70 bg-rose-500/10"
+                      ? "border-rose-400 bg-rose-50"
                       : active
-                      ? "border-blue-500/40 bg-[oklch(0.13_0_0)] shadow-[0_0_20px_-6px_oklch(0.78_0.24_120/0.5)]"
+                      ? "border-blue-400 bg-blue-50 shadow-sm"
                       : (sh.p2pOrderIds?.length ?? 0) > 0
                       ? ""
-                      : "border-white/5 bg-[oklch(0.095_0_0)] hover:bg-[oklch(0.11_0_0)]"
+                      : "border-slate-200 bg-white hover:bg-slate-50"
                   }`}
                   style={!selectMode && !active && sh.p2pOrderIds?.length ? {
                     borderColor: p2pOrderColor(sh.p2pOrderIds[0]).border,
@@ -486,18 +486,18 @@ function ShiftPickerMenu({
                   {/* بداية / انتهاء */}
                   <div className="flex flex-1 items-stretch gap-2" dir="rtl">
                     {/* بداية — على اليمين */}
-                    <div className="flex flex-1 flex-col items-start gap-1 rounded-lg bg-[oklch(0.055_0_0)] px-2 py-1.5">
+                    <div className="flex flex-1 flex-col items-start gap-1 rounded-lg border border-slate-100 bg-white/90 px-2 py-1.5 shadow-sm">
                       <span className="rounded bg-[linear-gradient(180deg,#1636e6,#0a24c4)] px-2 py-0.5 text-[10px] font-black text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
                         بدا
                       </span>
                       <div className="flex flex-col gap-0.5 pr-1">
-                        <span className="text-[11px] font-bold text-white/90">
+                        <span className="text-[11px] font-bold text-slate-800">
                           اليوم: {start.day}
                         </span>
-                        <span className="text-[11px] text-white/70">
+                        <span className="text-[11px] text-slate-500">
                           التاريخ: {start.date}
                         </span>
-                        <span className="text-[11px] font-bold text-blue-300">
+                        <span className="text-[11px] font-bold text-blue-700">
                           الساعه: {start.time}
                         </span>
                       </div>
@@ -522,7 +522,7 @@ function ShiftPickerMenu({
                         </div>
                       ) : (
                         <div className="flex flex-1 items-center justify-center pr-1">
-                          <span className="text-[11px] font-black text-emerald-400">شغّال الآن</span>
+                          <span className="text-[11px] font-black text-emerald-700">شغّال الآن</span>
                         </div>
                       )}
                     </div>
